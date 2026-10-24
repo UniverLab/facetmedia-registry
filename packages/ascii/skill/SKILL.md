@@ -32,7 +32,7 @@ image = "lamina.png"
 width = 100
 mode = "forma"
 invert = true
-name = "lamina"
+name = "lamina-ascii"
 ```
 
 Run it with `--out build/`: without it the rendered `<name>.png` lands

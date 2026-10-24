@@ -3,4 +3,4 @@ image = "lamina.png"
 width = 100
 mode = "forma"
 invert = true
-name = "lamina"
+name = "lamina-ascii"
