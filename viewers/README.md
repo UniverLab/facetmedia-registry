@@ -36,9 +36,22 @@ viewers/
     └── *.js            # ES modules, no build step
 ```
 
-Try one without a package: `python3 scripts/serve-example.py <kind>`
-serves `/viewer/`, `/kit/` and `/asset/` on 127.0.0.1 and prints the URL.
-`scripts/check-viewers.mjs` opens each example by hand (system Chrome).
+Try one without a package: `python3 scripts/serve-example.py <kind>` serves
+`/viewer/`, `/kit/` and `/asset/` on 127.0.0.1 (the same three routes
+`facet preview` serves) and prints the URL to open. Check them by hand with
+`node scripts/check-viewers.mjs [kind ...]`: with `playwright-core`
+resolvable and the system Chrome, it opens each example in light and dark at
+1280x800 and 390x844, exercises the audio click-to-seek and the CAD view
+enlargement, fails on any console error, page error, failed request or HTTP
+status >= 400, and saves a screenshot of each case under
+`_examples/<kind>/screens/` (gitignored).
+
+Every viewer opens with the same header, `_kit/header.js`: the asset's name
+and kind, the verification verdict with its metrics against their
+thresholds, the licences with a visible `non-commercial` badge when the
+tool's licence or a model's forbids commercial use, and the provenance
+(capability, package version, registry commit, models, parameters)
+collapsed.
 
 The viewers here are `generic` (any preview: summary, fields, the asset),
 `audio` (player, waveform with silences and the playhead, loudness against the
