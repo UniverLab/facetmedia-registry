@@ -80,7 +80,7 @@ description = "Relative tolerance on expect-volume-mm3 (0.001 = 0.1 %)."
 
 [capabilities.solid.inputs.expect-bbox-mm]
 type = "array"
-description = "Expected bounding box [x, y, z] in mm; verify fails when any side is off by more than bbox-abs-tol-mm."
+description = "Expected bounding box as one {x, y, z} item, in mm; verify fails when any side is off by more than bbox-abs-tol-mm."
 
 [capabilities.solid.inputs.expect-bbox-mm.items.x]
 type = "number"

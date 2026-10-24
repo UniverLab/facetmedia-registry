@@ -30,7 +30,7 @@ describe cad.drawing --json` report for this manifest.
 | `name` | string | yes | — | matches `[a-z0-9][a-z0-9-]*`; the asset base name |
 | `expect-volume-mm3` | number | no | — | expected volume; verify fails outside `volume-rel-tol` |
 | `volume-rel-tol` | number | no | `0.001` | relative tolerance on the volume, 0 to 0.1 |
-| `expect-bbox-mm` | array | no | — | expected bounding box `[x, y, z]` in mm, each a number |
+| `expect-bbox-mm` | array | no | — | expected bounding box as one item `{ x, y, z }` in mm; verify fails when any side is off by more than `bbox-abs-tol-mm` |
 | `bbox-abs-tol-mm` | number | no | `0.01` | absolute tolerance per side, in mm |
 
 `cad.drawing` — 2D plan from an ezdxf script: DXF with an audit, SVG and PNG
@@ -96,9 +96,10 @@ actually ran, pinned by the manifest and the lock.
 
 - **STEP**: `isValid()` is true, there is at least one solid, and when the
   piece carries `expect-volume-mm3` the volume is within `volume-rel-tol`
-  (relative) and when it carries `expect-bbox-mm` every side is within
-  `bbox-abs-tol-mm` (absolute). The metrics carry `volume_mm3`, `bbox_mm`,
-  `faces`, `solids` and, when expected, `volume_diff_rel` and
+  (relative) and when it carries `expect-bbox-mm` (one `{ x, y, z }` item,
+  e.g. `expect-bbox-mm = [{ x = 60, y = 40, z = 50 }]`) every side is
+  within `bbox-abs-tol-mm` (absolute). The metrics carry `volume_mm3`,
+  `bbox_mm`, `faces`, `solids` and, when expected, `volume_diff_rel` and
   `bbox_diff_mm`.
 - **STL and SVG**: non-empty and parseable — the STL meshes to at least one
   triangle, the SVG parses as XML.

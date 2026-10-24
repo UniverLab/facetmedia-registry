@@ -225,24 +225,45 @@ def _verify_step(params: Mapping[str, Any], path: Path) -> dict[str, Any]:
     thresholds: dict[str, Any] = {"volume_rel_tol": None, "bbox_abs_tol_mm": None}
     expect_volume = params.get("expect-volume-mm3")
     if expect_volume is not None:
+        wanted_volume = float(expect_volume)
+        if wanted_volume <= 0:
+            problem = "expect-volume-mm3 must be positive"
+            return _verdict(path.name, False, {**metrics, "error": problem}, "cadquery", thresholds)
         tolerance = float(params.get("volume-rel-tol", 0.001))
-        difference = abs(float(measured["volume_mm3"]) - float(expect_volume)) / float(
-            expect_volume
-        )
+        difference = abs(float(measured["volume_mm3"]) - wanted_volume) / wanted_volume
         metrics["volume_diff_rel"] = round(difference, 6)
         thresholds["volume_rel_tol"] = tolerance
         passed = passed and difference <= tolerance
     expect_bbox = params.get("expect-bbox-mm")
     if expect_bbox is not None:
+        wanted = _expected_bbox(expect_bbox)
+        if wanted is None:
+            problem = "expect-bbox-mm must be one {x, y, z} item"
+            return _verdict(path.name, False, {**metrics, "error": problem}, "cadquery", thresholds)
         tolerance = float(params.get("bbox-abs-tol-mm", 0.01))
         differences = [
-            abs(float(side) - float(want))
-            for side, want in zip(measured["bbox_mm"], expect_bbox, strict=True)
+            abs(float(side) - want) for side, want in zip(measured["bbox_mm"], wanted, strict=True)
         ]
         metrics["bbox_diff_mm"] = [round(difference, 6) for difference in differences]
         thresholds["bbox_abs_tol_mm"] = tolerance
         passed = passed and all(difference <= tolerance for difference in differences)
     return _verdict(path.name, passed, metrics, "cadquery", thresholds)
+
+
+def _expected_bbox(value: Any) -> tuple[float, float, float] | None:
+    """The piece's expected bbox as ``[x, y, z]``; ``None`` when malformed.
+
+    The manifest's schema language only describes an array as a list of
+    objects (core ``docs/registry.md``), so a validated piece carries
+    ``[{x, y, z}]`` and never a flat ``[x, y, z]``.
+    """
+    if not isinstance(value, list) or len(value) != 1 or not isinstance(value[0], Mapping):
+        return None
+    item = value[0]
+    try:
+        return (float(item["x"]), float(item["y"]), float(item["z"]))
+    except (KeyError, TypeError, ValueError):
+        return None
 
 
 def _verify_dxf(params: Mapping[str, Any], path: Path) -> dict[str, Any]:
@@ -332,8 +353,8 @@ def _preview_step(req: Request, path: Path) -> tuple[dict[str, Any], list[str]]:
 
 def _solid_summary(name: str, fields: Mapping[str, Any]) -> str:
     """``escuadra · valid · 20 806 mm³ · 2 holes Ø6.5``."""
-    volume = f"{float(fields['volume_mm3']):,.0f}".replace(",", " ")
-    parts = [name, "valid", f"{volume} mm³"]
+    volume = f"{float(fields['volume_mm3']):,.0f}".replace(",", " ")
+    parts = [name, "valid" if fields["valid"] else "invalid", f"{volume} mm³"]
     holes = fields["holes"]
     if holes:
         diameters = "/".join(
@@ -434,11 +455,14 @@ def _doctor_step() -> dict[str, Any]:
             path = Path(folder) / "doctor.step"
             occlab.export_step(cadquery.Workplane().box(10, 10, 10), path)
             shape = occlab.import_step(path)
-            ok = shape.isValid() and len(shape.Solids()) == 1
+            valid = bool(shape.isValid())
+            solids = len(shape.Solids())
     except Exception as exc:  # catch-all: the check reports, the verb survives
         return _doctor_verdict("step", False, f"STEP roundtrip failed: {exc}", "facet pull cad")
     detail = "a 10 mm box exports to STEP and reads back valid with one solid"
-    return _doctor_verdict("step", ok, detail if ok else f"{detail}: got valid={ok}")
+    if valid and solids == 1:
+        return _doctor_verdict("step", True, detail)
+    return _doctor_verdict("step", False, f"{detail}: got valid={valid} solids={solids}")
 
 
 def _doctor_dxf() -> dict[str, Any]:

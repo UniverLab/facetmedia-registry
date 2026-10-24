@@ -96,7 +96,8 @@ required file is fine.
 ## Judging the result
 
 - Set `expect-volume-mm3` (with `volume-rel-tol`, default 0.1 %) or
-  `expect-bbox-mm` (with `bbox-abs-tol-mm`, default 0.01 mm) so `verify`
+  `expect-bbox-mm` (one `{ x, y, z }` item — `expect-bbox-mm = [{ x = 60,
+  y = 40, z = 50 }]` — with `bbox-abs-tol-mm`, default 0.01 mm) so `verify`
   can fail: it re-imports the STEP, checks `isValid()`, at least one solid,
   and the volume and bbox against those expectations. A wrong feature that
   keeps the volume right shows up in `expect-bbox-mm`; one that keeps both
