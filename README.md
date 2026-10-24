@@ -22,6 +22,7 @@ snapshot, offline; the formats are defined by the core:
 | Facet | Package | What it does |
 |-------|---------|--------------|
 | audio | ffmpeg | Normalise, mix and convert audio clips with FFmpeg, with loudness and duration verified |
+| cad | cad | 3D parts and 2D plans from CadQuery or ezdxf scripts, checked by volume, bounding box and DXF audit |
 | text | ascii | ASCII art from images and figlet banners in the lab's font |
 | voice | kokoro | Narration from text on CPU (Spanish and English), checked by transcription |
 | voice | whisper | Transcripts and subtitles from audio on CPU, checked by confidence or reference text |

@@ -1,0 +1,134 @@
+name = "cad"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "CadQuery project · Manfred Moitzi (ezdxf)"
+tool_name = "CadQuery + ezdxf"
+description = "3D parts and 2D plans from CadQuery or ezdxf scripts, checked by volume, bounding box and DXF audit"
+facet = "cad"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 2
+disk_gb = 1.5
+exclusive = false
+platforms = ["linux"]
+host_libs = [
+  "libGL.so.1",
+  "libGLX.so.0",
+  "libGLdispatch.so.0",
+  "libX11.so.6",
+  "libXau.so.6",
+  "libXdmcp.so.6",
+  "libxcb.so.1",
+]
+host_hint = "sudo apt install libgl1 libx11-6"
+
+[[licenses]]
+subject = "cadquery"
+spdx = "Apache-2.0"
+
+[[licenses]]
+subject = "cadquery-ocp"
+spdx = "Apache-2.0"
+
+[[licenses]]
+subject = "OpenCASCADE (in cadquery-ocp)"
+spdx = "LGPL-2.1-only WITH OCCT-exception-1.0"
+
+[[licenses]]
+subject = "ezdxf"
+spdx = "MIT"
+
+[[licenses]]
+subject = "matplotlib"
+spdx = "PSF-2.0"
+
+[capabilities.solid]
+summary = "3D part from a CadQuery script: STEP, STL and a line view"
+kind = "cad"
+
+[capabilities.solid.inputs.script]
+type = "path"
+required = true
+description = "CadQuery script, run unchanged as <env python> -I <script> <out_dir>/<name>; must write <name>.step and may write <name>.stl and <name>.svg."
+
+[capabilities.solid.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name: writes <name>.step, <name>.stl and <name>.svg."
+
+[capabilities.solid.inputs.expect-volume-mm3]
+type = "number"
+description = "Expected solid volume in mm³; verify fails when the part is off by more than volume-rel-tol."
+
+[capabilities.solid.inputs.volume-rel-tol]
+type = "number"
+default = 0.001
+min = 0
+max = 0.1
+description = "Relative tolerance on expect-volume-mm3 (0.001 = 0.1 %)."
+
+[capabilities.solid.inputs.expect-bbox-mm]
+type = "array"
+description = "Expected bounding box [x, y, z] in mm; verify fails when any side is off by more than bbox-abs-tol-mm."
+
+[capabilities.solid.inputs.expect-bbox-mm.items.x]
+type = "number"
+required = true
+description = "Bounding box size along X in mm."
+
+[capabilities.solid.inputs.expect-bbox-mm.items.y]
+type = "number"
+required = true
+description = "Bounding box size along Y in mm."
+
+[capabilities.solid.inputs.expect-bbox-mm.items.z]
+type = "number"
+required = true
+description = "Bounding box size along Z in mm."
+
+[capabilities.solid.inputs.bbox-abs-tol-mm]
+type = "number"
+default = 0.01
+min = 0
+description = "Absolute tolerance on expect-bbox-mm, in mm."
+
+[capabilities.solid.preview]
+viewer = "cad"
+
+[capabilities.drawing]
+summary = "2D plan from an ezdxf script: DXF with an audit, SVG and PNG views"
+kind = "cad"
+
+[capabilities.drawing.inputs.script]
+type = "path"
+required = true
+description = "ezdxf script, run unchanged as <env python> -I <script> <out_dir>/<name>; must write <name>.dxf and may write <name>.svg and <name>.png."
+
+[capabilities.drawing.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name: writes <name>.dxf, <name>.svg and <name>.png."
+
+[capabilities.drawing.inputs.expect-layers]
+type = "array"
+description = "Layers the DXF must contain; verify fails when one is missing."
+
+[capabilities.drawing.inputs.expect-layers.items.layer]
+type = "string"
+required = true
+description = "Layer name the plan must draw on."
+
+[capabilities.drawing.preview]
+viewer = "cad"

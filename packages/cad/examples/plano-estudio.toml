@@ -1,0 +1,10 @@
+[inputs]
+script = "plano-estudio.py"
+name = "plano-estudio"
+expect-layers = [
+  { layer = "muros" },
+  { layer = "aberturas" },
+  { layer = "mobiliario" },
+  { layer = "cotas" },
+  { layer = "textos" },
+]

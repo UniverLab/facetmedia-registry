@@ -1,0 +1,4 @@
+[inputs]
+script = "escuadra.py"
+name = "escuadra"
+expect-volume-mm3 = 20805
