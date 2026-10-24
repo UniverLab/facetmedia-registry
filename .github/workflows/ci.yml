@@ -1,0 +1,87 @@
+# Pull-request gate only: never on branch pushes, never on schedule.
+# Actions are pinned by commit SHA as in UniverLab/workflows.
+name: ci
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # The core ref CI validates against; the ship queue switches this to the
+  # released package.
+  FACETMEDIA_REF: feature/v0.1
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Ruff format
+        run: uv run ruff format --check .
+
+      - name: Ruff check
+        run: uv run ruff check .
+
+      # The core rejects an empty index (index.toml/packages/min_items), so
+      # validate runs only once a package.toml exists.
+      - name: Validate registry manifests
+        run: |
+          if find packages -name package.toml -print -quit | grep -q .; then
+            uvx --from "git+https://github.com/UniverLab/facetmedia@${FACETMEDIA_REF}" facet registry validate . --json
+          else
+            echo "registry: no packages yet"
+          fi
+
+      # Per package: the lock matches its pyproject, and its locked set has
+      # no known vulnerabilities. Licences are declared in each package.toml.
+      - name: Package locks and audits
+        run: |
+          set -euo pipefail
+          for f in packages/*/pyproject.toml; do
+            [ -e "$f" ] || continue
+            p=$(dirname "$f")
+            echo "== ${p}: lock check =="
+            uv lock --check --project "$p"
+            echo "== ${p}: pip-audit =="
+            uv export --frozen --no-hashes --format requirements-txt --project "$p" > req.txt
+            uvx pip-audit --disable-pip --no-deps --strict -r req.txt
+          done
+
+      # The lab quality gate, single definition in UniverLab/workflows, run
+      # as python-ci.yml runs it. Audit, deptry and licences are off at the
+      # root: the root project holds tooling only — each package's audit is
+      # the step above, and each package declares and checks its licences in
+      # its package.toml.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: UniverLab/workflows
+          ref: main
+          path: .univerlab-workflows
+          persist-credentials: false
+
+      - name: Quality gate
+        env:
+          QUALITY_SRC_PATHS: packages scripts
+          QUALITY_TEST_PATHS: tests
+          QUALITY_DEPTRY: "0"
+          QUALITY_AUDIT: "0"
+          QUALITY_LICENSES: "0"
+        run: |
+          if find packages scripts -name '*.py' -print -quit | grep -q .; then
+            bash .univerlab-workflows/scripts/python-quality.sh
+          else
+            echo "quality: no Python source yet"
+          fi

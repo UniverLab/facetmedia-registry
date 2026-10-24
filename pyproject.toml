@@ -1,0 +1,13 @@
+[project]
+name = "facetmedia-registry"
+version = "0.0.0"
+description = "Repository tooling for UniverLab/facetmedia-registry (packages are uv projects of their own)"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+
+[dependency-groups]
+dev = ["ruff>=0.8"]
+
+[tool.uv]
+package = false

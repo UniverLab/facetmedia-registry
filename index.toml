@@ -1,0 +1,4 @@
+# facetmedia-registry index — read by `facet update` from a pinned commit.
+# Packages are added here by later specs; the list stays empty until then.
+version = 1
+packages = []
