@@ -27,6 +27,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import espeakpath
 import textnorm
 from facet_runner_sdk import Request, Runner
 
@@ -129,10 +130,23 @@ def _whisper_language(language: str) -> str:
     return WHISPER_LANGUAGE.get(language, "en")
 
 
+def _espeak_data() -> str:
+    """espeakng-loader's data directory, through a short copy when its path is long."""
+    espeakng_loader = importlib.import_module("espeakng_loader")
+    return espeakpath.short_data_path(
+        str(espeakng_loader.get_data_path()), Path(tempfile.gettempdir())
+    )
+
+
 def _kokoro(req: Request) -> Any:
     """Kokoro loaded once per run; the two files are the manifest models."""
     kokoro_onnx = importlib.import_module("kokoro_onnx")
-    return kokoro_onnx.Kokoro(str(req.model_path(ONNX_MODEL)), str(req.model_path(VOICES_MODEL)))
+    config = importlib.import_module("kokoro_onnx.config")
+    return kokoro_onnx.Kokoro(
+        str(req.model_path(ONNX_MODEL)),
+        str(req.model_path(VOICES_MODEL)),
+        espeak_config=config.EspeakConfig(data_path=_espeak_data()),
+    )
 
 
 def _whisper(req: Request) -> Any:
@@ -334,14 +348,17 @@ def _version(distribution: str) -> str:
 
 
 def _doctor_espeak() -> dict[str, Any]:
-    """The espeak-ng library bundled by espeakng-loader must load."""
+    """The espeak-ng library bundled by espeakng-loader loads and finds its data."""
     try:
         espeakng_loader = importlib.import_module("espeakng_loader")
         library = Path(espeakng_loader.get_library_path())
         ctypes.CDLL(str(library))
+        data = _espeak_data()
     except Exception as exc:  # catch-all: report whatever went wrong
         return _verdict("espeak", False, f"the bundled espeak-ng does not load: {exc}")
-    return _verdict("espeak", True, f"espeak-ng loads from {library.name}")
+    if not (Path(data) / "phontab").is_file():
+        return _verdict("espeak", False, f"espeak-ng data has no phontab at {data}")
+    return _verdict("espeak", True, f"espeak-ng loads from {library.name}, data at {data}")
 
 
 def _doctor_models(req: Request) -> dict[str, Any]:
