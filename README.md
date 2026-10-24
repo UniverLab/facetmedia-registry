@@ -22,6 +22,7 @@ snapshot, offline; the formats are defined by the core:
 | Facet | Package | What it does |
 |-------|---------|--------------|
 | text | ascii | ASCII art from images and figlet banners in the lab's font |
+| voice | kokoro | Narration from text on CPU (Spanish and English), checked by transcription |
 
 ## How facet uses this repository
 

@@ -1,0 +1,18 @@
+[project]
+name = "facet-kokoro"
+version = "0.1.0"
+description = "Narration from text on CPU (Spanish and English), checked by transcription."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "kokoro-onnx==0.6.1",
+  "soundfile==0.13.1",
+  "faster-whisper==1.2.1",
+  "av==18.1.0",
+  "pyloudnorm==0.2.0",
+  "pillow==13.0.0",
+]
+
+[tool.uv]
+package = false

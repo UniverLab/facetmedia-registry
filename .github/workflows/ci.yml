@@ -35,6 +35,9 @@ jobs:
       - name: Ruff check
         run: uv run ruff check .
 
+      - name: Tests
+        run: uv run pytest -q
+
       - name: Check preview schemas
         run: uv run scripts/check-previews.py
 

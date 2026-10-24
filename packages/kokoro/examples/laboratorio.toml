@@ -1,0 +1,7 @@
+[inputs]
+voice = "ef_dora"
+language = "es"
+
+[[inputs.clip]]
+name = "laboratorio"
+text = "En este laboratorio probamos una voz en español generada localmente. Queremos medir si se entiende bien, cuánto tarda y cómo suena frente a las voces que ya usamos."

@@ -1,0 +1,227 @@
+name = "kokoro"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "hexgrad (model) · thewh1teagle (kokoro-onnx)"
+tool_name = "Kokoro TTS (kokoro-onnx)"
+description = "Narration from text on CPU (Spanish and English), checked by transcription"
+facet = "voice"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 4
+disk_gb = 1.5
+exclusive = true
+platforms = ["linux"]
+
+[[licenses]]
+subject = "kokoro-onnx"
+spdx = "MIT"
+
+[[licenses]]
+subject = "onnxruntime"
+spdx = "MIT"
+
+[[licenses]]
+subject = "phonemizer"
+spdx = "GPL-3.0-or-later"
+
+[[licenses]]
+subject = "espeak-ng (bundled by espeakng-loader)"
+spdx = "GPL-3.0-or-later"
+
+[[licenses]]
+subject = "espeakng-loader"
+spdx = "MIT"
+
+[[licenses]]
+subject = "faster-whisper"
+spdx = "MIT"
+
+[[licenses]]
+subject = "ctranslate2"
+spdx = "MIT"
+
+[[licenses]]
+subject = "soundfile"
+spdx = "BSD-3-Clause"
+
+[[licenses]]
+subject = "pyloudnorm"
+spdx = "MIT"
+
+[[licenses]]
+subject = "pillow"
+spdx = "MIT-CMU"
+
+[[licenses]]
+subject = "numpy"
+spdx = "BSD-3-Clause"
+
+[[models]]
+id = "kokoro-82m-v1.0-onnx"
+url = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/kokoro-v1.0.onnx"
+sha256 = "beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a"
+bytes = 325505369
+path = "kokoro-82m-v1.0-onnx/kokoro-v1.0.onnx"
+spdx = "Apache-2.0"
+commercial_use = true
+requires_acceptance = false
+terms_url = "https://huggingface.co/hexgrad/Kokoro-82M"
+
+[[models]]
+id = "kokoro-voices-v1.0"
+url = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/voices-v1.0.bin"
+sha256 = "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d"
+bytes = 28214398
+path = "kokoro-voices-v1.0/voices-v1.0.bin"
+spdx = "Apache-2.0"
+commercial_use = true
+requires_acceptance = false
+terms_url = "https://huggingface.co/hexgrad/Kokoro-82M"
+
+[[models]]
+id = "faster-whisper-small"
+hf_repo = "Systran/faster-whisper-small"
+revision = "536b0662742c02347bc0e980a01041f333bce120"
+bytes = 486212372
+spdx = "MIT"
+commercial_use = true
+requires_acceptance = false
+terms_url = "https://huggingface.co/Systran/faster-whisper-small"
+
+[capabilities.speak]
+summary = "Narration from text on CPU (Spanish and English), checked by transcription"
+kind = "audio"
+
+[capabilities.speak.inputs.voice]
+type = "enum"
+values = [
+  "ef_dora",
+  "em_alex",
+  "em_santa",
+  "af_alloy",
+  "af_aoede",
+  "af_bella",
+  "af_heart",
+  "af_jessica",
+  "af_kore",
+  "af_nicole",
+  "af_nova",
+  "af_river",
+  "af_sarah",
+  "af_sky",
+  "am_adam",
+  "am_echo",
+  "am_eric",
+  "am_fenrir",
+  "am_liam",
+  "am_michael",
+  "am_onyx",
+  "am_puck",
+  "am_santa",
+  "bf_alice",
+  "bf_emma",
+  "bf_isabella",
+  "bf_lily",
+  "bm_daniel",
+  "bm_fable",
+  "bm_george",
+  "bm_lewis",
+]
+default = "ef_dora"
+description = "Kokoro voice; its first letter must match language (e → es, a → en-us, b → en-gb)."
+
+[capabilities.speak.inputs.language]
+type = "enum"
+values = ["es", "en-us", "en-gb"]
+default = "es"
+description = "Narration language."
+
+[capabilities.speak.inputs.speed]
+type = "number"
+default = 1.0
+min = 0.5
+max = 2.0
+description = "Speaking rate."
+
+[capabilities.speak.inputs.target-lufs]
+type = "number"
+default = -16.0
+min = -30
+max = -10
+description = "Normalisation target in LUFS, capped so the peak stays at or below -1.0 dBFS."
+
+[capabilities.speak.inputs.clip]
+type = "array"
+min_items = 1
+required = true
+description = "Clips to narrate; each writes <name>.wav."
+
+[capabilities.speak.inputs.clip.items.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name."
+
+[capabilities.speak.inputs.clip.items.text]
+type = "string"
+required = true
+description = "Narration text."
+
+[capabilities.speak.inputs.clip.items.voice]
+type = "enum"
+values = [
+  "ef_dora",
+  "em_alex",
+  "em_santa",
+  "af_alloy",
+  "af_aoede",
+  "af_bella",
+  "af_heart",
+  "af_jessica",
+  "af_kore",
+  "af_nicole",
+  "af_nova",
+  "af_river",
+  "af_sarah",
+  "af_sky",
+  "am_adam",
+  "am_echo",
+  "am_eric",
+  "am_fenrir",
+  "am_liam",
+  "am_michael",
+  "am_onyx",
+  "am_puck",
+  "am_santa",
+  "bf_alice",
+  "bf_emma",
+  "bf_isabella",
+  "bf_lily",
+  "bm_daniel",
+  "bm_fable",
+  "bm_george",
+  "bm_lewis",
+]
+description = "Voice for this clip; overrides the piece voice."
+
+[capabilities.speak.inputs.clip.items.speed]
+type = "number"
+min = 0.5
+max = 2.0
+description = "Speed for this clip; overrides the piece speed."
+
+[capabilities.speak.verify]
+thresholds = { wer_max = 0.05 }
+
+[capabilities.speak.preview]
+viewer = "audio"

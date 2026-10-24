@@ -101,7 +101,45 @@ def check_pair(schema_path: Path) -> bool:
     return check_invalid(kind, schema) and ok
 
 
+def check_file(path: Path) -> bool:
+    """Validate one preview file against the schema of its declared ``kind``.
+
+    Package specs use this on the preview files their runners write:
+    ``uv run scripts/check-previews.py build/clip.wav.preview.json``.
+    """
+    try:
+        data = read_json(path)
+    except (OSError, ValueError) as exc:
+        print(f"FAIL {path}: unreadable ({exc})")
+        return False
+    if not isinstance(data, dict):
+        print(f"FAIL {path}: the preview is not a JSON object")
+        return False
+    kind = data.get("kind")
+    if not isinstance(kind, str) or not kind:
+        print(f"FAIL {path}: the preview names no kind")
+        return False
+    schema_path = SDIR / f"{kind}.schema.json"
+    if not schema_path.is_file():
+        print(f"FAIL {path}: no {schema_path.name} for kind {kind!r}")
+        return False
+    try:
+        schema = read_json(schema_path)
+        Draft202012Validator(schema).validate(data)
+    except (OSError, ValueError, SchemaError, ValidationError) as exc:
+        print(f"FAIL {path.name}: should pass ({exc})")
+        return False
+    print(f"OK {path.name}: valid against {schema_path.name}")
+    return True
+
+
 def main() -> int:
+    files = [Path(argument) for argument in sys.argv[1:]]
+    if files:
+        ok = True
+        for path in files:
+            ok = check_file(path) and ok
+        return 0 if ok else 1
     schemas = sorted(SDIR.glob("*.schema.json"))
     if not schemas:
         print("FAIL: no schemas found")

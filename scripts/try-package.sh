@@ -19,6 +19,9 @@ pkg=$1
 cap=$2
 piece=$3
 shift 3
+# The capability may be given bare ("speak") or fully qualified
+# ("kokoro.speak"), as the spec's heavy test prints it.
+cap=${cap#"${pkg}."}
 
 keep_home=0
 for arg in "$@"; do
