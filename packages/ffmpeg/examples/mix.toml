@@ -1,0 +1,15 @@
+# The voice over a pink-noise ambience bed, the bed ducked under the voice.
+[inputs]
+name = "voz-sobre-fondo"
+ducking = true
+duck-db = -12.0
+target-lufs = -16.0
+
+[[inputs.layer]]
+audio = "voz.flac"
+role = "voice"
+start-s = 2.0
+
+[[inputs.layer]]
+audio = "fondo.flac"
+role = "bed"

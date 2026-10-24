@@ -1,0 +1,206 @@
+name = "ffmpeg"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "FFmpeg project · imageio (imageio-ffmpeg)"
+tool_name = "FFmpeg (imageio-ffmpeg build)"
+description = "Normalise, mix and convert audio clips with FFmpeg, with loudness and duration verified"
+facet = "audio"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 0.3
+exclusive = false
+platforms = ["linux"]
+
+[[licenses]]
+subject = "imageio-ffmpeg"
+spdx = "BSD-2-Clause"
+
+[[licenses]]
+subject = "FFmpeg (binary bundled in imageio-ffmpeg)"
+spdx = "GPL-3.0-or-later"
+
+[[licenses]]
+subject = "numpy"
+spdx = "BSD-3-Clause"
+
+[[licenses]]
+subject = "pyloudnorm"
+spdx = "MIT"
+
+[[licenses]]
+subject = "soundfile"
+spdx = "BSD-3-Clause"
+
+[capabilities.normalize]
+summary = "Bring clips to a loudness target (EBU R128, two-pass) without clipping"
+kind = "audio"
+
+[capabilities.normalize.inputs.clip]
+type = "array"
+min_items = 1
+required = true
+description = "Clips to normalise; each writes <name>.wav."
+
+[capabilities.normalize.inputs.clip.items.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name."
+
+[capabilities.normalize.inputs.clip.items.audio]
+type = "path"
+required = true
+description = "Clip to normalise; any format the bundled FFmpeg decodes."
+
+[capabilities.normalize.inputs.target-lufs]
+type = "number"
+default = -16.0
+min = -30
+max = -10
+description = "Integrated loudness target in LUFS (web and podcasts use -16, broadcast -23)."
+
+[capabilities.normalize.inputs.true-peak-db]
+type = "number"
+default = -1.5
+min = -6
+max = 0
+description = "True-peak ceiling in dBFS; the second pass never overshoots it."
+
+[capabilities.normalize.inputs.sample-rate-hz]
+type = "enum"
+values = ["24000", "44100", "48000"]
+default = "48000"
+description = "Output sample rate."
+
+[capabilities.normalize.verify]
+thresholds = { lufs_tol = 1.0 }
+
+[capabilities.normalize.preview]
+viewer = "audio"
+
+[capabilities.mix]
+summary = "Lay voice layers over a music or ambience bed, with the bed ducked under the voice"
+kind = "audio"
+
+[capabilities.mix.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.wav."
+
+[capabilities.mix.inputs.layer]
+type = "array"
+min_items = 1
+required = true
+description = "Layers to mix; voice layers are summed, beds are ducked under them."
+
+[capabilities.mix.inputs.layer.items.audio]
+type = "path"
+required = true
+description = "Layer audio; any format the bundled FFmpeg decodes."
+
+[capabilities.mix.inputs.layer.items.role]
+type = "enum"
+values = ["voice", "bed"]
+required = true
+description = "voice layers sit on top; bed layers are ducked under the voices."
+
+[capabilities.mix.inputs.layer.items.gain-db]
+type = "number"
+default = 0.0
+min = -40
+max = 12
+description = "Layer gain in dB before mixing."
+
+[capabilities.mix.inputs.layer.items.start-s]
+type = "number"
+default = 0.0
+min = 0
+description = "Layer start offset in seconds from the mix start."
+
+[capabilities.mix.inputs.ducking]
+type = "boolean"
+default = true
+description = "Duck the beds under the voices with a sidechain compressor."
+
+[capabilities.mix.inputs.duck-db]
+type = "number"
+default = -12.0
+min = -30
+max = 0
+description = "How far the beds drop while the voice sounds, in dB."
+
+[capabilities.mix.inputs.target-lufs]
+type = "number"
+min = -30
+max = -10
+description = "Normalise the finished mix to this LUFS when given."
+
+[capabilities.mix.verify]
+thresholds = { lufs_tol = 1.0 }
+
+[capabilities.mix.preview]
+viewer = "audio"
+
+[capabilities.convert]
+summary = "Convert, resample or cut a clip"
+kind = "audio"
+
+[capabilities.convert.inputs.audio]
+type = "path"
+required = true
+description = "Clip to convert; any format the bundled FFmpeg decodes."
+
+[capabilities.convert.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.<ext>."
+
+[capabilities.convert.inputs.format]
+type = "enum"
+values = ["wav", "flac", "mp3", "ogg"]
+default = "wav"
+description = "Container/codec the bundled FFmpeg build can encode."
+
+[capabilities.convert.inputs.sample-rate-hz]
+type = "integer"
+min = 8000
+max = 96000
+description = "Resample to this rate; the source's rate when omitted."
+
+[capabilities.convert.inputs.channels]
+type = "enum"
+values = ["1", "2"]
+description = "Channel count; the source's when omitted."
+
+[capabilities.convert.inputs.start-s]
+type = "number"
+min = 0
+description = "Cut: keep from this second onward."
+
+[capabilities.convert.inputs.end-s]
+type = "number"
+min = 0
+description = "Cut: keep up to this second."
+
+[capabilities.convert.inputs.bitrate-kbps]
+type = "integer"
+default = 128
+min = 32
+max = 320
+description = "Bitrate for the lossy formats (mp3, ogg)."
+
+[capabilities.convert.preview]
+viewer = "audio"

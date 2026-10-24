@@ -1,0 +1,9 @@
+# The lab's reference voice clip brought to the web/podcast loudness target.
+[inputs]
+target-lufs = -16.0
+true-peak-db = -1.5
+sample-rate-hz = "48000"
+
+[[inputs.clip]]
+name = "voz-a-16"
+audio = "voz.flac"

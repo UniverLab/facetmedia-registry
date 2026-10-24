@@ -1,0 +1,16 @@
+[project]
+name = "facet-ffmpeg"
+version = "0.1.0"
+description = "Normalise, mix and convert audio clips with FFmpeg, with loudness and duration verified."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "imageio-ffmpeg==0.6.0",
+  "numpy==2.5.4",
+  "pyloudnorm==0.2.0",
+  "soundfile==0.13.1",
+]
+
+[tool.uv]
+package = false

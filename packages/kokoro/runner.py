@@ -62,7 +62,7 @@ DOCTOR_IMPORTS = (
 
 def _audio() -> Any:
     """The package's audio helpers, imported only when a verb needs them."""
-    return importlib.import_module("audio")
+    return importlib.import_module("audiopreview")
 
 
 def _tool() -> dict[str, str]:

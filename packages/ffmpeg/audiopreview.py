@@ -1,9 +1,13 @@
-"""Audio measurement and loudness for the kokoro package.
+"""Audio measurement and loudness for the audio preview.
 
 The runner keeps every pure-text function in ``textnorm``; this module is
 the signal side: loudness normalisation (ITU-R BS.1770 through pyloudnorm),
 the preview's waveform, momentary curve, silences and clipped samples.
 numpy, pyloudnorm and soundfile come from the package environment.
+
+Packages run in separate environments, so kokoro and ffmpeg each carry a
+byte-identical copy of this module; ``tests/test_audiopreview_copies.py``
+keeps the copies from drifting.
 """
 
 from __future__ import annotations
@@ -39,7 +43,7 @@ _SILENCE_DBFS = -160.0
 
 
 def read_wav(path: Path) -> tuple[numpy.ndarray, int]:
-    """The clip as mono float64 in [-1, 1] plus its sample rate."""
+    """The clip as float64 in [-1, 1] (mono, or (samples, channels)) and its rate."""
     data, rate = soundfile.read(str(path), dtype="float64")
     return data, int(rate)
 
@@ -50,7 +54,7 @@ def write_wav(path: Path, samples: numpy.ndarray, rate: int) -> None:
 
 
 def integrated_lufs(samples: numpy.ndarray, rate: int) -> float:
-    """Integrated loudness (BS.1770); pads short audio to one 400 ms block."""
+    """Integrated loudness (BS.1770) on the raw signal; pads short audio to one 400 ms block."""
     window = int(MOMENTARY_WINDOW_S * rate)
     data = samples if len(samples) >= window else _pad(samples, window)
     try:
@@ -81,8 +85,14 @@ def duration_s(samples: numpy.ndarray, rate: int) -> float:
     return len(samples) / rate if rate else 0.0
 
 
+def channels(samples: numpy.ndarray) -> int:
+    """1 for mono, else the second axis' width."""
+    return 1 if samples.ndim == 1 else int(samples.shape[1])
+
+
 def waveform(samples: numpy.ndarray) -> dict[str, Any]:
-    """Per-bin min and max peaks over exactly ``WAVEFORM_BINS`` bins."""
+    """Per-bin min and max peaks over exactly ``WAVEFORM_BINS`` bins, from the channel mean."""
+    samples = _mono(samples)
     count = len(samples)
     if count == 0:
         return {"bins": WAVEFORM_BINS, "min": [0.0] * WAVEFORM_BINS, "max": [0.0] * WAVEFORM_BINS}
@@ -100,6 +110,7 @@ def waveform(samples: numpy.ndarray) -> dict[str, Any]:
 
 def momentary(samples: numpy.ndarray, rate: int) -> list[float | None]:
     """Momentary loudness: 400 ms windows every 100 ms, null below -70 LUFS."""
+    samples = _mono(samples)
     window = int(MOMENTARY_WINDOW_S * rate)
     step = int(MOMENTARY_STEP_S * rate)
     meter = pyln.Meter(rate)
@@ -119,6 +130,7 @@ def momentary(samples: numpy.ndarray, rate: int) -> list[float | None]:
 
 def silences(samples: numpy.ndarray, rate: int) -> list[dict[str, float]]:
     """Stretches longer than 1 s whose 10 ms peak stays below -50 dBFS."""
+    samples = _mono(samples)
     frame = max(int(SILENCE_FRAME_S * rate), 1)
     threshold = 10 ** (SILENCE_FLOOR_DBFS / 20)
     quiet = _quiet_frames(samples, frame, threshold)
@@ -131,6 +143,13 @@ def silences(samples: numpy.ndarray, rate: int) -> list[dict[str, float]]:
             stretches.extend(_silence_stretch(samples, rate, frame, start, index))
             start = None
     return stretches
+
+
+def _mono(samples: numpy.ndarray) -> numpy.ndarray:
+    """One waveform: the channel mean, identity for mono."""
+    if samples.ndim == 1:
+        return samples
+    return samples.mean(axis=1)
 
 
 def _quiet_frames(samples: numpy.ndarray, frame: int, threshold: float) -> list[bool]:
@@ -159,7 +178,8 @@ def clipped_samples(samples: numpy.ndarray) -> int:
 
 
 def _pad(chunk: numpy.ndarray, size: int) -> numpy.ndarray:
-    """Zero-pad ``chunk`` (or cut it) to exactly ``size`` samples."""
+    """Zero-pad ``chunk`` (or cut it) to exactly ``size`` samples, along the sample axis only."""
     if len(chunk) >= size:
         return chunk[:size]
-    return numpy.pad(chunk, (0, size - len(chunk)))
+    pad = ((0, size - len(chunk)),) + ((0, 0),) * (chunk.ndim - 1)
+    return numpy.pad(chunk, pad)

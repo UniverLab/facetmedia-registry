@@ -5,6 +5,9 @@ version = 1
 name = "ascii"
 
 [[packages]]
+name = "ffmpeg"
+
+[[packages]]
 name = "kokoro"
 
 [[packages]]
