@@ -21,7 +21,7 @@ snapshot, offline; the formats are defined by the core:
 
 | Facet | Package | What it does |
 |-------|---------|--------------|
-| — | — | no packages yet |
+| text | ascii | ASCII art from images and figlet banners in the lab's font |
 
 ## How facet uses this repository
 

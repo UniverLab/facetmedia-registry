@@ -1,0 +1,127 @@
+name = "ascii"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "UniverLab"
+tool_name = "facet ascii (Pillow, NumPy, pyfiglet)"
+description = "ASCII art from images and figlet banners in the lab's font."
+facet = "text"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 0.2
+exclusive = false
+platforms = ["linux"]
+
+[[licenses]]
+subject = "pillow"
+spdx = "MIT-CMU"
+
+[[licenses]]
+subject = "numpy"
+spdx = "BSD-3-Clause"
+
+[[licenses]]
+subject = "pyfiglet"
+spdx = "MIT"
+
+[[licenses]]
+subject = "dos_rebel font (bundled in pyfiglet)"
+spdx = "LicenseRef-DOS-Rebel-unspecified"
+
+[[models]]
+id = "sometype-mono"
+spdx = "OFL-1.1"
+commercial_use = true
+requires_acceptance = false
+terms_url = "https://github.com/google/fonts/blob/main/ofl/sometypemono/OFL.txt"
+url = "https://raw.githubusercontent.com/google/fonts/8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5/ofl/sometypemono/SometypeMono%5Bwght%5D.ttf"
+sha256 = "4095fd328c988392fb00ab867134e69beff0fc16de66ecdd9e7e232c16f16f25"
+bytes = 64308
+path = "sometype-mono/SometypeMono.ttf"
+
+[capabilities.image]
+summary = "Image to ASCII art (density, stroke, braille or shape matching), checked by re-rendering."
+kind = "text"
+
+[capabilities.image.inputs.image]
+type = "path"
+required = true
+description = "Source image (PNG, JPEG or WebP)."
+
+[capabilities.image.inputs.width]
+type = "integer"
+default = 80
+min = 16
+max = 400
+description = "Output width in columns."
+
+[capabilities.image.inputs.mode]
+type = "enum"
+values = ["densidad", "trazo", "braille", "forma"]
+default = "forma"
+description = "How source cells map to characters."
+
+[capabilities.image.inputs.invert]
+type = "boolean"
+default = false
+description = "Light ink on a dark source."
+
+[capabilities.image.inputs.color]
+type = "enum"
+values = ["none", "ansi"]
+default = "none"
+description = "Plain text or 24-bit ANSI foreground colour."
+
+[capabilities.image.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name."
+
+[capabilities.image.verify]
+thresholds = { similarity_min = 0.55 }
+
+[capabilities.image.preview]
+viewer = "generic"
+
+[capabilities.banner]
+summary = "A text banner in the lab's figlet font (DOS Rebel by default)."
+kind = "text"
+
+[capabilities.banner.inputs.text]
+type = "string"
+required = true
+pattern = "^.{1,40}$"
+description = "Banner text, 1 to 40 characters."
+
+[capabilities.banner.inputs.font]
+type = "enum"
+values = ["dos_rebel", "ansi_shadow", "standard", "small"]
+default = "dos_rebel"
+description = "Figlet font."
+
+[capabilities.banner.inputs.width]
+type = "integer"
+default = 120
+min = 20
+max = 400
+description = "Maximum line width."
+
+[capabilities.banner.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name."
+
+[capabilities.banner.preview]
+viewer = "generic"
