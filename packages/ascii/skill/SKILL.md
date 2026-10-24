@@ -35,13 +35,17 @@ invert = true
 name = "lamina"
 ```
 
+Run it with `--out build/`: without it the rendered `<name>.png` lands
+in the piece's directory and overwrites the source plate.
+
 `ascii.image` also takes `invert` (light ink on a dark source) and
 `color` (`none` or `ansi` 24-bit foreground). `ascii.banner` takes
 `font` (`dos_rebel`, `ansi_shadow`, `standard`, `small`) and `width`.
 
 ## Judging the result
 
-`ascii.image` re-renders the `.txt` with the glyph atlas, downsamples
+`ascii.image` re-renders the `.txt` as the art it is (glyphs for ASCII,
+dot cells for braille, filled cells for `trazo`'s marks), downsamples
 both it and the source to the grid, and reports the Pearson correlation
 as `similarity`. It passes at `similarity_min = 0.55` with every line
 exactly `columns` wide and the ink ratio between 0.02 and 0.98. When it

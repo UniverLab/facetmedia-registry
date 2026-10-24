@@ -4,8 +4,10 @@ Every mode converts a synthetic 64x64 image (a black disc on white) to
 the expected grid size with a disc-shaped ink pattern; ``forma``
 minimises the per-cell bitmap error by construction, so its shape error
 beats ``densidad``'s and its re-render similarity clears the manifest's
-0.55 floor. The ``canopy`` banner in ``dos_rebel`` equals the lab's
-wordmark fixture byte for byte.
+0.55 floor. Verify's re-render must stay meaningful for every mode:
+``braille`` decodes to dot cells and ``trazo``'s marks fill their cells,
+so neither re-renders to a blank grid. The ``canopy`` banner in
+``dos_rebel`` equals the lab's wordmark fixture byte for byte.
 """
 
 from __future__ import annotations
@@ -93,6 +95,28 @@ class TestModes(unittest.TestCase):
         similarity = art.pearson(
             art.downsample_to_grid(grey, WIDTH, 8),
             art.downsample_to_grid(re_rendered, WIDTH, 8),
+        )
+        self.assertGreaterEqual(similarity, 0.55)
+
+    def test_every_mode_re_renders_with_ink(self) -> None:
+        grey = disc()
+        atlas = art.glyph_atlas(FONT)
+        outputs = [
+            art.to_densidad(grey, WIDTH),
+            art.to_trazo(grey, WIDTH),
+            art.to_braille(grey, WIDTH),
+            art.to_forma(grey, WIDTH, atlas),
+        ]
+        for lines in outputs:
+            self.assertGreater(art.render_text_bitmap(lines, atlas).std(), 0.0)
+
+    def test_braille_similarity_clears_floor(self) -> None:
+        grey = disc()
+        atlas = art.glyph_atlas(FONT)
+        rendered = art.render_text_bitmap(art.to_braille(grey, WIDTH), atlas)
+        similarity = art.pearson(
+            art.downsample_to_grid(grey, WIDTH, 8),
+            art.downsample_to_grid(rendered, WIDTH, 8),
         )
         self.assertGreaterEqual(similarity, 0.55)
 

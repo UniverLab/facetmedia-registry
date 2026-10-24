@@ -200,12 +200,53 @@ def shape_error(grey: np.ndarray, width: int, atlas: Atlas, lines: list[str]) ->
     return total / max(1, rows * columns)
 
 
+#: The ``trazo`` marks: they fill their cell when the art is re-rendered.
+STROKE_CHARS = frozenset("─╲│╱·")
+
+
+def braille_dots(char: str) -> np.ndarray | None:
+    """The 4x2 dot bits of a braille character, or None outside U+2800."""
+    code = ord(char)
+    if not BRAILLE_BASE <= code <= BRAILLE_BASE + 0xFF:
+        return None
+    value = code - BRAILLE_BASE
+    return np.array([[bool(value & bit) for bit in row] for row in BRAILLE_BITS])
+
+
+def braille_cell(dots: np.ndarray, atlas: Atlas) -> np.ndarray:
+    """One braille character as ink: its 4x2 dots padded into the cell."""
+    sub_h, sub_w = atlas.cell_h // 4, atlas.cell_w // 2
+    return np.pad(
+        np.kron(dots, np.ones((sub_h, sub_w))),
+        ((0, atlas.cell_h - 4 * sub_h), (0, atlas.cell_w - 2 * sub_w)),
+    )
+
+
+def cell_bitmap(
+    char: str, glyphs: dict[str, np.ndarray], atlas: Atlas, blank: np.ndarray, solid: np.ndarray
+) -> np.ndarray:
+    """One character's ink cell: an atlas glyph, braille dots, a stroke, blank.
+
+    Every mode the package emits is re-renderable: ``densidad`` and
+    ``forma`` are printable ASCII, ``braille`` decodes to its dot bits,
+    and ``trazo``'s marks fill their cell.
+    """
+    glyph = glyphs.get(char)
+    if glyph is not None:
+        return glyph
+    dots = braille_dots(char)
+    if dots is not None:
+        return braille_cell(dots, atlas)
+    return solid if char in STROKE_CHARS else blank
+
+
 def render_text_bitmap(lines: list[str], atlas: Atlas) -> np.ndarray:
-    """Re-render text lines with the atlas (unknown characters stay blank)."""
+    """Re-render text lines as the art they are (unknown characters blank)."""
     rows = len(lines)
     columns = max((len(line) for line in lines), default=0)
-    table = {char: atlas.maps[i] for i, char in enumerate(atlas.chars)}
+    glyphs = {char: atlas.maps[i] for i, char in enumerate(atlas.chars)}
     blank = np.zeros((atlas.cell_h, atlas.cell_w), dtype=np.float64)
+    solid = np.ones((atlas.cell_h, atlas.cell_w), dtype=np.float64)
     canvas = np.zeros((rows * atlas.cell_h, columns * atlas.cell_w), dtype=np.float64)
     for r, line in enumerate(lines):
         for c in range(columns):
@@ -213,7 +254,7 @@ def render_text_bitmap(lines: list[str], atlas: Atlas) -> np.ndarray:
             canvas[
                 r * atlas.cell_h : (r + 1) * atlas.cell_h,
                 c * atlas.cell_w : (c + 1) * atlas.cell_w,
-            ] = table.get(char, blank)
+            ] = cell_bitmap(char, glyphs, atlas, blank, solid)
     return 1.0 - canvas  # back to grey: 0 is black, 1 is white
 
 

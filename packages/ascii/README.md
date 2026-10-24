@@ -45,15 +45,17 @@ all cells. `run` writes `<name>.txt` always (plain), `<name>.ans` when
 
 ## Verification and doctor
 
-`ascii.image` re-renders `<name>.txt` with the glyph atlas, downsamples
-both it and the source to the grid, and reports the Pearson correlation
-as `similarity`. It passes at `similarity_min = 0.55` with every line
-exactly `columns` wide and the ink ratio between 0.02 and 0.98, reporting
-`similarity`, `ink_ratio`, `columns`, `rows`. `ascii.banner` passes when
-re-running pyfiglet gives the same bytes, no line is wider than `width`,
-and one non-space character exists, reporting `columns`, `rows`. The
-generic preview (`<name>.txt.preview.json`) carries `columns`, `rows`,
-the mode or font, and for images the verification metrics:
+`ascii.image` re-renders `<name>.txt` as the art it is — Sometype Mono
+glyphs for ASCII, decoded dot cells for braille, filled cells for
+`trazo`'s marks — downsamples both it and the source to the grid, and
+reports the Pearson correlation as `similarity`. It passes at
+`similarity_min = 0.55` with every line exactly `columns` wide and the
+ink ratio between 0.02 and 0.98, reporting `similarity`, `ink_ratio`,
+`columns`, `rows`. `ascii.banner` passes when re-running pyfiglet gives
+the same bytes, no line is wider than `width`, and one non-space
+character exists, reporting `columns`, `rows`. The generic preview
+(`<name>.txt.preview.json`) carries `columns`, `rows`, the mode or font,
+and for images the verification metrics:
 
 ```json
 {"fields": {"charset_size": 95, "columns": 100, "ink_ratio": 0.7192, "mode": "forma", "rows": 50, "similarity": 0.9625421776568691}, "kind": "text", "preview": 1, "summary": "100×50 · forma · similarity 0.96"}
@@ -96,7 +98,10 @@ text = "canopy"
 name = "canopy"
 ```
 
-Its record (`canopy.txt.facet.json`, beside the asset):
+Its record (`canopy.txt.facet.json`, beside the asset; abridged here —
+the file also carries the record version, the asset path, the creation
+time, the facet and registry provenance, the model provenance, the
+params digest, the input files and the licence section):
 
 ```json
 {"bytes": 1178, "id": "sha256:d7849983b179b9bf052bae59e8446dd8079de6cb207642c7575791d3120f26bf", "kind": "text", "mime": "text/plain", "name": "canopy", "properties": {"columns": 60, "font": "dos_rebel", "rows": 9}, "provenance": {"capability": "ascii.banner", "params": {"font": "dos_rebel", "name": "canopy", "text": "canopy", "width": 120}, "package": {"name": "ascii", "version": "0.1.0"}, "tool": {"name": "facet ascii (Pillow, NumPy, pyfiglet)", "version": "0.1.0"}}, "verification": {"metrics": {"columns": 60, "rows": 9}, "status": "passed", "thresholds": {}, "verifier": "ascii-pyfiglet"}}
@@ -116,7 +121,8 @@ invert = true
 name = "lamina"
 ```
 
-Its record (`lamina.txt.facet.json`, beside the asset):
+Its record (`lamina.txt.facet.json`, beside the asset; abridged here,
+with the same extra sections as the banner's record above):
 
 ```json
 {"bytes": 5050, "id": "sha256:87d18776d1f2000ed91520cad4c900e9385f3af04aefb10869f1ad0920d72896", "kind": "text", "mime": "text/plain", "name": "lamina", "properties": {"charset_size": 95, "columns": 100, "mode": "forma", "rows": 50}, "provenance": {"capability": "ascii.image", "params": {"color": "none", "image": "../lamina.png", "invert": true, "mode": "forma", "name": "lamina", "width": 100}, "package": {"name": "ascii", "version": "0.1.0"}, "tool": {"name": "facet ascii (Pillow, NumPy, pyfiglet)", "version": "0.1.0"}}, "verification": {"metrics": {"columns": 100, "ink_ratio": 0.7192, "rows": 50, "similarity": 0.9625421776568691}, "status": "passed", "thresholds": {"similarity_min": 0.55}, "verifier": "ascii-rerender"}}

@@ -48,8 +48,8 @@ def _mono_font(req: Request) -> Path:
     return req.model_path(MODEL_ID)
 
 
-def _source_grey(params: dict[str, Any], base: Path) -> Any:
-    """The source as a 0..1 grey array, flipped when ``invert`` is set.
+def _image_file(params: dict[str, Any], base: Path) -> str:
+    """The piece's image path, resolved against the request's directory.
 
     Records keep the piece's relative image path, so a relative path
     resolves against the request's directory before loading.
@@ -57,8 +57,13 @@ def _source_grey(params: dict[str, Any], base: Path) -> Any:
     raw = str(params["image"])
     candidate = Path(raw)
     if not candidate.is_absolute() and (base / candidate).is_file():
-        raw = str(base / candidate)
-    grey, _ = art.load_image(raw)
+        return str(base / candidate)
+    return raw
+
+
+def _source_grey(params: dict[str, Any], base: Path) -> Any:
+    """The source as a 0..1 grey array, flipped when ``invert`` is set."""
+    grey, _ = art.load_image(_image_file(params, base))
     if bool(params.get("invert", False)):
         grey = 1.0 - grey
     return grey
@@ -114,7 +119,7 @@ def _run_image(req: Request, params: dict[str, Any]) -> dict[str, Any]:
         }
     ]
     if str(params.get("color", "none")) == "ansi":
-        _, rgb = art.load_image(str(params["image"]))
+        _, rgb = art.load_image(_image_file(params, req.piece_dir))
         tinted = art.apply_ansi(lines, art.sample_color(rgb, width))
         (req.out_dir / f"{name}.ans").write_text("\n".join(tinted) + "\n", encoding="utf-8")
         assets.append(
@@ -338,10 +343,26 @@ def doctor(req: Request) -> dict[str, Any]:
             "fix": "",
         }
     ]
+    _doctor_figlet(checks)
     font_path = _doctor_font(req, checks)
     if req.depth == "full":
         _doctor_full(req, checks, font_path)
     return {"checks": checks}
+
+
+def _doctor_figlet(checks: list[dict[str, Any]]) -> None:
+    """Append the figlet-font check; it never depends on the model."""
+    present = "dos_rebel" in pyfiglet.FigletFont.getFonts()
+    checks.append(
+        {
+            "name": "figlet_font",
+            "ok": present,
+            "detail": "dos_rebel is installed with pyfiglet"
+            if present
+            else "dos_rebel is not in pyfiglet's fonts",
+            "fix": "" if present else "facet pull ascii",
+        }
+    )
 
 
 def _doctor_font(req: Request, checks: list[dict[str, Any]]) -> Path | None:
@@ -387,17 +408,6 @@ def _doctor_font(req: Request, checks: list[dict[str, Any]]) -> Path | None:
             }
         )
         return None
-    present = "dos_rebel" in pyfiglet.FigletFont.getFonts()
-    checks.append(
-        {
-            "name": "figlet_font",
-            "ok": present,
-            "detail": "dos_rebel is installed with pyfiglet"
-            if present
-            else "dos_rebel is not in pyfiglet's fonts",
-            "fix": "" if present else "facet pull ascii",
-        }
-    )
     return font_path
 
 
