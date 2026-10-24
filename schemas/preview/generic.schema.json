@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://univerlab.org/facetmedia-registry/schemas/preview/generic.schema.json",
+  "title": "Generic preview",
+  "description": "Fallback preview file (<asset>.preview.json) for kinds without their own schema, including text.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["preview", "kind", "summary", "fields"],
+  "properties": {
+    "preview": {
+      "const": 1,
+      "description": "Preview format version."
+    },
+    "kind": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Asset kind."
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 160,
+      "description": "One-line summary for an agent."
+    },
+    "fields": {
+      "type": "object",
+      "additionalProperties": {"type": ["string", "number", "boolean", "null"]},
+      "description": "Scalar values describing the asset."
+    }
+  }
+}

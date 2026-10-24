@@ -35,6 +35,9 @@ jobs:
       - name: Ruff check
         run: uv run ruff check .
 
+      - name: Check preview schemas
+        run: uv run scripts/check-previews.py
+
       # The core rejects an empty index (index.toml/packages/min_items), so
       # validate runs only once a package.toml exists.
       - name: Validate registry manifests

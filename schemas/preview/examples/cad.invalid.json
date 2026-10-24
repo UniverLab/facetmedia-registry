@@ -1,0 +1,72 @@
+{
+  "preview": 1,
+  "kind": "cad",
+  "summary": "CAD preview of the lab escuadra: valid solid with 2 holes, 34 drawing entities.",
+  "solid": {
+    "valid": true,
+    "volume_mm3": 18432.5,
+    "bbox_mm": [
+      80,
+      40,
+      3
+    ],
+    "faces": 12,
+    "solids": 1,
+    "holes": [
+      {
+        "center_mm": [
+          20,
+          20,
+          1.5
+        ],
+        "diameter_mm": -4.2,
+        "axis": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "center_mm": [
+          60,
+          20,
+          1.5
+        ],
+        "diameter_mm": 4.2,
+        "axis": [
+          0,
+          0,
+          1
+        ]
+      }
+    ]
+  },
+  "drawing": {
+    "units": "mm",
+    "entities": 34,
+    "layers": [
+      {
+        "name": "0",
+        "entities": 20
+      },
+      {
+        "name": "holes",
+        "entities": 14
+      }
+    ],
+    "audit": {
+      "errors": 0,
+      "fixes": 0
+    }
+  },
+  "views": [
+    {
+      "file": "escuadra-iso.svg",
+      "label": "isometric"
+    },
+    {
+      "file": "escuadra-front.svg",
+      "label": "front"
+    }
+  ]
+}
