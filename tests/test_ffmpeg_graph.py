@@ -121,6 +121,23 @@ class TestMixFiltergraph(unittest.TestCase):
             "[l0]anull[vsum];[vsum]alimiter=limit=0.891251[out]",
         )
 
+    def test_bed_only_never_builds_an_empty_voice_sum(self) -> None:
+        got = graph.mix_filtergraph([bed(0.0, -6.0)], True, -12.0)
+        self.assertEqual(
+            got,
+            "[0:a]aformat=sample_rates=48000:channel_layouts=stereo,adelay=0|0,volume=-6dB[l0];"
+            "[l0]anull[mix];[mix]alimiter=limit=0.891251[out]",
+        )
+
+    def test_two_beds_sum_without_a_voice(self) -> None:
+        got = graph.mix_filtergraph([bed(0.0, 0.0), bed(1.0, -3.0)], True, -12.0)
+        self.assertEqual(
+            got,
+            "[0:a]aformat=sample_rates=48000:channel_layouts=stereo,adelay=0|0,volume=0dB[l0];"
+            "[1:a]aformat=sample_rates=48000:channel_layouts=stereo,adelay=1000|1000,volume=-3dB[l1];"
+            "[l0][l1]amix=inputs=2:normalize=0[mix];[mix]alimiter=limit=0.891251[out]",
+        )
+
 
 class TestDuckRatio(unittest.TestCase):
     def test_minus_twelve(self) -> None:

@@ -62,7 +62,9 @@ verification measures the decoded file). `mix` is one filtergraph: every
 layer is delayed (`adelay`) and scaled (`volume`), the voices are summed
 (`amix`, `normalize=0`), the beds are compressed with `sidechaincompress`
 keyed on the padded voice sum so they drop by about `duck-db` while the
-voice sounds, and the result passes `alimiter` at −1 dBFS. `convert` cuts
+voice sounds, and the result passes `alimiter` at −1 dBFS. A piece with
+only beds is legal too: the beds are simply summed and limited, with
+nothing to duck under. `convert` cuts
 with `-ss`/`-to` and encodes with the format's own encoder
 (`pcm_s16le`, `flac`, `libmp3lame`, `libopus`).
 

@@ -21,6 +21,7 @@ from __future__ import annotations
 import importlib
 import importlib.metadata
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -175,6 +176,11 @@ def _opt_int(params: Mapping[str, Any], key: str) -> int | None:
     return None if value is None else int(value)
 
 
+def _opt_str(params: Mapping[str, Any], key: str) -> str | None:
+    value = params.get(key)
+    return None if value is None else str(value)
+
+
 @runner.verb("run")
 def run(req: Request) -> dict[str, Any]:
     """Execute the capability: normalise, mix or convert with the bundled binary."""
@@ -259,7 +265,8 @@ def _run_mix(params: Mapping[str, Any], out_dir: Path) -> list[dict[str, Any]]:
         _ffmpeg(graph.mix_args(filtergraph, inputs, raw))
         out = out_dir / f"{name}.wav"
         if target is None:
-            raw.replace(out)
+            # move, not rename: /tmp may be another filesystem than the out dir.
+            shutil.move(str(raw), str(out))
         else:
             _two_pass(raw, out, target, MIX_TRUE_PEAK_DB, MIX_RATE_HZ, tmp)
         properties = _measure(out, tmp, name)
@@ -322,7 +329,7 @@ def _convert_params(params: Mapping[str, Any]) -> dict[str, Any]:
     }
     for key, kind in (
         ("sample-rate-hz", _opt_int),
-        ("channels", _opt_int),
+        ("channels", _opt_str),
         ("start-s", _opt_float),
         ("end-s", _opt_float),
     ):

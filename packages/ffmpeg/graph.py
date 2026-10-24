@@ -101,16 +101,25 @@ def measure_chain(target_lufs: float, true_peak_db: float) -> str:
 
 
 def mix_filtergraph(layers: Sequence[Mapping[str, object]], ducking: bool, duck_db: float) -> str:
-    """One filtergraph: layers delayed and scaled, voices summed, beds ducked, alimited."""
+    """One filtergraph: layers delayed and scaled, voices summed, beds ducked, alimited.
+
+    A piece without a voice is legal (a bed alone, or several beds), so
+    the beds form the mix directly: an ``amix`` with no voice sum to key
+    on would be ``amix=inputs=0``, which ffmpeg rejects.
+    """
     steps = [_layer_step(index, layer) for index, layer in enumerate(layers)]
     voices = [index for index, layer in enumerate(layers) if str(layer["role"]) == "voice"]
     beds = [index for index, layer in enumerate(layers) if str(layer["role"]) != "voice"]
+    if not voices:
+        steps.append(_sum_step(beds, "mix"))
+        steps.append(f"[mix]alimiter=limit={num(LIMIT)}[out]")
+        return ";".join(steps)
     steps.append(_sum_step(voices, "vsum"))
     if not beds:
         steps.append(f"[vsum]alimiter=limit={num(LIMIT)}[out]")
         return ";".join(steps)
     steps.append(_sum_step(beds, "bsum"))
-    if ducking and voices:
+    if ducking:
         steps.extend(_duck_steps(duck_db))
     else:
         steps.append("[vsum][bsum]amix=inputs=2:normalize=0[mix]")
