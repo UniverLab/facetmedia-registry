@@ -84,14 +84,15 @@ def duration_s(samples: numpy.ndarray, rate: int) -> float:
 def waveform(samples: numpy.ndarray) -> dict[str, Any]:
     """Per-bin min and max peaks over exactly ``WAVEFORM_BINS`` bins."""
     count = len(samples)
+    if count == 0:
+        return {"bins": WAVEFORM_BINS, "min": [0.0] * WAVEFORM_BINS, "max": [0.0] * WAVEFORM_BINS}
     mins: list[float] = []
     maxs: list[float] = []
     for index in range(WAVEFORM_BINS):
         start = index * count // WAVEFORM_BINS
         end = max((index + 1) * count // WAVEFORM_BINS, start + 1)
-        if start >= count:  # more bins than samples: repeat the last one
-            start = end = count - 1
-        chunk = samples[start:end]
+        # More bins than samples: repeat the last one.
+        chunk = samples[count - 1 : count] if start >= count else samples[start:end]
         mins.append(round(float(numpy.min(chunk)), 6))
         maxs.append(round(float(numpy.max(chunk)), 6))
     return {"bins": WAVEFORM_BINS, "min": mins, "max": maxs}

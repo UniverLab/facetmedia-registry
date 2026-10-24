@@ -242,11 +242,13 @@ def _verify_clip(model: Any, audio: Any, path: Path, clip: dict[str, Any]) -> di
 @runner.verb("preview")
 def preview(req: Request) -> dict[str, Any]:
     params = dict(req.inputs)
+    clips = {clip["name"]: clip for clip in _clips(params)}
     model = _whisper(req)
     entries = []
     for path in req.assets:
+        clip = _clip_for(clips, path)
         preview_name = f"{path.name}.preview.json"
-        data = _preview_data(model, path, params)
+        data = _preview_data(model, path, clip)
         (req.out_dir / preview_name).write_text(
             json.dumps(data, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8"
         )
@@ -254,13 +256,13 @@ def preview(req: Request) -> dict[str, Any]:
     return {"assets": entries}
 
 
-def _preview_data(model: Any, path: Path, params: dict[str, Any]) -> dict[str, Any]:
+def _preview_data(model: Any, path: Path, clip: dict[str, Any]) -> dict[str, Any]:
     """The audio preview file: signal, loudness, and the speech judgement."""
     audio = _audio()
     samples, rate = audio.read_wav(path)
-    language = str(params.get("language", "es"))
-    text = str(params.get("text", ""))
-    voice = str(params.get("voice", "ef_dora"))
+    language = clip["language"]
+    text = clip["text"]
+    voice = clip["voice"]
     transcript = _transcribe(model, path, language)
     reference = textnorm.words(text, language)
     heard = textnorm.words(transcript, language)
@@ -278,7 +280,7 @@ def _preview_data(model: Any, path: Path, params: dict[str, Any]) -> dict[str, A
         "loudness": {
             "integrated_lufs": round(lufs, 2),
             "peak_dbfs": round(audio.peak_dbfs(samples), 2),
-            "target_lufs": float(params.get("target-lufs", -16.0)),
+            "target_lufs": float(clip["target_lufs"]),
             "momentary": {
                 "step_s": 0.1,
                 "window_s": 0.4,
