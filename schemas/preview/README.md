@@ -18,8 +18,15 @@ hole in a CAD part.
 
 `scripts/check-previews.py` validates every example in `examples/` against its
 schema (each `*.invalid.json` must fail, and an example with no schema of its
-own fails the check); package specs reuse it on the preview files their
-runners write.
+own fails the check). Give it file paths instead and it validates those files
+against the schema of the `kind` each one declares — how a package spec checks
+the preview its runner wrote:
+
+```bash
+uv run scripts/check-previews.py build/laboratorio.wav.preview.json
+```
+
+A file that names no kind, or a kind with no schema of its own, fails.
 
 ## Examples
 
