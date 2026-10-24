@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>facet — CAD viewer</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/kit/base.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <div id="error" class="error-box" role="alert" hidden></div>
+      <header id="header"></header>
+      <main>
+        <p id="summary"></p>
+        <section id="views" hidden>
+          <h2>views</h2>
+          <div class="views"></div>
+        </section>
+        <section id="solid" hidden>
+          <h2>solid</h2>
+          <dl class="kv" id="solid-kv"></dl>
+          <table id="holes">
+            <thead>
+              <tr>
+                <th>hole</th>
+                <th class="num">centre (mm)</th>
+                <th class="num">diameter (mm)</th>
+                <th class="num">axis</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+        <section id="drawing" hidden>
+          <h2>drawing</h2>
+          <dl class="kv" id="drawing-kv"></dl>
+          <table id="layers">
+            <thead>
+              <tr>
+                <th>layer</th>
+                <th class="num">entities</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <p id="audit"></p>
+        </section>
+        <p><a id="asset-link" href="#">open the asset</a></p>
+      </main>
+    </div>
+    <dialog id="zoom">
+      <img id="zoom-img" alt="" />
+      <p><button id="zoom-close" type="button">close</button></p>
+    </dialog>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

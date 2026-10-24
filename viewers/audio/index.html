@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>facet — audio viewer</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/kit/base.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <div id="error" class="error-box" role="alert" hidden></div>
+      <header id="header"></header>
+      <main>
+        <p id="summary"></p>
+        <h2>player</h2>
+        <audio id="player" controls preload="auto"></audio>
+        <figure>
+          <figcaption>waveform — click to seek, shaded bands are silences</figcaption>
+          <canvas id="wave" style="height: 8rem"></canvas>
+        </figure>
+        <figure>
+          <figcaption>momentary loudness against the target</figcaption>
+          <canvas id="loud" style="height: 11rem"></canvas>
+        </figure>
+        <h2>numbers</h2>
+        <table id="stats">
+          <tbody></tbody>
+        </table>
+        <section id="speech" class="speech" hidden>
+          <h2>speech <span id="wer" class="num"></span></h2>
+          <p id="alignment"></p>
+        </section>
+        <p><a id="asset-link" href="#">open the asset</a></p>
+      </main>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

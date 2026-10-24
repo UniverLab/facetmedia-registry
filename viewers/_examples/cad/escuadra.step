@@ -1,0 +1,10 @@
+ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('example set square'),'2;1');
+FILE_NAME('escuadra.step','2026-10-24T00:00:00Z',('facetmedia-registry'),('facetmedia-registry'),'','','');
+FILE_SCHEMA(('AUTOMOTIVE_DESIGN'));
+ENDSEC;
+DATA;
+/* placeholder geometry: example asset for the CAD viewer, not a real solid */
+ENDSEC;
+END-ISO-10303-21;

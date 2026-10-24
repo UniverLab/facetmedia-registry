@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>facet — generic viewer</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/kit/base.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <div id="error" class="error-box" role="alert" hidden></div>
+      <header id="header"></header>
+      <main>
+        <p id="summary"></p>
+        <h2>fields</h2>
+        <table id="fields">
+          <thead>
+            <tr>
+              <th>field</th>
+              <th class="num">value</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p><a id="asset-link" href="#">open the asset</a></p>
+      </main>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

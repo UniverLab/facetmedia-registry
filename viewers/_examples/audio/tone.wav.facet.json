@@ -1,0 +1,68 @@
+{
+  "record": 1,
+  "id": "sha256:37eba83ae349ff3ac74a9b6058c0319499a9d5aaeb7b21d43ee470ebd18f9897",
+  "name": "tone",
+  "path": "tone.wav",
+  "kind": "audio",
+  "mime": "audio/wav",
+  "bytes": 144044,
+  "created": "2026-10-24T00:00:00Z",
+  "properties": {},
+  "provenance": {
+    "facet": "audio",
+    "registry": {
+      "commit": "0000000000000000000000000000000000000000",
+      "path": null
+    },
+    "capability": "tone",
+    "package": {
+      "name": "example",
+      "version": "0.1.0"
+    },
+    "tool": {
+      "name": "example",
+      "version": "0.1.0"
+    },
+    "models": [
+      {
+        "id": "test-tone",
+        "spdx": "CC0-1.0",
+        "commercial_use": true
+      }
+    ],
+    "params": {},
+    "params_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "seed": null,
+    "inputs": []
+  },
+  "verification": {
+    "status": "passed",
+    "metrics": {
+      "duration_s": 3.0,
+      "peak_dbfs": -1.2
+    },
+    "thresholds": {
+      "duration_s": 3.0,
+      "peak_dbfs": -1.0
+    },
+    "verifier": "example"
+  },
+  "license": {
+    "tools": [
+      {
+        "name": "example",
+        "spdx": "Apache-2.0",
+        "commercial_use": true
+      }
+    ],
+    "models": [
+      {
+        "id": "test-tone",
+        "spdx": "CC0-1.0",
+        "commercial_use": true
+      }
+    ],
+    "commercial_use": true,
+    "accepted": []
+  }
+}

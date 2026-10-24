@@ -1,0 +1,62 @@
+{
+  "record": 1,
+  "id": "sha256:9373bca1ed2a208b822fd87d1350232baaa5d423dbcf5e10acd320ba3ed3a63b",
+  "name": "escuadra",
+  "path": "escuadra.step",
+  "kind": "cad",
+  "mime": "application/step",
+  "bytes": 333,
+  "created": "2026-10-24T00:00:00Z",
+  "properties": {},
+  "provenance": {
+    "facet": "cad",
+    "registry": {
+      "commit": "0000000000000000000000000000000000000000",
+      "path": null
+    },
+    "capability": "draw",
+    "package": {
+      "name": "example",
+      "version": "0.1.0"
+    },
+    "tool": {
+      "name": "example",
+      "version": "0.1.0"
+    },
+    "models": [
+      {
+        "id": "example-escuadra",
+        "spdx": "CC-BY-NC-4.0",
+        "commercial_use": false
+      }
+    ],
+    "params": {},
+    "params_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "seed": null,
+    "inputs": []
+  },
+  "verification": {
+    "status": "skipped",
+    "metrics": {},
+    "thresholds": {},
+    "verifier": null
+  },
+  "license": {
+    "tools": [
+      {
+        "name": "example",
+        "spdx": "Apache-2.0",
+        "commercial_use": true
+      }
+    ],
+    "models": [
+      {
+        "id": "example-escuadra",
+        "spdx": "CC-BY-NC-4.0",
+        "commercial_use": false
+      }
+    ],
+    "commercial_use": false,
+    "accepted": []
+  }
+}

@@ -1,0 +1,293 @@
+/* Shared design tokens and layout for every facet viewer.
+   The facetMedia visual identity later replaces only the :root tokens. */
+
+:root {
+  --ground: #fbfbfc;
+  --panel: #f1f2f5;
+  --ink: #171a20;
+  --muted: #5c6270;
+  --accent: #1a7f4b;   /* verified values */
+  --warning: #8a5a00;
+  --error: #b3261e;
+  --line: #d8dbe2;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #14161b;
+    --panel: #1d2129;
+    --ink: #e9ebef;
+    --muted: #99a1af;
+    --accent: #4ecb8a;
+    --warning: #e2a93b;
+    --error: #e5736a;
+    --line: #2d333d;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.wrap {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 3rem;
+}
+
+h1 {
+  font-size: 1.35rem;
+  margin: 0.25rem 0;
+}
+
+h2 {
+  font-size: 1.05rem;
+  margin: 1.75rem 0 0.5rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.25rem;
+}
+
+a {
+  color: var(--accent);
+}
+
+/* Numbers are monospaced so columns line up. */
+.num,
+td.num,
+th.num,
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- header ---- */
+
+.asset-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: baseline;
+}
+
+.kind-chip {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.05rem 0.6rem;
+}
+
+/* ---- status pill ---- */
+
+.pill {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 0.1rem 0.7rem;
+  border: 1px solid currentColor;
+}
+
+.pill.passed {
+  color: var(--accent);
+}
+
+.pill.failed {
+  color: var(--error);
+}
+
+.pill.skipped {
+  color: var(--muted);
+}
+
+.badge-nc {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--warning);
+  border: 1px solid var(--warning);
+  border-radius: 4px;
+  padding: 0.05rem 0.4rem;
+}
+
+/* ---- error box (load.js) ---- */
+
+.error-box {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--error);
+  border-left-width: 6px;
+  border-radius: 6px;
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 8%, transparent);
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+}
+
+.error-box:empty {
+  display: none;
+}
+
+/* ---- tables ---- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5rem 0 1rem;
+  font-size: 0.92rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.3rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+td.v,
+td.num {
+  text-align: right;
+}
+
+/* ---- misc blocks ---- */
+
+details {
+  margin: 0.5rem 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  background: var(--panel);
+}
+
+summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+dl.kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.15rem 1rem;
+  margin: 0.5rem 0;
+}
+
+dl.kv dt {
+  color: var(--muted);
+}
+
+dl.kv dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+figure {
+  margin: 0;
+}
+
+figcaption {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  touch-action: manipulation;
+}
+
+audio {
+  width: 100%;
+}
+
+dialog {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--ground);
+  color: var(--ink);
+  padding: 1rem;
+  max-width: min(92vw, 60rem);
+}
+
+dialog::backdrop {
+  background: color-mix(in srgb, var(--ground) 55%, transparent);
+}
+
+dialog img {
+  max-width: 100%;
+  max-height: 80vh;
+  display: block;
+  margin: 0 auto;
+}
+
+.views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.views figure {
+  flex: 1 1 16rem;
+}
+
+.views img {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  cursor: zoom-in;
+}
+
+/* ---- speech alignment ---- */
+
+.speech p {
+  margin: 0.4rem 0;
+}
+
+.w-ok {
+  color: var(--ink);
+}
+
+.w-sub {
+  background: color-mix(in srgb, var(--warning) 25%, transparent);
+  color: var(--ink);
+  border-radius: 3px;
+}
+
+.w-del {
+  background: color-mix(in srgb, var(--error) 25%, transparent);
+  color: var(--ink);
+  text-decoration: line-through;
+  border-radius: 3px;
+}
+
+.w-ins {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  color: var(--ink);
+  border-radius: 3px;
+}
