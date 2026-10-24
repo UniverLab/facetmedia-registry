@@ -104,6 +104,8 @@ def check_pair(schema_path: Path) -> bool:
 def check_file(path: Path) -> bool:
     """Validate one preview file against the schema of its declared ``kind``.
 
+    A kind without a schema of its own is validated against the generic
+    fallback (``generic.schema.json``), which is what the ``text`` kind uses.
     Package specs use this on the preview files their runners write:
     ``uv run scripts/check-previews.py build/clip.wav.preview.json``.
     """
@@ -119,9 +121,9 @@ def check_file(path: Path) -> bool:
     if not isinstance(kind, str) or not kind:
         print(f"FAIL {path}: the preview names no kind")
         return False
-    schema_path = SDIR / f"{kind}.schema.json"
-    if not schema_path.is_file():
-        print(f"FAIL {path}: no {schema_path.name} for kind {kind!r}")
+    schema_path = _schema_for(kind)
+    if schema_path is None:
+        print(f"FAIL {path}: no {kind}.schema.json and no generic fallback")
         return False
     try:
         schema = read_json(schema_path)
@@ -131,6 +133,15 @@ def check_file(path: Path) -> bool:
         return False
     print(f"OK {path.name}: valid against {schema_path.name}")
     return True
+
+
+def _schema_for(kind: str) -> Path | None:
+    """The kind's own schema, else ``generic.schema.json``, the documented fallback."""
+    for name in (f"{kind}.schema.json", "generic.schema.json"):
+        candidate = SDIR / name
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 def main() -> int:

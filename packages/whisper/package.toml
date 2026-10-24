@@ -1,0 +1,92 @@
+name = "whisper"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "SYSTRAN (faster-whisper) · OpenAI (Whisper model)"
+tool_name = "faster-whisper"
+description = "Transcripts and subtitles from audio on CPU, checked by confidence or reference text"
+facet = "voice"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 3
+disk_gb = 1
+exclusive = true
+platforms = ["linux"]
+
+[[licenses]]
+subject = "faster-whisper"
+spdx = "MIT"
+
+[[licenses]]
+subject = "ctranslate2"
+spdx = "MIT"
+
+[[licenses]]
+subject = "onnxruntime"
+spdx = "MIT"
+
+[[licenses]]
+subject = "av"
+spdx = "BSD-3-Clause"
+
+[[licenses]]
+subject = "FFmpeg (bundled in the av wheels)"
+spdx = "LGPL-2.1-or-later"
+
+[[licenses]]
+subject = "soundfile"
+spdx = "BSD-3-Clause"
+
+[[licenses]]
+subject = "numpy"
+spdx = "BSD-3-Clause"
+
+[[models]]
+id = "faster-whisper-small-transcribe"
+hf_repo = "Systran/faster-whisper-small"
+revision = "536b0662742c02347bc0e980a01041f333bce120"
+bytes = 486212372
+spdx = "MIT"
+commercial_use = true
+requires_acceptance = false
+terms_url = "https://huggingface.co/Systran/faster-whisper-small"
+
+[capabilities.transcribe]
+summary = "Transcript, subtitles and timed words from an audio file on CPU, checked by confidence and optional reference text"
+kind = "text"
+
+[capabilities.transcribe.inputs.audio]
+type = "path"
+required = true
+description = "Audio to transcribe; any format the bundled FFmpeg decodes (WAV, FLAC, MP3, OGG, M4A)."
+
+[capabilities.transcribe.inputs.language]
+type = "enum"
+values = ["auto", "es", "en"]
+default = "auto"
+description = "Spoken language; auto detects it, es and en name it."
+
+[capabilities.transcribe.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name: writes <name>.txt, <name>.srt and <name>.json."
+
+[capabilities.transcribe.inputs.expect-text]
+type = "string"
+description = "What was said, when known; the word error rate is measured against it."
+
+[capabilities.transcribe.verify]
+thresholds = { min_avg_logprob = -1.0, max_no_speech_share = 0.2, wer_max = 0.10 }
+
+[capabilities.transcribe.preview]
+viewer = "generic"

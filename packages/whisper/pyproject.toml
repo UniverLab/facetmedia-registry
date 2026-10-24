@@ -1,0 +1,15 @@
+[project]
+name = "facet-whisper"
+version = "0.1.0"
+description = "Transcripts, subtitles and timed words from audio on CPU, checked by confidence and optional reference text."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "faster-whisper==1.2.1",
+  "av==18.1.0",
+  "soundfile==0.13.1",
+]
+
+[tool.uv]
+package = false

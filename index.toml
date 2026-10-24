@@ -6,3 +6,6 @@ name = "ascii"
 
 [[packages]]
 name = "kokoro"
+
+[[packages]]
+name = "whisper"

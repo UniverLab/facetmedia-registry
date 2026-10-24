@@ -26,7 +26,8 @@ the preview its runner wrote:
 uv run scripts/check-previews.py build/laboratorio.wav.preview.json
 ```
 
-A file that names no kind, or a kind with no schema of its own, fails.
+A file that names no kind fails. A kind with no schema of its own — `text`,
+for instance — is validated against `generic.schema.json`, the fallback.
 
 ## Examples
 

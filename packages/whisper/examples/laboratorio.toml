@@ -1,0 +1,5 @@
+[inputs]
+audio = "laboratorio.flac"
+language = "es"
+name = "laboratorio"
+expect-text = "En este laboratorio probamos una voz en español generada localmente. Queremos medir si se entiende bien, cuánto tarda y cómo suena frente a las voces que ya usamos."
