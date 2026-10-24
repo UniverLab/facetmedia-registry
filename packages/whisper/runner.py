@@ -188,27 +188,34 @@ def _expect_text(params: Mapping[str, Any]) -> str | None:
     return text or None
 
 
+def _language(params: Mapping[str, Any]) -> str:
+    """The piece's language, defaulted the way the manifest does."""
+    return str(params.get("language") or "auto")
+
+
 @runner.verb("verify")
 def verify(req: Request) -> dict[str, Any]:
-    expect = _expect_text(dict(req.inputs))
-    return {"assets": [_verify_asset(path, expect) for path in req.assets]}
+    params = dict(req.inputs)
+    expect = _expect_text(params)
+    requested = _language(params)
+    return {"assets": [_verify_asset(path, expect, requested) for path in req.assets]}
 
 
-def _verify_asset(path: Path, expect: str | None) -> dict[str, Any]:
+def _verify_asset(path: Path, expect: str | None, requested: str) -> dict[str, Any]:
     """The transcript carries the verification; the derived files must parse."""
     if path.suffix.lower() == ".txt":
-        return _verify_transcript(path, expect)
+        return _verify_transcript(path, expect, requested)
     return _verify_derived(path)
 
 
-def _verify_transcript(path: Path, expect: str | None) -> dict[str, Any]:
+def _verify_transcript(path: Path, expect: str | None, requested: str) -> dict[str, Any]:
     """Judge the transcript: not empty, confident, mostly speech, WER under max."""
     try:
         transcript = path.read_text(encoding="utf-8").strip()
         sidecar = _sidecar(path)
     except (OSError, ValueError) as exc:
         return _verdict(path.name, False, {"error": str(exc)})
-    metrics = _metrics(transcript, sidecar, expect)
+    metrics = _metrics(transcript, sidecar, expect, requested)
     return {
         "file": path.name,
         "passed": _passed(metrics, bool(transcript)),
@@ -279,13 +286,19 @@ def _segments(sidecar: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     return [segment for segment in raw if isinstance(segment, dict)]
 
 
-def _metrics(transcript: str, sidecar: Mapping[str, Any], expect: str | None) -> dict[str, Any]:
+def _metrics(
+    transcript: str, sidecar: Mapping[str, Any], expect: str | None, requested: str
+) -> dict[str, Any]:
     """What verify reports: the model's confidence, the speech share, the WER."""
     segments = _segments(sidecar)
     language = str(sidecar.get("language") or "")
     duration = float(sidecar.get("duration_s") or 0.0)
     words = _word_count(segments)
     minutes = duration / 60.0 if duration else 0.0
+    wer = None
+    if expect is not None:
+        normalise = _normalisation_language(requested, language)
+        wer = _wer(transcript, expect, normalise)
     return {
         "language": language,
         "language_probability": round(float(sidecar.get("language_probability") or 0.0), 4),
@@ -293,8 +306,19 @@ def _metrics(transcript: str, sidecar: Mapping[str, Any], expect: str | None) ->
         "no_speech_share": _no_speech_share(segments),
         "words": words,
         "words_per_minute": round(words / minutes) if minutes else 0,
-        "wer": None if expect is None else _wer(transcript, expect, language),
+        "wer": wer,
     }
+
+
+def _normalisation_language(requested: str, detected: str) -> str:
+    """The language whose rules normalise the reference: the piece's when named.
+
+    Kokoro normalises the reference with the piece's language; here ``auto``
+    means the piece names none, so the detected one is the only evidence. A
+    named language wins even when the model heard another: the reference text
+    is known to be in the caller's language.
+    """
+    return detected if requested in AUTO_LANGUAGES else requested
 
 
 def _avg_logprob(segments: Sequence[Mapping[str, Any]]) -> float | None:
@@ -342,13 +366,15 @@ def _passed(metrics: Mapping[str, Any], has_text: bool) -> bool:
 
 @runner.verb("preview")
 def preview(req: Request) -> dict[str, Any]:
-    expect = _expect_text(dict(req.inputs))
+    params = dict(req.inputs)
+    expect = _expect_text(params)
+    requested = _language(params)
     entries = []
     for path in req.assets:
         if path.suffix.lower() != ".txt":
             raise ValueError(f"{path.name}: preview the transcript (.txt), not this file")
         preview_name = f"{path.name}.preview.json"
-        data = _preview_data(path, expect)
+        data = _preview_data(path, expect, requested)
         (req.out_dir / preview_name).write_text(
             json.dumps(data, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8"
         )
@@ -356,11 +382,11 @@ def preview(req: Request) -> dict[str, Any]:
     return {"assets": entries}
 
 
-def _preview_data(path: Path, expect: str | None) -> dict[str, Any]:
+def _preview_data(path: Path, expect: str | None, requested: str) -> dict[str, Any]:
     """The generic preview: the properties and metrics, never the timed segments."""
     transcript = path.read_text(encoding="utf-8").strip()
     sidecar = _sidecar(path)
-    metrics = _metrics(transcript, sidecar, expect)
+    metrics = _metrics(transcript, sidecar, expect, requested)
     fields = {
         "language": metrics["language"],
         "language_probability": metrics["language_probability"],

@@ -49,8 +49,9 @@ parse to at least one cue or segment.
 
 ## Verification and doctor
 
-`verify` loads the model once and reads the transcript with its sidecar. The
-transcript passes when all of the following hold:
+`verify` reads the transcript with its sidecar: the run already measured the
+segments' confidence, so verify loads no model. The transcript passes when all
+of the following hold:
 
 - it is not empty;
 - the mean `avg_logprob` over its segments is at least `min_avg_logprob =
@@ -64,7 +65,8 @@ The metrics are `language`, `language_probability`, `avg_logprob`,
 `no_speech_share`, `words`, `words_per_minute` and `wer` (null without a
 reference), under `verifier = "faster-whisper-small@536b0662"`. The word error
 rate normalises exactly as Kokoro does — lowercase, accents stripped,
-thousands dots dropped, Spanish numbers spelled into words — because
+thousands dots dropped, Spanish numbers spelled into words, with the piece's
+`language` when it is named and the detected one under `auto` — because
 `packages/whisper/textnorm.py` is a byte-identical copy of Kokoro's (packages
 run in separate environments and cannot import each other; a root test keeps
 the copies identical).
