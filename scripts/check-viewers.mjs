@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 /* Open every viewer example in light and dark at 1280x800 and 390x844, one
    case at a time, with the system Chrome: fail on any page error, console
-   error, failed request or HTTP >= 400, and save a screenshot of each case
-   under viewers/_examples/<kind>/screens/ (gitignored).
+   error, failed request or HTTP >= 400, exercise the interaction the viewer
+   exists for (audio click-to-seek, the CAD view dialog), and save a
+   screenshot of each case under viewers/_examples/<kind>/screens/
+   (gitignored).
 
    Run by hand:  node scripts/check-viewers.mjs [kind ...]
    Needs playwright-core resolvable (npm i --prefix /tmp/opencode/pw
@@ -78,6 +80,41 @@ function watchPage(page, label, failures) {
   });
 }
 
+/** Click at 60% of the waveform: the player must seek there (a server that
+    sends no byte ranges leaves it at 0 s and the playhead never moves). */
+async function checkAudioSeek(page, label, failures) {
+  const wave = page.locator("#wave");
+  const box = await wave.boundingBox();
+  if (!box) {
+    failures.push(`${label}: no waveform canvas`);
+    return;
+  }
+  await wave.click({ position: { x: 46 + (box.width - 56) * 0.6, y: box.height / 2 } });
+  await page.waitForTimeout(400);
+  const [time, duration] = await page.evaluate(() => {
+    const player = document.getElementById("player");
+    return [player.currentTime, player.duration];
+  });
+  if (!(Number.isFinite(duration) && duration > 0)) {
+    failures.push(`${label}: the player reported no duration`);
+  } else if (Math.abs(time - 0.6 * duration) > 0.25) {
+    failures.push(`${label}: click-to-seek left the player at ${time}s of ${duration}s`);
+  }
+}
+
+/** Clicking a view must open the enlargement dialog (and close it again). */
+async function checkCadZoom(page, label, failures) {
+  const view = page.locator(".views img").first();
+  if ((await view.count()) === 0) {
+    failures.push(`${label}: no view image`);
+    return;
+  }
+  await view.click();
+  const open = await page.evaluate(() => document.getElementById("zoom").open);
+  if (!open) failures.push(`${label}: clicking a view did not open the enlargement`);
+  await page.evaluate(() => document.getElementById("zoom").close());
+}
+
 async function runCase(browser, url, kind, testCase, failures) {
   const { scheme, width, height } = testCase;
   const label = `${kind} ${scheme} ${width}x${height}`;
@@ -90,6 +127,8 @@ async function runCase(browser, url, kind, testCase, failures) {
   watchPage(page, label, failures);
   await page.goto(url, { waitUntil: "load" });
   await page.waitForTimeout(600); // canvases draw, images and fonts settle
+  if (kind === "audio") await checkAudioSeek(page, label, failures);
+  if (kind === "cad") await checkCadZoom(page, label, failures);
   const dir = path.join(ROOT, "viewers", "_examples", kind, "screens");
   mkdirSync(dir, { recursive: true });
   await page.screenshot({

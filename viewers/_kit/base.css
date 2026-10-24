@@ -116,6 +116,11 @@ th.num,
   color: var(--muted);
 }
 
+/* The header's verification block (pill + metrics table). */
+.verify {
+  margin: 0.5rem 0 0.9rem;
+}
+
 .badge-nc {
   display: inline-block;
   font-size: 0.75rem;
@@ -170,6 +175,24 @@ th {
 
 td.v,
 td.num {
+  text-align: right;
+}
+
+/* A hole's coordinates stay on one line: wrapped, "20 × 20 × 1.5" reads as
+   two rows at phone width. Headers still wrap, and the tighter padding keeps
+   the four columns inside 390 px. */
+.holes td.num {
+  white-space: nowrap;
+}
+
+.holes th,
+.holes td {
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+}
+
+/* The row number is a label, not a value: keep it off the header's text. */
+.holes tbody th {
   text-align: right;
 }
 

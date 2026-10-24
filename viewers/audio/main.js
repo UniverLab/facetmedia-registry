@@ -117,7 +117,6 @@ function loudSpec(preview, duration) {
 function seekOnClick(canvas, audio, duration) {
   canvas.addEventListener("click", (event) => {
     audio.currentTime = valueAtX(canvas, event.clientX, duration);
-    audio.pause();
   });
 }
 

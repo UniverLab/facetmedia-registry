@@ -29,8 +29,18 @@ viewer is named after the asset **kind** it renders (`audio`, `text`, `cad`,
 
 ```text
 viewers/
-├── _kit/               # shared ES modules: preview loading, formatting, layout
+├── _kit/               # shared CSS + ES modules: tokens, loading, header, plots
+├── _examples/<kind>/   # fake asset + .facet.json + .preview.json; screens/ is local
 └── <kind>/
     ├── index.html      # the viewer's entry point
     └── *.js            # ES modules, no build step
 ```
+
+Try one without a package: `python3 scripts/serve-example.py <kind>`
+serves `/viewer/`, `/kit/` and `/asset/` on 127.0.0.1 and prints the URL.
+`scripts/check-viewers.mjs` opens each example by hand (system Chrome).
+
+The viewers here are `generic` (any preview: summary, fields, the asset),
+`audio` (player, waveform with silences and the playhead, loudness against the
+target, speech alignment) and `cad` (views that enlarge, solid and drawing
+measurements); each has a runnable example under `_examples/`.

@@ -29,7 +29,7 @@ function statusOf(record) {
 }
 
 function verificationBlock(record) {
-  const block = document.createElement("p");
+  const block = document.createElement("div");
   block.className = "verify";
   const status = statusOf(record);
   const pill = document.createElement("span");

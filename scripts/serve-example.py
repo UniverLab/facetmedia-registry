@@ -8,6 +8,10 @@
 preview`` serves on 127.0.0.1. The first line printed is the URL to open;
 anything outside those three routes (and any directory, or any path that
 escapes its root with ``..``) is a 404. No other host is ever bound.
+
+Assets answer byte ranges (``206``), because a browser cannot seek an
+``<audio>`` element — the audio viewer's click-to-seek and playhead — over a
+server that always returns the whole file.
 """
 
 from __future__ import annotations
@@ -67,6 +71,40 @@ def resolve_route(roots: dict[str, Path], path: str) -> Path | None:
     return target
 
 
+def content_type_of(path: Path) -> str:
+    """The Content-Type to send for `path`."""
+    return (
+        CONTENT_TYPES.get(path.suffix)
+        or mimetypes.guess_type(path.name)[0]
+        or "application/octet-stream"
+    )
+
+
+def parse_range(header: str | None, size: int) -> tuple[int, int] | None:
+    """The single byte span (start, end, both inclusive) a ``Range`` header
+    asks for, or None to send the whole file.
+
+    Multiple ranges, a header that is not ``bytes=`` and a malformed range all
+    send the whole file. A span with ``start > end`` asks for nothing, so the
+    caller answers 416.
+    """
+    if not header or not header.startswith("bytes="):
+        return None
+    first, _, rest = header[len("bytes=") :].partition(",")
+    if rest.strip():  # more than one range: the whole file is a valid answer
+        return None
+    start_text, _, end_text = first.strip().partition("-")
+    if not start_text:  # "bytes=-N": the last N bytes
+        if not end_text.isdigit() or int(end_text) == 0:
+            return None
+        return max(0, size - int(end_text)), size - 1
+    if not start_text.isdigit():
+        return None
+    start = int(start_text)
+    end = min(int(end_text), size - 1) if end_text.isdigit() else size - 1
+    return start, end
+
+
 def make_handler(kind: str) -> type[BaseHTTPRequestHandler]:
     roots = route_roots(kind)
 
@@ -76,17 +114,30 @@ def make_handler(kind: str) -> type[BaseHTTPRequestHandler]:
             if target is None:
                 self.send_error(404, "not found")
                 return
-            body = target.read_bytes()
-            content_type = (
-                CONTENT_TYPES.get(target.suffix)
-                or mimetypes.guess_type(target.name)[0]
-                or "application/octet-stream"
-            )
-            self.send_response(200)
+            self.send_body(target.read_bytes(), content_type_of(target))
+
+        def send_body(self, body: bytes, content_type: str) -> None:
+            """The whole file, or the byte range asked for (206)."""
+            span = parse_range(self.headers.get("Range"), len(body))
+            if span is None:
+                self.send_response(200)
+                self.send_header("Content-Type", content_type)
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Accept-Ranges", "bytes")
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            start, end = span
+            if start > end:
+                self.send_error(416, "range not satisfiable")
+                return
+            self.send_response(206)
             self.send_header("Content-Type", content_type)
-            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Content-Length", str(end - start + 1))
+            self.send_header("Content-Range", f"bytes {start}-{end}/{len(body)}")
+            self.send_header("Accept-Ranges", "bytes")
             self.end_headers()
-            self.wfile.write(body)
+            self.wfile.write(body[start : end + 1])
 
     return Handler
 
