@@ -1,17 +1,16 @@
 # Preview schemas
 
-One **JSON Schema per asset kind**, describing the `<asset>.preview.json`
-file a package's `preview` verb writes beside its asset. The file is named
-after the kind: `schemas/preview/<kind>.schema.json`, where `<kind>` is the
-kind (`audio`, `text`, `cad`, ...), and it validates one preview file of that
-kind — the same kind facet uses to pick the schema and the
-[viewer](../viewers/README.md).
+One **JSON Schema per asset kind**, describing the `<asset>.preview.json` file
+a package's `preview` verb writes beside its asset. The file is named after the
+kind: `schemas/preview/<kind>.schema.json`, where `<kind>` is the kind a
+capability declares (`audio`, `text`, `cad`, ...) — the same kind names the
+[viewer](../../viewers/README.md). Each schema describes one preview file of
+that kind; a package whose preview does not match it is a review blocker.
 
-The preview file is a small JSON object: `kind` (the asset's kind),
-`preview` (the schema version), plus kind-specific fields — for example a
-`text` preview carries a `summary` and a `chars` count, an `audio` preview
-the duration and a waveform. The image paths a preview lists are only ever
-files beside the asset.
+The preview file is a small JSON object: `kind` (the asset's kind), `preview`
+(the format version, `1`), plus kind-specific fields — for example a `text`
+preview carries a `summary` and a `chars` count. The image paths a preview
+lists are only ever files beside the asset.
 
 **This directory is filled by the next spec.** A package whose capability
 writes a kind that has no schema here must add `schemas/preview/<kind>.schema.json`

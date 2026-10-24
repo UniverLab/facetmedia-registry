@@ -1,11 +1,13 @@
 # Viewers
 
 A **viewer** is the person-facing half of a preview: a static web app facet
-serves on `127.0.0.1` when you run `facet preview <asset>`. One viewer per
-asset **kind** (`audio`, `text`, `cad`, ...), named after the kind:
-`viewers/<kind>/`. facet picks the viewer from the asset's kind, the same way
-it picks the preview schema from `schemas/preview/<kind>.schema.json`. The
-preview contract is defined by the core:
+serves on `127.0.0.1` when you run `facet preview <asset>`. A capability picks
+its viewer with `[capabilities.<c>.preview] viewer`; the core's default is
+`generic`, so a package must name the viewer it wants. In this registry a
+viewer is named after the asset **kind** it renders (`audio`, `text`, `cad`,
+...) — `viewers/<kind>/` — and each capability that writes that kind sets
+`viewer = "<kind>"`. A viewer the registry does not have falls back to
+`generic`. The preview contract is defined by the core:
 [docs/preview.md](https://github.com/UniverLab/facetmedia/blob/main/docs/preview.md).
 
 ## Rules
@@ -20,7 +22,8 @@ preview contract is defined by the core:
   viewer; a viewer is the kind-specific part only.
 - **One viewer per kind.** A new kind adds its preview schema in
   `schemas/preview/` and its viewer here, in the same change as the first
-  package that writes that kind.
+  package that writes that kind — and the capability names that viewer, so the
+  kind is what picks it.
 
 ## Layout
 

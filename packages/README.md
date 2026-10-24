@@ -15,8 +15,8 @@ for the skill.
 packages/<name>/
 ├── package.toml        # the manifest: name, version, requires_facet,
 │                       # protocol, provider, tool_name, description,
-│                       # facet, capabilities, [requirements], [[licenses]],
-│                       # [[models]]
+│                       # facet, [engine], [transport], capabilities,
+│                       # [requirements], [[licenses]], [[models]]
 ├── pyproject.toml      # the environment's dependencies, with
 │                       # [tool.uv] package = false
 ├── uv.lock             # the pinned lock, authoritative
@@ -31,7 +31,9 @@ packages/<name>/
 - **`package.toml`** — the manifest. Its `facet` (`voice`, `audio`, `image`,
   `video`, `cad`, `text`, `presentation`) places the package in a domain; its
   `[[capabilities]]` each declare the **kind** of asset they write, which
-  picks the preview schema and the viewer.
+  picks the preview schema and the viewer, and name the viewer directory with
+  `[capabilities.<c>.preview] viewer` — the core's default is `generic`, so a
+  kind's viewer is reached by naming it.
 - **`pyproject.toml`** — the tool's dependencies for its own environment,
   with `[tool.uv] package = false` so uv treats it as a virtual project.
 - **`uv.lock`** — the pinned environment; CI checks it against the
@@ -42,8 +44,10 @@ packages/<name>/
 
 ## The runner verbs
 
-Every package runner implements all four; `facet registry validate` rejects
-one that does not:
+Every package runner implements all four. `facet registry validate` rejects a
+runner that does not register `doctor`; it also rejects a package missing its
+`pyproject.toml`, `uv.lock` or entry, missing the `viewers/<viewer>/index.html`
+a capability names, or missing a valid skill:
 
 | Verb | What it does |
 |------|--------------|

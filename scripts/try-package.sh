@@ -45,6 +45,7 @@ if [ "${keep_home}" = "0" ]; then
   export FACET_HOME="${work}/home"
 else
   export FACET_HOME="${FACET_HOME:-${HOME}/.facet}"
+  echo "keeping ${work} (assets in ${work}/out)"
 fi
 export FACET_REGISTRY="${repo}"
 
@@ -53,21 +54,46 @@ section() {
   echo "===== ${1} ====="
 }
 
+# The record is printed even when the run fails: a verification failure (exit
+# 3) still carries every record, and that is what the manual test is read for.
 section "facet run ${pkg}.${cap} ${piece}"
-run=$(facet run "${pkg}.${cap}" "${piece}" --out "${work}/out" --json)
-echo "${run}"
+run_status=0
+run=$(facet run "${pkg}.${cap}" "${piece}" --out "${work}/out" --json) || run_status=$?
+printf '%s\n' "${run}"
 
-# The first asset of the record: out_dir + "/" + the asset's path.
+# The first asset of the record: out_dir + "/" + the asset's path. A run that
+# failed before producing anything leaves none, and there is nothing to show.
 asset=$(
-  printf '%s' "${run}" |
-    python3 -c 'import json, sys; data = json.load(sys.stdin); print(data["out_dir"] + "/" + data["assets"][0]["path"])'
-)
+  printf '%s' "${run}" | python3 -c '
+import json, sys
 
+data = json.load(sys.stdin)
+assets = data.get("assets") or []
+print(data["out_dir"] + "/" + assets[0]["path"] if assets else "")
+'
+) || asset=""
+if [ -z "${asset}" ]; then
+  echo "try-package: the run left no asset to preview" >&2
+  if [ "${run_status}" -ne 0 ]; then
+    exit "${run_status}"
+  fi
+  exit 1
+fi
+
+# The preview, the doctor and the skill all print: a failed verification or a
+# failing doctor (a missing GPU, an unaccepted model) must not hide the rest, so
+# every step runs and the script exits with the last non-zero status.
+status=${run_status}
 section "facet preview ${asset}"
-facet preview "${asset}" --json
+facet preview "${asset}" --json || status=$?
 
 section "facet doctor ${pkg}"
-facet doctor "${pkg}" --json
+facet doctor "${pkg}" --json || status=$?
 
 section "facet skill ${pkg}"
-facet skill "${pkg}"
+facet skill "${pkg}" || status=$?
+
+if [ "${status}" -ne 0 ]; then
+  echo "try-package: a step failed (exit ${status})" >&2
+fi
+exit "${status}"

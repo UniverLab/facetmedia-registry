@@ -21,10 +21,10 @@ The formats are defined by the core:
    capability is the kind of asset it writes — it picks the preview schema
    and the viewer. Kokoro and Whisper are both `voice`; a speech-to-text
    capability writes `text` assets.
-2. **Create `packages/<name>/package.toml`.** Manifest, capabilities,
-   `[requirements]`, `[[licenses]]`, `[[models]]` — the reference machine is
-   8 GB VRAM, 19 GB RAM, one heavy job at a time, and your `requirements`
-   must say what you need within it.
+2. **Create `packages/<name>/package.toml`.** The manifest's keys, `[engine]`,
+   `[transport]`, the capabilities, `[requirements]`, `[[licenses]]`,
+   `[[models]]` — the reference machine is 8 GB VRAM, 19 GB RAM, one heavy job
+   at a time, and your `requirements` must say what you need within it.
 3. **Create `packages/<name>/pyproject.toml`** with the tool's dependencies
    and `[tool.uv] package = false`, then `uv lock --project packages/<name>`
    and commit the `uv.lock`.
@@ -35,7 +35,9 @@ The formats are defined by the core:
 6. **Add the preview schema and the viewer if the kind is new**: a first
    package writing a kind that has none adds
    `schemas/preview/<kind>.schema.json` and `viewers/<kind>/` in the same
-   change.
+   change. A capability reaches that viewer by naming it —
+   `[capabilities.<c>.preview] viewer = "<kind>"` — because the core's
+   default viewer is `generic`.
 7. **Add the package to `index.toml`** as `[[packages]]` with its `name`.
 8. **Run `scripts/try-package.sh <package> <capability> <piece>`** — a real
    `facet run` against your working copy, then `facet preview`, `facet
@@ -129,7 +131,7 @@ Images carry image content only: no watermarks, no captions, no embedded
 metadata carrying the input or the result. A human reads the output; an
 agent reads the preview file and the record.
 
-### Heavy tests run alone
+### 9. Heavy local tests run alone
 
 Local tests that exercise the real tool are run one package at a time on the
 lab machine — never in parallel, never in CI. Tests must not download

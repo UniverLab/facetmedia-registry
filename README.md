@@ -23,12 +23,14 @@ snapshot, offline; the formats are defined by the core:
 
 ## How facet uses this repository
 
-`facet update` clones or fetches this repository and pins the commit it
-resolved; every later command (`facet pull`, `facet run`, `facet preview`,
-`facet skill`, `facet doctor`, `facet registry validate`) reads that snapshot,
-never the network. `index.toml` lists the package directories facet knows
-about. Because the commit is pinned, an unpublished package reaches machines
-only once a pull request merges to `main`.
+`facet update` downloads this repository, resolves the ref to one exact commit
+and keeps that commit as an immutable snapshot under `FACET_HOME`; every later
+command (`facet pull`, `facet run`, `facet preview`, `facet skill`,
+`facet doctor`) reads that snapshot, offline. `index.toml` lists the package
+directories facet knows about. (`facet registry validate` is the exception: it
+validates the registry directory you give it, which is how CI reads a
+checkout.) Because the commit is pinned, an unpublished package reaches
+machines only once a pull request merges to `main`.
 
 ## Entry criteria
 
@@ -50,8 +52,8 @@ A package is merged when all of the following hold:
    time) and says so in `requirements`.
 7. A **`preview`** that writes the preview file of its kind; a kind without a
    preview schema and a viewer adds both in the same change.
-8. **No text or data inside generated images**, and heavy local tests run
-   alone on the lab machine.
+8. **No text or data inside generated images.**
+9. **Heavy local tests run alone** on the lab machine.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the step-by-step, and
 [packages/README.md](packages/README.md) and
