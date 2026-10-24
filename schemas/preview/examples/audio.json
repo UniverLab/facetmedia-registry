@@ -2504,16 +2504,16 @@
         -18.7,
         -18.9,
         -19.2,
-        -19.3,
-        -19.4,
-        -19.4,
-        -19.3,
-        -19.1,
-        -18.8,
-        -18.5,
-        -18.3,
-        -18.0,
-        -17.9,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
         null,
         null
       ]
@@ -2521,15 +2521,15 @@
   },
   "silences": [
     {
-      "start_s": 8.9,
-      "end_s": 9.5
+      "start_s": 8.4,
+      "end_s": 9.6
     }
   ],
   "clipped_samples": 0,
   "speech": {
     "text": "quick brown fox jumps over the lazy dog near the old lab",
-    "transcript": "quick brown fox jumps over a lazy very dog near the quiet lab",
-    "wer": 0.083,
+    "transcript": "quick brown fox jumps over a lazy very dog near the lab",
+    "wer": 0.25,
     "alignment": [
       {
         "ref": "quick",
@@ -2544,6 +2544,16 @@
       {
         "ref": "fox",
         "hyp": "fox",
+        "op": "ok"
+      },
+      {
+        "ref": "jumps",
+        "hyp": "jumps",
+        "op": "ok"
+      },
+      {
+        "ref": "over",
+        "hyp": "over",
         "op": "ok"
       },
       {
@@ -2567,9 +2577,24 @@
         "op": "ok"
       },
       {
+        "ref": "near",
+        "hyp": "near",
+        "op": "ok"
+      },
+      {
+        "ref": "the",
+        "hyp": "the",
+        "op": "ok"
+      },
+      {
         "ref": "old",
         "hyp": null,
         "op": "del"
+      },
+      {
+        "ref": "lab",
+        "hyp": "lab",
+        "op": "ok"
       }
     ]
   }

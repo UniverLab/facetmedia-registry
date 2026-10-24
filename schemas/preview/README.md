@@ -13,8 +13,9 @@ including `text`.
 A field is added only when a viewer or an agent uses it.
 
 `scripts/check-previews.py` validates every example in `examples/` against its
-schema (each `*.invalid.json` must fail); package specs reuse it on the preview
-files their runners write.
+schema (each `*.invalid.json` must fail, and an example with no schema of its
+own fails the check); package specs reuse it on the preview files their
+runners write.
 
 ## Common fields
 

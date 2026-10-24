@@ -9,8 +9,9 @@
 
 Every ``<kind>.schema.json`` must be a valid draft 2020-12 schema, its
 ``examples/<kind>.json`` must pass and its ``examples/<kind>.invalid.json``
-must fail. Exits non-zero on the first failing schema. Package specs reuse it
-on the preview files their runners write.
+must fail. Every example file must have a schema of its own. Exits non-zero
+when any check fails. Package specs reuse it on the preview files their
+runners write.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError, ValidationError
@@ -40,7 +42,7 @@ def check_schema_file(schema_path: Path) -> bool:
     return True
 
 
-def check_example(kind: str, schema: dict) -> bool:
+def check_example(kind: str, schema: dict[str, Any]) -> bool:
     path = SDIR / "examples" / f"{kind}.json"
     if not path.exists():
         print(f"FAIL {path.name}: missing example")
@@ -54,7 +56,7 @@ def check_example(kind: str, schema: dict) -> bool:
     return True
 
 
-def check_invalid(kind: str, schema: dict) -> bool:
+def check_invalid(kind: str, schema: dict[str, Any]) -> bool:
     path = SDIR / "examples" / f"{kind}.invalid.json"
     if not path.exists():
         print(f"FAIL {path.name}: missing invalid example")
@@ -73,18 +75,30 @@ def check_invalid(kind: str, schema: dict) -> bool:
     return False
 
 
+def check_orphans(schema_paths: list[Path]) -> bool:
+    """Every example file must have a schema of its own to validate against."""
+    ok = True
+    for path in sorted((SDIR / "examples").glob("*.json")):
+        name = path.name
+        kind = name.removesuffix(".invalid.json").removesuffix(".json")
+        if SDIR / f"{kind}.schema.json" not in schema_paths:
+            print(f"FAIL {name}: no {kind}.schema.json to validate it against")
+            ok = False
+    return ok
+
+
 def check_pair(schema_path: Path) -> bool:
+    if not check_schema_file(schema_path):
+        return False
     kind = schema_path.name.removesuffix(".schema.json")
-    ok = check_schema_file(schema_path)
     try:
         schema = read_json(schema_path)
     except (OSError, ValueError):
         return False
     if not isinstance(schema, dict):
         return False
-    ok = check_example(kind, schema) and ok
-    ok = check_invalid(kind, schema) and ok
-    return ok
+    ok = check_example(kind, schema)
+    return check_invalid(kind, schema) and ok
 
 
 def main() -> int:
@@ -92,7 +106,7 @@ def main() -> int:
     if not schemas:
         print("FAIL: no schemas found")
         return 1
-    ok = True
+    ok = check_orphans(schemas)
     for schema_path in schemas:
         ok = check_pair(schema_path) and ok
     return 0 if ok else 1
