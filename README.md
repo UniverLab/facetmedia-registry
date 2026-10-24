@@ -7,7 +7,9 @@ tool can arrive without a facet release. A **package** is one directory under
 belongs to (`voice`, `audio`, `image`, `video`, `cad`, `text`,
 `presentation`) — Kokoro (speech) and Whisper (transcription) are both
 `voice` — and the **kind** is the kind of asset a capability writes
-(`audio`, `text`, `cad`, ...), which picks the preview schema and the viewer.
+(`audio`, `text`, `cad`, ...), which picks the preview schema
+([`schemas/preview/`](schemas/preview/README.md)) and the viewer
+(`viewers/<kind>/`).
 facet downloads this registry at a **pinned commit** (`facet update`) and
 reads `index.toml`, `packages/<name>/` and `viewers/<name>/` from that
 snapshot, offline; the formats are defined by the core:
@@ -56,5 +58,7 @@ A package is merged when all of the following hold:
 9. **Heavy local tests run alone** on the lab machine.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the step-by-step, and
-[packages/README.md](packages/README.md) and
-[viewers/README.md](viewers/README.md) for the directory layouts.
+[packages/README.md](packages/README.md),
+[viewers/README.md](viewers/README.md) and
+[schemas/preview/README.md](schemas/preview/README.md) for the directory
+layouts and the preview fields of each kind.

@@ -12,10 +12,24 @@ including `text`.
 
 A field is added only when a viewer or an agent uses it.
 
+The viewer of the same kind draws the file for a person, and an agent reads it
+without opening the asset — a misheard sentence in a narration, a misplaced
+hole in a CAD part.
+
 `scripts/check-previews.py` validates every example in `examples/` against its
 schema (each `*.invalid.json` must fail, and an example with no schema of its
 own fails the check); package specs reuse it on the preview files their
 runners write.
+
+## Examples
+
+`examples/<kind>.json` is one valid file per schema; `examples/<kind>.invalid.json`
+is the same file with one defect, so the check proves the schema accepts the
+first and rejects the second — a waveform of 600 bins instead of 1200, a
+negative hole diameter, a `fields` value that is a list. A new kind adds the
+pair: `cad.json` is the lab's escuadra with two holes and its two views,
+`audio.json` a 9.6 s narration with its word alignment, `generic.json` a short
+`text` asset.
 
 ## Common fields
 
