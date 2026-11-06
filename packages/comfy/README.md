@@ -149,12 +149,12 @@ inside the frame moves.
 
 `workflow = "wan22-i2v-rapido"` runs the same Wan graph with FastWan's
 `Wan2_2_5B_FastWanFullAttn_lora_rank_128_bf16.safetensors` LoRA, four steps
-and no CFG, so a clip takes about half the time. It is a **draft**: halfway
-through it drifts from the input image — the light and the composition
-change — so it is for trying a movement, never a final render or a piece of
-an assembly. The runner names every draft output `<name>-borrador.mp4` and
-its record carries `properties.draft = true`, so no draft passes for a final.
-The lab's approved sample is
+and a CFG of 1, so a clip takes about half the time. It is a **draft**:
+halfway through it drifts from the input image — the light and the
+composition change — so it is for trying a movement, never a final render or
+a piece of an assembly. The runner names every draft output
+`<name>-borrador.mp4` and its record carries `properties.draft = true`, so
+no draft passes for a final. The lab's approved sample is
 `projects/prueba-video-ia/bosque-niebla-rapido.mp4`.
 
 ## The no-data rule
@@ -209,20 +209,22 @@ every edit entry; a clip uploads once per entry. The run prints
 
 At run start the runner links each facet model into the checkout where
 ComfyUI looks — the unet into `models/diffusion_models/`, the clip into
-`models/text_encoders/`, the vae into `models/vae/` — as symlinks, refreshed
-on every run. The link target is the file `facet pull` downloaded under
-`models/direct`; nothing is copied.
+`models/text_encoders/`, the vae into `models/vae/` and the FastWan LoRA into
+`models/loras/` — as symlinks, refreshed on every run. The link target is
+the file `facet pull` downloaded under `models/direct`; nothing is copied.
 
 ## Assets
 
 One run writes one PNG per entry, each with a record (`kind = "image"`,
 `mime = "image/png"`, `seed` the entry's seed, `params` the entry, and
 `properties` carrying `width`, `height` and `seed`). A clip run writes one
-MP4 per entry instead, with `kind = "video"` and `mime = "video/mp4"`. The
-runner prints one `<name>.png ok` or `<name>.mp4 ok` line per output, with no
-absolute path and no timing. An edit or clip run uploads first, so its log
-starts with the `<file> uploaded as <name>` lines and then the
-`<name>.png ok` or `<name>.mp4 ok` lines.
+MP4 per entry instead, with `kind = "video"` and `mime = "video/mp4"`. A
+`wan22-i2v-rapido` draft writes `<name>-borrador.mp4` and adds `draft = true`
+to its properties; every other record keeps `width`, `height` and `seed`
+alone. The runner prints one `<name>.png ok` or `<name>.mp4 ok` line per
+output, with no absolute path and no timing. An edit or clip run uploads
+first, so its log starts with the `<file> uploaded as <name>` lines and then
+the `<name>.png ok` or `<name>.mp4 ok` lines.
 
 ## Verification and doctor
 
@@ -258,11 +260,11 @@ declares, and the licence acceptance.
 
 The tool is ComfyUI (GPL-3.0-or-later); the runner's own dependencies are
 Pillow (MIT-CMU) and imageio-ffmpeg (BSD-2-Clause, the FFmpeg binary `verify`
-probes clips with). The ten models — the Z-Image Turbo unet, the FLUX.2
-klein 4B unet, the Wan 2.2 TI2V 5B unet, their three VAEs, the two text
-encoders (the Qwen clip the still and edit flows share, the UMT5 clip Wan
-loads) and the FastWan LoRA — are Apache-2.0, commercial use allowed, and no
-acceptance is needed.
+probes clips with). The ten manifest models — the Z-Image Turbo unet, the
+FLUX.2 klein 4B unet, the Wan 2.2 TI2V 5B unet, their three VAEs, the Qwen
+clip the still and edit flows share (one file, listed for both), the UMT5
+clip Wan loads and the FastWan LoRA — are Apache-2.0, commercial use allowed,
+and no acceptance is needed.
 The manifest records each model's direct URL and sha256, measured from the
 lab's clone.
 
