@@ -10,6 +10,12 @@ the runner never imports anything CUDA. It is the package behind the v0.1
 success metric: a verified voice clip from one command, in under 5
 minutes, without a GPU.
 
+Since 0.1.1 the pure text functions and the audio measurements come from the
+registry's shared `lib/textnorm.py` and `lib/audiopreview.py` — declared as
+`uses = ["textnorm", "audiopreview"]` and copied into the environment as
+`facet_lib.textnorm` and `facet_lib.audiopreview` — so the package no longer
+carries its own copies.
+
 ## Piece fields
 
 The fields below are what `facet describe kokoro.speak --json` reports
@@ -122,7 +128,7 @@ for `facet run`, the first pull included, and its record reads
 lock provenance, the params digest and the licence section):
 
 ```json
-{"bytes": 462796, "id": "sha256:de2279a6dbc67308bbd2c5d8a634086adeb2f0a4e49753243f38672c1482f256", "kind": "audio", "mime": "audio/wav", "name": "laboratorio", "path": "laboratorio.wav", "properties": {"duration_s": 9.641, "language": "es", "lufs": -20.72, "peak_dbfs": -1.0, "sample_rate_hz": 24000, "voice": "ef_dora"}, "provenance": {"capability": "kokoro.speak", "models": [{"id": "kokoro-82m-v1.0-onnx", "sha256": "beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a"}, {"id": "kokoro-voices-v1.0", "sha256": "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d"}, {"hf_repo": "Systran/faster-whisper-small", "id": "faster-whisper-small", "revision": "536b0662742c02347bc0e980a01041f333bce120"}], "package": {"name": "kokoro", "version": "0.1.0"}, "params": {"language": "es", "name": "laboratorio", "speed": 1.0, "target-lufs": -16.0, "text": "En este laboratorio probamos una voz en español generada localmente. Queremos medir si se entiende bien, cuánto tarda y cómo suena frente a las voces que ya usamos.", "voice": "ef_dora"}, "seed": null, "tool": {"name": "kokoro-onnx", "version": "0.6.1"}}, "record": 1, "verification": {"metrics": {"lufs": -20.72, "peak_dbfs": -1.0, "transcript": "En este laboratorio probamos una voz en español generada localmente. Queremos medir si se entiende bien, cuánto tarda y cómo suena frente a las voces que ya usamos.", "wer": 0.0, "words": 28, "words_per_minute": 174}, "status": "passed", "thresholds": {"wer_max": 0.05}, "verifier": "faster-whisper-small@536b0662"}}
+{"bytes": 462796, "id": "sha256:de2279a6dbc67308bbd2c5d8a634086adeb2f0a4e49753243f38672c1482f256", "kind": "audio", "mime": "audio/wav", "name": "laboratorio", "path": "laboratorio.wav", "properties": {"duration_s": 9.641, "language": "es", "lufs": -20.72, "peak_dbfs": -1.0, "sample_rate_hz": 24000, "voice": "ef_dora"}, "provenance": {"capability": "kokoro.speak", "models": [{"id": "kokoro-82m-v1.0-onnx", "sha256": "beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a"}, {"id": "kokoro-voices-v1.0", "sha256": "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d"}, {"hf_repo": "Systran/faster-whisper-small", "id": "faster-whisper-small", "revision": "536b0662742c02347bc0e980a01041f333bce120"}], "package": {"name": "kokoro", "version": "0.1.1"}, "params": {"language": "es", "name": "laboratorio", "speed": 1.0, "target-lufs": -16.0, "text": "En este laboratorio probamos una voz en español generada localmente. Queremos medir si se entiende bien, cuánto tarda y cómo suena frente a las voces que ya usamos.", "voice": "ef_dora"}, "seed": null, "tool": {"name": "kokoro-onnx", "version": "0.6.1"}}, "record": 1, "verification": {"metrics": {"lufs": -20.72, "peak_dbfs": -1.0, "transcript": "En este laboratorio probamos una voz en español generada localmente. Queremos medir si se entiende bien, cuánto tarda y cómo suena frente a las voces que ya usamos.", "wer": 0.0, "words": 28, "words_per_minute": 174}, "status": "passed", "thresholds": {"wer_max": 0.05}, "verifier": "faster-whisper-small@536b0662"}}
 ```
 
 The transcript is the text word for word, so the WER is 0. The loudness

@@ -1,6 +1,6 @@
 [project]
 name = "facet-kokoro"
-version = "0.1.0"
+version = "0.1.1"
 description = "Narration from text on CPU (Spanish and English), checked by transcription."
 readme = "README.md"
 license = "Apache-2.0"
@@ -12,6 +12,7 @@ dependencies = [
   "av==18.1.0",
   "pyloudnorm==0.2.0",
   "pillow==13.0.0",
+  "numpy==2.5.4",
 ]
 
 [tool.uv]

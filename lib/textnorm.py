@@ -1,10 +1,12 @@
-"""Pure text functions for the kokoro package: normalisation, WER, alignment.
+"""The registry's pure text functions: normalisation, WER and word alignment.
 
-Stdlib only, so the tests import it without the package environment and no
+Stdlib only, so a test imports it without any package environment and no
 model is ever needed. ``spell`` and ``words`` are ported from Grafics
 ``tools/voz.py`` (2026-10-19 lab), which handles Whisper writing ``2026``
 where the text says "dos mil veintiséis": Spanish numbers are spelled into
 words so the transcript and the text land on the same tokens.
+
+Requires: stdlib
 """
 
 from __future__ import annotations

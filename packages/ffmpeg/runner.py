@@ -8,8 +8,9 @@ and pyloudnorm, ``preview`` writes the audio preview file, ``doctor``
 checks the tool at ``quick`` and ``full`` depth.
 
 The command builders and the loudnorm parser live in ``graph`` (pure,
-stdlib-only, unit-tested); the signal measurements live in ``audiopreview``
-(a byte-identical copy of kokoro's). The bundled binary ships no ffprobe:
+stdlib-only, unit-tested); the signal measurements live in ``audiopreview``,
+the registry's shared module pulled into the environment as
+``facet_lib.audiopreview``. The bundled binary ships no ffprobe:
 every measurement decodes to a 32-bit float WAV and goes through
 soundfile and pyloudnorm. Heavy imports go through ``importlib`` inside
 the functions, so a broken environment still lets the doctor report
@@ -33,8 +34,8 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import audiopreview
 import graph
+from facet_lib import audiopreview
 from facet_runner_sdk import Request, Runner
 
 runner = Runner()

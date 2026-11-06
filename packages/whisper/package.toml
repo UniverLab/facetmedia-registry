@@ -1,11 +1,12 @@
 name = "whisper"
-version = "0.1.0"
+version = "0.1.1"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "SYSTRAN (faster-whisper) · OpenAI (Whisper model)"
 tool_name = "faster-whisper"
 description = "Transcripts and subtitles from audio on CPU, checked by confidence or reference text"
 facet = "voice"
+uses = ["textnorm"]
 
 [engine]
 type = "python-env"

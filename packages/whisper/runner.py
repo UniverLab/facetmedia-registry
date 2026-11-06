@@ -30,7 +30,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import formats
-import textnorm
+from facet_lib import textnorm
 from facet_runner_sdk import Request, Runner
 
 runner = Runner()

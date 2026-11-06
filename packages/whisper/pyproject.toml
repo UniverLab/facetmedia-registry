@@ -1,6 +1,6 @@
 [project]
 name = "facet-whisper"
-version = "0.1.0"
+version = "0.1.1"
 description = "Transcripts, subtitles and timed words from audio on CPU, checked by confidence and optional reference text."
 readme = "README.md"
 license = "MIT"

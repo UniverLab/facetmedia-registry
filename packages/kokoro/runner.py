@@ -28,7 +28,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import espeakpath
-import textnorm
+from facet_lib import textnorm
 from facet_runner_sdk import Request, Runner
 
 runner = Runner()
@@ -63,7 +63,7 @@ DOCTOR_IMPORTS = (
 
 def _audio() -> Any:
     """The package's audio helpers, imported only when a verb needs them."""
-    return importlib.import_module("audiopreview")
+    return importlib.import_module("facet_lib.audiopreview")
 
 
 def _tool() -> dict[str, str]:

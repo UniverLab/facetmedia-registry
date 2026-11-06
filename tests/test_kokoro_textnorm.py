@@ -1,4 +1,4 @@
-"""Tests for the kokoro package's pure text functions (no models needed).
+"""Tests for the facet registry's pure text functions (no models needed).
 
 ``textnorm`` is the port of Grafics ``tools/voz.py``'s normalisation, so
 these tests carry voz.py's own cases: accents fold (``vídeo`` → ``video``),
@@ -18,9 +18,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location(
-    "kokoro_textnorm", ROOT / "packages" / "kokoro" / "textnorm.py"
-)
+SPEC = importlib.util.spec_from_file_location("registry_textnorm", ROOT / "lib" / "textnorm.py")
 assert SPEC is not None and SPEC.loader is not None
 textnorm = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(textnorm)

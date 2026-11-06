@@ -1,13 +1,10 @@
-"""Audio measurement and loudness for the audio preview.
+"""The registry's audio measurement: loudness, waveform, silences and clipping.
 
-The runner keeps every pure-text function in ``textnorm``; this module is
-the signal side: loudness normalisation (ITU-R BS.1770 through pyloudnorm),
-the preview's waveform, momentary curve, silences and clipped samples.
-numpy, pyloudnorm and soundfile come from the package environment.
+The signal side of the audio preview: loudness normalisation (ITU-R BS.1770
+through pyloudnorm), the preview's waveform, momentary curve, silences and
+clipped samples. numpy, pyloudnorm and soundfile come from the environment.
 
-Packages run in separate environments, so kokoro and ffmpeg each carry a
-byte-identical copy of this module; ``tests/test_audiopreview_copies.py``
-keeps the copies from drifting.
+Requires: numpy, pyloudnorm, soundfile
 """
 
 from __future__ import annotations

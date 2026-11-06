@@ -8,8 +8,10 @@ ffmpeg.convert` cuts, resamples and encodes to another format. It belongs
 to the **`audio`** facet and writes the `audio` kind, so its assets show
 through the audio viewer. It runs the static FFmpeg binary bundled inside
 the `imageio-ffmpeg` wheel — never a system ffmpeg — and measures every
-result with soundfile and pyloudnorm (the binary ships no ffprobe). Light
-package: **no models, no GPU, not exclusive**.
+result with soundfile and pyloudnorm (the binary ships no ffprobe). The
+signal measurements live in the registry's `lib/audiopreview.py`, copied into
+the environment as `facet_lib.audiopreview` (`uses = ["audiopreview"]` in the
+manifest). Light package: **no models, no GPU, not exclusive**.
 
 ## Piece fields
 
@@ -128,7 +130,7 @@ with the bundled ffmpeg (`anoisesrc`), 117 KB.
 packages/ffmpeg/examples/normalize.toml`. The record:
 
 ```json
-{"bytes": 925584, "id": "sha256:cc150f5826d1dfd498fe32f5618ba026a4ec864bd3f592833316ee2065c65a14", "kind": "audio", "mime": "audio/wav", "name": "voz-a-16", "path": "voz-a-16.wav", "properties": {"channels": 1, "duration_s": 9.641, "lufs": -16.8, "peak_dbfs": -1.5, "sample_rate_hz": 48000}, "provenance": {"capability": "ffmpeg.normalize", "package": {"name": "ffmpeg", "version": "0.1.0"}, "seed": null, "tool": {"name": "ffmpeg", "version": "ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers"}}, "record": 1, "verification": {"metrics": {"duration_error_s": 0.0, "duration_s": 9.641, "lufs": -16.8, "peak_dbfs": -1.5}, "status": "passed", "thresholds": {"lufs_tol": 1.0}, "verifier": "ffmpeg 7.0.2-static loudnorm"}}
+{"bytes": 925584, "id": "sha256:cc150f5826d1dfd498fe32f5618ba026a4ec864bd3f592833316ee2065c65a14", "kind": "audio", "mime": "audio/wav", "name": "voz-a-16", "path": "voz-a-16.wav", "properties": {"channels": 1, "duration_s": 9.641, "lufs": -16.8, "peak_dbfs": -1.5, "sample_rate_hz": 48000}, "provenance": {"capability": "ffmpeg.normalize", "package": {"name": "ffmpeg", "version": "0.1.1"}, "seed": null, "tool": {"name": "ffmpeg", "version": "ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers"}}, "record": 1, "verification": {"metrics": {"duration_error_s": 0.0, "duration_s": 9.641, "lufs": -16.8, "peak_dbfs": -1.5}, "status": "passed", "thresholds": {"lufs_tol": 1.0}, "verifier": "ffmpeg 7.0.2-static loudnorm"}}
 ```
 
 The loudness stopped at −16.8 rather than −16.0 because this clip's peak
@@ -139,7 +141,7 @@ of "without clipping".
 2 s, ducking on, `target-lufs = -16`:
 
 ```json
-{"bytes": 2880078, "id": "sha256:8635d2de048be74cd1b88183ce8cf97df7181dd0155a921cd48f4c2a60cf698a", "kind": "audio", "mime": "audio/wav", "name": "voz-sobre-fondo", "path": "voz-sobre-fondo.wav", "properties": {"channels": 2, "duration_s": 15.0, "lufs": -16.21, "peak_dbfs": -1.5, "sample_rate_hz": 48000}, "provenance": {"capability": "ffmpeg.mix", "package": {"name": "ffmpeg", "version": "0.1.0"}, "seed": null, "tool": {"name": "ffmpeg", "version": "ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers"}}, "record": 1, "verification": {"metrics": {"duration_error_s": 0.0, "duration_s": 15.0, "lufs": -16.21, "peak_dbfs": -1.5}, "status": "passed", "thresholds": {"lufs_tol": 1.0}, "verifier": "ffmpeg 7.0.2-static loudnorm"}}
+{"bytes": 2880078, "id": "sha256:8635d2de048be74cd1b88183ce8cf97df7181dd0155a921cd48f4c2a60cf698a", "kind": "audio", "mime": "audio/wav", "name": "voz-sobre-fondo", "path": "voz-sobre-fondo.wav", "properties": {"channels": 2, "duration_s": 15.0, "lufs": -16.21, "peak_dbfs": -1.5, "sample_rate_hz": 48000}, "provenance": {"capability": "ffmpeg.mix", "package": {"name": "ffmpeg", "version": "0.1.1"}, "seed": null, "tool": {"name": "ffmpeg", "version": "ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers"}}, "record": 1, "verification": {"metrics": {"duration_error_s": 0.0, "duration_s": 15.0, "lufs": -16.21, "peak_dbfs": -1.5}, "status": "passed", "thresholds": {"lufs_tol": 1.0}, "verifier": "ffmpeg 7.0.2-static loudnorm"}}
 ```
 
 The mix lasts 15.0 s — the bed's own length — even though the voice ends
