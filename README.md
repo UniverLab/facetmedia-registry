@@ -11,8 +11,9 @@ belongs to (`voice`, `audio`, `image`, `video`, `cad`, `text`,
 ([`schemas/preview/`](schemas/preview/README.md)) and the viewer
 (`viewers/<kind>/`).
 facet downloads this registry at a **pinned commit** (`facet update`) and
-reads `index.toml`, `packages/<name>/` and `viewers/<name>/` from that
-snapshot, offline; the formats are defined by the core:
+reads `index.toml`, `packages/<name>/`, `lib/<name>.py` and
+`viewers/<name>/` from that snapshot, offline; the formats are defined by
+the core:
 [registry](https://github.com/UniverLab/facetmedia/blob/main/docs/registry.md),
 [skill](https://github.com/UniverLab/facetmedia/blob/main/docs/skill.md),
 [preview](https://github.com/UniverLab/facetmedia/blob/main/docs/preview.md).
