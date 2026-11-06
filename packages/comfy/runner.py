@@ -41,8 +41,12 @@ FLOW_NAMES = ("z-image-turbo", "flux2-klein-4b")
 DEFAULT_WORKFLOW = "z-image-turbo"
 #: The one flow an edit uses: reference-guided, no denoise strength.
 EDIT_FLOW = "flux2-klein-img2img"
-#: The one flow a clip uses: Wan 2.2 TI2V 5B animating what is inside a still.
-CLIP_FLOW_NAMES = ("wan22-i2v",)
+#: The flows a clip uses: Wan 2.2 TI2V 5B animating what is inside a still.
+CLIP_FLOW_NAMES = ("wan22-i2v", "wan22-i2v-rapido")
+#: The half-time flow whose output is a draft, never a final render.
+DRAFT_FLOW = "wan22-i2v-rapido"
+#: What a draft asset's name carries before its suffix: ``<name>-borrador.mp4``.
+DRAFT_SUFFIX = "borrador"
 STILL_CAPABILITY = "comfy.still"
 EDIT_CAPABILITY = "comfy.edit"
 CLIP_CAPABILITY = "comfy.clip"
@@ -85,6 +89,7 @@ MODEL_DIRS = {
     "wan2v2-unet": "models/diffusion_models",
     "wan2v2-clip": "models/text_encoders",
     "wan2v2-vae": "models/vae",
+    "wan2v2-fastwan-lora": "models/loras",
 }
 
 
@@ -279,39 +284,55 @@ def _images(history: dict[str, Any]) -> list[dict[str, Any]]:
     return images
 
 
-def _save(images: list[dict[str, Any]], name: str, out_dir: Path) -> list[Path]:
-    """Download every output beside the piece; one image keeps the plain name."""
+def _save(
+    images: list[dict[str, Any]], name: str, out_dir: Path, draft: bool = False
+) -> list[Path]:
+    """Download every output beside the piece; one image keeps the plain name.
+
+    A draft names its file ``<name>-borrador`` so a draft never passes for a
+    final render.
+    """
     saved: list[Path] = []
+    marker = f"-{DRAFT_SUFFIX}" if draft else ""
     for index, image in enumerate(images):
         query = urllib.parse.urlencode(
             {key: image[key] for key in ("filename", "subfolder", "type")}
         )
         suffix = Path(str(image["filename"])).suffix or ".png"
-        stem = f"{name}{suffix}" if len(images) == 1 else f"{name}-{index + 1}{suffix}"
+        if len(images) == 1:
+            stem = f"{name}{marker}{suffix}"
+        else:
+            stem = f"{name}{marker}-{index + 1}{suffix}"
         target = out_dir / stem
         target.write_bytes(_bytes(f"/view?{query}"))
         saved.append(target)
     return saved
 
 
-def _asset(entry: dict[str, Any], path: Path, video: bool = False) -> dict[str, Any]:
+def _asset(
+    entry: dict[str, Any], path: Path, video: bool = False, draft: bool = False
+) -> dict[str, Any]:
     """One record: the entry as its params, its seed beside them.
 
     A still is the ``image`` kind, a clip the ``video`` kind with the same
-    measured width and height.
+    measured width and height. A draft clip marks its properties so no
+    assembly mistakes it for a final.
     """
     seed = int(entry["seed"])
     kind, mime = ("video", "video/mp4") if video else ("image", "image/png")
+    properties: dict[str, Any] = {
+        "width": int(entry.get("width", DEFAULT_CLIP_WIDTH if video else DEFAULT_WIDTH)),
+        "height": int(entry.get("height", DEFAULT_CLIP_HEIGHT if video else DEFAULT_HEIGHT)),
+        "seed": seed,
+    }
+    if draft:
+        properties["draft"] = True
     return {
         "file": path.name,
         "name": str(entry["name"]),
         "kind": kind,
         "mime": mime,
-        "properties": {
-            "width": int(entry.get("width", DEFAULT_CLIP_WIDTH if video else DEFAULT_WIDTH)),
-            "height": int(entry.get("height", DEFAULT_CLIP_HEIGHT if video else DEFAULT_HEIGHT)),
-            "seed": seed,
-        },
+        "properties": properties,
         "params": dict(entry),
         "seed": seed,
         "inputs": [],
@@ -372,7 +393,9 @@ def run(req: Request) -> dict[str, Any]:
     if not entries:
         raise ValueError("the piece has no image entries")
     video = req.capability == CLIP_CAPABILITY
-    flow = _flow(_flow_name(req.capability, inputs))
+    flow_name = _flow_name(req.capability, inputs)
+    flow = _flow(flow_name)
+    draft = flow_name == DRAFT_FLOW
     source = None if video else _source_path(flow, inputs)
     _link_models(req)
     uploaded = _upload(source) if source is not None else ""
@@ -387,9 +410,9 @@ def run(req: Request) -> dict[str, Any]:
             values["image"] = uploaded
         graph = _fill(flow["graph"], values)
         images = _images(_history(_submit(graph)))
-        for path in _save(images, str(entry["name"]), req.out_dir):
+        for path in _save(images, str(entry["name"]), req.out_dir, draft):
             print(f"{path.name} ok", flush=True)
-            assets.append(_asset(entry, path, video))
+            assets.append(_asset(entry, path, video, draft))
     return {"tool": _tool(), "assets": assets}
 
 

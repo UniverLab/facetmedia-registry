@@ -129,6 +129,16 @@ sha256 = "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68"
 bytes = 6735906897
 path = "wan2v2-clip/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
 
+[[models]]
+id = "wan2v2-fastwan-lora"
+spdx = "Apache-2.0"
+commercial_use = true
+requires_acceptance = false
+url = "https://huggingface.co/Kijai/WanVideo_comfy/resolve/8260d429d19fd7a72304cad059160b95d843913f/FastWan/Wan2_2_5B_FastWanFullAttn_lora_rank_128_bf16.safetensors"
+sha256 = "79290493711b022e1c6e655d803715cd8a91a75cdb139856cad46f354e2f681c"
+bytes = 660874456
+path = "wan2v2-fastwan-lora/Wan2_2_5B_FastWanFullAttn_lora_rank_128_bf16.safetensors"
+
 [capabilities.still]
 summary = "Still illustration with the z-image-turbo (~8 s) or flux2-klein-4b (~6 s) flow, per 1344x768 image."
 kind = "image"
@@ -281,9 +291,9 @@ description = "Clip length in frames at 24 fps: 49 is about 2 s, 121 about 5 s (
 
 [capabilities.clip.inputs.workflow]
 type = "enum"
-values = ["wan22-i2v"]
+values = ["wan22-i2v", "wan22-i2v-rapido"]
 default = "wan22-i2v"
-description = "Clip flow: wan22-i2v animates what is inside the image."
+description = "Clip flow: wan22-i2v animates what is inside the image; wan22-i2v-rapido is a draft-only variant that drifts."
 
 [capabilities.clip.preview]
 viewer = "video"

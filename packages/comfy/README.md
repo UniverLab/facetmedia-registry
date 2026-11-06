@@ -9,12 +9,13 @@ reference image, changing it by instruction, and `facet run comfy.clip
 the image viewer, the clip writes the **`video`** kind and shows through the
 video viewer. A GPU is required: one model at a time, about 8 s per
 1344 × 768 image on z-image-turbo, about 6 s on flux2-klein-4b, about 23 s
-per edit, and about 7 minutes per two-second clip on wan22-i2v.
+per edit, and about 7 minutes per two-second clip on wan22-i2v, about half
+that on its `wan22-i2v-rapido` draft variant.
 
 ComfyUI is the lab's own tool (`~/Projects/open-source/ComfyUI`, 0.39.2) and
 facet treats it as an `[engine.server]`: `facet pull comfy` clones the pinned
 revision `3c1b7a17fdf239d35ce98cc777756f572d089795` into the facet home,
-builds its venv from its `requirements.txt`, and downloads the nine models
+builds its venv from its `requirements.txt`, and downloads the ten models
 next to it. For the duration of a verb facet starts
 `main.py --listen 127.0.0.1 --port <free> --disable-pinned-memory`; the
 runner reaches it through `FACET_SERVER_URL`. The flag is package-wide: the
@@ -116,7 +117,7 @@ The fields below are what `facet describe comfy.clip --json` reports.
 | `image[].width` | integer | no | `1280` | 64 to 2048, a multiple of 64 |
 | `image[].height` | integer | no | `704` | 64 to 2048, a multiple of 64 |
 | `image[].length` | integer | no | `49` | frames at 24 fps: `49` ≈ 2 s, `121` ≈ 5 s |
-| `workflow` | enum | no | `"wan22-i2v"` | the only clip flow |
+| `workflow` | enum | no | `"wan22-i2v"` | `"wan22-i2v"`, or `"wan22-i2v-rapido"` for a draft-only clip |
 
 The length must be `4n+1` frames — 49, 121 — because the Wan latent keeps one
 frame plus groups of four. The schema cannot express that, so piece validation
@@ -144,6 +145,18 @@ cup, static camera) and `calle-acuarela.mp4` (a slow pan along a watercolor
 street). The forest and the cup are the reliable pair: something visible
 inside the frame moves.
 
+### Drafts
+
+`workflow = "wan22-i2v-rapido"` runs the same Wan graph with FastWan's
+`Wan2_2_5B_FastWanFullAttn_lora_rank_128_bf16.safetensors` LoRA, four steps
+and no CFG, so a clip takes about half the time. It is a **draft**: halfway
+through it drifts from the input image — the light and the composition
+change — so it is for trying a movement, never a final render or a piece of
+an assembly. The runner names every draft output `<name>-borrador.mp4` and
+its record carries `properties.draft = true`, so no draft passes for a final.
+The lab's approved sample is
+`projects/prueba-video-ia/bosque-niebla-rapido.mp4`.
+
 ## The no-data rule
 
 Images carry image content only: no caption, no chart, no label, no logo, no
@@ -159,8 +172,9 @@ Illustrations, backgrounds and mood only.
 A **flow** is a ComfyUI API graph whose inputs written as `"$key"` are
 filled, in order, from the flow's own `params`, then the entry. The still
 piece's `workflow` input picks one of the two still flows, the clip's picks
-`wan22-i2v`, and an edit always uses `flux2-klein-img2img`. The package ships
-four, all copied unchanged from the lab's `tools/comfy/`:
+`wan22-i2v` or its `wan22-i2v-rapido` draft, and an edit always uses
+`flux2-klein-img2img`. The package ships five, all copied unchanged from the
+lab's `tools/comfy/`:
 
 | Flow | Models | Capability | Pick it for |
 |------|--------|------------|-------------|
@@ -168,6 +182,7 @@ four, all copied unchanged from the lab's `tools/comfy/`:
 | `flux2-klein-4b` | FLUX.2 klein 4B unet, the shared Qwen clip, the FLUX.2 VAE | `still` | palette, composition and empty space |
 | `flux2-klein-img2img` | FLUX.2 klein 4B unet, the shared Qwen clip, the FLUX.2 VAE | `edit` | editing a reference image by instruction |
 | `wan22-i2v` | Wan 2.2 TI2V 5B unet, the UMT5 clip, the Wan 2.2 VAE | `clip` | movement inside a still: fog, steam, a slow push in |
+| `wan22-i2v-rapido` | Wan 2.2 TI2V 5B unet, the UMT5 clip, the Wan 2.2 VAE, the FastWan LoRA | `clip` | motion drafts in half the time |
 
 - `$prompt`, `$seed`, `$width`, `$height` and `$name` come from the entry;
   the edit and clip flows add `$image`, the uploaded reference or first frame,
@@ -175,10 +190,13 @@ four, all copied unchanged from the lab's `tools/comfy/`:
 - `$steps` and `$shift` come from the flow's `params`; klein has no
   `$shift` (its params are width 1344, height 768, seed 0, steps 4). Wan's
   params are width 1280, height 704, length 49, steps 20, cfg 5, shift 8 and
-  24 fps, with Wan's own Chinese negative prompt as the default.
-- The unet, clip and vae load by the filenames of the manifest models; the
-  three still and edit flows share the one Qwen clip file, while Wan loads
-  its own UMT5 clip and VAE.
+  24 fps, with Wan's own Chinese negative prompt as the default. The rapido
+  draft keeps the same size, length and fps with steps 4, cfg 1 and
+  `lora_strength` 1.0 for its FastWan LoRA.
+- The unet, clip, vae and LoRA load by the filenames of the manifest models;
+  the three still and edit flows share the one Qwen clip file, while both
+  Wan flows load the one UMT5 clip and VAE and the rapido draft adds the
+  FastWan LoRA.
 
 The edit and clip flows list `uploads`: instead of a value they take a local
 file. Before filling the graph, the runner posts the piece's `source` — or
@@ -227,7 +245,7 @@ as `length`, and `fps`, shown in the video viewer.
 - `gpu` (quick): `nvidia-smi -L` sees an NVIDIA GPU.
 - `gpu_free` (quick): no other process holds GPU memory, unless the server
   facet started answers `/system_stats`.
-- `models` (quick): the nine manifest models are present with their byte
+- `models` (quick): the ten manifest models are present with their byte
   counts.
 - `checkout` (quick): the pinned ComfyUI checkout exists with `main.py`.
 - `server` (full): the started ComfyUI answers `/system_stats`.
@@ -240,10 +258,11 @@ declares, and the licence acceptance.
 
 The tool is ComfyUI (GPL-3.0-or-later); the runner's own dependencies are
 Pillow (MIT-CMU) and imageio-ffmpeg (BSD-2-Clause, the FFmpeg binary `verify`
-probes clips with). The nine models — the Z-Image Turbo unet, the FLUX.2
-klein 4B unet, the Wan 2.2 TI2V 5B unet, their three VAEs and the two text
+probes clips with). The ten models — the Z-Image Turbo unet, the FLUX.2
+klein 4B unet, the Wan 2.2 TI2V 5B unet, their three VAEs, the two text
 encoders (the Qwen clip the still and edit flows share, the UMT5 clip Wan
-loads) — are Apache-2.0, commercial use allowed, and no acceptance is needed.
+loads) and the FastWan LoRA — are Apache-2.0, commercial use allowed, and no
+acceptance is needed.
 The manifest records each model's direct URL and sha256, measured from the
 lab's clone.
 
@@ -251,7 +270,7 @@ lab's clone.
 
 `requirements` in the manifest: **GPU**, **16 GB RAM**, **40 GB disk**,
 exclusive (the default) on Linux — one heavy job at a time. The first `facet
-pull comfy` clones ComfyUI, builds its venv and downloads about 33.6 GB of
+pull comfy` clones ComfyUI, builds its venv and downloads about 34.3 GB of
 models (the shared Qwen clip downloads once); later runs are offline. A still
 or an edit fits the 8 GB reference GPU with room to spare; a clip fills it,
 about 7.8 GB of VRAM and 6.5 GB of RAM, so nothing else may hold the GPU.

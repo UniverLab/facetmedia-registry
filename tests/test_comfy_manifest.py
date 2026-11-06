@@ -1,4 +1,4 @@
-"""The comfy manifest: the server pin, the nine models and the prompt guard.
+"""The comfy manifest: the server pin, the ten models and the prompt guard.
 
 The registry suite runs without the core, so the checks here read the
 manifest and the flow as data. The closed item set pins what the core turns
@@ -104,7 +104,7 @@ LAB_CLIP_PROMPTS = (
     "mountains, watercolor painting style preserved, gentle movement",
 )
 
-#: The nine models the lab's clone holds, pinned by sha256, size and path.
+#: The ten models the lab's clone holds, pinned by sha256, size and path.
 #: ``flux2-qwen-clip`` shares the z-image clip's file: pull downloads it once.
 LAB_MODELS = {
     "z-image-turbo-unet": (
@@ -152,6 +152,11 @@ LAB_MODELS = {
         6735906897,
         "wan2v2-clip/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
     ),
+    "wan2v2-fastwan-lora": (
+        "79290493711b022e1c6e655d803715cd8a91a75cdb139856cad46f354e2f681c",
+        660874456,
+        "wan2v2-fastwan-lora/Wan2_2_5B_FastWanFullAttn_lora_rank_128_bf16.safetensors",
+    ),
 }
 
 #: The Hugging Face repo prefix each model's url must carry.
@@ -170,6 +175,9 @@ KIJAI_REPO = (
     "https://huggingface.co/Kijai/WanVideo_comfy_fp8_scaled/resolve/"
     "033a4e487f60220b3d6e469599a6aebc46e13cee/"
 )
+FASTWAN_REPO = (
+    "https://huggingface.co/Kijai/WanVideo_comfy/resolve/8260d429d19fd7a72304cad059160b95d843913f/"
+)
 MODEL_REPOS = {
     "z-image-turbo-unet": Z_IMAGE_REPO,
     "z-image-qwen-clip": Z_IMAGE_REPO,
@@ -180,6 +188,7 @@ MODEL_REPOS = {
     "wan2v2-unet": KIJAI_REPO,
     "wan2v2-vae": WAN_REPO,
     "wan2v2-clip": WAN_REPO,
+    "wan2v2-fastwan-lora": FASTWAN_REPO,
 }
 
 
@@ -225,7 +234,7 @@ def test_the_requirements_are_one_gpu_job() -> None:
     assert "platforms" not in requirements
 
 
-def test_the_nine_models_are_the_lab_files() -> None:
+def test_the_ten_models_are_the_lab_files() -> None:
     models = {model["id"]: model for model in MANIFEST["models"]}
     assert set(models) == set(LAB_MODELS)
     for model_id, (sha256, size, path) in LAB_MODELS.items():
@@ -335,9 +344,10 @@ def test_the_clip_entries_carry_their_own_first_frame() -> None:
 def test_the_clip_workflow_is_the_wan_enum() -> None:
     workflow = CLIP["inputs"]["workflow"]
     assert workflow["type"] == "enum"
-    assert workflow["values"] == ["wan22-i2v"]
+    assert workflow["values"] == ["wan22-i2v", "wan22-i2v-rapido"]
     assert workflow["default"] == "wan22-i2v"
     assert workflow["default"] in workflow["values"]
+    assert "draft" in workflow["description"]
 
 
 @pytest.mark.parametrize("word", GUARD_WORDS)

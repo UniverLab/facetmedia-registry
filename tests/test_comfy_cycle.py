@@ -41,6 +41,7 @@ MODEL_DIRS = {
     "wan2v2-unet": "models/diffusion_models",
     "wan2v2-clip": "models/text_encoders",
     "wan2v2-vae": "models/vae",
+    "wan2v2-fastwan-lora": "models/loras",
 }
 #: The 64x48, 24 fps, 49-frame MP4 the stub serves for a clip.
 CLIP_FIXTURE = ROOT / "tests" / "fixtures" / "clip.mp4"
@@ -58,6 +59,13 @@ CLIP_CFG = 5
 CLIP_SHIFT = 8
 CLIP_LENGTH = 49
 CLIP_FPS = 24
+#: The draft clip flow: FastWan's LoRA, four steps and no CFG.
+RAPIDO_FLOW = "wan22-i2v-rapido"
+RAPIDO_STEPS = 4
+RAPIDO_CFG = 1
+RAPIDO_STRENGTH = 1.0
+#: The suffix the runner gives every draft output, so none passes for a final.
+DRAFT_SUFFIX = "-borrador"
 WIDTH = 64
 HEIGHT = 48
 OK = 200
@@ -190,6 +198,24 @@ def main():
 
 if __name__ == "__main__":
     main()
+"""
+
+#: Import the runner by file path and read one ``_flow_name``: the module runs
+#: ``runner.main()`` at import, so argv points at a harmless empty verify and
+#: the SystemExit it raises is caught.
+PROBE_FLOW_NAME = """
+import importlib.util
+import sys
+
+runner_path, request_path, result_path = sys.argv[1], sys.argv[2], sys.argv[3]
+sys.argv = [runner_path, "verify", "--input", request_path, "--result", result_path]
+spec = importlib.util.spec_from_file_location("comfy_runner", runner_path)
+module = importlib.util.module_from_spec(spec)
+try:
+    spec.loader.exec_module(module)
+except SystemExit:
+    pass
+print(module._flow_name("comfy.clip", {"workflow": "wan22-i2v-rapido"}))
 """
 
 
@@ -626,6 +652,98 @@ def _assert_wan_graph(graph_file: Path) -> None:
     assert graph["unet"]["inputs"]["unet_name"] == Path(MODEL_PATHS["wan2v2-unet"]).name
     assert graph["clip"]["inputs"]["clip_name"] == Path(MODEL_PATHS["wan2v2-clip"]).name
     assert graph["vae"]["inputs"]["vae_name"] == Path(MODEL_PATHS["wan2v2-vae"]).name
+
+
+def test_the_rapido_flow_lora_is_a_linked_manifest_model() -> None:
+    flow = json.loads((PACKAGE / "flows" / f"{RAPIDO_FLOW}.json").read_text(encoding="utf-8"))
+    lora_name = flow["graph"]["lora"]["inputs"]["lora_name"]
+    matches = [model["id"] for model in MANIFEST["models"] if Path(model["path"]).name == lora_name]
+    assert matches == ["wan2v2-fastwan-lora"]
+    assert MODEL_DIRS["wan2v2-fastwan-lora"] == "models/loras"
+
+
+def test_a_rapido_clip_is_a_borrador_draft(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    models = _model_files(home)
+    graph_file = tmp_path / "graph.json"
+    upload_file = tmp_path / "upload.bin"
+    stub_dir = _stub_sdk(tmp_path)
+    checkout = _clone(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    source = tmp_path / "primer-cuadro.png"
+    PIL.Image.new("RGB", (WIDTH, HEIGHT), (12, 34, 56)).save(source)
+    entry = _clip_entry(source)
+    port = _free_port()
+    url = f"http://127.0.0.1:{port}"
+    process = _launch(checkout, graph_file, upload_file, port)
+    try:
+        assert _wait_healthy(f"{url}/system_stats"), "the stub ComfyUI never became healthy"
+        env = _environment(stub_dir, home, url)
+        request = _request(
+            "run",
+            out,
+            tmp_path,
+            models,
+            inputs={"workflow": RAPIDO_FLOW, "image": [entry]},
+            capability="comfy.clip",
+        )
+        result, printed = _call(stub_dir, "run", request, tmp_path, env)
+        assert f"bosque-niebla{DRAFT_SUFFIX}.mp4 ok" in printed
+        asset = result["assets"][0]
+        assert asset["file"] == f"bosque-niebla{DRAFT_SUFFIX}.mp4"
+        assert (asset["kind"], asset["mime"]) == ("video", "video/mp4")
+        assert asset["properties"] == {
+            "width": WIDTH,
+            "height": HEIGHT,
+            "seed": SEED,
+            "draft": True,
+        }
+        assert (out / f"bosque-niebla{DRAFT_SUFFIX}.mp4").read_bytes() == CLIP_FIXTURE.read_bytes()
+        _assert_links(checkout, models)
+        _assert_rapido_graph(graph_file)
+    finally:
+        process.terminate()
+        process.wait(timeout=10)
+
+
+def _assert_rapido_graph(graph_file: Path) -> None:
+    graph = json.loads(graph_file.read_text(encoding="utf-8"))["prompt"]
+    assert graph["lora"]["class_type"] == "LoraLoaderModelOnly"
+    assert graph["lora"]["inputs"]["lora_name"] == Path(MODEL_PATHS["wan2v2-fastwan-lora"]).name
+    assert graph["lora"]["inputs"]["strength_model"] == RAPIDO_STRENGTH
+    assert graph["model"]["inputs"]["model"] == ["lora", 0]
+    assert graph["sampler"]["inputs"]["steps"] == RAPIDO_STEPS
+    assert graph["sampler"]["inputs"]["cfg"] == RAPIDO_CFG
+    assert graph["save"]["inputs"]["filename_prefix"] == "bosque-niebla"
+    assert "$" not in json.dumps(graph)
+
+
+def test_the_runner_resolves_the_rapido_clip_flow(tmp_path: Path) -> None:
+    stub_dir = _stub_sdk(tmp_path)
+    request_path = tmp_path / "probe-request.json"
+    request = _request(
+        "verify", tmp_path, tmp_path, {}, inputs={"workflow": RAPIDO_FLOW}, capability="comfy.clip"
+    )
+    request_path.write_text(json.dumps(request), encoding="utf-8")
+    result_path = tmp_path / "probe-result.json"
+    done = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            PROBE_FLOW_NAME,
+            str(PACKAGE / "runner.py"),
+            str(request_path),
+            str(result_path),
+        ],
+        env={**os.environ, "PYTHONPATH": str(stub_dir)},
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert done.stdout.strip() == RAPIDO_FLOW
 
 
 def _clip_verdict(
