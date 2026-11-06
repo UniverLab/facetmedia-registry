@@ -53,6 +53,8 @@ linocut restyle, another palette, a different mood. Trying amounts of change
 is not what this capability is for; if a gradual transformation needs a
 strength knob, that is a separate flow.
 
+The fields below are what `facet describe comfy.edit --json` reports.
+
 | Field | Type | Required | Default | Notes |
 |-------|------|----------|---------|-------|
 | `source` | path | yes | — | reference image, relative to the piece; missing fails `invalid_input` |
@@ -65,7 +67,8 @@ strength knob, that is a separate flow.
 
 The entries have the same five fields and defaults as `still`, so `verify`
 and `preview` work unchanged; there is no `workflow` input, because an edit
-always uses `flux2-klein-img2img`.
+always uses `flux2-klein-img2img`. The reference is uploaded once per run and
+guides every entry; a second reference image is a second piece.
 
 ```toml
 [inputs]
@@ -80,19 +83,21 @@ That pair is the lab's approved piece
 `ilustracion-editorial.png` in 22.7 s at 1344 × 768, keeping the character
 and framing while turning the picture into a blue and cream print.
 
-### The no-data rule
+## The no-data rule
 
 Images carry image content only: no caption, no chart, no label, no logo, no
 sign, no title, no watermark, no numbers. Text and figures belong in HTML or
 SVG. A prompt that names one of those words (as a whole word, any case) is
 rejected with `invalid_input` before anything runs; digits stay allowed, so
-"85mm lens" passes. Illustrations, backgrounds and mood only.
+"85mm lens" passes. This holds for a still prompt and for an edit
+instruction. Illustrations, backgrounds and mood only.
 
 ## Flows
 
 A **flow** is a ComfyUI API graph whose inputs written as `"$key"` are
-filled, in order, from the flow's own `params`, then the entry. The piece's
-`workflow` input picks one; the package ships three, all copied unchanged
+filled, in order, from the flow's own `params`, then the entry. The still
+piece's `workflow` input picks one of the two still flows; an edit always
+uses `flux2-klein-img2img`. The package ships three, all copied unchanged
 from the lab's `tools/comfy/`:
 
 | Flow | Models | Capability | Pick it for |
@@ -108,12 +113,13 @@ from the lab's `tools/comfy/`:
 - The unet, clip and vae load by the filenames of the manifest models;
   all three flows share the one Qwen clip file.
 
-A flow that lists `uploads` takes a local file instead of a value: before it
-fills the graph, the runner posts the piece's `source` to the server's
-`/upload/image` endpoint (the lab's multipart protocol, `overwrite` set) and
-fills `$image` with the name the server answers, `subfolder/name` when it
-names one. The run prints `<source> uploaded as <name>` so the log shows what
-reached the server.
+Only the edit flow lists `uploads`: instead of a value it takes a local file.
+Before filling the graph, the runner posts the piece's `source` to the
+server's `/upload/image` endpoint (the lab's multipart protocol, `overwrite`
+set) and fills `$image` with the name the server answers, `subfolder/name`
+when it names one. One upload serves every entry. The run prints
+`<file> uploaded as <name>` — the reference's file name and the name the
+server stored — so the log shows what reached the server.
 
 At run start the runner links each facet model into the checkout where
 ComfyUI looks — the unet into `models/diffusion_models/`, the clip into
@@ -128,7 +134,7 @@ One run writes one PNG per entry, each with a record (`kind = "image"`,
 `properties` carrying `width`, `height` and `seed`). The runner prints one
 `<name>.png ok` line per output, with no absolute path and no timing. An edit
 run also uploads the piece's `source` first, so its log starts with the
-`<source> uploaded as <name>` line and then the same `<name>.png ok` lines.
+`<file> uploaded as <name>` line and then the same `<name>.png ok` lines.
 
 ## Verification and doctor
 
@@ -159,9 +165,9 @@ declares, and the licence acceptance.
 
 The tool is ComfyUI (GPL-3.0-or-later); the runner's own dependency is
 Pillow (MIT-CMU). The six models — the Z-Image Turbo unet, the FLUX.2 klein
-4B unet, their two VAEs and the Qwen clip both flows share — are Apache-2.0,
-commercial use allowed, and no acceptance is needed. The manifest records
-each model's direct URL and sha256, measured from the lab's clone.
+4B unet, their two VAEs and the Qwen clip all three flows share — are
+Apache-2.0, commercial use allowed, and no acceptance is needed. The manifest
+records each model's direct URL and sha256, measured from the lab's clone.
 
 ## Machine cost
 
