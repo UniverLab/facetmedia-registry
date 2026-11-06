@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>facet — image viewer</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/kit/base.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <div id="error" class="error-box" role="alert" hidden></div>
+      <header id="header"></header>
+      <main>
+        <p id="summary"></p>
+        <section id="image">
+          <h2>image</h2>
+          <div class="views">
+            <figure>
+              <img id="still" alt="" />
+              <figcaption>click to enlarge</figcaption>
+            </figure>
+          </div>
+        </section>
+        <h2>piece</h2>
+        <dl class="kv" id="details"></dl>
+        <p><a id="asset-link" href="#">open the asset</a></p>
+      </main>
+    </div>
+    <dialog id="zoom">
+      <img id="zoom-img" alt="" />
+      <p><button id="zoom-close" type="button">close</button></p>
+    </dialog>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

@@ -2,8 +2,9 @@
 /* Open every viewer example in light and dark at 1280x800 and 390x844, one
    case at a time, with the system Chrome: fail on any page error, console
    error, failed request or HTTP >= 400, exercise the interaction the viewer
-   exists for (audio click-to-seek, the CAD view dialog), and save a
-   screenshot of each case under viewers/_examples/<kind>/screens/
+   exists for (audio click-to-seek, the CAD view dialog, the image
+   enlargement), and save a screenshot of each case under
+   viewers/_examples/<kind>/screens/
    (gitignored).
 
    Run by hand:  node scripts/check-viewers.mjs [kind ...]
@@ -19,7 +20,9 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CHROME = process.env.CHROME_PATH || "/usr/bin/google-chrome";
-const KINDS = process.argv.slice(2).length > 0 ? process.argv.slice(2) : ["generic", "audio", "cad"];
+const KINDS = process.argv.slice(2).length > 0
+  ? process.argv.slice(2)
+  : ["generic", "audio", "cad", "image"];
 const CASES = [
   { scheme: "light", width: 1280, height: 800 },
   { scheme: "dark", width: 1280, height: 800 },
@@ -115,6 +118,19 @@ async function checkCadZoom(page, label, failures) {
   await page.evaluate(() => document.getElementById("zoom").close());
 }
 
+/** Clicking the still must open the enlargement dialog (and close it again). */
+async function checkImageZoom(page, label, failures) {
+  const still = page.locator("#still");
+  if ((await still.count()) === 0) {
+    failures.push(`${label}: no still image`);
+    return;
+  }
+  await still.click();
+  const open = await page.evaluate(() => document.getElementById("zoom").open);
+  if (!open) failures.push(`${label}: clicking the still did not open the enlargement`);
+  await page.evaluate(() => document.getElementById("zoom").close());
+}
+
 async function runCase(browser, url, kind, testCase, failures) {
   const { scheme, width, height } = testCase;
   const label = `${kind} ${scheme} ${width}x${height}`;
@@ -129,6 +145,7 @@ async function runCase(browser, url, kind, testCase, failures) {
   await page.waitForTimeout(600); // canvases draw, images and fonts settle
   if (kind === "audio") await checkAudioSeek(page, label, failures);
   if (kind === "cad") await checkCadZoom(page, label, failures);
+  if (kind === "image") await checkImageZoom(page, label, failures);
   const dir = path.join(ROOT, "viewers", "_examples", kind, "screens");
   mkdirSync(dir, { recursive: true });
   await page.screenshot({

@@ -100,3 +100,12 @@ pair: `cad.json` is the lab's escuadra with two holes and its two views,
 - `views`: rendered views beside the asset, at least one.
 - `views[].file`: view file beside the asset (PNG/SVG).
 - `views[].label`: view label.
+
+## Image fields
+
+- `name`: asset base name, `[a-z0-9][a-z0-9-]*`.
+- `prompt`: the prompt the image was generated from.
+- `seed`: sampling seed, integer >= 0.
+- `width`: image width in pixels, integer >= 1.
+- `height`: image height in pixels, integer >= 1.
+

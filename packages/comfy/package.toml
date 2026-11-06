@@ -1,0 +1,110 @@
+name = "comfy"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "ComfyUI project"
+tool_name = "ComfyUI"
+description = "Still illustration from prompts with ComfyUI's z-image-turbo flow, checked by pixel size."
+facet = "image"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[engine.server]
+repo = "https://github.com/comfyanonymous/ComfyUI.git"
+rev = "3c1b7a17fdf239d35ce98cc777756f572d089795"
+requirements = "requirements.txt"
+launch = ["python", "main.py", "--listen", "127.0.0.1", "--port", "{{port}}"]
+health_url = "http://127.0.0.1:{{port}}/system_stats"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = true
+ram_gb = 16
+disk_gb = 25
+
+[[licenses]]
+subject = "ComfyUI"
+spdx = "GPL-3.0-or-later"
+
+[[licenses]]
+subject = "pillow"
+spdx = "MIT-CMU"
+
+[[models]]
+id = "z-image-turbo-unet"
+spdx = "Apache-2.0"
+commercial_use = true
+requires_acceptance = false
+url = "https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/6fc90a3b1b653e935a0d175e260736de25b84df5/split_files/diffusion_models/z_image_turbo_int8_convrot.safetensors"
+sha256 = "be517ebd47c912a5626a588e1aeea43e6be4a43c0cdcd2b48a2a780d9f358635"
+bytes = 6201001296
+path = "z-image-turbo-unet/z_image_turbo_int8_convrot.safetensors"
+
+[[models]]
+id = "z-image-qwen-clip"
+spdx = "Apache-2.0"
+commercial_use = true
+requires_acceptance = false
+url = "https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/6fc90a3b1b653e935a0d175e260736de25b84df5/split_files/text_encoders/qwen_3_4b_fp8_mixed.safetensors"
+sha256 = "72450b19758172c5a7273cf7de729d1c17e7f434a104a00167624cba94f68f15"
+bytes = 5631994051
+path = "z-image-qwen-clip/qwen_3_4b_fp8_mixed.safetensors"
+
+[[models]]
+id = "z-image-vae"
+spdx = "Apache-2.0"
+commercial_use = true
+requires_acceptance = false
+url = "https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/6fc90a3b1b653e935a0d175e260736de25b84df5/split_files/vae/ae.safetensors"
+sha256 = "afc8e28272cd15db3919bacdb6918ce9c1ed22e96cb12c4d5ed0fba823529e38"
+bytes = 335304388
+path = "z-image-vae/ae.safetensors"
+
+[capabilities.still]
+summary = "Still illustration with the z-image-turbo flow (~8 s per 1344x768 image)."
+kind = "image"
+
+[capabilities.still.inputs.image]
+type = "array"
+required = true
+min_items = 1
+description = "Images to make; each entry is one prompt with its seed and size."
+
+[capabilities.still.inputs.image.items.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name: writes <name>.png."
+
+[capabilities.still.inputs.image.items.prompt]
+type = "string"
+required = true
+pattern = '(?i)^(?!.*\b(?:captions?|chart|graph|labels?|letters?|logo|sign|text|title|words?)\b).*$'
+description = "English prompt; illustration, backgrounds or mood only, never data or lettering."
+
+[capabilities.still.inputs.image.items.seed]
+type = "integer"
+required = true
+description = "Sampling seed; the same seed and prompt give the same image."
+
+[capabilities.still.inputs.image.items.width]
+type = "integer"
+default = 1344
+min = 64
+max = 2048
+description = "Image width in pixels, a multiple of 64."
+
+[capabilities.still.inputs.image.items.height]
+type = "integer"
+default = 768
+min = 64
+max = 2048
+description = "Image height in pixels, a multiple of 64."
+
+[capabilities.still.preview]
+viewer = "image"

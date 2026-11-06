@@ -41,10 +41,10 @@ Try one without a package: `python3 scripts/serve-example.py <kind>` serves
 `facet preview` serves) and prints the URL to open. Check them by hand with
 `node scripts/check-viewers.mjs [kind ...]`: with `playwright-core`
 resolvable and the system Chrome, it opens each example in light and dark at
-1280x800 and 390x844, exercises the audio click-to-seek and the CAD view
-enlargement, fails on any console error, page error, failed request or HTTP
-status >= 400, and saves a screenshot of each case under
-`_examples/<kind>/screens/` (gitignored).
+1280x800 and 390x844, exercises the audio click-to-seek, the CAD view
+enlargement and the image enlargement, fails on any console error, page
+error, failed request or HTTP status >= 400, and saves a screenshot of each
+case under `_examples/<kind>/screens/` (gitignored).
 
 Every viewer opens with the same header, `_kit/header.js`: the asset's name
 and kind, the verification verdict with its metrics against their
@@ -55,5 +55,6 @@ collapsed.
 
 The viewers here are `generic` (any preview: summary, fields, the asset),
 `audio` (player, waveform with silences and the playhead, loudness against the
-target, speech alignment) and `cad` (views that enlarge, solid and drawing
-measurements); each has a runnable example under `_examples/`.
+target, speech alignment), `cad` (views that enlarge, solid and drawing
+measurements) and `image` (the still itself, click to enlarge, with its
+prompt, seed and pixel size); each has a runnable example under `_examples/`.

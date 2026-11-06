@@ -8,6 +8,9 @@ name = "ascii"
 name = "cad"
 
 [[packages]]
+name = "comfy"
+
+[[packages]]
 name = "ffmpeg"
 
 [[packages]]
