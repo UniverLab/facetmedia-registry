@@ -24,9 +24,15 @@ MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
 INDEX = tomllib.loads((ROOT / "index.toml").read_text(encoding="utf-8"))
 FLOW = json.loads((PACKAGE / "flows" / "z-image-turbo.json").read_text(encoding="utf-8"))
 FLOW_KLEIN = json.loads((PACKAGE / "flows" / "flux2-klein-4b.json").read_text(encoding="utf-8"))
+FLOW_IMG2IMG = json.loads(
+    (PACKAGE / "flows" / "flux2-klein-img2img.json").read_text(encoding="utf-8")
+)
 CAPABILITY = MANIFEST["capabilities"]["still"]
+EDIT = MANIFEST["capabilities"]["edit"]
 IMAGE = CAPABILITY["inputs"]["image"]
 ITEMS = IMAGE["items"]
+EDIT_ITEMS = EDIT["inputs"]["image"]["items"]
+EDIT_SOURCE = EDIT["inputs"]["source"]
 GUARD = re.compile(ITEMS["prompt"]["pattern"])
 
 #: The requirements and image defaults the manifest declares.
@@ -34,6 +40,7 @@ RAM_GB = 16
 DISK_GB = 25
 DEFAULT_WIDTH = 1344
 DEFAULT_HEIGHT = 768
+KLEIN_STEPS = 4
 SIDE_MIN = 64
 SIDE_MAX = 2048
 #: The core's skill description bounds.
@@ -72,6 +79,13 @@ LAB_PROMPTS = (
     "Loose watercolor painting of a colonial street in a small Andean town, colorful "
     "facades with wooden balconies, cobblestones, green mountains in the background, "
     "visible paper texture and pigment blooms",
+)
+
+#: The prompt of the lab's approved img2img piece.
+LAB_EDIT_PROMPT = (
+    "Edit the reference image into a two-color linocut print in deep indigo and warm cream. "
+    "Preserve the woman reading under the desk lamp, the framing, and the large geometric "
+    "shapes. Use rough carved edges and visible paper grain. Do not add lettering or symbols."
 )
 
 #: The six models the lab's clone holds, pinned by sha256, size and path.
@@ -133,11 +147,11 @@ def test_index_lists_the_comfy_package() -> None:
     assert "comfy" in names
 
 
-def test_the_package_is_the_image_facet_with_one_still_capability() -> None:
+def test_the_package_is_the_image_facet_with_still_and_edit() -> None:
     assert MANIFEST["name"] == "comfy"
     assert MANIFEST["facet"] == "image"
     assert MANIFEST["transport"] == {"type": "cli", "entry": "runner.py"}
-    assert sorted(MANIFEST["capabilities"]) == ["still"]
+    assert sorted(MANIFEST["capabilities"]) == ["edit", "still"]
     assert CAPABILITY["kind"] == "image"
     assert CAPABILITY["preview"]["viewer"] == "image"
 
@@ -205,6 +219,51 @@ def test_the_workflow_input_is_an_enum_with_a_default() -> None:
     assert workflow["default"] in workflow["values"]
 
 
+def test_the_edit_capability_is_an_image_from_a_reference() -> None:
+    assert EDIT["kind"] == "image"
+    assert EDIT["preview"]["viewer"] == "image"
+    assert EDIT_SOURCE["type"] == "path"
+    assert EDIT_SOURCE["required"] is True
+    assert set(EDIT["inputs"]) == {"source", "image"}
+
+
+def test_the_edit_entries_have_the_still_shape_and_defaults() -> None:
+    assert set(EDIT_ITEMS) == {"name", "prompt", "seed", "width", "height"}
+    assert EDIT_ITEMS["prompt"]["pattern"] == ITEMS["prompt"]["pattern"]
+    for side in ("width", "height"):
+        assert EDIT_ITEMS[side]["default"] == ITEMS[side]["default"]
+        assert EDIT_ITEMS[side]["min"] == ITEMS[side]["min"]
+        assert EDIT_ITEMS[side]["max"] == ITEMS[side]["max"]
+    assert EDIT_ITEMS["width"]["default"] == DEFAULT_WIDTH
+    assert EDIT_ITEMS["height"]["default"] == DEFAULT_HEIGHT
+    assert EDIT["inputs"]["image"]["min_items"] == 1
+    # The method is reference-guided: there is no denoise or strength knob.
+    assert "workflow" not in EDIT["inputs"]
+    assert "denoise" not in EDIT["inputs"]
+
+
+def test_the_edit_flow_guides_the_latent_from_the_uploaded_image() -> None:
+    graph = FLOW_IMG2IMG["graph"]
+    assert graph["source"]["class_type"] == "LoadImage"
+    assert graph["source"]["inputs"]["image"] == "$image"
+    assert graph["reference"]["class_type"] == "ReferenceLatent"
+    assert graph["reference"]["inputs"]["conditioning"] == ["positive_text", 0]
+    assert graph["guider"]["inputs"]["positive"] == ["reference", 0]
+    assert FLOW_IMG2IMG["uploads"] == ["image"]
+    assert "denoise" not in json.dumps(graph)
+    assert "denoise" not in json.dumps(FLOW_IMG2IMG["params"])
+    placeholders = set(re.findall(r'"\$([a-z]+)"', json.dumps(graph)))
+    assert placeholders == {"image", "prompt", "seed", "width", "height", "steps", "name"}
+
+
+def test_the_edit_flow_loads_the_klein_models() -> None:
+    graph = FLOW_IMG2IMG["graph"]
+    assert graph["unet"]["inputs"]["unet_name"] == Path(LAB_MODELS["flux2-klein-unet"][2]).name
+    assert graph["clip"]["inputs"]["clip_name"] == Path(LAB_MODELS["flux2-qwen-clip"][2]).name
+    assert graph["vae"]["inputs"]["vae_name"] == Path(LAB_MODELS["flux2-klein-vae"][2]).name
+    assert FLOW_IMG2IMG["params"]["steps"] == KLEIN_STEPS
+
+
 @pytest.mark.parametrize("word", GUARD_WORDS)
 def test_the_guard_rejects_every_data_word(word: str) -> None:
     assert GUARD.fullmatch(f"A quiet {word} in the scene") is None
@@ -218,6 +277,10 @@ def test_the_guard_rejects_a_data_word_in_caps() -> None:
 @pytest.mark.parametrize("prompt", LAB_PROMPTS)
 def test_the_guard_accepts_the_four_lab_prompts(prompt: str) -> None:
     assert GUARD.fullmatch(prompt) is not None
+
+
+def test_the_edit_guard_accepts_the_lab_edit_prompt() -> None:
+    assert GUARD.fullmatch(LAB_EDIT_PROMPT) is not None
 
 
 def test_the_guard_keeps_texture_digits_and_longer_words() -> None:

@@ -1,10 +1,12 @@
 # comfy
 
-Still illustration from prompts with ComfyUI: `facet run comfy.still
+Stills and reference-guided edits with ComfyUI: `facet run comfy.still
 <piece.toml>` turns each `[[inputs.image]]` entry into `<name>.png` beside the
-piece file. It belongs to the **`image`** facet, writes the **`image`** kind
-and shows through the image viewer. A GPU is required: one model at a time,
-about 8 s per 1344 × 768 image on z-image-turbo, about 6 s on flux2-klein-4b.
+piece file, and `facet run comfy.edit <piece.toml>` does the same from one
+reference image, changing it by instruction. Both belong to the **`image`**
+facet, write the **`image`** kind and show through the image viewer. A GPU is
+required: one model at a time, about 8 s per 1344 × 768 image on
+z-image-turbo, about 6 s on flux2-klein-4b, about 23 s per edit.
 
 ComfyUI is the lab's own tool (`~/Projects/open-source/ComfyUI`, 0.39.2) and
 facet treats it as an `[engine.server]`: `facet pull comfy` clones the pinned
@@ -40,6 +42,44 @@ An unknown key in an entry — or in the piece's `[inputs]` — fails piece
 validation with `invalid_input`, as the lab's `tools/comfy.py` errors on an
 unknown key.
 
+## Edits
+
+`comfy.edit` iterates an image instead of rerolling it: one `source`
+reference image for the whole piece, then one instruction per entry. The lab's
+verdict on `flux2-klein-img2img` holds here: **guided by reference image, no
+denoise slider.** It is reference-guided, not strength-guided. Editing keeps
+the framing and the character and changes what the instruction says: a
+linocut restyle, another palette, a different mood. Trying amounts of change
+is not what this capability is for; if a gradual transformation needs a
+strength knob, that is a separate flow.
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|-------|
+| `source` | path | yes | — | reference image, relative to the piece; missing fails `invalid_input` |
+| `image` | array | yes | — | at least one entry; each writes one PNG |
+| `image[].name` | string | yes | — | `[a-z0-9][a-z0-9-]*`; the asset base name |
+| `image[].prompt` | string | yes | — | English instruction describing the edit |
+| `image[].seed` | integer | yes | — | same seed, prompt and reference give the same image |
+| `image[].width` | integer | no | `1344` | 64 to 2048, a multiple of 64 |
+| `image[].height` | integer | no | `768` | 64 to 2048, a multiple of 64 |
+
+The entries have the same five fields and defaults as `still`, so `verify`
+and `preview` work unchanged; there is no `workflow` input, because an edit
+always uses `flux2-klein-img2img`.
+
+```toml
+[inputs]
+source = "flux2-klein-4b/ilustracion-editorial.png"
+image = [
+  { name = "iteracion-grabado", seed = 242, prompt = "Edit the reference image into a two-color linocut print in deep indigo and warm cream. Preserve the woman reading under the desk lamp, the framing, and the large geometric shapes. Use rough carved edges and visible paper grain. Do not add lettering or symbols." },
+]
+```
+
+That pair is the lab's approved piece
+(`projects/prueba-imagen/img2img.toml`): `iteracion-grabado.png` came from
+`ilustracion-editorial.png` in 22.7 s at 1344 × 768, keeping the character
+and framing while turning the picture into a blue and cream print.
+
 ### The no-data rule
 
 Images carry image content only: no caption, no chart, no label, no logo, no
@@ -52,19 +92,28 @@ rejected with `invalid_input` before anything runs; digits stay allowed, so
 
 A **flow** is a ComfyUI API graph whose inputs written as `"$key"` are
 filled, in order, from the flow's own `params`, then the entry. The piece's
-`workflow` input picks one; the package ships two, both copied unchanged
+`workflow` input picks one; the package ships three, all copied unchanged
 from the lab's `tools/comfy/`:
 
-| Flow | Models | Pick it for |
-|------|--------|-------------|
-| `z-image-turbo` | Z-Image Turbo unet, the shared Qwen clip, the Z-Image VAE | photographic realism |
-| `flux2-klein-4b` | FLUX.2 klein 4B unet, the shared Qwen clip, the FLUX.2 VAE | palette, composition and empty space |
+| Flow | Models | Capability | Pick it for |
+|------|--------|------------|-------------|
+| `z-image-turbo` | Z-Image Turbo unet, the shared Qwen clip, the Z-Image VAE | `still` | photographic realism |
+| `flux2-klein-4b` | FLUX.2 klein 4B unet, the shared Qwen clip, the FLUX.2 VAE | `still` | palette, composition and empty space |
+| `flux2-klein-img2img` | FLUX.2 klein 4B unet, the shared Qwen clip, the FLUX.2 VAE | `edit` | editing a reference image by instruction |
 
-- `$prompt`, `$seed`, `$width`, `$height` and `$name` come from the entry.
+- `$prompt`, `$seed`, `$width`, `$height` and `$name` come from the entry;
+  the edit flow adds `$image`, the uploaded reference.
 - `$steps` and `$shift` come from the flow's `params`; klein has no
   `$shift` (its params are width 1344, height 768, seed 0, steps 4).
 - The unet, clip and vae load by the filenames of the manifest models;
-  both flows share the one Qwen clip file.
+  all three flows share the one Qwen clip file.
+
+A flow that lists `uploads` takes a local file instead of a value: before it
+fills the graph, the runner posts the piece's `source` to the server's
+`/upload/image` endpoint (the lab's multipart protocol, `overwrite` set) and
+fills `$image` with the name the server answers, `subfolder/name` when it
+names one. The run prints `<source> uploaded as <name>` so the log shows what
+reached the server.
 
 At run start the runner links each facet model into the checkout where
 ComfyUI looks — the unet into `models/diffusion_models/`, the clip into
@@ -77,7 +126,9 @@ on every run. The link target is the file `facet pull` downloaded under
 One run writes one PNG per entry, each with a record (`kind = "image"`,
 `mime = "image/png"`, `seed` the entry's seed, `params` the entry, and
 `properties` carrying `width`, `height` and `seed`). The runner prints one
-`<name>.png ok` line per output, with no absolute path and no timing.
+`<name>.png ok` line per output, with no absolute path and no timing. An edit
+run also uploads the piece's `source` first, so its log starts with the
+`<source> uploaded as <name>` line and then the same `<name>.png ok` lines.
 
 ## Verification and doctor
 

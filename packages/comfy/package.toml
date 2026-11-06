@@ -4,7 +4,7 @@ requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "ComfyUI project"
 tool_name = "ComfyUI"
-description = "Still illustration from prompts with ComfyUI's z-image-turbo and flux2-klein-4b flows, checked by pixel size."
+description = "Stills and reference-guided edits with ComfyUI's z-image-turbo and flux2-klein flows, checked by pixel size."
 facet = "image"
 
 [engine]
@@ -143,4 +143,53 @@ default = "z-image-turbo"
 description = "Still flow: z-image-turbo for photographic realism, flux2-klein-4b for palette, composition and empty space."
 
 [capabilities.still.preview]
+viewer = "image"
+
+[capabilities.edit]
+summary = "Reference-guided edit by instruction with the flux2-klein-img2img flow (~23 s), per 1344x768 image."
+kind = "image"
+
+[capabilities.edit.inputs.source]
+type = "path"
+required = true
+description = "Reference image the edits start from, relative to the piece file."
+
+[capabilities.edit.inputs.image]
+type = "array"
+required = true
+min_items = 1
+description = "Edits to make; each entry is one instruction with its seed and size."
+
+[capabilities.edit.inputs.image.items.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name: writes <name>.png."
+
+[capabilities.edit.inputs.image.items.prompt]
+type = "string"
+required = true
+pattern = '(?i)^(?!.*\b(?:captions?|chart|graph|labels?|letters?|logo|sign|text|title|words?)\b).*$'
+description = "English instruction describing the edit; keeps framing and character, never adds data or lettering."
+
+[capabilities.edit.inputs.image.items.seed]
+type = "integer"
+required = true
+description = "Sampling seed; the same seed, prompt and reference image give the same image."
+
+[capabilities.edit.inputs.image.items.width]
+type = "integer"
+default = 1344
+min = 64
+max = 2048
+description = "Image width in pixels, a multiple of 64."
+
+[capabilities.edit.inputs.image.items.height]
+type = "integer"
+default = 768
+min = 64
+max = 2048
+description = "Image height in pixels, a multiple of 64."
+
+[capabilities.edit.preview]
 viewer = "image"

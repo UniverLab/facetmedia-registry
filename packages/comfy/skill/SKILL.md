@@ -1,17 +1,20 @@
 ---
 name: comfy
-description: Still illustration with ComfyUI's z-image-turbo flow, checked by pixel size.
+description: Stills from prompts and reference-guided edits with ComfyUI, checked by pixel size.
 ---
 # ComfyUI
 
 Turn prompts into still illustrations with the lab's z-image-turbo flow on
-ComfyUI. The capability writes the `image` kind and is checked by pixel
-size.
+ComfyUI, and iterate one by instruction from a reference image. The
+capabilities write the `image` kind and are checked by pixel size.
 
 ## When to use
 
 - `comfy.still` for illustration, backgrounds or mood: a scene, an object,
   an editorial drawing, a watercolor.
+- `comfy.edit` to change an image you already have while keeping its framing
+  and character: another style, palette or mood. It is guided by reference
+  image and has no denoise slider.
 - Never for anything a person must read. Text, numbers, labels, charts and
   logos belong in HTML or SVG; a generated image carries image content only.
 

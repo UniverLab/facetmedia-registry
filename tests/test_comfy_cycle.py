@@ -96,7 +96,7 @@ class Runner:
         raise SystemExit(self.run(sys.argv[1:]))
 """
 
-#: A stub ComfyUI: the four endpoints the runner uses, one 64x48 PNG.
+#: A stub ComfyUI: the endpoints the runner uses, one 64x48 PNG.
 STUB_MAIN = """
 import argparse
 import json
@@ -109,6 +109,7 @@ from urllib.parse import urlsplit
 import PIL.Image
 
 GRAPH = Path(os.environ["STUB_GRAPH"])
+UPLOAD = Path(os.environ["STUB_UPLOAD"])
 SIZE = (64, 48)
 
 
@@ -144,7 +145,13 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length", "0"))
-        GRAPH.write_text(self.rfile.read(length).decode())
+        body = self.rfile.read(length)
+        if urlsplit(self.path).path == "/upload/image":
+            UPLOAD.write_bytes(body)
+            answer = {"name": "source.png", "subfolder": "", "type": "input"}
+            self.send_body(json.dumps(answer).encode(), "application/json")
+            return
+        GRAPH.write_text(body.decode())
         self.send_body(b'{"prompt_id": "stub-prompt"}', "application/json")
 
 
@@ -223,7 +230,9 @@ def _stub_sdk(tmp_path: Path) -> Path:
     return folder
 
 
-def _launch(checkout: Path, graph_file: Path, port: int) -> subprocess.Popen[str]:
+def _launch(
+    checkout: Path, graph_file: Path, upload_file: Path, port: int
+) -> subprocess.Popen[str]:
     """Start the manifest's own launch argv with the free port substituted."""
     venv_bin = checkout / "venv" / "bin"
     venv_bin.mkdir(parents=True)
@@ -237,6 +246,7 @@ def _launch(checkout: Path, graph_file: Path, port: int) -> subprocess.Popen[str
         **os.environ,
         "PATH": str(venv_bin) + os.pathsep + os.environ["PATH"],
         "STUB_GRAPH": str(graph_file),
+        "STUB_UPLOAD": str(upload_file),
     }
     return subprocess.Popen(
         argv,
@@ -266,16 +276,15 @@ def _request(
     piece_dir: Path,
     models: dict[str, Path],
     assets: tuple[Path, ...] = (),
-    workflow: str | None = None,
+    inputs: dict[str, object] | None = None,
+    capability: str = "comfy.still",
 ) -> dict[str, object]:
-    inputs: dict[str, object] = {"image": [ENTRY]}
-    if workflow is not None:
-        inputs["workflow"] = workflow
+    merged: dict[str, object] = {"image": [ENTRY], **(inputs or {})}
     return {
         "protocol": 1,
         "verb": verb,
-        "capability": "comfy.still",
-        "inputs": inputs,
+        "capability": capability,
+        "inputs": merged,
         "out_dir": str(out_dir),
         "piece_dir": str(piece_dir),
         "models": {key: str(value) for key, value in models.items()},
@@ -337,13 +346,14 @@ def test_the_cycle_links_the_models_returns_bare_names_and_verifies(tmp_path: Pa
     home = tmp_path / "home"
     models = _model_files(home)
     graph_file = tmp_path / "graph.json"
+    upload_file = tmp_path / "upload.bin"
     stub_dir = _stub_sdk(tmp_path)
     checkout = _clone(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     port = _free_port()
     url = f"http://127.0.0.1:{port}"
-    process = _launch(checkout, graph_file, port)
+    process = _launch(checkout, graph_file, upload_file, port)
     try:
         assert _wait_healthy(f"{url}/system_stats"), "the stub ComfyUI never became healthy"
         env = _environment(stub_dir, home, url)
@@ -372,17 +382,18 @@ def test_the_klein_flow_renders_through_the_same_runner(tmp_path: Path) -> None:
     home = tmp_path / "home"
     models = _model_files(home)
     graph_file = tmp_path / "graph.json"
+    upload_file = tmp_path / "upload.bin"
     stub_dir = _stub_sdk(tmp_path)
     checkout = _clone(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     port = _free_port()
     url = f"http://127.0.0.1:{port}"
-    process = _launch(checkout, graph_file, port)
+    process = _launch(checkout, graph_file, upload_file, port)
     try:
         assert _wait_healthy(f"{url}/system_stats"), "the stub ComfyUI never became healthy"
         env = _environment(stub_dir, home, url)
-        request = _request("run", out, tmp_path, models, workflow="flux2-klein-4b")
+        request = _request("run", out, tmp_path, models, inputs={"workflow": "flux2-klein-4b"})
         result, printed = _call(stub_dir, "run", request, tmp_path, env)
         assert "foto-producto.png ok" in printed
         asset = result["assets"][0]
@@ -393,6 +404,106 @@ def test_the_klein_flow_renders_through_the_same_runner(tmp_path: Path) -> None:
     finally:
         process.terminate()
         process.wait(timeout=10)
+
+
+def test_an_edit_uploads_the_reference_and_fills_the_img2img_flow(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    models = _model_files(home)
+    graph_file = tmp_path / "graph.json"
+    upload_file = tmp_path / "upload.bin"
+    stub_dir = _stub_sdk(tmp_path)
+    checkout = _clone(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    reference = tmp_path / "referencia.png"
+    PIL.Image.new("RGB", (32, 24), (10, 20, 30)).save(reference)
+    port = _free_port()
+    url = f"http://127.0.0.1:{port}"
+    process = _launch(checkout, graph_file, upload_file, port)
+    try:
+        assert _wait_healthy(f"{url}/system_stats"), "the stub ComfyUI never became healthy"
+        env = _environment(stub_dir, home, url)
+        request = _request(
+            "run",
+            out,
+            tmp_path,
+            models,
+            inputs={"source": str(reference)},
+            capability="comfy.edit",
+        )
+        result, printed = _call(stub_dir, "run", request, tmp_path, env)
+        assert "referencia.png uploaded as source.png" in printed
+        assert "foto-producto.png ok" in printed
+        assert result["assets"][0]["file"] == "foto-producto.png"
+        assert (out / "foto-producto.png").is_file()
+        _assert_upload(upload_file, reference)
+        _assert_edit_graph(graph_file)
+        _assert_links(checkout, models)
+    finally:
+        process.terminate()
+        process.wait(timeout=10)
+
+
+def _assert_upload(upload_file: Path, reference: Path) -> None:
+    """The lab protocol: multipart, ``overwrite`` then the file as ``image``."""
+    body = upload_file.read_bytes()
+    assert b'name="overwrite"\r\n\r\ntrue' in body
+    assert b'name="image"; filename="referencia.png"' in body
+    assert reference.read_bytes() in body
+    assert body.startswith(b"--")
+    assert body.rstrip().endswith(b"--")
+
+
+def _assert_edit_graph(graph_file: Path) -> None:
+    graph = json.loads(graph_file.read_text(encoding="utf-8"))["prompt"]
+    assert graph["source"]["class_type"] == "LoadImage"
+    assert graph["source"]["inputs"]["image"] == "source.png"
+    assert graph["reference"]["class_type"] == "ReferenceLatent"
+    assert graph["positive_text"]["inputs"]["text"] == PROMPT
+    assert graph["noise"]["inputs"]["noise_seed"] == SEED
+    assert graph["sigmas"]["inputs"]["steps"] == KLEIN_STEPS
+    assert graph["latent"]["inputs"]["width"] == WIDTH
+    assert graph["latent"]["inputs"]["height"] == HEIGHT
+    assert graph["save"]["inputs"]["filename_prefix"] == "foto-producto"
+    assert "$image" not in json.dumps(graph)
+    assert "denoise" not in json.dumps(graph)
+    assert graph["unet"]["inputs"]["unet_name"] == Path(MODEL_PATHS["flux2-klein-unet"]).name
+
+
+def _call_failing(
+    stub_dir: Path, request: dict[str, object], tmp_path: Path, name: str
+) -> subprocess.CompletedProcess[str]:
+    """Run the runner without a server, for the failures that come before it."""
+    input_path = tmp_path / f"{name}-request.json"
+    input_path.write_text(json.dumps(request), encoding="utf-8")
+    return subprocess.run(
+        [
+            sys.executable,
+            str(PACKAGE / "runner.py"),
+            "run",
+            "--input",
+            str(input_path),
+            "--result",
+            str(tmp_path / f"{name}-result.json"),
+        ],
+        env={**os.environ, "PYTHONPATH": str(stub_dir)},
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+
+
+def test_an_edit_without_a_source_fails_before_anything_runs(tmp_path: Path) -> None:
+    stub_dir = _stub_sdk(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    request = _request("run", out, tmp_path, {}, capability="comfy.edit")
+    assert "source" not in request["inputs"]
+    done = _call_failing(stub_dir, request, tmp_path, "no-source")
+    assert done.returncode != 0
+    assert "no source image" in done.stderr
+    assert not (tmp_path / "no-source-result.json").exists()
 
 
 def _assert_klein_graph(graph_file: Path) -> None:
@@ -414,7 +525,7 @@ def test_an_unknown_workflow_fails_before_anything_runs(tmp_path: Path) -> None:
     stub_dir = _stub_sdk(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    request = _request("run", out, tmp_path, {}, workflow="flux2-klain-4b")
+    request = _request("run", out, tmp_path, {}, inputs={"workflow": "flux2-klain-4b"})
     input_path = tmp_path / "bad-request.json"
     input_path.write_text(json.dumps(request), encoding="utf-8")
     done = subprocess.run(

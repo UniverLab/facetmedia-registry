@@ -1,11 +1,13 @@
-"""The comfy package runner: still images from prompts with ComfyUI.
+"""The comfy package runner: stills and reference-guided edits with ComfyUI.
 
 Four verbs on the runner SDK (``facet_runner_sdk``, copied into the
 environment at pull). ``run`` links facet's models into the pinned ComfyUI
-checkout, fills the selected flow's graph and downloads the PNGs it
-produced; ``verify`` opens every PNG with Pillow and checks its pixel size;
-``preview`` writes the image preview file; ``doctor`` checks the GPU, the
-models and the checkout at ``quick`` and probes the server at ``full``.
+checkout, fills the selected flow's graph and downloads the PNGs it produced;
+an edit flow also uploads the piece's reference image first and fills
+``$image`` with the name the server answered; ``verify`` opens every PNG with
+Pillow and checks its pixel size; ``preview`` writes the image preview file;
+``doctor`` checks the GPU, the models and the checkout at ``quick`` and
+probes the server at ``full``.
 
 ComfyUI itself is a ``[engine.server]``: facet clones the pinned revision,
 builds its venv and starts ``main.py`` for the duration of the verb, passing
@@ -33,6 +35,13 @@ runner = Runner()
 #: The lab's flows, copied from the Grafics lab's ``tools/comfy/``.
 FLOW_NAMES = ("z-image-turbo", "flux2-klein-4b")
 DEFAULT_WORKFLOW = "z-image-turbo"
+#: The one flow an edit uses: reference-guided, no denoise strength.
+EDIT_FLOW = "flux2-klein-img2img"
+STILL_CAPABILITY = "comfy.still"
+EDIT_CAPABILITY = "comfy.edit"
+#: The lab's multipart boundary and timeout for posting an image.
+UPLOAD_BOUNDARY = "----facet-upload"
+UPLOAD_TIMEOUT_S = 60.0
 DEFAULT_WIDTH = 1344
 DEFAULT_HEIGHT = 768
 #: The server facet starts for the verb; the fallback is the lab's own port.
@@ -159,6 +168,35 @@ def _bytes(path: str, timeout: float = 60.0) -> bytes:
         return response.read()
 
 
+def _upload_body(path: Path) -> bytes:
+    """The lab's multipart body: ``overwrite`` first, then the file as ``image``."""
+    head = (
+        f"--{UPLOAD_BOUNDARY}\r\n"
+        'Content-Disposition: form-data; name="overwrite"\r\n\r\n'
+        "true\r\n"
+        f"--{UPLOAD_BOUNDARY}\r\n"
+        f'Content-Disposition: form-data; name="image"; filename="{path.name}"\r\n'
+        "Content-Type: application/octet-stream\r\n\r\n"
+    ).encode()
+    return head + path.read_bytes() + f"\r\n--{UPLOAD_BOUNDARY}--\r\n".encode()
+
+
+def _upload(path: Path) -> str:
+    """Upload ``path`` to the server's input folder; the name a LoadImage expects."""
+    request = urllib.request.Request(
+        _server_url() + "/upload/image",
+        data=_upload_body(path),
+        headers={"Content-Type": f"multipart/form-data; boundary={UPLOAD_BOUNDARY}"},
+    )
+    with urllib.request.urlopen(request, timeout=UPLOAD_TIMEOUT_S) as response:
+        answer = json.load(response)
+    name = answer.get("name") if isinstance(answer, dict) else None
+    if not isinstance(name, str) or not name:
+        raise RuntimeError(f"{path}: the server uploaded no name")
+    subfolder = answer.get("subfolder")
+    return f"{subfolder}/{name}" if subfolder else name
+
+
 def _submit(graph: dict[str, Any]) -> str:
     """POST the graph; ComfyUI answers the prompt id that owns the job."""
     try:
@@ -251,22 +289,48 @@ def _asset(entry: dict[str, Any], path: Path) -> dict[str, Any]:
     }
 
 
+def _flow_name(capability: str, inputs: dict[str, Any]) -> str:
+    """The flow the request asks for: an edit is always the img2img one."""
+    if capability == EDIT_CAPABILITY:
+        return EDIT_FLOW
+    workflow = str(inputs.get("workflow", DEFAULT_WORKFLOW))
+    if workflow not in FLOW_NAMES:
+        raise ValueError(f"unknown workflow: {workflow}")
+    return workflow
+
+
+def _source_path(flow: dict[str, Any], inputs: dict[str, Any]) -> Path | None:
+    """The piece's reference image, when the flow uploads one."""
+    uploads = flow.get("uploads")
+    if not isinstance(uploads, list) or "image" not in uploads:
+        return None
+    source = inputs.get("source")
+    if not source:
+        raise ValueError("the piece has no source image")
+    return Path(str(source))
+
+
 @runner.verb("run")
 def run(req: Request) -> dict[str, Any]:
-    if req.capability != "comfy.still":
+    if req.capability not in (STILL_CAPABILITY, EDIT_CAPABILITY):
         raise ValueError(f"unknown capability: {req.capability}")
-    raw = dict(req.inputs).get("image")
+    inputs = dict(req.inputs)
+    raw = inputs.get("image")
     entries = raw if isinstance(raw, list) else []
     if not entries:
         raise ValueError("the piece has no image entries")
-    workflow = str(dict(req.inputs).get("workflow", DEFAULT_WORKFLOW))
-    if workflow not in FLOW_NAMES:
-        raise ValueError(f"unknown workflow: {workflow}")
+    flow = _flow(_flow_name(req.capability, inputs))
+    source = _source_path(flow, inputs)
     _link_models(req)
-    flow = _flow(workflow)
+    uploaded = _upload(source) if source is not None else ""
+    if source is not None:
+        print(f"{source.name} uploaded as {uploaded}", flush=True)
     assets: list[dict[str, Any]] = []
     for entry in entries:
-        graph = _fill(flow["graph"], _values(flow, entry))
+        values = _values(flow, entry)
+        if source is not None:
+            values["image"] = uploaded
+        graph = _fill(flow["graph"], values)
         images = _images(_history(_submit(graph)))
         for path in _save(images, str(entry["name"]), req.out_dir):
             print(f"{path.name} ok", flush=True)
