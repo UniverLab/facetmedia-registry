@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://univerlab.org/facetmedia-registry/schemas/preview/video.schema.json",
+  "title": "Video preview",
+  "description": "Preview file (<asset>.preview.json) for the video kind.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "preview",
+    "kind",
+    "summary",
+    "name",
+    "prompt",
+    "seed",
+    "width",
+    "height",
+    "length",
+    "fps"
+  ],
+  "properties": {
+    "preview": {
+      "const": 1,
+      "description": "Preview format version."
+    },
+    "kind": {
+      "const": "video",
+      "description": "Asset kind."
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 160,
+      "description": "One-line summary for an agent."
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "Asset base name."
+    },
+    "prompt": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The prompt the movement was generated from."
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Sampling seed."
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Clip width in pixels."
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Clip height in pixels."
+    },
+    "length": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Frame count at the clip's frame rate."
+    },
+    "fps": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Frame rate in frames per second."
+    }
+  }
+}

@@ -1,0 +1,158 @@
+{
+ "about": "Wan 2.2 TI2V 5B (Wan-AI, Apache-2.0), image-to-video, fp8 scaled by Kijai. Template: ComfyUI video_wan2_2_5B_ti2v. 24 fps; length = frames (4n+1: 49 ≈ 2 s, 121 ≈ 5 s). The default negative is Wan's official Chinese one. Server flag --disable-pinned-memory: without it RAM peaked at 18 of 19 GB.",
+ "uploads": [
+  "image"
+ ],
+ "params": {
+  "width": 1280,
+  "height": 704,
+  "length": 49,
+  "seed": 0,
+  "steps": 20,
+  "cfg": 5,
+  "shift": 8,
+  "fps": 24,
+  "negative": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"
+ },
+ "graph": {
+  "unet": {
+   "class_type": "UNETLoader",
+   "inputs": {
+    "unet_name": "Wan2_2-TI2V-5B_fp8_e4m3fn_scaled_KJ.safetensors",
+    "weight_dtype": "default"
+   }
+  },
+  "clip": {
+   "class_type": "CLIPLoader",
+   "inputs": {
+    "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+    "type": "wan",
+    "device": "default"
+   }
+  },
+  "vae": {
+   "class_type": "VAELoader",
+   "inputs": {
+    "vae_name": "wan2.2_vae.safetensors"
+   }
+  },
+  "start": {
+   "class_type": "LoadImage",
+   "inputs": {
+    "image": "$image"
+   }
+  },
+  "positive": {
+   "class_type": "CLIPTextEncode",
+   "inputs": {
+    "text": "$prompt",
+    "clip": [
+     "clip",
+     0
+    ]
+   }
+  },
+  "negative": {
+   "class_type": "CLIPTextEncode",
+   "inputs": {
+    "text": "$negative",
+    "clip": [
+     "clip",
+     0
+    ]
+   }
+  },
+  "model": {
+   "class_type": "ModelSamplingSD3",
+   "inputs": {
+    "model": [
+     "unet",
+     0
+    ],
+    "shift": "$shift"
+   }
+  },
+  "latent": {
+   "class_type": "Wan22ImageToVideoLatent",
+   "inputs": {
+    "vae": [
+     "vae",
+     0
+    ],
+    "width": "$width",
+    "height": "$height",
+    "length": "$length",
+    "batch_size": 1,
+    "start_image": [
+     "start",
+     0
+    ]
+   }
+  },
+  "sampler": {
+   "class_type": "KSampler",
+   "inputs": {
+    "model": [
+     "model",
+     0
+    ],
+    "positive": [
+     "positive",
+     0
+    ],
+    "negative": [
+     "negative",
+     0
+    ],
+    "latent_image": [
+     "latent",
+     0
+    ],
+    "seed": "$seed",
+    "steps": "$steps",
+    "cfg": "$cfg",
+    "sampler_name": "uni_pc",
+    "scheduler": "simple",
+    "denoise": 1
+   }
+  },
+  "decode": {
+   "class_type": "VAEDecode",
+   "inputs": {
+    "samples": [
+     "sampler",
+     0
+    ],
+    "vae": [
+     "vae",
+     0
+    ]
+   }
+  },
+  "video": {
+   "class_type": "CreateVideo",
+   "inputs": {
+    "images": [
+     "decode",
+     0
+    ],
+    "fps": "$fps"
+   }
+  },
+  "save": {
+   "class_type": "SaveVideo",
+   "inputs": {
+    "video": [
+     "video",
+     0
+    ],
+    "filename_prefix": "$name",
+    "format": "mp4",
+    "codec": "h264"
+   }
+  }
+ },
+ "comfy_args": [
+  "--disable-pinned-memory"
+ ]
+}

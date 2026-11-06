@@ -1,12 +1,14 @@
-"""The comfy package runner: stills and reference-guided edits with ComfyUI.
+"""The comfy package runner: stills, edits and clips with ComfyUI.
 
 Four verbs on the runner SDK (``facet_runner_sdk``, copied into the
 environment at pull). ``run`` links facet's models into the pinned ComfyUI
-checkout, fills the selected flow's graph and downloads the PNGs it produced;
-an edit flow also uploads the piece's reference image first and fills
-``$image`` with the name the server answered; ``verify`` opens every PNG with
-Pillow and checks its pixel size; ``preview`` writes the image preview file;
-``doctor`` checks the GPU, the models and the checkout at ``quick`` and
+checkout, fills the selected flow's graph and downloads the PNGs (or the MP4
+of a clip) it produced; an edit flow uploads the piece's reference image
+first and a clip uploads each entry's first frame, filling ``$image`` with
+the name the server answered; ``verify`` opens every PNG with Pillow (and
+every clip with FFmpeg) and checks its pixel size (and its resolution, frame
+rate and frame count); ``preview`` writes the preview file of the asset's
+kind; ``doctor`` checks the GPU, the models and the checkout at ``quick`` and
 probes the server at ``full``.
 
 ComfyUI itself is a ``[engine.server]``: facet clones the pinned revision,
@@ -18,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import time
 import tomllib
@@ -27,6 +30,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+import imageio_ffmpeg
 import PIL.Image
 from facet_runner_sdk import Request, Runner
 
@@ -37,13 +41,30 @@ FLOW_NAMES = ("z-image-turbo", "flux2-klein-4b")
 DEFAULT_WORKFLOW = "z-image-turbo"
 #: The one flow an edit uses: reference-guided, no denoise strength.
 EDIT_FLOW = "flux2-klein-img2img"
+#: The one flow a clip uses: Wan 2.2 TI2V 5B animating what is inside a still.
+CLIP_FLOW_NAMES = ("wan22-i2v",)
 STILL_CAPABILITY = "comfy.still"
 EDIT_CAPABILITY = "comfy.edit"
+CLIP_CAPABILITY = "comfy.clip"
 #: The lab's multipart boundary and timeout for posting an image.
 UPLOAD_BOUNDARY = "----facet-upload"
 UPLOAD_TIMEOUT_S = 60.0
 DEFAULT_WIDTH = 1344
 DEFAULT_HEIGHT = 768
+DEFAULT_CLIP_WIDTH = 1280
+DEFAULT_CLIP_HEIGHT = 704
+DEFAULT_CLIP_LENGTH = 49
+#: Wan 2.2 TI2V renders 24 fps; verify holds the clip to it.
+VIDEO_FPS = 24
+VIDEO_FPS_TOLERANCE = 0.01
+FFMPEG_TIMEOUT_S = 300.0
+#: Every FFmpeg call: no stdin, so a terminal keypress never cuts a probe.
+FFMPEG_FLAGS = ("-nostdin", "-hide_banner")
+#: FFmpeg's ``-i`` header: the stream's ``1280x704`` and its ``24 fps``.
+VIDEO_STREAM = re.compile(r"Video: .*?, (\d+)x(\d+)")
+VIDEO_RATE = re.compile(r"(\d+(?:\.\d+)?) fps")
+#: The final ``frame=  49`` of a decode-to-null pass.
+FRAME_COUNT = re.compile(r"frame=\s*(\d+)")
 #: The server facet starts for the verb; the fallback is the lab's own port.
 DEFAULT_SERVER_URL = "http://127.0.0.1:8188"
 HEALTH_TIMEOUT_S = 2.0
@@ -61,6 +82,9 @@ MODEL_DIRS = {
     "flux2-klein-unet": "models/diffusion_models",
     "flux2-qwen-clip": "models/text_encoders",
     "flux2-klein-vae": "models/vae",
+    "wan2v2-unet": "models/diffusion_models",
+    "wan2v2-clip": "models/text_encoders",
+    "wan2v2-vae": "models/vae",
 }
 
 
@@ -270,17 +294,22 @@ def _save(images: list[dict[str, Any]], name: str, out_dir: Path) -> list[Path]:
     return saved
 
 
-def _asset(entry: dict[str, Any], path: Path) -> dict[str, Any]:
-    """One record: kind image, the entry as its params, the seed beside them."""
+def _asset(entry: dict[str, Any], path: Path, video: bool = False) -> dict[str, Any]:
+    """One record: the entry as its params, its seed beside them.
+
+    A still is the ``image`` kind, a clip the ``video`` kind with the same
+    measured width and height.
+    """
     seed = int(entry["seed"])
+    kind, mime = ("video", "video/mp4") if video else ("image", "image/png")
     return {
         "file": path.name,
         "name": str(entry["name"]),
-        "kind": "image",
-        "mime": "image/png",
+        "kind": kind,
+        "mime": mime,
         "properties": {
-            "width": int(entry.get("width", DEFAULT_WIDTH)),
-            "height": int(entry.get("height", DEFAULT_HEIGHT)),
+            "width": int(entry.get("width", DEFAULT_CLIP_WIDTH if video else DEFAULT_WIDTH)),
+            "height": int(entry.get("height", DEFAULT_CLIP_HEIGHT if video else DEFAULT_HEIGHT)),
             "seed": seed,
         },
         "params": dict(entry),
@@ -293,8 +322,12 @@ def _flow_name(capability: str, inputs: dict[str, Any]) -> str:
     """The flow the request asks for: an edit is always the img2img one."""
     if capability == EDIT_CAPABILITY:
         return EDIT_FLOW
-    workflow = str(inputs.get("workflow", DEFAULT_WORKFLOW))
-    if workflow not in FLOW_NAMES:
+    if capability == CLIP_CAPABILITY:
+        names, fallback = CLIP_FLOW_NAMES, CLIP_FLOW_NAMES[0]
+    else:
+        names, fallback = FLOW_NAMES, DEFAULT_WORKFLOW
+    workflow = str(inputs.get("workflow", fallback))
+    if workflow not in names:
         raise ValueError(f"unknown workflow: {workflow}")
     return workflow
 
@@ -310,17 +343,37 @@ def _source_path(flow: dict[str, Any], inputs: dict[str, Any]) -> Path | None:
     return Path(str(source))
 
 
+def _entry_list(inputs: dict[str, Any]) -> list[dict[str, Any]]:
+    """The piece's ``image`` array, one dict per entry."""
+    raw = inputs.get("image")
+    return [item for item in raw if isinstance(item, dict)] if isinstance(raw, list) else []
+
+
+def _entry_image(req: Request, entry: dict[str, Any]) -> Path:
+    """A clip entry's first frame; the core resolves it, this keeps one relative."""
+    path = Path(str(entry["image"]))
+    return path if path.is_absolute() else req.piece_dir / path
+
+
+def _upload_entry(req: Request, entry: dict[str, Any]) -> str:
+    """Upload one clip's first frame; the server's name is what LoadImage wants."""
+    source = _entry_image(req, entry)
+    uploaded = _upload(source)
+    print(f"{source.name} uploaded as {uploaded}", flush=True)
+    return uploaded
+
+
 @runner.verb("run")
 def run(req: Request) -> dict[str, Any]:
-    if req.capability not in (STILL_CAPABILITY, EDIT_CAPABILITY):
+    if req.capability not in (STILL_CAPABILITY, EDIT_CAPABILITY, CLIP_CAPABILITY):
         raise ValueError(f"unknown capability: {req.capability}")
     inputs = dict(req.inputs)
-    raw = inputs.get("image")
-    entries = raw if isinstance(raw, list) else []
+    entries = _entry_list(inputs)
     if not entries:
         raise ValueError("the piece has no image entries")
+    video = req.capability == CLIP_CAPABILITY
     flow = _flow(_flow_name(req.capability, inputs))
-    source = _source_path(flow, inputs)
+    source = None if video else _source_path(flow, inputs)
     _link_models(req)
     uploaded = _upload(source) if source is not None else ""
     if source is not None:
@@ -328,13 +381,15 @@ def run(req: Request) -> dict[str, Any]:
     assets: list[dict[str, Any]] = []
     for entry in entries:
         values = _values(flow, entry)
-        if source is not None:
+        if video:
+            uploaded = _upload_entry(req, entry)
+        if source is not None or video:
             values["image"] = uploaded
         graph = _fill(flow["graph"], values)
         images = _images(_history(_submit(graph)))
         for path in _save(images, str(entry["name"]), req.out_dir):
             print(f"{path.name} ok", flush=True)
-            assets.append(_asset(entry, path))
+            assets.append(_asset(entry, path, video))
     return {"tool": _tool(), "assets": assets}
 
 
@@ -364,8 +419,82 @@ def _size(path: Path) -> tuple[int, int]:
     return int(width), int(height)
 
 
-def _verify_asset(entries: dict[str, dict[str, Any]], path: Path) -> dict[str, Any]:
-    """The PNG opens and its pixel size equals the entry's width and height."""
+def _ffmpeg_exe() -> str:
+    """The FFmpeg binary ``imageio-ffmpeg`` ships; the package depends on it."""
+    return str(imageio_ffmpeg.get_ffmpeg_exe())
+
+
+def _ffmpeg_output(*args: str) -> str:
+    """One FFmpeg pass, its stdout and stderr together: the info it prints."""
+    done = subprocess.run(
+        [_ffmpeg_exe(), *FFMPEG_FLAGS, *args],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=FFMPEG_TIMEOUT_S,
+    )
+    return done.stdout + done.stderr
+
+
+def _probe_video(path: Path) -> dict[str, Any]:
+    """The MP4's width, height, frame rate and frame count, as FFmpeg reads them."""
+    header = _ffmpeg_output("-i", str(path))
+    stream = VIDEO_STREAM.search(header)
+    rate = VIDEO_RATE.search(header)
+    if stream is None or rate is None:
+        raise ValueError(f"{path}: FFmpeg read no video stream")
+    counted = _ffmpeg_output("-i", str(path), "-map", "0:v:0", "-f", "null", "-")
+    frames = FRAME_COUNT.findall(counted)
+    if not frames:
+        raise ValueError(f"{path}: FFmpeg counted no frames")
+    return {
+        "width": int(stream.group(1)),
+        "height": int(stream.group(2)),
+        "fps": float(rate.group(1)),
+        "frames": int(frames[-1]),
+    }
+
+
+def _verify_video(entries: dict[str, dict[str, Any]], path: Path) -> dict[str, Any]:
+    """The MP4 opens, at the entry's size, 24 fps and the entry's frame count."""
+    entry = _entry_for(entries, path)
+    thresholds: dict[str, Any] = {
+        "width": int(entry.get("width", DEFAULT_CLIP_WIDTH)),
+        "height": int(entry.get("height", DEFAULT_CLIP_HEIGHT)),
+        "fps": VIDEO_FPS,
+        "frames": int(entry.get("length", DEFAULT_CLIP_LENGTH)),
+    }
+    try:
+        metrics = _probe_video(path)
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        return {
+            "file": path.name,
+            "passed": False,
+            "metrics": {"error": str(exc)},
+            "thresholds": thresholds,
+            "verifier": "ffmpeg",
+        }
+    passed = (
+        metrics["width"] == thresholds["width"]
+        and metrics["height"] == thresholds["height"]
+        and abs(metrics["fps"] - VIDEO_FPS) <= VIDEO_FPS_TOLERANCE
+        and metrics["frames"] == thresholds["frames"]
+    )
+    return {
+        "file": path.name,
+        "passed": passed,
+        "metrics": metrics,
+        "thresholds": thresholds,
+        "verifier": "ffmpeg",
+    }
+
+
+def _verify_asset(
+    entries: dict[str, dict[str, Any]], path: Path, video: bool = False
+) -> dict[str, Any]:
+    """A clip's MP4 is probed with FFmpeg; a still's PNG with Pillow."""
+    if video:
+        return _verify_video(entries, path)
     entry = _entry_for(entries, path)
     expected_width = int(entry.get("width", DEFAULT_WIDTH))
     expected_height = int(entry.get("height", DEFAULT_HEIGHT))
@@ -393,7 +522,8 @@ def _verify_asset(entries: dict[str, dict[str, Any]], path: Path) -> dict[str, A
 @runner.verb("verify")
 def verify(req: Request) -> dict[str, Any]:
     entries = _entries(req)
-    return {"assets": [_verify_asset(entries, path) for path in req.assets]}
+    video = req.capability == CLIP_CAPABILITY
+    return {"assets": [_verify_asset(entries, path, video) for path in req.assets]}
 
 
 def _preview_data(entry: dict[str, Any], path: Path) -> dict[str, Any]:
@@ -413,12 +543,38 @@ def _preview_data(entry: dict[str, Any], path: Path) -> dict[str, Any]:
     }
 
 
+def _preview_video(entry: dict[str, Any], path: Path) -> dict[str, Any]:
+    """The video schema's fields, with the probe's measurements of the MP4."""
+    probe = _probe_video(path)
+    name = str(entry.get("name", path.stem))
+    seed = int(entry.get("seed", 0))
+    fps = int(round(float(probe["fps"])))
+    summary = (
+        f"{name} · {probe['width']}×{probe['height']} · "
+        f"{probe['frames']} frames · {fps} fps · seed {seed}"
+    )
+    return {
+        "preview": 1,
+        "kind": "video",
+        "summary": summary,
+        "name": name,
+        "prompt": str(entry.get("prompt", "")),
+        "seed": seed,
+        "width": probe["width"],
+        "height": probe["height"],
+        "length": probe["frames"],
+        "fps": fps,
+    }
+
+
 @runner.verb("preview")
 def preview(req: Request) -> dict[str, Any]:
     entries = _entries(req)
+    video = req.capability == CLIP_CAPABILITY
     results: list[dict[str, Any]] = []
     for path in req.assets:
-        data = _preview_data(_entry_for(entries, path), path)
+        entry = _entry_for(entries, path)
+        data = _preview_video(entry, path) if video else _preview_data(entry, path)
         preview_name = f"{path.name}.preview.json"
         (req.out_dir / preview_name).write_text(
             json.dumps(data, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8"

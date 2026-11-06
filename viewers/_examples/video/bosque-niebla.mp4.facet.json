@@ -1,0 +1,116 @@
+{
+  "record": 1,
+  "id": "sha256:fd29c09aa7a5f9a1e7d075c28a7ac69014b3effb48684b000d16045259d0621a",
+  "name": "bosque-niebla",
+  "path": "bosque-niebla.mp4",
+  "kind": "video",
+  "mime": "video/mp4",
+  "bytes": 1588495,
+  "created": "2026-10-14T00:10:00Z",
+  "properties": {
+    "width": 1280,
+    "height": 704,
+    "seed": 51
+  },
+  "provenance": {
+    "facet": "comfy",
+    "registry": {
+      "commit": "0000000000000000000000000000000000000000",
+      "path": null
+    },
+    "capability": "comfy.clip",
+    "package": {
+      "name": "comfy",
+      "version": "0.1.0"
+    },
+    "tool": {
+      "name": "ComfyUI",
+      "version": "0.1.0"
+    },
+    "models": [
+      {
+        "id": "wan2v2-unet",
+        "sha256": "a83f54a2450d5471e5721e59ab556afa2d8793e30280713e3796b254c5286b48",
+        "bytes": 5277255650
+      },
+      {
+        "id": "wan2v2-clip",
+        "sha256": "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68",
+        "bytes": 6735906897
+      },
+      {
+        "id": "wan2v2-vae",
+        "sha256": "e40321bd36b9709991dae2530eb4ac303dd168276980d3e9bc4b6e2b75fed156",
+        "bytes": 1409400960
+      }
+    ],
+    "params": {
+      "name": "bosque-niebla",
+      "prompt": "Fog drifting slowly between the pine trees at dawn, soft light rays shifting through the mist, very slow camera push in, calm and quiet, cinematic",
+      "seed": 51,
+      "width": 1280,
+      "height": 704,
+      "length": 49
+    },
+    "params_sha256": "8ef5b1d9a6a4c0be0d2f4d4b9a1c1f2e3d4c5b6a79801f2e3d4c5b6a79801f2e",
+    "seed": 51,
+    "inputs": []
+  },
+  "verification": {
+    "status": "passed",
+    "metrics": {
+      "width": 1280,
+      "height": 704,
+      "fps": 24,
+      "frames": 49
+    },
+    "thresholds": {
+      "width": 1280,
+      "height": 704,
+      "fps": 24,
+      "frames": 49
+    },
+    "verifier": "ffmpeg"
+  },
+  "license": {
+    "tools": [
+      {
+        "name": "ComfyUI",
+        "spdx": "GPL-3.0-or-later",
+        "commercial_use": true
+      },
+      {
+        "name": "pillow",
+        "spdx": "MIT-CMU",
+        "commercial_use": true
+      },
+      {
+        "name": "imageio-ffmpeg",
+        "spdx": "BSD-2-Clause",
+        "commercial_use": true
+      }
+    ],
+    "models": [
+      {
+        "id": "wan2v2-unet",
+        "spdx": "Apache-2.0",
+        "commercial_use": true,
+        "requires_acceptance": false
+      },
+      {
+        "id": "wan2v2-clip",
+        "spdx": "Apache-2.0",
+        "commercial_use": true,
+        "requires_acceptance": false
+      },
+      {
+        "id": "wan2v2-vae",
+        "spdx": "Apache-2.0",
+        "commercial_use": true,
+        "requires_acceptance": false
+      }
+    ],
+    "commercial_use": true,
+    "accepted": []
+  }
+}

@@ -1,4 +1,4 @@
-"""The comfy manifest: the server pin, the six models and the prompt guard.
+"""The comfy manifest: the server pin, the nine models and the prompt guard.
 
 The registry suite runs without the core, so the checks here read the
 manifest and the flow as data. The closed item set pins what the core turns
@@ -27,19 +27,25 @@ FLOW_KLEIN = json.loads((PACKAGE / "flows" / "flux2-klein-4b.json").read_text(en
 FLOW_IMG2IMG = json.loads(
     (PACKAGE / "flows" / "flux2-klein-img2img.json").read_text(encoding="utf-8")
 )
+FLOW_WAN = json.loads((PACKAGE / "flows" / "wan22-i2v.json").read_text(encoding="utf-8"))
 CAPABILITY = MANIFEST["capabilities"]["still"]
 EDIT = MANIFEST["capabilities"]["edit"]
+CLIP = MANIFEST["capabilities"]["clip"]
 IMAGE = CAPABILITY["inputs"]["image"]
 ITEMS = IMAGE["items"]
 EDIT_ITEMS = EDIT["inputs"]["image"]["items"]
 EDIT_SOURCE = EDIT["inputs"]["source"]
+CLIP_ITEMS = CLIP["inputs"]["image"]["items"]
 GUARD = re.compile(ITEMS["prompt"]["pattern"])
 
 #: The requirements and image defaults the manifest declares.
 RAM_GB = 16
-DISK_GB = 25
+DISK_GB = 40
 DEFAULT_WIDTH = 1344
 DEFAULT_HEIGHT = 768
+DEFAULT_CLIP_WIDTH = 1280
+DEFAULT_CLIP_HEIGHT = 704
+DEFAULT_CLIP_LENGTH = 49
 KLEIN_STEPS = 4
 SIDE_MIN = 64
 SIDE_MAX = 2048
@@ -88,7 +94,17 @@ LAB_EDIT_PROMPT = (
     "shapes. Use rough carved edges and visible paper grain. Do not add lettering or symbols."
 )
 
-#: The six models the lab's clone holds, pinned by sha256, size and path.
+#: The prompts of the lab's approved clip piece: movement inside the frame.
+LAB_CLIP_PROMPTS = (
+    "Fog drifting slowly between the pine trees at dawn, soft light rays shifting through "
+    "the mist, very slow camera push in, calm and quiet, cinematic",
+    "Steam rising and curling gently from the ceramic coffee cup, soft window light, static "
+    "camera, shallow depth of field, calm product shot",
+    "Slow camera pan to the right along the colonial street, clouds drifting over the green "
+    "mountains, watercolor painting style preserved, gentle movement",
+)
+
+#: The nine models the lab's clone holds, pinned by sha256, size and path.
 #: ``flux2-qwen-clip`` shares the z-image clip's file: pull downloads it once.
 LAB_MODELS = {
     "z-image-turbo-unet": (
@@ -121,6 +137,21 @@ LAB_MODELS = {
         336211292,
         "flux2-klein-vae/flux2-vae.safetensors",
     ),
+    "wan2v2-unet": (
+        "a83f54a2450d5471e5721e59ab556afa2d8793e30280713e3796b254c5286b48",
+        5277255650,
+        "wan2v2-unet/Wan2_2-TI2V-5B_fp8_e4m3fn_scaled_KJ.safetensors",
+    ),
+    "wan2v2-vae": (
+        "e40321bd36b9709991dae2530eb4ac303dd168276980d3e9bc4b6e2b75fed156",
+        1409400960,
+        "wan2v2-vae/wan2.2_vae.safetensors",
+    ),
+    "wan2v2-clip": (
+        "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68",
+        6735906897,
+        "wan2v2-clip/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+    ),
 }
 
 #: The Hugging Face repo prefix each model's url must carry.
@@ -132,6 +163,13 @@ FLUX2_REPO = (
     "https://huggingface.co/Comfy-Org/Flux-2-Klein-4B/resolve/"
     "5b3abca5c0dc1ecd4eaf3340868d09063fc1c965/"
 )
+WAN_REPO = (
+    "https://huggingface.co/Comfy-Org/Wan-2.2/resolve/ee6f4a40737a995bf5818954cfce6d59443b0f04/"
+)
+KIJAI_REPO = (
+    "https://huggingface.co/Kijai/WanVideo_comfy_fp8_scaled/resolve/"
+    "033a4e487f60220b3d6e469599a6aebc46e13cee/"
+)
 MODEL_REPOS = {
     "z-image-turbo-unet": Z_IMAGE_REPO,
     "z-image-qwen-clip": Z_IMAGE_REPO,
@@ -139,6 +177,9 @@ MODEL_REPOS = {
     "flux2-klein-unet": FLUX2_REPO,
     "flux2-qwen-clip": Z_IMAGE_REPO,
     "flux2-klein-vae": FLUX2_REPO,
+    "wan2v2-unet": KIJAI_REPO,
+    "wan2v2-vae": WAN_REPO,
+    "wan2v2-clip": WAN_REPO,
 }
 
 
@@ -147,13 +188,15 @@ def test_index_lists_the_comfy_package() -> None:
     assert "comfy" in names
 
 
-def test_the_package_is_the_image_facet_with_still_and_edit() -> None:
+def test_the_package_is_the_image_facet_with_still_edit_and_clip() -> None:
     assert MANIFEST["name"] == "comfy"
     assert MANIFEST["facet"] == "image"
     assert MANIFEST["transport"] == {"type": "cli", "entry": "runner.py"}
-    assert sorted(MANIFEST["capabilities"]) == ["edit", "still"]
+    assert sorted(MANIFEST["capabilities"]) == ["clip", "edit", "still"]
     assert CAPABILITY["kind"] == "image"
     assert CAPABILITY["preview"]["viewer"] == "image"
+    assert CLIP["kind"] == "video"
+    assert CLIP["preview"]["viewer"] == "video"
 
 
 def test_the_server_is_the_pinned_comfyui_launched_on_the_free_port() -> None:
@@ -166,6 +209,8 @@ def test_the_server_is_the_pinned_comfyui_launched_on_the_free_port() -> None:
     assert server["requirements"] == "requirements.txt"
     assert server["launch"][:2] == ["python", "main.py"]
     assert "--listen" in server["launch"]
+    # Without it the Wan flow peaked at 18 of 19 GB of RAM.
+    assert "--disable-pinned-memory" in server["launch"]
     assert any("{{port}}" in token for token in server["launch"])
     assert server["health_url"] == "http://127.0.0.1:{{port}}/system_stats"
 
@@ -180,7 +225,7 @@ def test_the_requirements_are_one_gpu_job() -> None:
     assert "platforms" not in requirements
 
 
-def test_the_six_models_are_the_lab_files() -> None:
+def test_the_nine_models_are_the_lab_files() -> None:
     models = {model["id"]: model for model in MANIFEST["models"]}
     assert set(models) == set(LAB_MODELS)
     for model_id, (sha256, size, path) in LAB_MODELS.items():
@@ -264,6 +309,37 @@ def test_the_edit_flow_loads_the_klein_models() -> None:
     assert FLOW_IMG2IMG["params"]["steps"] == KLEIN_STEPS
 
 
+def test_the_clip_capability_is_a_video_from_a_first_frame() -> None:
+    assert CLIP["kind"] == "video"
+    assert CLIP["preview"]["viewer"] == "video"
+    assert set(CLIP["inputs"]) == {"image", "workflow"}
+    image = CLIP["inputs"]["image"]
+    assert image["type"] == "array"
+    assert image["required"] is True
+    assert image["min_items"] == 1
+
+
+def test_the_clip_entries_carry_their_own_first_frame() -> None:
+    assert set(CLIP_ITEMS) == {"name", "image", "prompt", "seed", "width", "height", "length"}
+    assert CLIP_ITEMS["name"]["pattern"] == ITEMS["name"]["pattern"]
+    assert CLIP_ITEMS["image"]["type"] == "path"
+    assert CLIP_ITEMS["image"]["required"] is True
+    assert CLIP_ITEMS["prompt"]["pattern"] == ITEMS["prompt"]["pattern"]
+    assert CLIP_ITEMS["seed"]["required"] is True
+    assert CLIP_ITEMS["seed"]["type"] == "integer"
+    assert CLIP_ITEMS["width"]["default"] == DEFAULT_CLIP_WIDTH
+    assert CLIP_ITEMS["height"]["default"] == DEFAULT_CLIP_HEIGHT
+    assert CLIP_ITEMS["length"]["default"] == DEFAULT_CLIP_LENGTH
+
+
+def test_the_clip_workflow_is_the_wan_enum() -> None:
+    workflow = CLIP["inputs"]["workflow"]
+    assert workflow["type"] == "enum"
+    assert workflow["values"] == ["wan22-i2v"]
+    assert workflow["default"] == "wan22-i2v"
+    assert workflow["default"] in workflow["values"]
+
+
 @pytest.mark.parametrize("word", GUARD_WORDS)
 def test_the_guard_rejects_every_data_word(word: str) -> None:
     assert GUARD.fullmatch(f"A quiet {word} in the scene") is None
@@ -281,6 +357,11 @@ def test_the_guard_accepts_the_four_lab_prompts(prompt: str) -> None:
 
 def test_the_edit_guard_accepts_the_lab_edit_prompt() -> None:
     assert GUARD.fullmatch(LAB_EDIT_PROMPT) is not None
+
+
+@pytest.mark.parametrize("prompt", LAB_CLIP_PROMPTS)
+def test_the_guard_accepts_the_three_lab_clip_prompts(prompt: str) -> None:
+    assert GUARD.fullmatch(prompt) is not None
 
 
 def test_the_guard_keeps_texture_digits_and_longer_words() -> None:
@@ -307,6 +388,56 @@ def test_the_klein_flow_fills_the_names_of_its_three_models() -> None:
     assert FLOW_KLEIN["params"] == {"width": 1344, "height": 768, "seed": 0, "steps": 4}
     placeholders = set(re.findall(r'"\$([a-z]+)"', json.dumps(graph)))
     assert placeholders == {"prompt", "seed", "width", "height", "steps", "name"}
+
+
+def test_the_wan_flow_animates_the_uploaded_still() -> None:
+    graph = FLOW_WAN["graph"]
+    assert graph["unet"]["inputs"]["unet_name"] == Path(LAB_MODELS["wan2v2-unet"][2]).name
+    assert graph["clip"]["inputs"]["clip_name"] == Path(LAB_MODELS["wan2v2-clip"][2]).name
+    assert graph["vae"]["inputs"]["vae_name"] == Path(LAB_MODELS["wan2v2-vae"][2]).name
+    assert graph["start"]["class_type"] == "LoadImage"
+    assert graph["start"]["inputs"]["image"] == "$image"
+    assert graph["latent"]["class_type"] == "Wan22ImageToVideoLatent"
+    assert graph["latent"]["inputs"]["start_image"] == ["start", 0]
+    assert FLOW_WAN["uploads"] == ["image"]
+    assert FLOW_WAN["comfy_args"] == ["--disable-pinned-memory"]
+
+
+def test_the_wan_flow_params_are_the_lab_clip() -> None:
+    params = FLOW_WAN["params"]
+    assert set(params) == {
+        "width",
+        "height",
+        "length",
+        "seed",
+        "steps",
+        "cfg",
+        "shift",
+        "fps",
+        "negative",
+    }
+    assert (params["width"], params["height"], params["length"]) == (
+        DEFAULT_CLIP_WIDTH,
+        DEFAULT_CLIP_HEIGHT,
+        DEFAULT_CLIP_LENGTH,
+    )
+    assert (params["steps"], params["cfg"], params["shift"], params["fps"]) == (20, 5, 8, 24)
+    assert params["negative"].strip()
+    placeholders = set(re.findall(r'"\$([a-z]+)"', json.dumps(FLOW_WAN["graph"])))
+    assert placeholders == {
+        "image",
+        "prompt",
+        "negative",
+        "width",
+        "height",
+        "length",
+        "seed",
+        "steps",
+        "cfg",
+        "shift",
+        "fps",
+        "name",
+    }
 
 
 def test_the_skill_is_valid_and_names_the_capability() -> None:

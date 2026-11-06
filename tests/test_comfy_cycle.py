@@ -6,9 +6,10 @@ checkout at ``<home>/servers/comfy/<version>/<rev[:12]>``, substitutes the
 free port into the manifest's own launch argv and starts that argv, then runs
 the package's runner as a subprocess against a stub ``facet_runner_sdk`` on
 ``PYTHONPATH``. The stub ComfyUI answers ``/system_stats``, ``/prompt``,
-``/history`` and ``/view`` with a 64x48 Pillow PNG, and records the graph it
-was posted, so the test can prove the fill order, the model names and the
-port the runner reached.
+``/history`` and ``/view`` with a 64x48 Pillow PNG (or the fixture MP4 when
+the posted graph saves a video), and records the graph it was posted, so the
+test can prove the fill order, the model names and the port the runner
+reached.
 """
 
 from __future__ import annotations
@@ -37,12 +38,26 @@ MODEL_DIRS = {
     "flux2-klein-unet": "models/diffusion_models",
     "flux2-qwen-clip": "models/text_encoders",
     "flux2-klein-vae": "models/vae",
+    "wan2v2-unet": "models/diffusion_models",
+    "wan2v2-clip": "models/text_encoders",
+    "wan2v2-vae": "models/vae",
 }
+#: The 64x48, 24 fps, 49-frame MP4 the stub serves for a clip.
+CLIP_FIXTURE = ROOT / "tests" / "fixtures" / "clip.mp4"
+#: The same 64x48 and 49 frames at 12 fps: verify must fail on the rate alone.
+CLIP_12FPS_FIXTURE = ROOT / "tests" / "fixtures" / "clip-12fps.mp4"
+CLIP_12FPS = 12
 PROMPT = "A handmade matte ceramic cup on a raw concrete surface, soft window light"
+CLIP_PROMPT = "Fog drifting slowly between the pine trees at dawn, very slow camera push in"
 SEED = 7
 STEPS = 8
 KLEIN_STEPS = 4
 SHIFT = 3
+CLIP_STEPS = 20
+CLIP_CFG = 5
+CLIP_SHIFT = 8
+CLIP_LENGTH = 49
+CLIP_FPS = 24
 WIDTH = 64
 HEIGHT = 48
 OK = 200
@@ -110,6 +125,7 @@ import PIL.Image
 
 GRAPH = Path(os.environ["STUB_GRAPH"])
 UPLOAD = Path(os.environ["STUB_UPLOAD"])
+CLIP = Path(os.environ["STUB_CLIP"])
 SIZE = (64, 48)
 
 
@@ -124,6 +140,9 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def video_requested(self):
+        return "clip.mp4" in urlsplit(self.path).query
+
     def do_GET(self):
         path = urlsplit(self.path).path
         if path == "/system_stats":
@@ -131,12 +150,17 @@ class Handler(BaseHTTPRequestHandler):
         elif path.startswith("/history/"):
             prompt_id = path.rsplit("/", 1)[-1]
             status = {"completed": True, "status_str": "success"}
+            video = "SaveVideo" in GRAPH.read_text()
+            filename = "clip.mp4" if video else "still.png"
             outputs = {
-                "save": {"images": [{"filename": "still.png", "subfolder": "", "type": "output"}]}
+                "save": {"images": [{"filename": filename, "subfolder": "", "type": "output"}]}
             }
             body = json.dumps({prompt_id: {"status": status, "outputs": outputs}})
             self.send_body(body.encode(), "application/json")
         elif path == "/view":
+            if self.video_requested():
+                self.send_body(CLIP.read_bytes(), "video/mp4")
+                return
             buffer = BytesIO()
             PIL.Image.new("RGB", SIZE, (40, 90, 140)).save(buffer, format="PNG")
             self.send_body(buffer.getvalue(), "image/png")
@@ -159,6 +183,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--listen", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8188)
+    parser.add_argument("--disable-pinned-memory", action="store_true")
     args = parser.parse_args()
     ThreadingHTTPServer((args.listen, args.port), Handler).serve_forever()
 
@@ -247,6 +272,7 @@ def _launch(
         "PATH": str(venv_bin) + os.pathsep + os.environ["PATH"],
         "STUB_GRAPH": str(graph_file),
         "STUB_UPLOAD": str(upload_file),
+        "STUB_CLIP": str(CLIP_FIXTURE),
     }
     return subprocess.Popen(
         argv,
@@ -298,9 +324,12 @@ def _record_request(
     piece_dir: Path,
     models: dict[str, Path],
     assets: tuple[Path, ...] = (),
+    entry: dict[str, object] | None = None,
+    capability: str = "comfy.still",
 ) -> dict[str, object]:
     """The request ``facet check`` and ``facet preview`` make: the record's params."""
-    return {**_request(verb, out_dir, piece_dir, models, assets), "inputs": dict(ENTRY)}
+    request = _request(verb, out_dir, piece_dir, models, assets, capability=capability)
+    return {**request, "inputs": dict(entry or ENTRY)}
 
 
 def _call(
@@ -448,7 +477,7 @@ def _assert_upload(upload_file: Path, reference: Path) -> None:
     """The lab protocol: multipart, ``overwrite`` then the file as ``image``."""
     body = upload_file.read_bytes()
     assert b'name="overwrite"\r\n\r\ntrue' in body
-    assert b'name="image"; filename="referencia.png"' in body
+    assert f'name="image"; filename="{reference.name}"'.encode() in body
     assert reference.read_bytes() in body
     assert body.startswith(b"--")
     assert body.rstrip().endswith(b"--")
@@ -519,6 +548,191 @@ def _assert_klein_graph(graph_file: Path) -> None:
     assert graph["unet"]["inputs"]["unet_name"] == Path(MODEL_PATHS["flux2-klein-unet"]).name
     assert graph["clip"]["inputs"]["clip_name"] == Path(MODEL_PATHS["flux2-qwen-clip"]).name
     assert graph["vae"]["inputs"]["vae_name"] == Path(MODEL_PATHS["flux2-klein-vae"]).name
+
+
+def _clip_entry(source: Path) -> dict[str, object]:
+    """One clip: the still is the first frame, the prompt describes the movement."""
+    return {
+        "name": "bosque-niebla",
+        "image": str(source),
+        "prompt": CLIP_PROMPT,
+        "seed": SEED,
+        "width": WIDTH,
+        "height": HEIGHT,
+        "length": CLIP_LENGTH,
+    }
+
+
+def test_a_clip_uploads_its_first_frame_and_returns_the_mp4(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    models = _model_files(home)
+    graph_file = tmp_path / "graph.json"
+    upload_file = tmp_path / "upload.bin"
+    stub_dir = _stub_sdk(tmp_path)
+    checkout = _clone(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    source = tmp_path / "primer-cuadro.png"
+    PIL.Image.new("RGB", (WIDTH, HEIGHT), (12, 34, 56)).save(source)
+    entry = _clip_entry(source)
+    port = _free_port()
+    url = f"http://127.0.0.1:{port}"
+    process = _launch(checkout, graph_file, upload_file, port)
+    try:
+        assert _wait_healthy(f"{url}/system_stats"), "the stub ComfyUI never became healthy"
+        env = _environment(stub_dir, home, url)
+        request = _request(
+            "run",
+            out,
+            tmp_path,
+            models,
+            inputs={"image": [entry]},
+            capability="comfy.clip",
+        )
+        result, printed = _call(stub_dir, "run", request, tmp_path, env)
+        assert "primer-cuadro.png uploaded as source.png" in printed
+        assert "bosque-niebla.mp4 ok" in printed
+        asset = result["assets"][0]
+        assert asset["file"] == "bosque-niebla.mp4"
+        assert (asset["kind"], asset["mime"]) == ("video", "video/mp4")
+        assert asset["seed"] == SEED
+        assert asset["properties"] == {"width": WIDTH, "height": HEIGHT, "seed": SEED}
+        assert (out / "bosque-niebla.mp4").read_bytes() == CLIP_FIXTURE.read_bytes()
+        _assert_links(checkout, models)
+        _assert_wan_graph(graph_file)
+        _assert_upload(upload_file, source)
+    finally:
+        process.terminate()
+        process.wait(timeout=10)
+    _assert_clip_verdicts(stub_dir, home, url, out, models, tmp_path, entry)
+
+
+def _assert_wan_graph(graph_file: Path) -> None:
+    graph = json.loads(graph_file.read_text(encoding="utf-8"))["prompt"]
+    assert graph["start"]["class_type"] == "LoadImage"
+    assert graph["start"]["inputs"]["image"] == "source.png"
+    assert graph["positive"]["inputs"]["text"] == CLIP_PROMPT
+    assert graph["sampler"]["inputs"]["seed"] == SEED
+    assert graph["sampler"]["inputs"]["steps"] == CLIP_STEPS
+    assert graph["sampler"]["inputs"]["cfg"] == CLIP_CFG
+    assert graph["model"]["inputs"]["shift"] == CLIP_SHIFT
+    assert graph["latent"]["inputs"]["length"] == CLIP_LENGTH
+    assert graph["latent"]["inputs"]["width"] == WIDTH
+    assert graph["latent"]["inputs"]["height"] == HEIGHT
+    assert graph["video"]["inputs"]["fps"] == CLIP_FPS
+    assert graph["save"]["inputs"]["filename_prefix"] == "bosque-niebla"
+    assert graph["negative"]["inputs"]["text"].strip()
+    assert "$" not in json.dumps(graph)
+    assert graph["unet"]["inputs"]["unet_name"] == Path(MODEL_PATHS["wan2v2-unet"]).name
+    assert graph["clip"]["inputs"]["clip_name"] == Path(MODEL_PATHS["wan2v2-clip"]).name
+    assert graph["vae"]["inputs"]["vae_name"] == Path(MODEL_PATHS["wan2v2-vae"]).name
+
+
+def _clip_verdict(
+    stub_dir: Path,
+    env: dict[str, str],
+    clip: Path,
+    models: dict[str, Path],
+    entry: dict[str, object],
+    tmp_path: Path,
+) -> dict[str, object]:
+    """The verify verdict ``facet check`` gets for one clip and one entry."""
+    request = _record_request(
+        "verify", clip.parent, tmp_path, models, (clip,), entry=entry, capability="comfy.clip"
+    )
+    verdict, _ = _call(stub_dir, "verify", request, tmp_path, env)
+    asset: dict[str, object] = verdict["assets"][0]
+    return asset
+
+
+def _assert_clip_verdicts(
+    stub_dir: Path,
+    home: Path,
+    url: str,
+    out: Path,
+    models: dict[str, Path],
+    tmp_path: Path,
+    entry: dict[str, object],
+) -> None:
+    """Verify probes the MP4; preview writes the video schema's fields."""
+    env = _environment(stub_dir, home, url)
+    clip = out / "bosque-niebla.mp4"
+    request = _request(
+        "verify", out, tmp_path, models, (clip,), inputs={"image": [entry]}, capability="comfy.clip"
+    )
+    verdict, _ = _call(stub_dir, "verify", request, tmp_path, env)
+    asset = verdict["assets"][0]
+    assert asset["passed"] is True
+    assert asset["verifier"] == "ffmpeg"
+    assert asset["metrics"] == {
+        "width": WIDTH,
+        "height": HEIGHT,
+        "fps": float(CLIP_FPS),
+        "frames": CLIP_LENGTH,
+    }
+    # facet check and facet preview send the record's params for one asset.
+    assert _clip_verdict(stub_dir, env, clip, models, entry, tmp_path)["passed"] is True
+    _call(
+        stub_dir,
+        "preview",
+        _record_request(
+            "preview", out, tmp_path, models, (clip,), entry=entry, capability="comfy.clip"
+        ),
+        tmp_path,
+        env,
+    )
+    data = json.loads((out / "bosque-niebla.mp4.preview.json").read_text(encoding="utf-8"))
+    assert set(data) == {
+        "preview",
+        "kind",
+        "summary",
+        "name",
+        "prompt",
+        "seed",
+        "width",
+        "height",
+        "length",
+        "fps",
+    }
+    assert data["kind"] == "video"
+    assert data["name"] == "bosque-niebla"
+    assert data["length"] == CLIP_LENGTH
+    assert data["fps"] == CLIP_FPS
+    assert (data["width"], data["height"]) == (WIDTH, HEIGHT)
+    # Each measurement alone can fail the verdict.
+    wrong_size = _clip_verdict(stub_dir, env, clip, models, {**entry, "width": WIDTH * 2}, tmp_path)
+    assert wrong_size["passed"] is False
+    wrong_frames = _clip_verdict(
+        stub_dir, env, clip, models, {**entry, "length": CLIP_LENGTH * 2}, tmp_path
+    )
+    assert wrong_frames["passed"] is False
+    assert wrong_frames["metrics"]["frames"] == CLIP_LENGTH
+    wrong_rate = _clip_verdict(stub_dir, env, CLIP_12FPS_FIXTURE, models, entry, tmp_path)
+    assert wrong_rate["passed"] is False
+    assert wrong_rate["metrics"]["fps"] == float(CLIP_12FPS)
+    broken = out / "broken.mp4"
+    broken.write_text("not an mp4", encoding="utf-8")
+    unreadable = _clip_verdict(stub_dir, env, broken, models, entry, tmp_path)
+    assert unreadable["passed"] is False
+    assert "error" in unreadable["metrics"]
+
+
+def test_an_unknown_clip_workflow_fails_before_anything_runs(tmp_path: Path) -> None:
+    stub_dir = _stub_sdk(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    request = _request(
+        "run",
+        out,
+        tmp_path,
+        {},
+        inputs={"workflow": "wan22-i2v-bad"},
+        capability="comfy.clip",
+    )
+    done = _call_failing(stub_dir, request, tmp_path, "bad-clip")
+    assert done.returncode != 0
+    assert "unknown workflow" in done.stderr
+    assert not (tmp_path / "bad-clip-result.json").exists()
 
 
 def test_an_unknown_workflow_fails_before_anything_runs(tmp_path: Path) -> None:

@@ -36,8 +36,8 @@ is the same file with one defect, so the check proves the schema accepts the
 first and rejects the second — a waveform of 600 bins instead of 1200, a
 negative hole diameter, a `fields` value that is a list. A new kind adds the
 pair: `cad.json` is the lab's escuadra with two holes and its two views,
-`audio.json` a 9.6 s narration with its word alignment, `generic.json` a short
-`text` asset.
+`audio.json` a 9.6 s narration with its word alignment, `video.json` the lab's
+two-second fog clip, `generic.json` a short `text` asset.
 
 ## Common fields
 
@@ -108,4 +108,14 @@ pair: `cad.json` is the lab's escuadra with two holes and its two views,
 - `seed`: sampling seed, integer >= 0.
 - `width`: image width in pixels, integer >= 1.
 - `height`: image height in pixels, integer >= 1.
+
+## Video fields
+
+- `name`: asset base name, `[a-z0-9][a-z0-9-]*`.
+- `prompt`: the prompt describing the movement the clip was generated from.
+- `seed`: sampling seed, integer >= 0.
+- `width`: clip width in pixels, integer >= 1.
+- `height`: clip height in pixels, integer >= 1.
+- `length`: frame count at the clip's frame rate, integer >= 1.
+- `fps`: frame rate in frames per second, integer >= 1.
 

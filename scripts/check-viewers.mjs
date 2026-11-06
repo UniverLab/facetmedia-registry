@@ -22,7 +22,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CHROME = process.env.CHROME_PATH || "/usr/bin/google-chrome";
 const KINDS = process.argv.slice(2).length > 0
   ? process.argv.slice(2)
-  : ["generic", "audio", "cad", "image"];
+  : ["generic", "audio", "cad", "image", "video"];
 const CASES = [
   { scheme: "light", width: 1280, height: 800 },
   { scheme: "dark", width: 1280, height: 800 },

@@ -56,5 +56,7 @@ collapsed.
 The viewers here are `generic` (any preview: summary, fields, the asset),
 `audio` (player, waveform with silences and the playhead, loudness against the
 target, speech alignment), `cad` (views that enlarge, solid and drawing
-measurements) and `image` (the still itself, click to enlarge, with its
-prompt, seed and pixel size); each has a runnable example under `_examples/`.
+measurements), `image` (the still itself, click to enlarge, with its prompt,
+seed and pixel size) and `video` (the clip in a player, with its motion
+prompt, seed, frame count and rate); each has a runnable example under
+`_examples/`.

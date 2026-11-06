@@ -4,7 +4,7 @@ requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "ComfyUI project"
 tool_name = "ComfyUI"
-description = "Stills and reference-guided edits with ComfyUI's z-image-turbo and flux2-klein flows, checked by pixel size."
+description = "Stills, reference-guided edits and clips with ComfyUI's z-image-turbo, flux2-klein and wan22-i2v flows, checked by pixel size and video probe."
 facet = "image"
 
 [engine]
@@ -15,7 +15,7 @@ python = "3.12"
 repo = "https://github.com/comfyanonymous/ComfyUI.git"
 rev = "3c1b7a17fdf239d35ce98cc777756f572d089795"
 requirements = "requirements.txt"
-launch = ["python", "main.py", "--listen", "127.0.0.1", "--port", "{{port}}"]
+launch = ["python", "main.py", "--listen", "127.0.0.1", "--port", "{{port}}", "--disable-pinned-memory"]
 health_url = "http://127.0.0.1:{{port}}/system_stats"
 
 [transport]
@@ -25,7 +25,7 @@ entry = "runner.py"
 [requirements]
 gpu = true
 ram_gb = 16
-disk_gb = 25
+disk_gb = 40
 
 [[licenses]]
 subject = "ComfyUI"
@@ -34,6 +34,10 @@ spdx = "GPL-3.0-or-later"
 [[licenses]]
 subject = "pillow"
 spdx = "MIT-CMU"
+
+[[licenses]]
+subject = "imageio-ffmpeg"
+spdx = "BSD-2-Clause"
 
 [[models]]
 id = "z-image-turbo-unet"
@@ -94,6 +98,36 @@ url = "https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/6fc90a3b1b653e935a
 sha256 = "72450b19758172c5a7273cf7de729d1c17e7f434a104a00167624cba94f68f15"
 bytes = 5631994051
 path = "z-image-qwen-clip/qwen_3_4b_fp8_mixed.safetensors"
+
+[[models]]
+id = "wan2v2-unet"
+spdx = "Apache-2.0"
+commercial_use = true
+requires_acceptance = false
+url = "https://huggingface.co/Kijai/WanVideo_comfy_fp8_scaled/resolve/033a4e487f60220b3d6e469599a6aebc46e13cee/TI2V/Wan2_2-TI2V-5B_fp8_e4m3fn_scaled_KJ.safetensors"
+sha256 = "a83f54a2450d5471e5721e59ab556afa2d8793e30280713e3796b254c5286b48"
+bytes = 5277255650
+path = "wan2v2-unet/Wan2_2-TI2V-5B_fp8_e4m3fn_scaled_KJ.safetensors"
+
+[[models]]
+id = "wan2v2-vae"
+spdx = "Apache-2.0"
+commercial_use = true
+requires_acceptance = false
+url = "https://huggingface.co/Comfy-Org/Wan-2.2/resolve/ee6f4a40737a995bf5818954cfce6d59443b0f04/split_files/vae/wan2.2_vae.safetensors"
+sha256 = "e40321bd36b9709991dae2530eb4ac303dd168276980d3e9bc4b6e2b75fed156"
+bytes = 1409400960
+path = "wan2v2-vae/wan2.2_vae.safetensors"
+
+[[models]]
+id = "wan2v2-clip"
+spdx = "Apache-2.0"
+commercial_use = true
+requires_acceptance = false
+url = "https://huggingface.co/Comfy-Org/Wan-2.2/resolve/ee6f4a40737a995bf5818954cfce6d59443b0f04/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
+sha256 = "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68"
+bytes = 6735906897
+path = "wan2v2-clip/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
 
 [capabilities.still]
 summary = "Still illustration with the z-image-turbo (~8 s) or flux2-klein-4b (~6 s) flow, per 1344x768 image."
@@ -193,3 +227,63 @@ description = "Image height in pixels, a multiple of 64."
 
 [capabilities.edit.preview]
 viewer = "image"
+
+[capabilities.clip]
+summary = "Micro video from a still with the wan22-i2v flow (~7 min), per 1280x704 clip."
+kind = "video"
+
+[capabilities.clip.inputs.image]
+type = "array"
+required = true
+min_items = 1
+description = "Clips to make; each entry is one first frame with its movement and seed."
+
+[capabilities.clip.inputs.image.items.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name: writes <name>.mp4."
+
+[capabilities.clip.inputs.image.items.image]
+type = "path"
+required = true
+description = "First frame of the clip, relative to the piece file; uploaded by the runner."
+
+[capabilities.clip.inputs.image.items.prompt]
+type = "string"
+required = true
+pattern = '(?i)^(?!.*\b(?:captions?|chart|graph|labels?|letters?|logo|sign|text|title|words?)\b).*$'
+description = "English prompt describing the movement inside the frame, never data or lettering."
+
+[capabilities.clip.inputs.image.items.seed]
+type = "integer"
+required = true
+description = "Sampling seed; the same seed, prompt and first frame give the same clip."
+
+[capabilities.clip.inputs.image.items.width]
+type = "integer"
+default = 1280
+min = 64
+max = 2048
+description = "Clip width in pixels, a multiple of 64."
+
+[capabilities.clip.inputs.image.items.height]
+type = "integer"
+default = 704
+min = 64
+max = 2048
+description = "Clip height in pixels, a multiple of 64."
+
+[capabilities.clip.inputs.image.items.length]
+type = "integer"
+default = 49
+description = "Clip length in frames at 24 fps: 49 is about 2 s, 121 about 5 s (4n+1)."
+
+[capabilities.clip.inputs.workflow]
+type = "enum"
+values = ["wan22-i2v"]
+default = "wan22-i2v"
+description = "Clip flow: wan22-i2v animates what is inside the image."
+
+[capabilities.clip.preview]
+viewer = "video"

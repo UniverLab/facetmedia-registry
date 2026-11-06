@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>facet — video viewer</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/kit/base.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <div id="error" class="error-box" role="alert" hidden></div>
+      <header id="header"></header>
+      <main>
+        <p id="summary"></p>
+        <section id="clip-section">
+          <h2>clip</h2>
+          <figure>
+            <video id="clip" controls playsinline></video>
+            <figcaption>what moves inside the still</figcaption>
+          </figure>
+        </section>
+        <h2>piece</h2>
+        <dl class="kv" id="details"></dl>
+        <p><a id="asset-link" href="#">open the asset</a></p>
+      </main>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

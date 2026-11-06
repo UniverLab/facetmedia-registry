@@ -1,0 +1,12 @@
+{
+  "preview": 1,
+  "kind": "video",
+  "summary": "bosque-niebla \u00b7 1280\u00d7704 \u00b7 49 frames \u00b7 24 fps \u00b7 seed 51",
+  "name": "bosque-niebla",
+  "prompt": "Fog drifting slowly between the pine trees at dawn, soft light rays shifting through the mist, very slow camera push in, calm and quiet, cinematic",
+  "seed": 51,
+  "width": 1280,
+  "height": 704,
+  "length": 49,
+  "fps": 24
+}

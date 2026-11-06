@@ -1,12 +1,13 @@
 ---
 name: comfy
-description: Stills from prompts and reference-guided edits with ComfyUI, checked by pixel size.
+description: Stills, reference-guided edits and short clips with ComfyUI, checked by pixel size and video probe.
 ---
 # ComfyUI
 
 Turn prompts into still illustrations with the lab's z-image-turbo flow on
-ComfyUI, and iterate one by instruction from a reference image. The
-capabilities write the `image` kind and are checked by pixel size.
+ComfyUI, iterate one by instruction from a reference image, and animate a
+still into a short clip. The capabilities write the `image` and `video` kinds
+and are checked by pixel size and by probing the MP4.
 
 ## When to use
 
@@ -15,6 +16,10 @@ capabilities write the `image` kind and are checked by pixel size.
 - `comfy.edit` to change an image you already have while keeping its framing
   and character: another style, palette or mood. It is guided by reference
   image and has no denoise slider.
+- `comfy.clip` to animate what is inside a still — fog advancing, steam
+  rising, a slow camera push in. A camera move over a still comes from the
+  GSAP draft first; Wan is for movement inside the frame. About 7 minutes per
+  two-second clip.
 - Never for anything a person must read. Text, numbers, labels, charts and
   logos belong in HTML or SVG; a generated image carries image content only.
 
@@ -47,6 +52,11 @@ equals the entry's `width` and `height`, reporting both. Read the image
 preview's `name`, `prompt`, `seed`, `width` and `height`, and open the PNG
 in the image viewer to look at it: the size says the flow ran, the picture
 says whether the prompt worked. About 8 s per 1344 × 768 image.
+
+A clip is a `video` kind: each entry writes `<name>.mp4`, and `verify` probes
+it with FFmpeg and passes when its resolution, 24 fps and frame count (`49`
+by default, about 2 s) equal the entry. In its preview, `length` is the frame
+count and `fps` the rate.
 
 ## Pitfalls
 

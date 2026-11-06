@@ -26,7 +26,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "serve-example.py"
 VIEWERS = ROOT / "viewers"
-KINDS = ("generic", "audio", "cad", "image")
+KINDS = ("generic", "audio", "cad", "image", "video")
 #: Content types a browser needs exactly right for ES modules and tokens.
 CONTENT_TYPES = {".html": "text/html", ".js": "text/javascript", ".css": "text/css"}
 EXTERNAL = re.compile(r"https?://")
@@ -194,7 +194,7 @@ class NotFoundTests(unittest.TestCase):
 
     def test_unknown_kind_is_refused(self) -> None:
         with self.assertRaises(SystemExit):
-            serve.make_server("video", 0)
+            serve.make_server("nope", 0)
 
 
 class ViewerSourceTests(unittest.TestCase):
@@ -239,6 +239,7 @@ class ExampleDataTests(unittest.TestCase):
         self.assertEqual(serve.example_asset("audio"), "tone.wav")
         self.assertEqual(serve.example_asset("cad"), "escuadra.step")
         self.assertEqual(serve.example_asset("image"), "foto-producto.png")
+        self.assertEqual(serve.example_asset("video"), "bosque-niebla.mp4")
 
     def test_every_record_matches_its_asset(self) -> None:
         for kind in KINDS:

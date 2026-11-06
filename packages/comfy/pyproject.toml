@@ -1,12 +1,13 @@
 [project]
 name = "facet-comfy"
 version = "0.1.0"
-description = "Stills and reference-guided edits with ComfyUI's z-image-turbo and flux2-klein flows."
+description = "Stills, reference-guided edits and clips with ComfyUI's z-image-turbo, flux2-klein and wan22-i2v flows."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "pillow==13.0.0",
+  "imageio-ffmpeg==0.6.0",
 ]
 
 [tool.uv]

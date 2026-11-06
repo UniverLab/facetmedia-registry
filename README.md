@@ -24,7 +24,7 @@ the core:
 |-------|---------|--------------|
 | audio | ffmpeg | Normalise, mix and convert audio clips with FFmpeg, with loudness and duration verified |
 | cad | cad | 3D parts and 2D plans from CadQuery or ezdxf scripts, checked by volume, bounding box and DXF audit |
-| image | comfy | Stills from prompts and reference-guided edits with ComfyUI's z-image-turbo and flux2-klein flows, checked by pixel size |
+| image | comfy | Stills, reference-guided edits and clips with ComfyUI's z-image-turbo, flux2-klein and wan22-i2v flows, checked by pixel size and video probe |
 | text | ascii | ASCII art from images and figlet banners in the lab's font |
 | voice | kokoro | Narration from text on CPU (Spanish and English), checked by transcription |
 | voice | whisper | Transcripts and subtitles from audio on CPU, checked by confidence or reference text |
