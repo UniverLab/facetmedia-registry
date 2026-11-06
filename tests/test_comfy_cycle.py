@@ -34,10 +34,14 @@ MODEL_DIRS = {
     "z-image-turbo-unet": "models/diffusion_models",
     "z-image-qwen-clip": "models/text_encoders",
     "z-image-vae": "models/vae",
+    "flux2-klein-unet": "models/diffusion_models",
+    "flux2-qwen-clip": "models/text_encoders",
+    "flux2-klein-vae": "models/vae",
 }
 PROMPT = "A handmade matte ceramic cup on a raw concrete surface, soft window light"
 SEED = 7
 STEPS = 8
+KLEIN_STEPS = 4
 SHIFT = 3
 WIDTH = 64
 HEIGHT = 48
@@ -262,12 +266,16 @@ def _request(
     piece_dir: Path,
     models: dict[str, Path],
     assets: tuple[Path, ...] = (),
+    workflow: str | None = None,
 ) -> dict[str, object]:
+    inputs: dict[str, object] = {"image": [ENTRY]}
+    if workflow is not None:
+        inputs["workflow"] = workflow
     return {
         "protocol": 1,
         "verb": verb,
         "capability": "comfy.still",
-        "inputs": {"image": [ENTRY]},
+        "inputs": inputs,
         "out_dir": str(out_dir),
         "piece_dir": str(piece_dir),
         "models": {key: str(value) for key, value in models.items()},
@@ -358,6 +366,75 @@ def test_the_cycle_links_the_models_returns_bare_names_and_verifies(tmp_path: Pa
         process.terminate()
         process.wait(timeout=10)
     _assert_verify_and_preview(stub_dir, home, url, out, models, tmp_path)
+
+
+def test_the_klein_flow_renders_through_the_same_runner(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    models = _model_files(home)
+    graph_file = tmp_path / "graph.json"
+    stub_dir = _stub_sdk(tmp_path)
+    checkout = _clone(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    port = _free_port()
+    url = f"http://127.0.0.1:{port}"
+    process = _launch(checkout, graph_file, port)
+    try:
+        assert _wait_healthy(f"{url}/system_stats"), "the stub ComfyUI never became healthy"
+        env = _environment(stub_dir, home, url)
+        request = _request("run", out, tmp_path, models, workflow="flux2-klein-4b")
+        result, printed = _call(stub_dir, "run", request, tmp_path, env)
+        assert "foto-producto.png ok" in printed
+        asset = result["assets"][0]
+        assert asset["file"] == "foto-producto.png"
+        assert (out / "foto-producto.png").is_file()
+        _assert_links(checkout, models)
+        _assert_klein_graph(graph_file)
+    finally:
+        process.terminate()
+        process.wait(timeout=10)
+
+
+def _assert_klein_graph(graph_file: Path) -> None:
+    graph = json.loads(graph_file.read_text(encoding="utf-8"))["prompt"]
+    assert graph["positive"]["inputs"]["text"] == PROMPT
+    assert graph["noise"]["inputs"]["noise_seed"] == SEED
+    assert graph["sigmas"]["inputs"]["steps"] == KLEIN_STEPS
+    assert graph["latent"]["class_type"] == "EmptyFlux2LatentImage"
+    assert graph["latent"]["inputs"]["width"] == WIDTH
+    assert graph["latent"]["inputs"]["height"] == HEIGHT
+    assert "shift" not in json.dumps(graph)
+    assert graph["save"]["inputs"]["filename_prefix"] == "foto-producto"
+    assert graph["unet"]["inputs"]["unet_name"] == Path(MODEL_PATHS["flux2-klein-unet"]).name
+    assert graph["clip"]["inputs"]["clip_name"] == Path(MODEL_PATHS["flux2-qwen-clip"]).name
+    assert graph["vae"]["inputs"]["vae_name"] == Path(MODEL_PATHS["flux2-klein-vae"]).name
+
+
+def test_an_unknown_workflow_fails_before_anything_runs(tmp_path: Path) -> None:
+    stub_dir = _stub_sdk(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    request = _request("run", out, tmp_path, {}, workflow="flux2-klain-4b")
+    input_path = tmp_path / "bad-request.json"
+    input_path.write_text(json.dumps(request), encoding="utf-8")
+    done = subprocess.run(
+        [
+            sys.executable,
+            str(PACKAGE / "runner.py"),
+            "run",
+            "--input",
+            str(input_path),
+            "--result",
+            str(tmp_path / "bad-result.json"),
+        ],
+        env={**os.environ, "PYTHONPATH": str(stub_dir)},
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert done.returncode != 0
+    assert "unknown workflow" in done.stderr
 
 
 def _assert_links(checkout: Path, models: dict[str, Path]) -> None:

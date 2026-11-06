@@ -1,4 +1,4 @@
-"""The comfy manifest: the server pin, the three models and the prompt guard.
+"""The comfy manifest: the server pin, the six models and the prompt guard.
 
 The registry suite runs without the core, so the checks here read the
 manifest and the flow as data. The closed item set pins what the core turns
@@ -23,6 +23,7 @@ PACKAGE = ROOT / "packages" / "comfy"
 MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
 INDEX = tomllib.loads((ROOT / "index.toml").read_text(encoding="utf-8"))
 FLOW = json.loads((PACKAGE / "flows" / "z-image-turbo.json").read_text(encoding="utf-8"))
+FLOW_KLEIN = json.loads((PACKAGE / "flows" / "flux2-klein-4b.json").read_text(encoding="utf-8"))
 CAPABILITY = MANIFEST["capabilities"]["still"]
 IMAGE = CAPABILITY["inputs"]["image"]
 ITEMS = IMAGE["items"]
@@ -73,7 +74,8 @@ LAB_PROMPTS = (
     "visible paper texture and pigment blooms",
 )
 
-#: The three models the lab's clone holds, pinned by sha256, size and path.
+#: The six models the lab's clone holds, pinned by sha256, size and path.
+#: ``flux2-qwen-clip`` shares the z-image clip's file: pull downloads it once.
 LAB_MODELS = {
     "z-image-turbo-unet": (
         "be517ebd47c912a5626a588e1aeea43e6be4a43c0cdcd2b48a2a780d9f358635",
@@ -90,6 +92,39 @@ LAB_MODELS = {
         335304388,
         "z-image-vae/ae.safetensors",
     ),
+    "flux2-klein-unet": (
+        "ec3d4e733a771f61c052fb4856c48b336c55eaf2c65487c2a1faeb9bbda7a343",
+        7751105712,
+        "flux2-klein-unet/flux-2-klein-4b.safetensors",
+    ),
+    "flux2-qwen-clip": (
+        "72450b19758172c5a7273cf7de729d1c17e7f434a104a00167624cba94f68f15",
+        5631994051,
+        "z-image-qwen-clip/qwen_3_4b_fp8_mixed.safetensors",
+    ),
+    "flux2-klein-vae": (
+        "868fe7b343cc8f3a19dbcfcafbc3d5f888802be3f89bd81b65b3621a066ce8f3",
+        336211292,
+        "flux2-klein-vae/flux2-vae.safetensors",
+    ),
+}
+
+#: The Hugging Face repo prefix each model's url must carry.
+Z_IMAGE_REPO = (
+    "https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/"
+    "6fc90a3b1b653e935a0d175e260736de25b84df5/"
+)
+FLUX2_REPO = (
+    "https://huggingface.co/Comfy-Org/Flux-2-Klein-4B/resolve/"
+    "5b3abca5c0dc1ecd4eaf3340868d09063fc1c965/"
+)
+MODEL_REPOS = {
+    "z-image-turbo-unet": Z_IMAGE_REPO,
+    "z-image-qwen-clip": Z_IMAGE_REPO,
+    "z-image-vae": Z_IMAGE_REPO,
+    "flux2-klein-unet": FLUX2_REPO,
+    "flux2-qwen-clip": Z_IMAGE_REPO,
+    "flux2-klein-vae": FLUX2_REPO,
 }
 
 
@@ -131,7 +166,7 @@ def test_the_requirements_are_one_gpu_job() -> None:
     assert "platforms" not in requirements
 
 
-def test_the_three_models_are_the_lab_files() -> None:
+def test_the_six_models_are_the_lab_files() -> None:
     models = {model["id"]: model for model in MANIFEST["models"]}
     assert set(models) == set(LAB_MODELS)
     for model_id, (sha256, size, path) in LAB_MODELS.items():
@@ -142,10 +177,7 @@ def test_the_three_models_are_the_lab_files() -> None:
         assert model["spdx"] == "Apache-2.0"
         assert model["commercial_use"] is True
         assert model["requires_acceptance"] is False
-        assert model["url"].startswith(
-            "https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/"
-            "6fc90a3b1b653e935a0d175e260736de25b84df5/"
-        )
+        assert model["url"].startswith(MODEL_REPOS[model_id])
         # Per-file entries: an HF entry would download the whole revision.
         assert "hf_repo" not in model
 
@@ -163,6 +195,14 @@ def test_the_image_input_is_closed_with_five_fields() -> None:
     for side in ("width", "height"):
         assert ITEMS[side]["min"] == SIDE_MIN
         assert ITEMS[side]["max"] == SIDE_MAX
+
+
+def test_the_workflow_input_is_an_enum_with_a_default() -> None:
+    workflow = CAPABILITY["inputs"]["workflow"]
+    assert workflow["type"] == "enum"
+    assert workflow["values"] == ["z-image-turbo", "flux2-klein-4b"]
+    assert workflow["default"] == "z-image-turbo"
+    assert workflow["default"] in workflow["values"]
 
 
 @pytest.mark.parametrize("word", GUARD_WORDS)
@@ -194,6 +234,16 @@ def test_the_flow_fills_the_names_of_the_three_models() -> None:
     assert FLOW["params"] == {"width": 1344, "height": 768, "seed": 0, "steps": 8, "shift": 3}
     placeholders = set(re.findall(r'"\$([a-z]+)"', json.dumps(graph)))
     assert placeholders == {"prompt", "seed", "width", "height", "steps", "shift", "name"}
+
+
+def test_the_klein_flow_fills_the_names_of_its_three_models() -> None:
+    graph = FLOW_KLEIN["graph"]
+    assert graph["unet"]["inputs"]["unet_name"] == Path(LAB_MODELS["flux2-klein-unet"][2]).name
+    assert graph["clip"]["inputs"]["clip_name"] == Path(LAB_MODELS["flux2-qwen-clip"][2]).name
+    assert graph["vae"]["inputs"]["vae_name"] == Path(LAB_MODELS["flux2-klein-vae"][2]).name
+    assert FLOW_KLEIN["params"] == {"width": 1344, "height": 768, "seed": 0, "steps": 4}
+    placeholders = set(re.findall(r'"\$([a-z]+)"', json.dumps(graph)))
+    assert placeholders == {"prompt", "seed", "width", "height", "steps", "name"}
 
 
 def test_the_skill_is_valid_and_names_the_capability() -> None:

@@ -1,7 +1,7 @@
 [project]
 name = "facet-comfy"
 version = "0.1.0"
-description = "Still illustration from prompts with ComfyUI's z-image-turbo flow."
+description = "Still illustration from prompts with ComfyUI's z-image-turbo and flux2-klein-4b flows."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12,<3.13"

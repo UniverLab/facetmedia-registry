@@ -4,7 +4,7 @@ requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "ComfyUI project"
 tool_name = "ComfyUI"
-description = "Still illustration from prompts with ComfyUI's z-image-turbo flow, checked by pixel size."
+description = "Still illustration from prompts with ComfyUI's z-image-turbo and flux2-klein-4b flows, checked by pixel size."
 facet = "image"
 
 [engine]
@@ -65,8 +65,38 @@ sha256 = "afc8e28272cd15db3919bacdb6918ce9c1ed22e96cb12c4d5ed0fba823529e38"
 bytes = 335304388
 path = "z-image-vae/ae.safetensors"
 
+[[models]]
+id = "flux2-klein-unet"
+spdx = "Apache-2.0"
+commercial_use = true
+requires_acceptance = false
+url = "https://huggingface.co/Comfy-Org/Flux-2-Klein-4B/resolve/5b3abca5c0dc1ecd4eaf3340868d09063fc1c965/split_files/diffusion_models/flux-2-klein-4b.safetensors"
+sha256 = "ec3d4e733a771f61c052fb4856c48b336c55eaf2c65487c2a1faeb9bbda7a343"
+bytes = 7751105712
+path = "flux2-klein-unet/flux-2-klein-4b.safetensors"
+
+[[models]]
+id = "flux2-klein-vae"
+spdx = "Apache-2.0"
+commercial_use = true
+requires_acceptance = false
+url = "https://huggingface.co/Comfy-Org/Flux-2-Klein-4B/resolve/5b3abca5c0dc1ecd4eaf3340868d09063fc1c965/split_files/vae/flux2-vae.safetensors"
+sha256 = "868fe7b343cc8f3a19dbcfcafbc3d5f888802be3f89bd81b65b3621a066ce8f3"
+bytes = 336211292
+path = "flux2-klein-vae/flux2-vae.safetensors"
+
+[[models]]
+id = "flux2-qwen-clip"
+spdx = "Apache-2.0"
+commercial_use = true
+requires_acceptance = false
+url = "https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/6fc90a3b1b653e935a0d175e260736de25b84df5/split_files/text_encoders/qwen_3_4b_fp8_mixed.safetensors"
+sha256 = "72450b19758172c5a7273cf7de729d1c17e7f434a104a00167624cba94f68f15"
+bytes = 5631994051
+path = "z-image-qwen-clip/qwen_3_4b_fp8_mixed.safetensors"
+
 [capabilities.still]
-summary = "Still illustration with the z-image-turbo flow (~8 s per 1344x768 image)."
+summary = "Still illustration with the z-image-turbo (~8 s) or flux2-klein-4b (~6 s) flow, per 1344x768 image."
 kind = "image"
 
 [capabilities.still.inputs.image]
@@ -105,6 +135,12 @@ default = 768
 min = 64
 max = 2048
 description = "Image height in pixels, a multiple of 64."
+
+[capabilities.still.inputs.workflow]
+type = "enum"
+values = ["z-image-turbo", "flux2-klein-4b"]
+default = "z-image-turbo"
+description = "Still flow: z-image-turbo for photographic realism, flux2-klein-4b for palette, composition and empty space."
 
 [capabilities.still.preview]
 viewer = "image"

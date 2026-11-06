@@ -2,7 +2,7 @@
 
 Four verbs on the runner SDK (``facet_runner_sdk``, copied into the
 environment at pull). ``run`` links facet's models into the pinned ComfyUI
-checkout, fills the z-image-turbo API graph and downloads the PNGs it
+checkout, fills the selected flow's graph and downloads the PNGs it
 produced; ``verify`` opens every PNG with Pillow and checks its pixel size;
 ``preview`` writes the image preview file; ``doctor`` checks the GPU, the
 models and the checkout at ``quick`` and probes the server at ``full``.
@@ -30,8 +30,9 @@ from facet_runner_sdk import Request, Runner
 
 runner = Runner()
 
-#: The lab's flow, copied from the Grafics lab's ``tools/comfy/``.
-FLOW_NAME = "z-image-turbo"
+#: The lab's flows, copied from the Grafics lab's ``tools/comfy/``.
+FLOW_NAMES = ("z-image-turbo", "flux2-klein-4b")
+DEFAULT_WORKFLOW = "z-image-turbo"
 DEFAULT_WIDTH = 1344
 DEFAULT_HEIGHT = 768
 #: The server facet starts for the verb; the fallback is the lab's own port.
@@ -48,6 +49,9 @@ MODEL_DIRS = {
     "z-image-turbo-unet": "models/diffusion_models",
     "z-image-qwen-clip": "models/text_encoders",
     "z-image-vae": "models/vae",
+    "flux2-klein-unet": "models/diffusion_models",
+    "flux2-qwen-clip": "models/text_encoders",
+    "flux2-klein-vae": "models/vae",
 }
 
 
@@ -93,16 +97,31 @@ def _link_models(req: Request) -> None:
         target.symlink_to(source)
 
 
-def _flow() -> dict[str, Any]:
-    """The z-image-turbo API graph shipped beside the runner."""
-    path = Path(__file__).parent / "flows" / f"{FLOW_NAME}.json"
+def _flow(name: str) -> dict[str, Any]:
+    """The API graph of ``name``, shipped beside the runner as ``flows/<name>.json``."""
+    path = Path(__file__).parent / "flows" / f"{name}.json"
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _values(flow: dict[str, Any], entry: dict[str, Any]) -> dict[str, Any]:
     """The flow's params first, then the entry: the lab's fill order."""
     params = flow.get("params")
-    return {**(params if isinstance(params, dict) else {}), **entry}
+    values = params if isinstance(params, dict) else {}
+    unknown = set(entry) - set(values) - _placeholders(flow["graph"])
+    if unknown:
+        raise ValueError(f"unknown keys {sorted(unknown)} for this flow")
+    return {**values, **entry}
+
+
+def _placeholders(value: Any) -> set[str]:
+    """Every ``"$key"`` the graph fills, as the lab's ``placeholders`` does."""
+    if isinstance(value, dict):
+        return set().union(*(_placeholders(item) for item in value.values()))
+    if isinstance(value, list):
+        return set().union(*(_placeholders(item) for item in value))
+    if isinstance(value, str) and value.startswith("$"):
+        return {value[1:]}
+    return set()
 
 
 def _fill(value: Any, values: dict[str, Any]) -> Any:
@@ -240,8 +259,11 @@ def run(req: Request) -> dict[str, Any]:
     entries = raw if isinstance(raw, list) else []
     if not entries:
         raise ValueError("the piece has no image entries")
+    workflow = str(dict(req.inputs).get("workflow", DEFAULT_WORKFLOW))
+    if workflow not in FLOW_NAMES:
+        raise ValueError(f"unknown workflow: {workflow}")
     _link_models(req)
-    flow = _flow()
+    flow = _flow(workflow)
     assets: list[dict[str, Any]] = []
     for entry in entries:
         graph = _fill(flow["graph"], _values(flow, entry))
