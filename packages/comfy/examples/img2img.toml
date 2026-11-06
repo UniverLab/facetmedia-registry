@@ -1,0 +1,14 @@
+# Img2img con FLUX.2 klein: itera una imagen aprobada por instrucción.
+# Uso: facet run comfy.edit packages/comfy/examples/img2img.toml
+# El flujo sube la referencia una vez y guía cada entrada con ReferenceLatent.
+# Produjo iteracion-grabado.png desde flux2-klein-4b/ilustracion-editorial.png
+# en 22,7 s a 1344 × 768. Conserva personaje y encuadre y cambia la imagen a
+# un grabado azul/crema. El grano y las líneas son ásperos, acordes al estilo
+# pedido. Sin fuerza de denoise: si hace falta controlar cuánto se conserva en
+# una transformación gradual, hay que sumar un flujo latent img2img con denoise
+# ajustable y compararlo por separado.
+[inputs]
+source = "flux2-klein-4b/ilustracion-editorial.png"
+image = [
+  { name = "iteracion-grabado", seed = 242, width = 1344, height = 768, prompt = "Edit the reference image into a two-color linocut print in deep indigo and warm cream. Preserve the woman reading under the desk lamp, the framing, and the large geometric shapes. Use rough carved edges and visible paper grain. Do not add lettering or symbols." },
+]

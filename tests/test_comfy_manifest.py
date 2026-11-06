@@ -469,3 +469,52 @@ def test_the_skill_is_valid_and_names_the_capability() -> None:
     required = ["When to use", "Pieces", "Judging the result", "Pitfalls"]
     assert [heading for heading in headings if heading in required] == required
     assert "comfy.still" in text
+
+
+def test_the_skill_documents_the_flows_and_the_server() -> None:
+    text = (PACKAGE / "skill" / "SKILL.md").read_text(encoding="utf-8")
+    for flow in (
+        "z-image-turbo",
+        "flux2-klein-4b",
+        "flux2-klein-img2img",
+        "wan22-i2v",
+        "wan22-i2v-rapido",
+    ):
+        assert flow in text
+    assert "--disable-pinned-memory" in text
+    assert "GSAP" in text
+    assert "Apache-2.0" in text
+    assert "GPL-3.0-or-later" in text
+    # comfy_args is inert in this registry: runner.py never reads it.
+    assert "comfy_args" not in text
+
+
+EXAMPLE_FILES = (
+    "examples/z-image-turbo/imagenes.toml",
+    "examples/z-image-turbo/fondo-video.png",
+    "examples/z-image-turbo/ilustracion-editorial.png",
+    "examples/z-image-turbo/foto-producto.png",
+    "examples/z-image-turbo/acuarela.png",
+    "examples/img2img.toml",
+    "examples/iteracion-grabado.png",
+    "examples/README-img2img.md",
+    "examples/comparacion.jpg",
+    "examples/flux2-klein-4b/ilustracion-editorial.png",
+    "examples/flux2-klein-4b/acuarela.png",
+    "examples/clips.toml",
+    "examples/bosque-niebla.mp4",
+    "examples/taza-vapor.mp4",
+    "examples/calle-acuarela.mp4",
+    "examples/bosque-niebla-rapido.mp4",
+)
+
+
+def test_the_skill_references_and_examples_exist() -> None:
+    for name in ("flows.md", "server.md", "seeds.md"):
+        path = PACKAGE / "references" / name
+        assert path.is_file(), name
+        assert path.stat().st_size > 0, name
+    for name in EXAMPLE_FILES:
+        path = PACKAGE / name
+        assert path.is_file(), name
+        assert path.stat().st_size > 0, name

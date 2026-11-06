@@ -173,8 +173,9 @@ A **flow** is a ComfyUI API graph whose inputs written as `"$key"` are
 filled, in order, from the flow's own `params`, then the entry. The still
 piece's `workflow` input picks one of the two still flows, the clip's picks
 `wan22-i2v` or its `wan22-i2v-rapido` draft, and an edit always uses
-`flux2-klein-img2img`. The package ships five, all copied unchanged from the
-lab's `tools/comfy/`:
+`flux2-klein-img2img`. The package ships five, copied from the lab's
+`tools/comfy/` — all unchanged except the edit flow, whose params open to
+1344 × 768 (the lab's default 1024 × 1024):
 
 | Flow | Models | Capability | Pick it for |
 |------|--------|------------|-------------|
