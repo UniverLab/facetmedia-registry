@@ -2,14 +2,19 @@
 
 Four verbs on the runner SDK (``facet_runner_sdk``, copied into the
 environment at pull): ``run`` narrates the clips through the backend (the
-piece's voice and engine, defaulting to ``narradora`` on ``voxcpm2``) and
-verifies each clip by transcribing it with faster-whisper ``small`` — a clip
-whose word error rate exceeds the threshold is regenerated with ``seed + 1``
-(at most three tries per clip, the last attempt kept), ``verify`` transcribes
-existing assets, ``preview`` writes the audio preview file, ``doctor`` checks
-the machine (an NVIDIA GPU, its VRAM readable, no model but the backend's
+piece's voice and engine — ``narradora`` on ``voxcpm2``, or on ``omnivoice``
+when the piece selects the approved narrator engine) and verifies each clip
+by transcribing it with faster-whisper ``small`` — a clip whose word error
+rate exceeds the threshold is regenerated with ``seed + 1`` (at most three
+tries per clip, the last attempt kept), ``verify`` transcribes existing
+assets, ``preview`` writes the audio preview file, ``doctor`` checks the
+machine (an NVIDIA GPU, its VRAM readable, no model but the backend's
 holding GPU memory) plus the package (imports, models, clone) at ``quick``
 depth, and the backend status and the default profile at ``full`` depth.
+
+The runner never reimplements the licence gate: an ``omnivoice`` piece whose
+CC-BY-NC terms are not recorded fails in the core with
+``license_not_accepted`` (exit 4), before the runner starts.
 
 This runner is a pure client: it never starts, stops or holds the backend.
 The backend is user-started for now (the lab recipe, named by a run when
@@ -54,7 +59,8 @@ VERIFIER = "faster-whisper-small@536b0662"
 #: The transcriber the package itself embeds (its manifest model id; the
 #: registry pins unique ids, and kokoro already declares the bare name).
 WHISPER_MODEL = "faster-whisper-small-verify"
-#: The synthesis engine of a whole piece (the manifest enum holds it alone).
+#: The engine a piece gets when it names none. Any other manifest engine
+#: (``omnivoice``) reaches the backend by the piece's own ``model`` value.
 ENGINE = "voxcpm2"
 #: The tool that produced a run: the pinned VoiceStudio clone the lab tested
 #: (a git revision, recorded as the tool's version).
@@ -577,10 +583,18 @@ def _version(distribution: str) -> str:
 
 
 def _doctor_models(req: Request) -> dict[str, Any]:
-    """The embedded transcriber exists with the byte size the manifest claims."""
-    expected = {str(m["id"]): int(m["bytes"]) for m in _manifest().get("models", [])}
+    """The embedded transcriber exists with the byte size the manifest claims.
+
+    A backend-owned entry (``backend = true``, e.g. ``omnivoice``) declares no
+    bytes and no source: the backend holds those weights, so the doctor skips
+    its byte check and reports it as ``backend-owned: <id>``, mirroring the
+    core doctor.
+    """
+    entries = _manifest().get("models", [])
+    owned = [str(m["id"]) for m in entries if m.get("backend") is True]
+    expected = {str(m["id"]): int(m["bytes"]) for m in entries if m.get("backend") is not True}
     problems: list[str] = []
-    found: list[str] = []
+    found: list[str] = [f"backend-owned: {model_id}" for model_id in sorted(owned)]
     for model_id, want in sorted(expected.items()):
         try:
             path = req.model_path(model_id)

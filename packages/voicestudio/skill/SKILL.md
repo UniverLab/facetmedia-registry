@@ -1,18 +1,18 @@
 ---
 name: voicestudio
-description: Narration in Spanish through a started VoiceStudio backend with the engine voxcpm2, every clip transcribed back and regenerated while its WER passes 5 %.
+description: Narrate Spanish through a started VoiceStudio backend on the voxcpm2 or omnivoice engine, verifying every clip by transcription and regenerating it over 5 % WER.
 ---
 # VoiceStudio
 
-Voice text to WAV clips through a VoiceStudio backend (omnivoice) —
-the `narradora` clone on the `voxcpm2` engine, Apache-licensed and
-commercial-safe. One capability, `voicestudio.speak`, writing the
-`audio` kind.
+Voice text to WAV clips through a VoiceStudio backend. Two engines speak
+the `narradora` clone: `voxcpm2` (Apache-2.0, the default) and `omnivoice`
+(CC-BY-NC, the approved narrator engine). One capability,
+`voicestudio.speak`, writing the `audio` kind.
 
 ## When to use
 
-- When the lab's commercial-safe voice is the point: the default engine
-  `voxcpm2` is Apache-2.0 and the default voice is the `narradora` clone.
+- When the lab's narrator voice is the point. `omnivoice` is the engine the
+  lab picked for naturalness; `voxcpm2` is the commercial-safe default.
 - When you need narration already verified: the runner transcribes every
   clip with faster-whisper and regenerates the bad ones with another seed.
 - Needs a backend that is already running (its start command lives in the
@@ -25,7 +25,7 @@ Two clips, the piece defaults once:
 ```toml
 [inputs]
 voice = "narradora"
-model = "voxcpm2"
+model = "omnivoice"
 language = "es"
 
 [[inputs.clip]]
@@ -43,6 +43,27 @@ Run a piece with `facet run voicestudio.speak <piece.toml> --out build/`;
 every clip becomes `<name>.wav`. Each clip carries its own `seed` — it is
 required, because the verification loop restarts a failed clip with `seed + 1`.
 
+The `model` value is the manifest model id, and the core gates the piece on
+it: only `omnivoice` pieces require the licence. The lab's original tool
+runs the same pattern: `python3 tools/voz.py <pieza>.toml`, with
+`projects/prueba-voz/narradora/voz.toml` as the reference piece
+(`voice = "narradora"`, `model = "omnivoice"`, two clips). This package is
+that invocation ported to a facet capability.
+
+## The `omnivoice` licence
+
+The OmniVoice weights are **CC-BY-NC** and **commercial use is forbidden**.
+Record the acceptance once before the first `omnivoice` piece:
+
+```sh
+facet license accept omnivoice
+```
+
+An `omnivoice` piece with no acceptance fails in the core with
+`license_not_accepted` (exit 4) and that hint; a `voxcpm2` piece runs with
+nothing accepted. The runner never re-checks the licence. Accepting makes
+the person who runs facet responsible for complying with the terms.
+
 ## Judging the result
 
 The runner itself verifies: after synthesis it transcribes each clip with
@@ -54,15 +75,22 @@ its first seed passed on first hearing.
 
 ## Pitfalls
 
-- Exactly one engine per piece: the piece-level `model` is the only model
-  field, and an entry cannot override it — two voices belong in two files
-  that interleave later in HyperFrames. Two engines also do not fit in 8 GB.
-- The backend is user-started for now: `facet run` waits for a backend at
-  `http://127.0.0.1:3900` (or `$VOICESTUDIO_URL`), and it does not start
+- **The first second can sound robotic.** OmniVoice (and voxcpm2) sometimes
+  start sharp or robotic on the opening second. Listen to the clip; a
+  re-render with another seed usually settles it. No measured flags exist
+  for this — judge it by ear.
+- **`/health` is not readiness.** The backend answers `/health` ok while it
+  is still importing the engine in the background; a first request in that
+  window fails with `omnivoice package missing: cannot import name …`. The
+  runner waits for `/model/status` to say `ready` before the first clip.
+- **One engine per piece.** The piece-level `model` is the only model field
+  and an entry cannot override it — two voices belong in two files that
+  interleave later in HyperFrames. Two engines also do not fit in 8 GB.
+- **The backend is user-started for now.** `facet run` waits for a backend
+  at `http://127.0.0.1:3900` (or `$VOICESTUDIO_URL`) and does not start
   one. `facet doctor voicestudio --json --full` prints the start command.
-- Cloned profiles live on the person's machine (the backend's omnivoice
-  store) and are never bundled by the registry. A missing `narradora`
-  profile is recreated from the host with `POST /profiles`; the doctor
-  names the recipe.
-- Verification is always on: there is no skip field in the piece format
+- **Cloned profiles live on the person's machine** (the backend's omnivoice
+  store) and are never bundled. A missing `narradora` profile is recreated
+  from the host with `POST /profiles`; the doctor names the recipe.
+- **Verification is always on.** There is no skip field in the piece format
   and no flag the runner would accept. A clip is heard back every time.

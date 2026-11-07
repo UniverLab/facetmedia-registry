@@ -35,10 +35,13 @@ DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
 #: The verification model the manifest pins, byte for byte.
 REVISION = "536b0662742c02347bc0e980a01041f333bce120"
+WHISPER_MODEL = "faster-whisper-small-verify"
 WHISPER_BYTES = 486_212_372
 #: The requirements the manifest declares.
 RAM_GB = 8
 DISK_GB = 2
+#: The manifest's two model entries: the embedded mouth and the backend engine.
+MODEL_ENTRIES = 2
 
 
 def test_the_engine_is_python_312_with_no_server_table() -> None:
@@ -63,13 +66,22 @@ def test_the_piece_voice_is_the_narradora_clone() -> None:
     assert voice["default"] == "narradora"
 
 
-def test_the_piece_engine_is_voxcpm2_alone() -> None:
+def test_the_piece_engine_offers_both_engines_with_voxcpm2_the_default() -> None:
+    """The default is unchanged; the approved narrator engine is opt-in."""
     model = INPUTS["model"]
-    assert model["values"] == ["voxcpm2"]
+    assert model["values"] == ["voxcpm2", "omnivoice"]
     assert model["default"] == "voxcpm2"
     language = INPUTS["language"]
     assert language["values"] == ["es"]
     assert language["default"] == "es"
+
+
+def test_the_model_input_names_the_manifest_id_the_core_gates_on() -> None:
+    """The value is a manifest model id, and the gate is per piece, by id."""
+    description = INPUTS["model"]["description"].lower()
+    assert "manifest model id" in description
+    assert "only omnivoice" in description
+    assert "licence accepted" in description
 
 
 def test_the_entries_carry_exactly_name_text_seed() -> None:
@@ -113,9 +125,8 @@ def test_the_piece_needs_the_machine_the_engine_wants() -> None:
 
 
 def test_the_verification_model_is_pinned() -> None:
-    assert len(MANIFEST["models"]) == 1
-    model = MANIFEST["models"][0]
-    assert model["id"] == "faster-whisper-small-verify"
+    assert len(MANIFEST["models"]) == MODEL_ENTRIES
+    model = next(entry for entry in MANIFEST["models"] if entry["id"] == WHISPER_MODEL)
     assert model["hf_repo"] == "Systran/faster-whisper-small"
     assert model["revision"] == REVISION
     assert model["bytes"] == WHISPER_BYTES
@@ -124,6 +135,37 @@ def test_the_verification_model_is_pinned() -> None:
     assert model["requires_acceptance"] is False
     assert model["terms_url"] == "https://huggingface.co/Systran/faster-whisper-small"
     assert re.fullmatch(r"[0-9a-f]{40}", model["revision"])
+
+
+def test_the_omnivoice_entry_is_backend_owned_with_the_cc_by_nc_terms() -> None:
+    """Exactly the shape the core accepts for a bytes-less, gated engine."""
+    entry = next(entry for entry in MANIFEST["models"] if entry["id"] == "omnivoice")
+    assert set(entry) == {
+        "id",
+        "backend",
+        "spdx",
+        "commercial_use",
+        "requires_acceptance",
+        "terms_url",
+    }
+    assert entry["backend"] is True
+    # The licensor states only "CC-BY-NC": no version number, exact-match gate.
+    assert entry["spdx"] == "CC-BY-NC"
+    assert entry["commercial_use"] is False
+    assert entry["requires_acceptance"] is True
+    assert entry["terms_url"] == "https://huggingface.co/k2-fsa/OmniVoice"
+    for source in ("url", "sha256", "path", "hf_repo", "revision", "bytes"):
+        assert source not in entry
+
+
+def test_the_omnivoice_terms_url_is_an_upstream_url() -> None:
+    entry = next(entry for entry in MANIFEST["models"] if entry["id"] == "omnivoice")
+    assert entry["terms_url"].startswith("https://huggingface.co/k2-fsa/OmniVoice")
+
+
+def test_only_the_omnivoice_entry_requires_acceptance() -> None:
+    gated = [entry["id"] for entry in MANIFEST["models"] if entry["requires_acceptance"]]
+    assert gated == ["omnivoice"]
 
 
 def test_the_model_id_is_unique_across_the_registry() -> None:
@@ -174,6 +216,35 @@ def test_the_readme_carries_the_user_start_recipe() -> None:
     assert "wer_max = 0.05" not in READ  # the threshold lives in the manifest
     assert "REGENERATE" in READ
     assert "VOICESTUDIO_URL" in READ
+
+
+def test_the_readme_carries_the_cc_by_nc_terms_and_the_accept_command() -> None:
+    assert "CC-BY-NC" in READ
+    assert "Commercial use is not allowed" in READ
+    assert "facet license accept omnivoice" in READ
+    assert "backend-owned, skipped" in READ
+
+
+def test_the_skill_teaches_both_engines_and_the_licence() -> None:
+    """The skill a person reads names both engines and the gate that admits one."""
+    assert "voxcpm2" in SKILL
+    assert "omnivoice" in SKILL
+    assert "CC-BY-NC" in SKILL
+    assert "commercial use is forbidden" in SKILL
+    assert "facet license accept omnivoice" in SKILL
+
+
+def test_the_skill_names_the_lab_invocation_it_ports() -> None:
+    assert "python3 tools/voz.py <pieza>.toml" in SKILL
+    assert "projects/prueba-voz/narradora/voz.toml" in SKILL
+
+
+def test_the_skill_names_the_startup_traps() -> None:
+    """The three traps the lab records, none of them a measured number."""
+    assert "robotic" in SKILL
+    assert "/model/status" in SKILL
+    assert "ready" in SKILL
+    assert "one engine per piece" in SKILL.lower()
 
 
 @pytest.mark.parametrize(

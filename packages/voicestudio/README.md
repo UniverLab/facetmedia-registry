@@ -1,18 +1,28 @@
 # voicestudio
 
 Narrates text through a [VoiceStudio](https://github.com/debpalash/VoiceStudio)
-backend (omnivoice): the `narradora` clone on the `voxcpm2` engine
-(Apache-2.0), in Spanish, at roughly 20 s per clip. Every clip is verified
-by transcribing it back with faster-whisper `small` and measuring the word
-error rate — a clip that misses by more than 5 % of its words is
-regenerated with another seed, always, with no flag to turn it off.
+backend with the `narradora` clone, in Spanish, and verifies every clip by
+transcribing it back with faster-whisper `small` — a clip that misses by
+more than 5 % of its words is regenerated with another seed, always, with
+no flag to turn it off.
+
+Two engines speak that voice:
+
+| `model` | Licence | Weights |
+| --- | --- | --- |
+| `voxcpm2` (default) | Apache-2.0 | the backend's |
+| `omnivoice` | CC-BY-NC, no commercial use | the backend's, terms accepted once with `facet license accept omnivoice` |
+
+`omnivoice` is the approved narrator engine: the `narradora` profile on the
+`omnivoice` backend voice. A `voxcpm2` piece asks for nothing; an
+`omnivoice` piece is gated per piece on its recorded acceptance.
 
 ## The piece format
 
 ```toml
 [inputs]
 voice = "narradora"      # the cloned profile registered in the backend
-model = "voxcpm2"        # the engine; the piece's only model field
+model = "voxcpm2"        # omnivoice for the approved narrator engine
 language = "es"          # the piece's language
 
 [[inputs.clip]]
@@ -33,6 +43,8 @@ representable by construction.
 One `.toml`, one engine. Two engines do not fit in 8 GB of VRAM, and two
 voices belong in two files that interleave later in HyperFrames. The
 manifest cannot say this twice — the entry list simply has no `model` key.
+The piece-level `model` is the manifest model id the core gates on: an
+`omnivoice` piece needs its acceptance, a `voxcpm2` one needs nothing.
 
 ## The backend is user-started (for now)
 
@@ -75,6 +87,28 @@ The runner resolves the backend URL in this order:
 The environment `facet run` hands the runner includes the person's own
 variables untouched, so `VOICESTUDIO_URL` works without extra config.
 
+## The `omnivoice` licence (CC-BY-NC)
+
+The OmniVoice weights are **CC-BY-NC**: the upstream card states
+"the pre-trained model is licensed under the CC-BY-NC", and the licensor
+states no version. Commercial use is not allowed. The manifest records the
+spdx exactly as `CC-BY-NC`, because the core matches an acceptance record
+by that exact string.
+
+The backend owns those weights, so the model entry in `package.toml` is
+`backend = true` and `facet pull` skips it (`backend-owned, skipped`).
+Before the first `omnivoice` piece, record the acceptance once:
+
+```sh
+facet license accept omnivoice
+```
+
+`facet run` then gates per piece: a piece whose `model` is `omnivoice` with
+no recorded acceptance fails with `license_not_accepted` (exit 4) and the
+hint above; a `voxcpm2` piece runs with nothing accepted. The runner never
+re-implements that check. Accepting makes the person who runs facet
+responsible for complying with the terms.
+
 ## Ready versus health
 
 `/health` answers `ok` while the backend's background import is still
@@ -95,7 +129,10 @@ poll `GET /model/status` until
 
 The package embeds faster-whisper-small (MIT-licensed, id
 `faster-whisper-small-verify`, fetched once by
-`facet pull voicestudio`). After each synthesis the runner transcribes the
+`facet pull voicestudio`). The `omnivoice` entry is backend-owned, carries
+no bytes and no source, and the doctor reports it as
+`backend-owned: omnivoice` instead of checking a byte size. After each
+synthesis the runner transcribes the
 clip back, folds tildes (NFKD: `hipótesis` → `hipotesis`) and spells
 numbers below a million in words (Whisper writes `2026` where the text
 says `dos mil veintiséis`), then compares word sequences. Over 5 % of
@@ -138,5 +175,6 @@ recipe as a host hint.
 
 The VoiceStudio backend is AGPL-3.0-only and runs on the person's machine
 as their tool; the runner talks to it over HTTP and licenses nothing of it.
-The verification model (faster-whisper, ctranslate2) is MIT, and the
-`voxcpm2` engine is Apache-2.0.
+The verification model (faster-whisper, ctranslate2) is MIT, the `voxcpm2`
+engine is Apache-2.0, and the `omnivoice` engine's weights are CC-BY-NC
+(non-commercial): see [the licence section](#the-omnivoice-licence-cc-by-nc).

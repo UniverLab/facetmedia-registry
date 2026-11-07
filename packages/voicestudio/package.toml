@@ -4,7 +4,7 @@ requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "debpalash (VoiceStudio)"
 tool_name = "VoiceStudio"
-description = "Narration through a self-started VoiceStudio backend with the voxcpm2 engine, checked by transcription"
+description = "Narration through a self-started VoiceStudio backend with the voxcpm2 or omnivoice engine, checked by transcription"
 facet = "voice"
 uses = ["textnorm", "audiopreview"]
 
@@ -45,8 +45,16 @@ commercial_use = true
 requires_acceptance = false
 terms_url = "https://huggingface.co/Systran/faster-whisper-small"
 
+[[models]]
+id = "omnivoice"
+backend = true
+spdx = "CC-BY-NC"
+commercial_use = false
+requires_acceptance = true
+terms_url = "https://huggingface.co/k2-fsa/OmniVoice"
+
 [capabilities.speak]
-summary = "Narration through a self-started VoiceStudio backend (engine voxcpm2), checked by transcription"
+summary = "Narration through a self-started VoiceStudio backend (engine voxcpm2 or omnivoice), checked by transcription"
 kind = "audio"
 
 [capabilities.speak.inputs.voice]
@@ -57,9 +65,9 @@ description = "Cloned voice profile registered in the backend (POST /profiles); 
 
 [capabilities.speak.inputs.model]
 type = "enum"
-values = ["voxcpm2"]
+values = ["voxcpm2", "omnivoice"]
 default = "voxcpm2"
-description = "Engine of the whole piece; exactly one engine per piece (two voices go in two files and interleave in HyperFrames)."
+description = "Manifest model id of the engine used by the whole piece: the core gates per piece on this value. Exactly one engine per piece (two voices go in two files and interleave in HyperFrames); only omnivoice pieces require its licence accepted."
 
 [capabilities.speak.inputs.language]
 type = "enum"

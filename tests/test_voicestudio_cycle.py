@@ -60,6 +60,8 @@ CLIP_FRAMES = RATE_HZ
 DURATION_S = 1.0
 #: Reachability probe budget for the stub backend start.
 START_TIMEOUT_S = 10
+#: The byte size the manifest pins for the embedded transcriber.
+WHISPER_BYTES = 486_212_372
 
 #: The pull-time SDK surface the runner touches; the real one is copied in.
 STUB_SDK = """
@@ -371,7 +373,7 @@ def _request(
     }
 
 
-def _piece_request(tmp_path: Path) -> Path:
+def _piece_request(tmp_path: Path, model: str = "voxcpm2") -> Path:
     """Write the run request for one clip; the path of its result file."""
     out = tmp_path / "out"
     out.mkdir()
@@ -381,7 +383,7 @@ def _piece_request(tmp_path: Path) -> Path:
     models["faster-whisper-small-verify"].mkdir()
     inputs = {
         "voice": "narradora",
-        "model": "voxcpm2",
+        "model": model,
         "language": "es",
         "clip": [{"name": "intro", "text": TEXT, "seed": SEED}],
     }
@@ -391,10 +393,10 @@ def _piece_request(tmp_path: Path) -> Path:
 
 
 def _run_piece(
-    tmp_path: Path, states: list[str], heard: list[str], error: str = ""
+    tmp_path: Path, states: list[str], heard: list[str], error: str = "", model: str = "voxcpm2"
 ) -> subprocess.CompletedProcess[str]:
     """One `run` verb as a subprocess against the stub backend."""
-    result_path = _piece_request(tmp_path)
+    result_path = _piece_request(tmp_path, model)
     stub_dir = _stub_dir(tmp_path)
     calls = tmp_path / "whisper-calls.jsonl"
     calls.touch()
@@ -429,9 +431,9 @@ def _run_piece(
 
 
 def _run_cycle(
-    tmp_path: Path, states: list[str], heard: list[str]
+    tmp_path: Path, states: list[str], heard: list[str], model: str = "voxcpm2"
 ) -> tuple[dict[str, object], str]:
-    done = _run_piece(tmp_path, states, heard)
+    done = _run_piece(tmp_path, states, heard, model=model)
     assert done.returncode == 0, done.stdout + done.stderr
     return _result(tmp_path / "run-result.json"), done.stdout
 
@@ -487,6 +489,30 @@ def test_the_stub_saw_the_piece_engine_voice_and_both_seeds(tmp_path: Path) -> N
         assert body["language"] == "es"
         assert body["input"] == TEXT
         assert body["response_format"] == "wav"
+
+
+def test_an_omnivoice_piece_reaches_the_omnivoice_backend_voice(tmp_path: Path) -> None:
+    """The approved narrator engine: model omnivoice on the narradora profile."""
+    result, _stdout = _run_cycle(tmp_path, ["ready"], [TEXT], model="omnivoice")
+    asset = result["assets"][0]
+    assert asset["properties"]["model"] == "omnivoice"
+    assert asset["properties"]["voice"] == "narradora"
+    assert asset["params"]["model"] == "omnivoice"
+    assert asset["seed"] == SEED
+    assert asset["file"] == "intro.wav"
+    bodies = _read_lines(tmp_path / "stub-logs" / "bodies.jsonl")
+    assert len(bodies) == 1
+    assert bodies[0]["model"] == "omnivoice"
+    assert bodies[0]["voice"] == "narradora"
+
+
+def test_an_omnivoice_piece_waits_for_model_status_ready_before_speaking(
+    tmp_path: Path,
+) -> None:
+    """The engine imports in the background and races /health: status is the gate."""
+    _run_cycle(tmp_path, ["idle", "loading", "ready"], [TEXT], model="omnivoice")
+    polls = [str(state) for state in _read_lines(tmp_path / "stub-logs" / "polls.jsonl")]
+    assert polls == ["idle", "loading", "ready"]
 
 
 def test_the_runner_waited_for_readiness_before_speaking(tmp_path: Path) -> None:
@@ -683,6 +709,50 @@ case "$*" in
   *"query-compute-apps"*) printf '%s\\n' "$FAKE_COMPUTE_APPS" ;;
 esac
 """
+
+
+def test_the_doctor_passes_with_the_bytes_less_entry_and_names_it(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The backend owns omnivoice's weights: no path, no byte check, a line.
+
+    The real manifest holds both entries, so a doctor that read ``bytes`` from
+    every entry would raise on the bytes-less one; this asserts the skip and
+    that the entry's id is never even asked of the request.
+    """
+    module = _import_runner(monkeypatch, tmp_path)
+    asked: list[str] = []
+
+    class _Request:
+        def model_path(self, model_id: str) -> Path:
+            asked.append(model_id)
+            if model_id == "omnivoice":
+                raise KeyError(model_id)  # backend-owned: never mapped to a path
+            return tmp_path / model_id
+
+    monkeypatch.setattr(module, "_tree_bytes", lambda _path: WHISPER_BYTES)
+    check = module._doctor_models(_Request())
+    assert check["ok"] is True, check
+    assert asked == ["faster-whisper-small-verify"]
+    assert "backend-owned: omnivoice" in check["detail"]
+    assert f"faster-whisper-small-verify {WHISPER_BYTES} B" in check["detail"]
+    assert check["fix"] == ""
+
+
+def test_the_doctor_still_fails_a_backend_entry_free_package(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The skip does not soften the byte check for a real, sourced model."""
+    module = _import_runner(monkeypatch, tmp_path)
+
+    class _Request:
+        def model_path(self, model_id: str) -> Path:
+            return tmp_path / model_id
+
+    monkeypatch.setattr(module, "_tree_bytes", lambda _path: WHISPER_BYTES - 1)
+    check = module._doctor_models(_Request())
+    assert check["ok"] is False
+    assert f"manifest says {WHISPER_BYTES}" in check["detail"]
 
 
 def _run_doctor(tmp_path: Path, url: str, machine: dict[str, str]) -> dict[str, object]:
