@@ -23,6 +23,37 @@ profile from the person's own samples; its recipe lives in the package README.
   profile id and `cosyvoice`, only with the owner's permission. Two voices are
   two pieces (narrator on `omnivoice`, person on `cosyvoice`).
 
+## Engines
+
+The lab compared three engines on 2026-10-13 with the same reference and the
+same texts (`/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-voz/comparacion/`):
+
+| `model` | Words wrong | First second (ref ~244 Hz) | Rest | Per clip | VRAM | Licence |
+| --- | --- | --- | --- | --- | --- | --- |
+| `omnivoice` | 0 % | 285-345 Hz, sharp attack | 237-253 Hz | ~3 s | ~3.9 GB | CC-BY-NC |
+| `voxcpm2` | 0 % | 236-262 Hz | 225-246 Hz | ~20 s | ~4.3 GB | Apache-2.0 |
+| `cosyvoice` | 0-3 % | 245-274 Hz | 211-223 Hz, lower | ~15 s | ~1.7 GB | Apache-2.0 |
+
+The verdict was OmniVoice for naturalness: it is the approved narrator
+engine, and its first second is the sharpest. VoxCPM2 finishes nearly tied —
+it starts robotic and then sounds natural — and CosyVoice sounds somewhat
+Spanish-from-Spain with the narrator, so it is the second voice at most.
+All three are kept. The `narradora` clone came from a
+`female, middle-aged, low pitch` design; its first reference opened with
+"Hola, ¿cómo vas?", which gave a sharp start (~370 Hz) and a skipped first
+sentence in 2 of 3 takes, and cutting it to neutral speech fixed it.
+
+The person's cloned voice was tested with the same texts on all three
+engines: 0 % wrong words and the same pitch as the real voice (body of
+135-144 Hz against 136-140 Hz). In rhythm, OmniVoice speaks 14 % faster,
+VoxCPM2 19 % and CosyVoice 5 %. The person chose `cosyvoice` for their
+voice; the narrator stays on `omnivoice`.
+
+For a commercial piece, use `voxcpm2` or `cosyvoice` (Apache-2.0); OmniVoice
+is CC-BY-NC and commercial use is forbidden. One `.toml`, one engine: two do
+not fit together on the GPU. XTTS was discarded first and deleted: it
+sounded Spanish-from-Spain and robotic.
+
 ## Pieces
 
 Two clips, the piece defaults once:
@@ -54,6 +85,30 @@ runs the same pattern: `python3 tools/voz.py <pieza>.toml`, with
 `projects/prueba-voz/narradora/voz.toml` as the reference piece
 (`voice = "narradora"`, `model = "omnivoice"`, two clips). This package is
 that invocation ported to a facet capability.
+
+## Cloning a voice
+
+**Ask the owner first, always.** Cloning a person's voice needs their
+permission: only clone from samples they gave you for it, and only with
+their consent.
+
+- The reference is 7-30 s of **neutral speech**. A reference that starts
+  with a question or an exclamation contaminates the clone with a sharp
+  attack and can skip the first sentence.
+- To record it, the script is
+  `/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-voz/guion-grabacion.md`.
+- If a WAV arrives in stereo with one channel digitally silent, keep the
+  live one (`ffmpeg -af "pan=mono|c0=c1"`); the profile runner repairs this
+  case and prints the repair.
+- The recipe for making the profile from local samples lives in the package
+  README (`voicestudio.profile`).
+
+Approved lab pieces to follow, by absolute path:
+`/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-voz/narradora/voz.toml`
+(the narrator) and
+`/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-voz/mi-voz/clon/cosyvoice/voz.toml`
+(the person's clone on `cosyvoice`). No sample bytes and no profile id enter
+this package.
 
 ## The `omnivoice` licence
 
@@ -94,6 +149,14 @@ its first seed passed on first hearing.
 - **The backend is user-started for now.** `facet run` waits for a backend
   at `http://127.0.0.1:3900` (or `$VOICESTUDIO_URL`) and does not start
   one. `facet doctor voicestudio --json --full` prints the start command.
+- **The same `seed` does not repeat a clip.** The output varies a little
+  between calls.
+- **Start it with the lab command, stop it by PID.** The backend start
+  command is
+  `UV_PYTHON_PREFERENCE=only-managed OMNIVOICE_TTS_BACKEND=omnivoice "$(uvx --from uv python -c 'import uv; print(uv.find_uv_bin())')" run --no-sync uvicorn main:app --app-dir backend --host 127.0.0.1 --port 3900`
+  (its `uv.lock` wants uv ≥ 0.8 and the global one is older). Never kill it
+  with `pkill -f` or `pgrep -f` and a pattern that appears in your own
+  command: they kill your shell. Kill it by PID.
 - **Cloned profiles live on the person's machine** (the backend's omnivoice
   store) and are never bundled. A missing `narradora` profile is recreated
   from the host with `POST /profiles`; the doctor names the recipe.

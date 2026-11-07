@@ -249,6 +249,55 @@ def test_the_skill_names_the_startup_traps() -> None:
     assert "one engine per piece" in SKILL.lower()
 
 
+def _skill_line(stem: str) -> str:
+    """The table row whose first cell is the backticked engine id."""
+    return next(line for line in SKILL.splitlines() if line.startswith(f"| `{stem}`"))
+
+
+def test_the_skill_tabulates_each_engine() -> None:
+    """The comparison table moves with its numbers, licence pairings included."""
+    assert "## Engines" in SKILL
+    for stem, cells in (
+        ("omnivoice", ("~3 s", "~3.9 GB", "CC-BY-NC")),
+        ("voxcpm2", ("~20 s", "~4.3 GB", "Apache-2.0")),
+        ("cosyvoice", ("~15 s", "~1.7 GB", "Apache-2.0")),
+    ):
+        line = _skill_line(stem)
+        for cell in cells:
+            assert cell in line
+
+
+def test_the_skill_asks_permission_first() -> None:
+    """The cloning rules: permission, neutral 7-30 s, script, repair, pattern."""
+    section = SKILL[SKILL.index("## Cloning a voice") : SKILL.index("## Judging the result")]
+    assert "permission" in section.lower()
+    assert "7-30 s" in section
+    assert "guion-grabacion.md" in section
+    assert "pan=mono|c0=c1" in section
+    assert "mi-voz/clon/cosyvoice/voz.toml" in section
+
+
+def test_the_skill_cites_the_lab_pieces() -> None:
+    """Approved lab pieces are cited by absolute path, never copied."""
+    lab = "/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-voz/"
+    for name in (
+        "narradora/voz.toml",
+        "mi-voz/clon/cosyvoice/voz.toml",
+        "guion-grabacion.md",
+        "comparacion/",
+    ):
+        assert lab + name in SKILL
+
+
+def test_the_skill_forbids_pkill() -> None:
+    """The start command travels verbatim, and the kill is by PID only."""
+    assert "pkill -f" in SKILL
+    assert "pgrep -f" in SKILL
+    assert "Kill it by PID" in SKILL
+    assert "UV_PYTHON_PREFERENCE=only-managed" in SKILL
+    assert "OMNIVOICE_TTS_BACKEND=omnivoice" in SKILL
+
+
 @pytest.mark.parametrize(
     ("input_name", "present"),
     [("voice", True), ("model", True), ("language", True), ("clip", True), ("speed", False)],
