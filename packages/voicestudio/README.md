@@ -224,9 +224,16 @@ synthesis the runner transcribes the
 clip back, folds tildes (NFKD: `hipótesis` → `hipotesis`) and spells
 numbers below a million in words (Whisper writes `2026` where the text
 says `dos mil veintiséis`), then compares word sequences. Over 5 % of
-words wrong → `REGENERATE` printed and `seed + 1` tried. The piece format
-has no skip field and the CLI flag cannot reach the runner, so the loop
-always runs.
+words wrong → `REGENERATE` printed and `seed + 1` tried, at most three
+attempts per clip. A clip still over the threshold after those attempts is
+not dropped: the runner keeps the last attempt's WAV, seed and transcript,
+and the `verify` verb reports that asset with `passed: false`, its `wer`
+and the `wer_max` threshold. The core turns that verdict into the record's
+failed verification status and `facet run` exits 3 (`verification_failed`).
+
+There is no piece-level skip: the piece inputs stay voice, model, language
+and clip. The only opt-out is the core's `facet run --no-verify` flag,
+which skips the verify verb; it never skips this run-time loop.
 
 ## Preview
 

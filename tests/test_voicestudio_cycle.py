@@ -521,6 +521,43 @@ def test_a_clip_that_never_passes_keeps_the_last_attempt(tmp_path: Path) -> None
     bodies = _read_lines(tmp_path / "stub-logs" / "bodies.jsonl")
     assert [body["seed"] for body in bodies] == [SEED, SEED + 1, SEED + 2]
 
+    verify_request = json.loads((tmp_path / "run-request.json").read_text(encoding="utf-8"))
+    verify_request["verb"] = "verify"
+    verify_request["assets"] = [str(tmp_path / "out" / "intro.wav")]
+    verify_request_path = tmp_path / "verify-request.json"
+    verify_request_path.write_text(json.dumps(verify_request), encoding="utf-8")
+    verify_result_path = tmp_path / "verify-result.json"
+    verify_done = subprocess.run(
+        [
+            sys.executable,
+            str(PACKAGE / "runner.py"),
+            "verify",
+            "--input",
+            str(verify_request_path),
+            "--result",
+            str(verify_result_path),
+        ],
+        env={
+            **os.environ,
+            "PYTHONPATH": str(tmp_path / "stub"),
+            "STUB_CALLS": str(tmp_path / "whisper-calls.jsonl"),
+            "STUB_HEARD": json.dumps([BAD_HEARD]),
+        },
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert verify_done.returncode == 0, verify_done.stdout + verify_done.stderr
+    verdicts = _result(verify_result_path)["assets"]
+    assert len(verdicts) == 1
+    verdict = verdicts[0]
+    assert verdict["file"] == "intro.wav"
+    assert verdict["passed"] is False
+    assert verdict["metrics"]["wer"] > WER_MAX
+    assert verdict["metrics"]["wer"] == asset["properties"]["wer"]
+    assert verdict["thresholds"] == {"wer_max": WER_MAX}
+
 
 def test_the_stub_saw_the_piece_engine_voice_and_both_seeds(tmp_path: Path) -> None:
     """Every synthesis carries model voxcpm2, voice narradora and the studied seeds."""
