@@ -45,9 +45,9 @@ env = "BLENDER_EXE"
   the resolved binary is a `.exe` under WSL, facet converts every path
   argument through `wslpath -w`.
 
-The runner is Blender's script, so it uses `bpy` directly. The `run` and
-`doctor` verbs need Blender; `verify` and `preview` read the PNG header alone
-and answer under plain Python too.
+The runner is Blender's script, so `blender.foto` and `doctor` use `bpy`
+directly and need Blender; `blender.assets` needs none — it is standard-library
+Python and `urllib` — and `verify` and `preview` answer under plain Python too.
 
 ## The glTF route
 
@@ -131,9 +131,10 @@ One `blender.foto` run writes one asset:
 actually rendered.
 
 `blender.assets` is the second capability (kind `text`, generic preview): a
-piece names Poly Haven asset ids — skies, textures and models, all CC0 — with
-an optional pinned `res` (`1k`, `2k`, `4k`; the lab defaults are 2k for skies
-and textures, 1k for models). The runner fetches the list **once** into the
+piece gives a required `name` — the receipt is `<name>.assets.json` — and lists
+Poly Haven asset ids — skies, textures and models, all CC0 — with an optional
+pinned `res` (`1k`, `2k`, `4k`; the lab defaults are 2k for skies and textures,
+1k for models). The runner fetches the list **once** into the
 shared models dir, `<home>/models/blender/polyhaven/<id>/`, with the lab's
 exact mechanism (`polyhaven.py`, ported from the Grafics lab): the type comes
 from `info/<id>`, the file records from `files/<id>`, files already present
