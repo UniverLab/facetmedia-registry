@@ -210,7 +210,16 @@ def test_the_skill_validates_in_the_core_format() -> None:
 
 def test_the_index_lists_the_package() -> None:
     names = [entry["name"] for entry in INDEX["packages"]]
-    assert names == ["ascii", "cad", "comfy", "ffmpeg", "kokoro", "whisper", "voicestudio"]
+    assert names == [
+        "ascii",
+        "blender",
+        "cad",
+        "comfy",
+        "ffmpeg",
+        "kokoro",
+        "whisper",
+        "voicestudio",
+    ]
 
 
 def test_the_readme_carries_the_user_start_recipe() -> None:

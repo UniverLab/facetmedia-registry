@@ -1,0 +1,84 @@
+name = "blender"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "Blender project (Blender Foundation)"
+tool_name = "Blender"
+description = "Daylight architectural photos of CadQuery glTF models with Blender Cycles on the GPU, checked by pixel size"
+facet = "image"
+
+[engine]
+type = "host-app"
+
+[engine.host_app]
+app = "blender"
+min_version = "5.2"
+config_key = "blender.path"
+env = "BLENDER_EXE"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+invocation_template = "{{app}} {{entry}} -- {{verb}} --input {{input}} --result {{result}}"
+
+[requirements]
+gpu = true
+ram_gb = 4
+disk_gb = 0.1
+exclusive = true
+platforms = ["linux"]
+
+[[licenses]]
+subject = "Blender (the host application this package drives)"
+spdx = "GPL-2.0-or-later"
+
+[capabilities.foto]
+summary = "Daylight architectural photo of a CadQuery glTF with Cycles on the GPU (1600x1000, ~11 s)"
+kind = "image"
+
+[capabilities.foto.inputs.model]
+type = "path"
+required = true
+description = "glTF (.glb) exported by cad.solid from a CadQuery Assembly, one element per piece carrying its name, resolved relative to the piece file; never STEP, which Blender does not open without an extra plugin."
+
+[capabilities.foto.inputs.camera]
+type = "array"
+description = "Camera view as one { azimut, elevacion, escala } item: degrees for the two angles, the orthographic scale in metres; the lab's axonometric view when omitted."
+
+[capabilities.foto.inputs.camera.items.azimut]
+type = "number"
+default = -40
+min = -360
+max = 360
+description = "Azimuth in degrees, measured from +X towards +Y."
+
+[capabilities.foto.inputs.camera.items.elevacion]
+type = "number"
+default = 48
+min = -89
+max = 89
+description = "Elevation in degrees above the floor."
+
+[capabilities.foto.inputs.camera.items.escala]
+type = "number"
+default = 11.5
+min = 0.5
+max = 200
+description = "Orthographic scale in metres: the width of the frame the camera fits."
+
+[capabilities.foto.inputs.giro]
+type = "number"
+default = 0
+min = -360
+max = 360
+description = "Turn of the whole model about Z in degrees; the sun keeps its place, so the light changes with the facade."
+
+[capabilities.foto.inputs.exposure]
+type = "number"
+default = -0.6
+min = -10
+max = 10
+description = "Exposure in stops under the AgX - Medium High Contrast view transform; -0.6 keeps sun plus sky wash from washing the colours out."
+
+[capabilities.foto.preview]
+viewer = "image"

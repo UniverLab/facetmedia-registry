@@ -1,0 +1,5 @@
+# The lab's study, exported by CadQuery as estudio.glb (one element per piece),
+# rendered as the approved daylight photo (1600x1000, Cycles on the GPU).
+# estudio.py regenerates the glb beside this piece when the study changes.
+[inputs]
+model = "estudio.glb"
