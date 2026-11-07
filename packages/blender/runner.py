@@ -32,9 +32,14 @@ import re
 import struct
 import subprocess
 import sys
+import tomllib
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import polyhaven
 
 #: The image the daylight recipe produces, per the approved lab render.
 RENDER_WIDTH = 1600
@@ -103,12 +108,15 @@ def main(argv: list[str] | None = None) -> int:
     """Run the verb named on the command line, inside Blender or beside it."""
     verb, input_path, result_path = _parse_argv(sys.argv[1:] if argv is None else argv)
     request = json.loads(Path(input_path).read_text(encoding="utf-8"))
-    bpy = _bpy()
-    if bpy is None and verb in NEEDS_BLENDER:
-        _launch_host(verb, input_path, result_path)
-        return 0
     _remember_root(str(input_path))
-    result = VERBS[verb](bpy, request)
+    if request.get("capability") == "blender.assets" and verb in ASSET_VERBS:
+        result = _assets_verb(verb, request)
+    else:
+        bpy = _bpy()
+        if bpy is None and verb in NEEDS_BLENDER:
+            _launch_host(verb, input_path, result_path)
+            return 0
+        result = VERBS[verb](bpy, request)
     Path(result_path).write_text(
         json.dumps(result, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8"
     )
@@ -310,6 +318,151 @@ def _doctor_devices(bpy: Any) -> dict[str, Any]:
 
 
 VERBS = {"run": _run, "verify": _verify, "preview": _preview, "doctor": _doctor}
+
+
+# --- blender.assets: Poly Haven skies, textures and models, fetched once.
+#
+# The capability is kind text and needs no Blender: ``run`` downloads the
+# piece's asset list into the shared models dir and writes one receipt,
+# ``<name>.assets.json``; ``verify`` re-checks every listed file's size and
+# ``preview`` writes the generic kind's preview beside the receipt.
+
+ASSET_VERBS = ("run", "verify", "preview")
+
+
+def _assets_verb(verb: str, request: dict[str, Any]) -> dict[str, Any]:
+    return {"run": _assets_run, "verify": _assets_verify, "preview": _assets_preview}[verb](request)
+
+
+def _assets_run(request: dict[str, Any]) -> dict[str, Any]:
+    """Fetch the piece's Poly Haven list once and report the receipt asset."""
+    params = dict(request.get("inputs") or {})
+    name = str(params["name"])
+    root = _polyhaven_root()
+    receipts = [
+        polyhaven.fetch(str(entry["id"]), entry.get("res"), root)
+        for entry in params.get("assets") or []
+    ]
+    receipt = {"receipt": 1, "name": name, "assets": receipts}
+    path = Path(_open_path(str(request["out_dir"]))) / f"{name}.assets.json"
+    path.write_text(
+        json.dumps(receipt, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    entries = [entry for item in receipts for entry in item["files"]]
+    return {
+        "tool": _manifest_tool(),
+        "assets": [
+            {
+                "file": f"{name}.assets.json",
+                "name": name,
+                "kind": "text",
+                "mime": "application/json",
+                "properties": {
+                    "assets": len(receipts),
+                    "files": len(entries),
+                    "bytes": sum(int(entry["bytes"]) for entry in entries),
+                },
+                "params": params,
+                "seed": None,
+                "inputs": [],
+            }
+        ],
+    }
+
+
+def _assets_verify(request: dict[str, Any]) -> dict[str, Any]:
+    """One verdict per receipt: every listed file present at its recorded size."""
+    return {"assets": [_receipt_verdict(str(item)) for item in request.get("assets") or []]}
+
+
+def _receipt_verdict(path: str) -> dict[str, Any]:
+    """The receipt's files re-measured on disk; no network, no Blender."""
+    file_name = posixpath.basename(path)
+    try:
+        receipt = json.loads(Path(_open_path(path)).read_text(encoding="utf-8"))
+        total, present, missing = _receipt_files(receipt)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        return _receipt_asset_verdict(file_name, False, {"error": str(exc)})
+    metrics: dict[str, Any] = {"files": total, "present": present}
+    passed = not missing
+    if missing:
+        metrics["error"] = f"missing or resized: {', '.join(missing)}"
+    return _receipt_asset_verdict(file_name, passed, metrics)
+
+
+def _receipt_files(receipt: dict[str, Any]) -> tuple[int, int, list[str]]:
+    """``(listed, present, missing)`` for every file a receipt names."""
+    root = _polyhaven_root()
+    total = present = 0
+    missing: list[str] = []
+    for item in receipt.get("assets") or []:
+        folder = root / str(item.get("id"))
+        for entry in item.get("files") or []:
+            total += 1
+            target = folder / str(entry.get("path"))
+            if target.is_file() and target.stat().st_size == entry.get("bytes"):
+                present += 1
+            else:
+                missing.append(str(entry.get("path")))
+    return total, present, missing
+
+
+def _receipt_asset_verdict(file_name: str, passed: bool, metrics: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "file": file_name,
+        "passed": passed,
+        "metrics": metrics,
+        "thresholds": {},
+        "verifier": "polyhaven-receipt",
+    }
+
+
+def _assets_preview(request: dict[str, Any]) -> dict[str, Any]:
+    """The generic kind's preview file beside each receipt asset."""
+    entries: list[dict[str, Any]] = []
+    for item in request.get("assets") or []:
+        path = str(item)
+        file_name = posixpath.basename(path)
+        data = _receipt_preview(path)
+        preview_name = f"{file_name}.preview.json"
+        directory = posixpath.dirname(path)
+        preview_path = f"{directory}/{preview_name}" if directory else preview_name
+        with open(_open_path(preview_path), "w", encoding="utf-8") as handle:
+            handle.write(json.dumps(data, ensure_ascii=False, sort_keys=True) + "\n")
+        entries.append({"file": file_name, "preview": preview_name, "images": []})
+    return {"assets": entries}
+
+
+def _receipt_preview(path: str) -> dict[str, Any]:
+    """The generic schema's scalars for one receipt: counts and total bytes."""
+    receipt = json.loads(Path(_open_path(path)).read_text(encoding="utf-8"))
+    assets = receipt.get("assets") or []
+    files = [entry for item in assets for entry in item.get("files") or []]
+    total = sum(int(entry.get("bytes") or 0) for entry in files)
+    name = str(receipt.get("name") or posixpath.basename(path))
+    ids = ", ".join(str(item.get("id")) for item in assets)
+    summary = f"{name} · {len(assets)} assets · {len(files)} files · {total / 1e6:.1f} MB"
+    return {
+        "preview": 1,
+        "kind": "text",
+        "summary": summary[:160],
+        "fields": {"assets": len(assets), "files": len(files), "bytes": total, "ids": ids},
+    }
+
+
+def _polyhaven_root() -> Path:
+    """``<home>/models/blender/polyhaven``; FACET_MODELS is ``<home>/models/direct``."""
+    return Path(
+        _open_path(
+            str(Path(os.environ["FACET_MODELS"]).parent.parent / "models" / "blender" / "polyhaven")
+        )
+    )
+
+
+def _manifest_tool() -> dict[str, str]:
+    """The manifest's tool identity, like the other runners report it."""
+    manifest = tomllib.loads((Path(__file__).parent / "package.toml").read_text(encoding="utf-8"))
+    return {"name": str(manifest["name"]), "version": str(manifest["version"])}
 
 
 # --- the scene: the lab's daylight recipe, one piece per glTF element.

@@ -15,12 +15,16 @@ resolve ``BLENDER_EXE`` and drive the host, which is the route the spec names
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import math
 import os
 import subprocess
 import sys
+import threading
+from collections.abc import Iterator
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import PIL.Image
@@ -31,6 +35,9 @@ PACKAGE = ROOT / "packages" / "blender"
 RUNNER = PACKAGE / "runner.py"
 SCHEMA = json.loads(
     (ROOT / "schemas" / "preview" / "image.schema.json").read_text(encoding="utf-8")
+)
+GENERIC_SCHEMA = json.loads(
+    (ROOT / "schemas" / "preview" / "generic.schema.json").read_text(encoding="utf-8")
 )
 WIDTH = 1600
 HEIGHT = 1000
@@ -562,14 +569,16 @@ def _model(tmp_path: Path) -> Path:
     return path
 
 
-def _request(tmp_path: Path, verb: str, **inputs) -> dict[str, object]:
+def _request(
+    tmp_path: Path, verb: str, capability: str = "blender.foto", **inputs
+) -> dict[str, object]:
     out = tmp_path / "out"
     out.mkdir(exist_ok=True)
     assets = [str(item) for item in inputs.pop("assets", ())]
     return {
         "protocol": 1,
         "verb": verb,
-        "capability": "blender.foto",
+        "capability": capability,
         "inputs": inputs,
         "out_dir": str(out),
         "piece_dir": str(tmp_path),
@@ -975,3 +984,263 @@ def test_doctor_reports_the_blender_modules(tmp_path: Path) -> None:
     assert set(checks) == {"bpy", "gltf", "cycles"}
     assert all(check["ok"] for check in checks.values())
     assert "5.2.2 LTS" in checks["bpy"]["detail"]
+
+
+# --- blender.assets: the Poly Haven fetch, against a local HTTP stub.
+
+
+class _PolyhavenStub:
+    """A local Poly Haven: info/files records plus the bytes they point at."""
+
+    def __init__(self, base: str) -> None:
+        self.base = base
+        self.info: dict[str, dict[str, object]] = {}
+        self.files: dict[str, dict[str, object]] = {}
+        self.blobs: dict[str, bytes] = {}
+        self.agents: list[str] = []
+        self.downloads = 0
+
+    def _blob(self, data: bytes) -> str:
+        key = f"dl/{len(self.blobs)}"
+        self.blobs[key] = data
+        return f"{self.base}/{key}"
+
+    def _record(self, data: bytes) -> dict[str, object]:
+        return {
+            "url": self._blob(data),
+            "size": len(data),
+            "md5": hashlib.md5(data).hexdigest(),
+        }
+
+    def add(self, asset_id: str, kind: str, **info_extra: object) -> None:
+        """Register one asset with lab-shaped records for its type.
+
+        Every map is listed under all three resolutions, as the real API
+        does; the fetch's default (2k skies and textures, 1k models) then
+        finds its level.
+        """
+        kind_id = {"sky": 0, "texture": 1, "model": 2}[kind]
+        self.info[f"info/{asset_id}"] = {"type": kind_id, **info_extra}
+        record: dict[str, object] = {}
+        self.files[f"files/{asset_id}"] = record
+        levels = ("1k", "2k", "4k")
+        if kind == "sky":
+            hdr = self._record(b"sky-" + asset_id.encode())
+            record["hdri"] = {res: {"hdr": hdr} for res in levels}
+        elif kind == "texture":
+            maps = {
+                "col_1": b"diffuse-one",
+                "col_2": b"diffuse-two",
+                "nor_gl": b"normal-map",
+                "Rough": b"roughness",
+            }
+            for key, data in maps.items():
+                jpg = self._record(data + asset_id.encode())
+                record[key] = {res: {"jpg": jpg} for res in levels}
+        else:
+            gltf = self._record(b"gltf-" + asset_id.encode())
+            gltf["include"] = {
+                "textures/wood.jpg": self._record(b"wood-" + asset_id.encode()),
+                "model.bin": self._record(b"bin-" + asset_id.encode()),
+            }
+            record["gltf"] = {res: {"gltf": gltf} for res in levels}
+
+
+class _PolyhavenHandler(BaseHTTPRequestHandler):
+    def do_GET(self) -> None:
+        stub = self.server.stub  # type: ignore[attr-defined]
+        stub.agents.append(str(self.headers.get("User-Agent")))
+        path = self.path.split("?", 1)[0].lstrip("/")
+        if path.startswith("dl/"):
+            stub.downloads += 1
+            self._send(stub.blobs[path], "application/octet-stream")
+            return
+        body = stub.info.get(path) or stub.files.get(path)
+        if body is None:
+            self.send_error(404)
+            return
+        self._send(json.dumps(body).encode(), "application/json")
+
+    def _send(self, data: bytes, content_type: str) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def log_message(self, *_args: object) -> None:
+        pass
+
+
+@pytest.fixture
+def polyhaven() -> Iterator[_PolyhavenStub]:
+    """A ThreadingHTTPServer posing as api.polyhaven.com for one test."""
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _PolyhavenHandler)
+    stub = _PolyhavenStub(f"http://127.0.0.1:{server.server_address[1]}")
+    server.stub = stub  # type: ignore[attr-defined]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield stub
+    server.shutdown()
+    server.server_close()
+    thread.join(timeout=10)
+
+
+def _assets_env(tmp_path: Path, stub: _PolyhavenStub) -> dict[str, str]:
+    env = {key: value for key, value in os.environ.items() if key != "PYTHONPATH"}
+    env["POLYHAVEN_API"] = stub.base
+    env["FACET_MODELS"] = str(tmp_path / "models" / "direct")
+    return env
+
+
+def _assets_request(tmp_path: Path, name: str, entries: list[dict[str, str]]) -> dict:
+    request = _request(tmp_path, "run", capability="blender.assets", name=name)
+    request["inputs"]["assets"] = entries
+    return request
+
+
+def _polyhaven_root(tmp_path: Path) -> Path:
+    return tmp_path / "models" / "blender" / "polyhaven"
+
+
+def test_assets_fetches_the_three_types_with_fixed_names(
+    tmp_path: Path, polyhaven: _PolyhavenStub
+) -> None:
+    """One fetch list lands sky.hdr, the texture maps and the glTF set."""
+    polyhaven.add("test-sky", "sky")
+    polyhaven.add("test-tex", "texture")
+    polyhaven.add("test-model", "model")
+    entries = [{"id": "test-sky"}, {"id": "test-tex", "res": "2k"}, {"id": "test-model"}]
+    request = _assets_request(tmp_path, "escenario", entries)
+
+    done, result_path = _call("run", request, tmp_path, _assets_env(tmp_path, polyhaven))
+
+    assert done.returncode == 0, done.stdout + done.stderr
+    result = json.loads(result_path.read_text(encoding="utf-8"))
+    asset = result["assets"][0]
+    assert asset["file"] == "escenario.assets.json"
+    assert (asset["kind"], asset["mime"]) == ("text", "application/json")
+    assert asset["seed"] is None and asset["inputs"] == []
+    assert asset["properties"]["assets"] == len(entries)
+    root = _polyhaven_root(tmp_path)
+    assert (root / "test-sky" / "sky.hdr").is_file()
+    for name in ("diff.jpg", "nor_gl.jpg", "rough.jpg"):
+        assert (root / "test-tex" / name).is_file(), name
+    assert (root / "test-model" / "test-model.gltf").is_file()
+    assert (root / "test-model" / "textures" / "wood.jpg").is_file()
+    assert (root / "test-model" / "model.bin").is_file()
+    receipt = json.loads((tmp_path / "out" / "escenario.assets.json").read_text())
+    assert receipt["receipt"] == 1 and receipt["name"] == "escenario"
+    by_id = {item["id"]: item for item in receipt["assets"]}
+    assert by_id["test-sky"]["type"] == "sky" and by_id["test-sky"]["res"] == "2k"
+    assert by_id["test-model"]["res"] == "1k"
+    for item in receipt["assets"]:
+        for entry in item["files"]:
+            assert set(entry) == {"path", "bytes", "md5"}
+    # The texture took the first colour variant, and every call identified itself.
+    diff = next(e for e in by_id["test-tex"]["files"] if e["path"] == "diff.jpg")
+    assert diff["bytes"] == len(b"diffuse-one" + b"test-tex")
+    assert polyhaven.agents and set(polyhaven.agents) == {"grafics-lab/1.0"}
+
+
+def test_assets_skips_files_already_present_with_the_right_size(
+    tmp_path: Path, polyhaven: _PolyhavenStub
+) -> None:
+    """The lab's size skip: a second run downloads nothing."""
+    polyhaven.add("test-sky", "sky")
+    request = _assets_request(tmp_path, "cielo", [{"id": "test-sky"}])
+    env = _assets_env(tmp_path, polyhaven)
+
+    first, _ = _call("run", request, tmp_path, env)
+    downloads = polyhaven.downloads
+    second, _ = _call("run", request, tmp_path, env)
+
+    assert first.returncode == 0 and second.returncode == 0
+    assert downloads == 1 and polyhaven.downloads == downloads
+
+
+def test_assets_md5_mismatch_fails_the_run(tmp_path: Path, polyhaven: _PolyhavenStub) -> None:
+    """Corrupt bytes against the record's md5 is a loud fetch failure."""
+    polyhaven.add("test-sky", "sky")
+    record = polyhaven.files["files/test-sky"]["hdri"]["2k"]["hdr"]
+    record["md5"] = "0" * 32
+    request = _assets_request(tmp_path, "cielo", [{"id": "test-sky"}])
+
+    done, result_path = _call("run", request, tmp_path, _assets_env(tmp_path, polyhaven))
+
+    assert done.returncode != 0
+    assert "md5 mismatch" in done.stderr
+    assert not result_path.exists()
+
+
+def test_assets_refuses_a_model_over_four_million_polygons(
+    tmp_path: Path, polyhaven: _PolyhavenStub
+) -> None:
+    """The lab's polygon gate names the id and the count before downloading."""
+    polyhaven.add("huge-model", "model", polycount=5_000_000)
+    request = _assets_request(tmp_path, "grande", [{"id": "huge-model"}])
+
+    done, _ = _call("run", request, tmp_path, _assets_env(tmp_path, polyhaven))
+
+    assert done.returncode != 0
+    assert "huge-model" in done.stderr
+    assert "5000000" in done.stderr
+    assert polyhaven.downloads == 0
+
+
+def test_assets_verify_passes_on_the_run_receipt(tmp_path: Path, polyhaven: _PolyhavenStub) -> None:
+    """verify re-measures every file the receipt lists, one verdict per asset."""
+    polyhaven.add("test-sky", "sky")
+    request = _assets_request(tmp_path, "cielo", [{"id": "test-sky"}])
+    env = _assets_env(tmp_path, polyhaven)
+    done, _ = _call("run", request, tmp_path, env)
+    assert done.returncode == 0, done.stdout + done.stderr
+    receipt = tmp_path / "out" / "cielo.assets.json"
+
+    verify = _request(tmp_path, "verify", capability="blender.assets")
+    verify["assets"] = [str(receipt)]
+    done, result_path = _call("verify", verify, tmp_path, env)
+
+    assert done.returncode == 0, done.stdout + done.stderr
+    verdict = json.loads(result_path.read_text(encoding="utf-8"))["assets"][0]
+    assert verdict["file"] == "cielo.assets.json"
+    assert verdict["passed"] is True
+    assert verdict["verifier"] == "polyhaven-receipt"
+    assert verdict["metrics"] == {"files": 1, "present": 1}
+
+    (_polyhaven_root(tmp_path) / "test-sky" / "sky.hdr").unlink()
+    done, result_path = _call("verify", verify, tmp_path, env)
+    verdict = json.loads(result_path.read_text(encoding="utf-8"))["assets"][0]
+    assert done.returncode == 0
+    assert verdict["passed"] is False
+    assert verdict["metrics"]["present"] == 0
+
+
+def test_assets_preview_writes_the_generic_preview_beside_the_receipt(
+    tmp_path: Path, polyhaven: _PolyhavenStub
+) -> None:
+    """The preview is <name>.assets.json.preview.json, the core's mandated path."""
+    polyhaven.add("test-sky", "sky")
+    polyhaven.add("test-model", "model")
+    request = _assets_request(tmp_path, "escena", [{"id": "test-sky"}, {"id": "test-model"}])
+    env = _assets_env(tmp_path, polyhaven)
+    done, _ = _call("run", request, tmp_path, env)
+    assert done.returncode == 0, done.stdout + done.stderr
+    receipt = tmp_path / "out" / "escena.assets.json"
+
+    preview = _request(tmp_path, "preview", capability="blender.assets")
+    preview["assets"] = [str(receipt)]
+    done, result_path = _call("preview", preview, tmp_path, env)
+
+    assert done.returncode == 0, done.stdout + done.stderr
+    entry = json.loads(result_path.read_text(encoding="utf-8"))["assets"][0]
+    assert entry["file"] == "escena.assets.json"
+    assert entry["preview"] == "escena.assets.json.preview.json"
+    data = json.loads((receipt.parent / entry["preview"]).read_text(encoding="utf-8"))
+    assert set(data) == set(GENERIC_SCHEMA["required"])
+    assert data["preview"] == 1 and data["kind"] == "text"
+    assert len(data["summary"]) <= GENERIC_SCHEMA["properties"]["summary"]["maxLength"]
+    assert all(
+        isinstance(value, (str, int, float, bool)) or value is None
+        for value in data["fields"].values()
+    )

@@ -130,6 +130,24 @@ One `blender.foto` run writes one asset:
 `tool` is `{"name": "blender", "version": "5.2.2 LTS"}` — the build that
 actually rendered.
 
+`blender.assets` is the second capability (kind `text`, generic preview): a
+piece names Poly Haven asset ids — skies, textures and models, all CC0 — with
+an optional pinned `res` (`1k`, `2k`, `4k`; the lab defaults are 2k for skies
+and textures, 1k for models). The runner fetches the list **once** into the
+shared models dir, `<home>/models/blender/polyhaven/<id>/`, with the lab's
+exact mechanism (`polyhaven.py`, ported from the Grafics lab): the type comes
+from `info/<id>`, the file records from `files/<id>`, files already present
+with the right size are skipped and every download is md5-checked, and the
+names are fixed — `sky.hdr`, `diff.jpg`/`nor_gl.jpg`/`rough.jpg` (the first
+`col_*` colour variant for textures), `<id>.gltf` plus its includes. Models
+reporting more than 4,000,000 polygons are refused with the id and count
+named. The run writes one asset, `<name>.assets.json`, the receipt of ids,
+file paths, bytes and md5s; `verify` re-measures every listed file on disk
+and `preview` writes `<name>.assets.json.preview.json` for the generic
+viewer. No manifest `[[models]]` entries: the URLs and md5s are dynamic per
+file record and cannot be pinned statically, so the runner — not the core
+downloader — performs the fetch.
+
 ## Verification and doctor
 
 `verify` measures the PNG header (the IHDR, which needs no third-party module
@@ -160,8 +178,9 @@ when the entry is run directly (`python runner.py doctor --input <request>
 
 `requirements` in the manifest: **GPU**, **4 GB RAM**, **0.1 GB disk**,
 `exclusive = true` (a Cycles render owns the GPU) on `linux` — Blender lives
-on the Windows host behind WSL. Nothing is downloaded: the package has no
-environment and no models, and Blender is the `host-app` you installed.
+on the Windows host behind WSL. Still no environment build and Blender is
+never installed; `blender.assets` is the one download — versioned CC0 assets
+that arrive into the models dir and are re-verified on every fetch.
 
 ## Example
 

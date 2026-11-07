@@ -131,7 +131,26 @@ def test_the_index_carries_the_package_in_order() -> None:
 def test_the_capability_is_the_image_kind() -> None:
     assert CAPABILITY["kind"] == "image"
     assert CAPABILITY["preview"] == {"viewer": "image"}
-    assert MANIFEST["capabilities"].keys() == {"foto"}
+    assert MANIFEST["capabilities"].keys() == {"foto", "assets"}
+
+
+def test_the_assets_capability_is_text_with_the_generic_preview() -> None:
+    """blender.assets fetches Poly Haven files into the models dir: no Blender."""
+    assets = MANIFEST["capabilities"]["assets"]
+    assert assets["kind"] == "text"
+    assert assets["preview"] == {"viewer": "generic"}
+    inputs = assets["inputs"]
+    assert inputs["name"]["type"] == "string"
+    assert inputs["name"]["required"] is True
+    assert inputs["name"]["pattern"] == "^[a-z0-9][a-z0-9-]*$"
+    fetch = inputs["assets"]
+    assert fetch["type"] == "array"
+    assert fetch["required"] is True
+    assert fetch["min_items"] == 1
+    assert fetch["items"]["id"]["required"] is True
+    assert fetch["items"]["id"]["pattern"] == "^[a-z0-9][a-z0-9_-]*$"
+    assert fetch["items"]["res"]["type"] == "enum"
+    assert fetch["items"]["res"]["values"] == ["1k", "2k", "4k"]
 
 
 def test_the_model_input_is_required_and_relative() -> None:

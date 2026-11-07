@@ -48,6 +48,10 @@ camera = [{ azimut = 25, elevacion = 40, escala = 12 }]
 Run it with `facet run blender.foto <piece>.toml --out build/`; the asset lands
 as `<model>-foto.png` beside the piece unless `--out` says otherwise.
 
+`blender.assets` is the fetching half: a piece lists Poly Haven ids (`{ id,
+res }` items) and the runner downloads them once into the shared models dir,
+writing `<name>.assets.json` as the receipt `verify` re-checks.
+
 ## Judging the result
 
 `verify` measures the PNG header: it passes at exactly 1600x1000, the recipe's

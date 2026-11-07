@@ -82,3 +82,33 @@ description = "Exposure in stops under the AgX - Medium High Contrast view trans
 
 [capabilities.foto.preview]
 viewer = "image"
+
+[capabilities.assets]
+summary = "Versioned Poly Haven skies, textures and models fetched once into the shared models dir, with a receipt that verify re-checks."
+kind = "text"
+
+[capabilities.assets.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name: writes <name>.assets.json, the receipt of every fetched file."
+
+[capabilities.assets.inputs.assets]
+type = "array"
+required = true
+min_items = 1
+description = "Poly Haven assets to fetch; one piece carries one fetch list."
+
+[capabilities.assets.inputs.assets.items.id]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9_-]*$"
+description = "Poly Haven asset id, the last part of its polyhaven.com URL."
+
+[capabilities.assets.inputs.assets.items.res]
+type = "enum"
+values = ["1k", "2k", "4k"]
+description = "Pinned resolution; the lab default applies when omitted (2k for skies and textures, 1k for models)."
+
+[capabilities.assets.preview]
+viewer = "generic"
