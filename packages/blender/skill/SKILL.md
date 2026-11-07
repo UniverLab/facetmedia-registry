@@ -25,6 +25,8 @@ put `blender` on `PATH`); `facet doctor blender` fails with
 - When a person should see one finished part as a catalogue photo:
   `blender.producto` shoots the STL from `cad.solid` at 1200x1200, with the
   studio lights scaled to the part's own size.
+- When a person should watch the model instead of a single still:
+  `blender.recorrido` orbits the same glTF in Eevee and writes an MP4.
 - Not for stills from prompts (use `comfy.still`), and not for a line view of
   a part (use `cad.solid`'s SVG).
 

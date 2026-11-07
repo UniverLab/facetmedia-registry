@@ -4,7 +4,7 @@ requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "Blender project (Blender Foundation)"
 tool_name = "Blender"
-description = "Daylight architectural photos of CadQuery glTF models with Blender Cycles on the GPU, checked by pixel size"
+description = "Daylight architectural photos of CadQuery glTF models with Blender Cycles on the GPU and animated camera tours in Eevee, checked by pixel size and an MP4 probe"
 facet = "image"
 
 [engine]
@@ -136,3 +136,96 @@ description = "Pinned resolution; the lab default applies when omitted (2k for s
 
 [capabilities.assets.preview]
 viewer = "generic"
+
+[capabilities.recorrido]
+summary = "Animated camera tour of a CadQuery glTF in Eevee on the GPU (240 frames at 1280x720, 24 fps, ~100 s)"
+kind = "video"
+
+[capabilities.recorrido.inputs.model]
+type = "path"
+required = true
+description = "glTF (.glb) exported by cad.solid from a CadQuery Assembly, one element per piece carrying its name, resolved relative to the piece file; never STEP, which Blender does not open without an extra plugin."
+
+[capabilities.recorrido.inputs.azimut]
+type = "array"
+description = "Azimuth the camera starts and ends at, as one { inicio, fin } item in degrees, measured from +X towards +Y; the lab's orbit when omitted."
+
+[capabilities.recorrido.inputs.azimut.items.inicio]
+type = "number"
+default = -75
+min = -360
+max = 360
+description = "Azimuth in degrees on the first frame."
+
+[capabilities.recorrido.inputs.azimut.items.fin]
+type = "number"
+default = -15
+min = -360
+max = 360
+description = "Azimuth in degrees on the last frame."
+
+[capabilities.recorrido.inputs.elevacion]
+type = "array"
+description = "Elevation the camera starts and ends at, as one { inicio, fin } item in degrees above the floor."
+
+[capabilities.recorrido.inputs.elevacion.items.inicio]
+type = "number"
+default = 55
+min = -89
+max = 89
+description = "Elevation in degrees on the first frame."
+
+[capabilities.recorrido.inputs.elevacion.items.fin]
+type = "number"
+default = 40
+min = -89
+max = 89
+description = "Elevation in degrees on the last frame."
+
+[capabilities.recorrido.inputs.distancia]
+type = "array"
+description = "Distance from the model's centre the camera starts and ends at, as one { inicio, fin } item in metres; the move starts far and comes closer."
+
+[capabilities.recorrido.inputs.distancia.items.inicio]
+type = "number"
+default = 14.0
+min = 0.5
+max = 200
+description = "Distance in metres on the first frame."
+
+[capabilities.recorrido.inputs.distancia.items.fin]
+type = "number"
+default = 10.5
+min = 0.5
+max = 200
+description = "Distance in metres on the last frame."
+
+[capabilities.recorrido.inputs.focal]
+type = "number"
+default = 30
+min = 18
+max = 100
+description = "Lens focal length in millimetres; 30 mm frames the study from 14 m."
+
+[capabilities.recorrido.inputs.seconds]
+type = "integer"
+default = 10
+min = 2
+max = 60
+description = "Clip length in seconds; the frame count is seconds x fps."
+
+[capabilities.recorrido.inputs.fps]
+type = "integer"
+default = 24
+min = 12
+max = 60
+description = "Frame rate; the lab's 24 fps plays the orbit smoothly."
+
+[capabilities.recorrido.inputs.seed]
+type = "integer"
+default = 0
+min = 0
+description = "Sampling seed; Eevee's render is deterministic, so it only labels the record."
+
+[capabilities.recorrido.preview]
+viewer = "video"

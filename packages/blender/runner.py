@@ -41,41 +41,22 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import escena
+import mp4
 import polyhaven
 import producto
+import recorrido
 
 #: The image the daylight recipe produces, per the approved lab render.
 RENDER_WIDTH = 1600
 RENDER_HEIGHT = 1000
 #: Cycles on the GPU: 128 samples with denoise is the lab's 8-10 s recipe.
 SAMPLES = 128
-#: glTF arrives in millimetres; Blender works in metres.
-SCALE = 0.001
-#: The view transform that keeps sun plus sky from washing the colours out.
-LOOK = "AgX - Medium High Contrast"
 DEFAULT_EXPOSURE = -0.6
 #: The lab's axonometric view: azimut and elevacion in degrees, escala in metres.
 DEFAULT_CAMERA = {"azimut": -40.0, "elevacion": 48.0, "escala": 11.5}
-#: The sun the approved render uses, and the sky wash strength beside it.
-SUN = {"azimut": 210.0, "elevacion": 32.0, "fuerza": 3.0}
-SKY_STRENGTH = 0.2
-SUN_ANGLE_DEG = 2.0
 #: How far the orthographic camera sits from the model, in frame widths.
 CAMERA_DISTANCE = 2.5
-#: The outside floor that receives the shadows, in metres.
-FLOOR_SIZE = 60.0
-FLOOR_DROP = 0.001
-#: Piece-name prefix -> (base colour, roughness, transmission).
-MATERIALS = {
-    "muros": ((0.92, 0.91, 0.88), 0.9, 0.0),
-    "piso": ((0.50, 0.34, 0.21), 0.45, 0.0),
-    "vidrio": ((0.85, 0.93, 1.0), 0.02, 1.0),
-    "cama": ((0.23, 0.33, 0.52), 0.85, 0.0),
-    "almohada": ((0.95, 0.95, 0.94), 0.8, 0.0),
-    "mesa": ((0.40, 0.26, 0.15), 0.4, 0.0),
-    "sillas": ((0.90, 0.40, 0.18), 0.55, 0.0),
-    "suelo": ((0.80, 0.80, 0.78), 0.95, 0.0),
-}
 #: What the run appends to the model's stem: ``estudio.glb`` -> ``estudio-foto.png``.
 ASSET_SUFFIX = "-foto"
 #: Cycles' sampling seed: one scene gives the same photo every run.
@@ -103,9 +84,6 @@ _UNC_ROOT: list[str] = [""]
 DRIVE_RE = re.compile(r"[A-Za-z]:[\\/]")
 UNSAFE_NAME = re.compile(r"[^a-z0-9-]+")
 
-#: One material recipe: base colour, roughness and glass transmission.
-Recipe = tuple[tuple[float, float, float], float, float]
-
 
 def main(argv: list[str] | None = None) -> int:
     """Run the verb named on the command line, inside Blender or beside it."""
@@ -119,12 +97,21 @@ def main(argv: list[str] | None = None) -> int:
         if bpy is None and verb in NEEDS_BLENDER:
             _launch_host(verb, input_path, result_path)
             return 0
-        table = PRODUCTO_VERBS if request.get("capability") == "blender.producto" else VERBS
+        table = _verbs(str(request.get("capability") or ""))
         result = table[verb](bpy, request)
     Path(result_path).write_text(
         json.dumps(result, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8"
     )
     return 0
+
+
+def _verbs(capability: str) -> dict[str, Any]:
+    """The verb table of the capability the request names."""
+    if capability == "blender.producto":
+        return PRODUCTO_VERBS
+    if capability == "blender.recorrido":
+        return RECORRIDO_VERBS
+    return VERBS
 
 
 def _bpy() -> Any:
@@ -252,14 +239,18 @@ def _verdict(path: str, thresholds: dict[str, int]) -> dict[str, Any]:
 
 
 def _asset_verdict(
-    path: str, passed: bool, metrics: dict[str, Any], thresholds: dict[str, int]
+    path: str,
+    passed: bool,
+    metrics: dict[str, Any],
+    thresholds: dict[str, Any],
+    verifier: str = "png",
 ) -> dict[str, Any]:
     return {
         "file": posixpath.basename(path),
         "passed": passed,
         "metrics": metrics,
         "thresholds": thresholds,
-        "verifier": "png",
+        "verifier": verifier,
     }
 
 
@@ -385,6 +376,113 @@ def _doctor_devices(bpy: Any) -> dict[str, Any]:
 VERBS = {"run": _run, "verify": _verify, "preview": _preview, "doctor": _doctor}
 #: ``blender.producto`` keeps verify, preview and doctor; its run is the studio.
 PRODUCTO_VERBS = {**VERBS, "run": _producto_run}
+
+
+# --- blender.recorrido: the Eevee camera tour, its MP4 probe and its preview.
+#
+# The capability is kind video. Its run is Eevee (``recorrido.py``); verify
+# reads the MP4's ISO BMFF boxes with the standard library alone, because a
+# host-app package ships no Python environment to install ffprobe into; and
+# preview writes the video kind's fields from those same measurements.
+
+
+def _recorrido_run(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
+    """Render the camera tour into one MP4 and report it as the video it is."""
+    params = dict(request.get("inputs") or {})
+    model = str(params["model"])
+    name = recorrido.asset_name(model)
+    destination = f"{str(request['out_dir']).rstrip('/')}/{name}.mp4"
+    windows = _on_windows()
+    recorrido.render(bpy, _host_path(model, windows), _host_path(destination, windows), params)
+    return {
+        "tool": {"name": "blender", "version": _version(bpy)},
+        "assets": [recorrido.asset(params, model)],
+    }
+
+
+def _recorrido_verify(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
+    """Probe each MP4's boxes against the entry's frames and frame rate."""
+    tour = recorrido.plan(_entry(request))
+    thresholds: dict[str, Any] = {
+        "width": recorrido.WIDTH,
+        "height": recorrido.HEIGHT,
+        "frames": tour.frames,
+        "fps": tour.fps,
+    }
+    paths = [str(item) for item in request.get("assets") or []]
+    return {"assets": [_video_verdict(path, thresholds) for path in paths]}
+
+
+def _entry(request: dict[str, Any]) -> dict[str, Any]:
+    """The piece's tour entry, or one record's params, as comfy's ``_entries``.
+
+    ``verify`` and ``preview`` receive the piece's inputs; ``facet check`` and
+    ``facet preview`` pass the record's params for one asset, which are the
+    entry itself. A ``recorrido`` list is accepted first when a piece has one.
+    """
+    inputs = dict(request.get("inputs") or {})
+    raw = inputs.get("recorrido")
+    items = raw if isinstance(raw, list) else [inputs]
+    entries = [item for item in items if isinstance(item, dict)]
+    return entries[0] if entries else {}
+
+
+def _video_verdict(path: str, thresholds: dict[str, Any]) -> dict[str, Any]:
+    """One MP4's measurements against the recipe; unparsable files fail."""
+    try:
+        metrics = _probe_mp4(path)
+    except (OSError, ValueError) as exc:
+        return _asset_verdict(path, False, {"error": str(exc)}, thresholds, "mp4")
+    passed = all(metrics[key] == thresholds[key] for key in thresholds)
+    return _asset_verdict(path, passed, metrics, thresholds, "mp4")
+
+
+def _recorrido_preview(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
+    """Write the video kind's preview file beside each MP4."""
+    entry = _entry(request)
+    seed = int(entry.get("seed", recorrido.DEFAULT_SEED))
+    tour = recorrido.plan(entry)
+    entries: list[dict[str, Any]] = []
+    for item in request.get("assets") or []:
+        path = str(item)
+        file_name = posixpath.basename(path)
+        name = str(entry.get("name") or posixpath.splitext(file_name)[0])
+        data = _video_preview(path, name, seed, tour)
+        preview_name = f"{file_name}.preview.json"
+        preview_path = f"{posixpath.dirname(path)}/{preview_name}"
+        with open(_open_path(preview_path), "w", encoding="utf-8") as handle:
+            handle.write(json.dumps(data, ensure_ascii=False, sort_keys=True) + "\n")
+        entries.append({"file": file_name, "preview": preview_name, "images": []})
+    return {"assets": entries}
+
+
+def _video_preview(path: str, name: str, seed: int, tour: recorrido.Tour) -> dict[str, Any]:
+    """The video schema's fields, with the probe's measurements of the MP4."""
+    probe = _probe_mp4(path)
+    summary = (
+        f"{name} · {probe['width']}×{probe['height']} · "
+        f"{probe['frames']}f @ {probe['fps']}fps · seed {seed}"
+    )
+    return {
+        "preview": 1,
+        "kind": "video",
+        "summary": summary[:160],
+        "name": name,
+        "prompt": recorrido.prompt(name, tour),
+        "seed": seed,
+        "width": probe["width"],
+        "height": probe["height"],
+        "length": probe["frames"],
+        "fps": probe["fps"],
+    }
+
+
+RECORRIDO_VERBS = {
+    **VERBS,
+    "run": _recorrido_run,
+    "verify": _recorrido_verify,
+    "preview": _recorrido_preview,
+}
 
 
 # --- blender.assets: Poly Haven skies, textures and models, fetched once.
@@ -541,29 +639,22 @@ def _render(bpy: Any, model: str, destination: str, params: dict[str, Any]) -> N
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
     bpy.ops.import_scene.gltf(filepath=_host_path(model, windows))
-    _scale_roots(scene)
+    escena.scale_roots(scene)
     _turn_roots(scene, _giro(params))
     bpy.context.view_layer.update()
-    centre = _centre(scene)
-    _floor(bpy, scene, centre)
-    _dress(bpy, scene, MATERIALS)
-    _sky_and_sun(bpy, scene)
+    centre = escena.centre(scene)
+    escena.floor(bpy, scene, centre)
+    escena.dress(bpy, scene, escena.MATERIALS)
+    escena.sky_and_sun(bpy, scene)
     _place_camera(bpy, scene, _camera(params), centre)
     scene.render.resolution_x = RENDER_WIDTH
     scene.render.resolution_y = RENDER_HEIGHT
     scene.view_settings.exposure = _exposure(params)
     with suppress(TypeError):
-        scene.view_settings.look = LOOK
+        scene.view_settings.look = escena.LOOK
     _cycles(bpy, scene)
     scene.render.filepath = _host_path(destination, windows)
     bpy.ops.render.render(write_still=True)
-
-
-def _scale_roots(scene: Any) -> None:
-    """The glTF arrives in millimetres: the top-level pieces become metres."""
-    for obj in [item for item in scene.objects if item.parent is None]:
-        obj.scale = tuple(side * SCALE for side in obj.scale)
-        obj.location = tuple(side * SCALE for side in obj.location)
 
 
 def _turn_roots(scene: Any, degrees: float) -> None:
@@ -579,111 +670,6 @@ def _turn_roots(scene: Any, degrees: float) -> None:
     for obj in [item for item in scene.objects if item.parent is None]:
         obj.rotation_mode = "XYZ"
         obj.rotation_euler[2] += math.radians(degrees)
-
-
-def _floor(bpy: Any, scene: Any, centre: tuple[float, float, float]) -> None:
-    """An outside plane just under the model, so the sun casts a shadow.
-
-    It sits below the lowest mesh, never at the model's mid-height: a plane
-    through the room would hide the furniture and the slab from the camera.
-    """
-    drop = _lowest_z(scene) - FLOOR_DROP
-    bpy.ops.mesh.primitive_plane_add(size=FLOOR_SIZE, location=(centre[0], centre[1], drop))
-    bpy.context.active_object.name = "suelo"
-
-
-def _lowest_z(scene: Any) -> float:
-    """The lowest point of every mesh, in metres; zero for an empty scene."""
-    lows = [
-        _world_point(obj.matrix_world, corner)[2]
-        for obj in scene.objects
-        if getattr(obj, "type", "") == "MESH"
-        for corner in obj.bound_box
-    ]
-    return min(lows) if lows else 0.0
-
-
-def _centre(scene: Any) -> tuple[float, float, float]:
-    """The middle of every mesh, in metres; the origin for an empty scene."""
-    points = [
-        _world_point(obj.matrix_world, corner)
-        for obj in scene.objects
-        if getattr(obj, "type", "") == "MESH"
-        for corner in obj.bound_box
-    ]
-    if not points:
-        return (0.0, 0.0, 0.0)
-    lows = [min(point[axis] for point in points) for axis in range(3)]
-    highs = [max(point[axis] for point in points) for axis in range(3)]
-    middle = [(lows[axis] + highs[axis]) / 2 for axis in range(3)]
-    return (middle[0], middle[1], middle[2])
-
-
-def _world_point(matrix: Any, corner: Any) -> tuple[float, float, float]:
-    """One local bound-box corner in world space, without mathutils."""
-    point = [
-        sum(matrix[axis][column] * corner[column] for column in range(3)) + matrix[axis][3]
-        for axis in range(3)
-    ]
-    return (point[0], point[1], point[2])
-
-
-def _dress(bpy: Any, scene: Any, recipes: dict[str, Recipe]) -> None:
-    """Assign each mesh the material of its name prefix; none left over."""
-    materials = {prefix: _material(bpy, prefix, recipe) for prefix, recipe in recipes.items()}
-    missing = _assign(scene, materials)
-    if missing:
-        raise RuntimeError(f"piezas sin material: {missing}")
-
-
-def _material(bpy: Any, name: str, recipe: Recipe) -> Any:
-    """One Principled material: colour, roughness and glass transmission."""
-    colour, roughness, transmission = recipe
-    material = bpy.data.materials.new(name)
-    material.use_nodes = True
-    inputs = material.node_tree.nodes["Principled BSDF"].inputs
-    inputs["Base Color"].default_value = (*colour, 1)
-    inputs["Roughness"].default_value = roughness
-    inputs["Transmission Weight"].default_value = transmission
-    if transmission:
-        inputs["IOR"].default_value = 1.45
-    return material
-
-
-def _assign(scene: Any, materials: dict[str, Any]) -> list[str]:
-    """Give every mesh its prefix's material; return the pieces left without."""
-    missing: list[str] = []
-    for obj in scene.objects:
-        if getattr(obj, "type", "") != "MESH":
-            continue
-        prefix = next((key for key in materials if obj.name.lower().startswith(key)), None)
-        if prefix is None:
-            missing.append(obj.name)
-            continue
-        obj.data.materials.clear()
-        obj.data.materials.append(materials[prefix])
-    return missing
-
-
-def _sky_and_sun(bpy: Any, scene: Any) -> None:
-    """A sky texture washing the scene from the sun's direction, plus the sun."""
-    world = bpy.data.worlds.new("cielo")
-    scene.world = world
-    world.use_nodes = True
-    azimuth, elevation = math.radians(SUN["azimut"]), math.radians(SUN["elevacion"])
-    try:
-        sky = world.node_tree.nodes.new("ShaderNodeTexSky")
-        sky.sun_elevation, sky.sun_rotation = elevation, azimuth
-        background = world.node_tree.nodes["Background"]
-        world.node_tree.links.new(sky.outputs["Color"], background.inputs["Color"])
-        background.inputs["Strength"].default_value = SKY_STRENGTH
-    except (AttributeError, KeyError, RuntimeError, TypeError):
-        world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.75, 0.82, 0.92, 1)
-    light = bpy.data.lights.new("sol", "SUN")
-    light.energy, light.angle = SUN["fuerza"], math.radians(SUN_ANGLE_DEG)
-    sun = bpy.data.objects.new("sol", light)
-    scene.collection.objects.link(sun)
-    sun.rotation_euler = (math.pi / 2 - elevation, 0, azimuth + math.pi / 2)
 
 
 def _place_camera(
@@ -787,6 +773,14 @@ def _png_size(value: str) -> tuple[int, int]:
 def _open_path(value: str) -> str:
     """The path ``open`` accepts when this entry runs inside the Windows build."""
     return _host_path(value, _on_windows())
+
+
+# --- the MP4: read from its boxes, which need no third-party module.
+
+
+def _probe_mp4(value: str) -> dict[str, int]:
+    """An MP4's width, height, frames and fps, from its boxes alone."""
+    return mp4.probe(_open_path(value))
 
 
 # --- the host launch, for the WSL Windows Blender the lab runs.

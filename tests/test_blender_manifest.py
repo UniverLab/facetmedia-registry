@@ -38,6 +38,9 @@ ENV_RE = re.compile(r"[A-Z][A-Z0-9_]*\Z")
 #: The manifest's cost and the approved exposure.
 DISK_GB = 0.1
 EXPOSURE = -0.6
+#: The tour's frame-rate bounds, from the spec.
+FPS_MIN = 12
+FPS_MAX = 60
 
 
 def _versions(value: str) -> tuple[int, int, int]:
@@ -131,7 +134,62 @@ def test_the_index_carries_the_package_in_order() -> None:
 def test_the_capability_is_the_image_kind() -> None:
     assert CAPABILITY["kind"] == "image"
     assert CAPABILITY["preview"] == {"viewer": "image"}
-    assert MANIFEST["capabilities"].keys() == {"foto", "assets", "producto"}
+    assert MANIFEST["capabilities"].keys() == {"foto", "assets", "producto", "recorrido"}
+
+
+def test_the_tour_is_the_video_kind_with_the_lab_recipe() -> None:
+    """blender.recorrido is the Eevee camera tour: video kind, video viewer."""
+    tour = MANIFEST["capabilities"]["recorrido"]
+    assert tour["kind"] == "video"
+    assert tour["preview"] == {"viewer": "video"}
+    assert set(tour["inputs"]) == {
+        "model",
+        "azimut",
+        "elevacion",
+        "distancia",
+        "focal",
+        "seconds",
+        "fps",
+        "seed",
+    }
+    assert tour["inputs"]["model"]["type"] == "path"
+    assert tour["inputs"]["model"]["required"] is True
+    assert "glb" in tour["inputs"]["model"]["description"]
+    assert "STEP" in tour["inputs"]["model"]["description"]
+
+
+def test_the_tour_pairs_carry_the_spec_ranges_and_defaults() -> None:
+    """Each leg is one { inicio, fin } item, the angle ranges foto already uses."""
+    inputs = MANIFEST["capabilities"]["recorrido"]["inputs"]
+    expected = {
+        "azimut": ((-75, -15), (-360, 360)),
+        "elevacion": ((55, 40), (-89, 89)),
+        "distancia": ((14.0, 10.5), (0.5, 200)),
+    }
+    for name, (defaults, (low, high)) in expected.items():
+        field = inputs[name]
+        assert field["type"] == "array", name
+        assert set(field["items"]) == {"inicio", "fin"}, name
+        for key, value in zip(("inicio", "fin"), defaults, strict=True):
+            item = field["items"][key]
+            assert item["default"] == value, (name, key)
+            assert (item["min"], item["max"]) == (low, high), (name, key)
+
+
+def test_the_tour_scalars_carry_the_spec_ranges() -> None:
+    inputs = MANIFEST["capabilities"]["recorrido"]["inputs"]
+    assert (inputs["focal"]["default"], inputs["focal"]["min"], inputs["focal"]["max"]) == (
+        30,
+        18,
+        100,
+    )
+    assert (inputs["seconds"]["default"], inputs["seconds"]["min"]) == (10, 2)
+    assert (inputs["seconds"]["max"], inputs["fps"]["default"]) == (60, 24)
+    assert inputs["focal"]["type"] == "number"
+    assert inputs["seconds"]["type"] == "integer" and inputs["fps"]["type"] == "integer"
+    assert (inputs["fps"]["min"], inputs["fps"]["max"]) == (FPS_MIN, FPS_MAX)
+    assert inputs["seed"]["type"] == "integer"
+    assert inputs["seed"]["default"] == 0 and inputs["seed"]["min"] == 0
 
 
 def test_the_assets_capability_is_text_with_the_generic_preview() -> None:

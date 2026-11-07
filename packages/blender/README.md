@@ -195,12 +195,59 @@ viewer. No manifest `[[models]]` entries: the URLs and md5s are dynamic per
 file record and cannot be pinned statically, so the runner — not the core
 downloader — performs the fetch.
 
+## Camera tours
+
+`facet run blender.recorrido <piece>.toml` moves a camera through the same
+daylight scene the photo uses and writes `<model>-recorrido.mp4`
+(1280x720, 24 fps, 10 s by default). The camera starts at the piece's start
+triple and glides to its end triple with a smoothstep, `t*t*(3-2*t)`: it leaves
+and arrives gently, like a crane, instead of starting and stopping dead.
+
+```toml
+[inputs]
+model = "estudio.glb"
+azimut = [{ inicio = -75, fin = -15 }]    # degrees
+elevacion = [{ inicio = 55, fin = 40 }]   # degrees above the floor
+distancia = [{ inicio = 14.0, fin = 10.5 }]  # metres from the model's centre
+focal = 30                                # millimetres
+seconds = 10
+fps = 24
+seed = 0
+```
+
+**Eevee, never Cycles.** A tour is 240 frames. Cycles renders that in about
+45 minutes; Eevee does the same 240 frames at 1280x720 in **about 100 s**, and
+the quality holds because the scene is static and only the camera moves. Cycles
+stays the still-photo engine, where every frame is looked at.
+
+The recipe is fixed, and it is the lab's:
+`scene.render.engine = "BLENDER_EEVEE"`, `taa_render_samples = 32`,
+`use_raytracing` with `SCREEN`, `use_fast_gi`, `use_shadows`, exposure **-0.4**
+under **`AgX - Medium High Contrast`**, 1280x720. One `location` and one
+`rotation_euler` keyframe per frame is what makes Blender interpolate the move.
+
+The clip is written by Blender itself: `media_type = "VIDEO"`,
+`file_format = "FFMPEG"`, `ffmpeg.format = "MPEG4"`, `codec = "H264"`,
+`constant_rate_factor = "HIGH"`, then `render(animation=True)` — no frame
+sequence on disk and no second encoder.
+
+`verify` reads the MP4's own boxes with the standard library alone (`ftyp`,
+`moov/mvhd` for the timescale and duration, `avc1` for the size, `stts` for the
+frame count): width 1280, height 720, the entry's `fps`, and
+`seconds x fps` frames. A file that does not parse fails with the parse error
+as its metric, never an exception. `preview` writes
+`<clip>.mp4.preview.json` for the video viewer, with the probe's measurements
+and the prompt line
+`<stem> · camera tour · azimut <start>→<end> · <frames>f @ <fps>fps`.
+
 ## Verification and doctor
 
 `verify` measures the PNG header (the IHDR, which needs no third-party module
 inside Blender): the file must parse as a PNG and measure exactly 1600x1000 for
 `blender.foto`, or 1200x1200 for `blender.producto`. The metrics carry `width`
-and `height`; a file that is not a PNG carries `error` and fails.
+and `height`; a file that is not a PNG carries `error` and fails. For
+`blender.recorrido` it probes the MP4's boxes instead, carrying `width`,
+`height`, `frames` and `fps`.
 
 `facet preview <name>.png` writes `<name>.png.preview.json` for the `image`
 kind with `name`, `prompt` (the recipe line: model, view, turning, exposure),
