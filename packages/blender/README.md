@@ -119,6 +119,52 @@ What `facet describe blender.foto --json` reports for this manifest:
 | `giro` | number | no | `0` | turn of the whole model about Z in degrees; the sun stays put |
 | `exposure` | number | no | `-0.6` | stops under `AgX - Medium High Contrast` |
 
+## Product photos
+
+`facet run blender.producto <piece>.toml` photographs one CAD part the way a
+catalogue does: the **STL** that `cad.solid` writes beside the piece is
+imported, scaled from millimetres to metres, dressed in a metal and shot on
+Cycles at **1200x1200** under two studio area lights against a dark backdrop.
+The approved reference is the lab's `projects/prueba-render-arq/escuadra-producto.png`
+(brushed aluminium, about 10 s).
+
+```toml
+[inputs]
+part = "escuadra.stl"
+material = "aluminio-cepillado"  # or "acero"
+backdrop = "grafito"             # or "cemento"
+```
+
+- `part` is the `.stl` `cad.solid` exports beside the piece (60 x 40 x 10 mm
+  for the reference bracket), resolved relative to the piece file. The runner
+  measures its bounding box after the import, so nothing about the part's size
+  is assumed.
+- `material` is `aluminio-cepillado` (brushed aluminium: metallic 1, roughness
+  0.38) or `acero` (steel: metallic 1, roughness 0.22). An unknown name fails
+  the run loudly (`material desconocido`), so a part is never left in Blender's
+  default grey.
+- `backdrop` is `grafito` (near black) or `cemento` (dark grey). Both stay dark
+  on purpose: metal needs contrast to read as metal, and a light cyclorama
+  flattens the highlight the photo exists for.
+
+**The light rule.** A fixed studio light burns a small piece out, so the two
+area lights are derived from the part's longest side. A 6 cm piece gets
+**4 W lights 0.50 m away**; the energy scales with the part and is clamped to
+**2-6 W**, the distance to **0.15-2 m**. The keys sit at azimuth -35°/
+elevation 55° and azimuth 145°/elevation 25° around the part's centre, and each
+square light's size is its own distance, which keeps the highlight soft.
+
+The exposure is **-0.2** under `AgX - Medium High Contrast` on Cycles
+(OPTIX, then CUDA, then CPU) at 128 samples with denoise: darker than the
+daylight photo because the studio's lights sit close to the part. The camera is
+a 50 mm perspective view three-quarters on, `max(3 x span, 0.25 m)` away.
+
+One `blender.producto` run writes `<part>-producto.png` (`image/png`) at
+1200x1200 with properties `width`, `height`, `samples`, `exposure`, `material`
+and `backdrop`; the `part` is the hashed input. `verify` measures the header
+against 1200x1200 and `preview` writes the image kind's file with the material,
+the backdrop and the part in its prompt.
+
 ## Assets
 
 One `blender.foto` run writes one asset:
@@ -152,9 +198,9 @@ downloader — performs the fetch.
 ## Verification and doctor
 
 `verify` measures the PNG header (the IHDR, which needs no third-party module
-inside Blender): the file must parse as a PNG and measure exactly 1600x1000.
-The metrics carry `width` and `height`; a file that is not a PNG carries
-`error` and fails.
+inside Blender): the file must parse as a PNG and measure exactly 1600x1000 for
+`blender.foto`, or 1200x1200 for `blender.producto`. The metrics carry `width`
+and `height`; a file that is not a PNG carries `error` and fails.
 
 `facet preview <name>.png` writes `<name>.png.preview.json` for the `image`
 kind with `name`, `prompt` (the recipe line: model, view, turning, exposure),

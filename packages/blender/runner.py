@@ -11,6 +11,8 @@ Cycles GPU settings (OPTIX, 128 samples, denoise, exposure -0.6 under AgX
 Medium High Contrast), and writes ``<model>-foto.png`` at 1600x1000.
 ``verify`` measures the PNG header, ``preview`` writes the image kind's
 preview file, and ``doctor`` reports the Blender-side modules.
+``blender.producto`` reuses the same four verbs for ``producto.py``: one STL
+part in a studio, 1200x1200, its lights scaled from the part's bounding box.
 
 Started with plain Python — ``python runner.py run ...``, as the tests and a
 manual paste-back do — the same entry is the launcher the lab's
@@ -40,6 +42,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import polyhaven
+import producto
 
 #: The image the daylight recipe produces, per the approved lab render.
 RENDER_WIDTH = 1600
@@ -116,7 +119,8 @@ def main(argv: list[str] | None = None) -> int:
         if bpy is None and verb in NEEDS_BLENDER:
             _launch_host(verb, input_path, result_path)
             return 0
-        result = VERBS[verb](bpy, request)
+        table = PRODUCTO_VERBS if request.get("capability") == "blender.producto" else VERBS
+        result = table[verb](bpy, request)
     Path(result_path).write_text(
         json.dumps(result, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8"
     )
@@ -195,9 +199,44 @@ def _run(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _producto_run(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
+    """Render one studio product shot and report it as the image asset it is."""
+    params = dict(request.get("inputs") or {})
+    part = str(params["part"])
+    name = f"{_part_stem(part)}-producto"
+    destination = f"{str(request['out_dir']).rstrip('/')}/{name}.png"
+    windows = _on_windows()
+    producto.render(bpy, _host_path(part, windows), _host_path(destination, windows), params)
+    return {
+        "tool": {"name": "blender", "version": _version(bpy)},
+        "assets": [
+            {
+                "file": f"{name}.png",
+                "name": name,
+                "kind": "image",
+                "mime": "image/png",
+                "properties": {
+                    "width": producto.PRODUCT_WIDTH,
+                    "height": producto.PRODUCT_HEIGHT,
+                    "samples": producto.SAMPLES,
+                    "exposure": producto.EXPOSURE,
+                    "material": str(params.get("material") or producto.DEFAULT_MATERIAL),
+                    "backdrop": str(params.get("backdrop") or producto.DEFAULT_BACKDROP),
+                },
+                "params": params,
+                "seed": producto.SEED,
+                "inputs": [part],
+            }
+        ],
+    }
+
+
 def _verify(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
     """Measure each PNG's header against the recipe's size."""
-    thresholds = {"width": RENDER_WIDTH, "height": RENDER_HEIGHT}
+    product = request.get("capability") == "blender.producto"
+    width = producto.PRODUCT_WIDTH if product else RENDER_WIDTH
+    height = producto.PRODUCT_HEIGHT if product else RENDER_HEIGHT
+    thresholds = {"width": width, "height": height}
     paths = [str(item) for item in request.get("assets") or []]
     return {"assets": [_verdict(path, thresholds) for path in paths]}
 
@@ -227,31 +266,57 @@ def _asset_verdict(
 def _preview(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
     """Write the image kind's preview file beside each asset."""
     params = dict(request.get("inputs") or {})
+    product = request.get("capability") == "blender.producto"
     entries: list[dict[str, Any]] = []
     for item in request.get("assets") or []:
         path = str(item)
         file_name = posixpath.basename(path)
         name = posixpath.splitext(file_name)[0]
         width, height = _png_size(path)
-        data = {
-            "preview": 1,
-            "kind": "image",
-            "summary": (
-                f"{name} · {width}×{height} · giro {_giro(params):g} · "
-                f"exposure {_exposure(params):g}"
-            ),
-            "name": name,
-            "prompt": _prompt(params),
-            "seed": SEED,
-            "width": width,
-            "height": height,
-        }
+        data = (
+            _producto_preview(name, width, height, params)
+            if product
+            else _foto_preview(name, width, height, params)
+        )
         preview_name = f"{file_name}.preview.json"
         preview_path = f"{posixpath.dirname(path)}/{preview_name}"
         with open(_open_path(preview_path), "w", encoding="utf-8") as handle:
             handle.write(json.dumps(data, ensure_ascii=False, sort_keys=True) + "\n")
         entries.append({"file": file_name, "preview": preview_name, "images": []})
     return {"assets": entries}
+
+
+def _foto_preview(name: str, width: int, height: int, params: dict[str, Any]) -> dict[str, Any]:
+    """The daylight photo's preview: the recipe line is the photo's prompt."""
+    return {
+        "preview": 1,
+        "kind": "image",
+        "summary": (
+            f"{name} · {width}×{height} · giro {_giro(params):g} · exposure {_exposure(params):g}"
+        ),
+        "name": name,
+        "prompt": _prompt(params),
+        "seed": SEED,
+        "width": width,
+        "height": height,
+    }
+
+
+def _producto_preview(name: str, width: int, height: int, params: dict[str, Any]) -> dict[str, Any]:
+    """The product shot's preview: material and backdrop name the studio."""
+    material = str(params.get("material") or producto.DEFAULT_MATERIAL)
+    backdrop = str(params.get("backdrop") or producto.DEFAULT_BACKDROP)
+    stem = _part_stem(str(params.get("part") or "producto"))
+    return {
+        "preview": 1,
+        "kind": "image",
+        "summary": f"{name} · {width}×{height} · {material} · {backdrop}",
+        "name": name,
+        "prompt": f"{stem} · product photo · {material} on {backdrop} · studio",
+        "seed": producto.SEED,
+        "width": width,
+        "height": height,
+    }
 
 
 def _prompt(params: dict[str, Any]) -> str:
@@ -318,6 +383,8 @@ def _doctor_devices(bpy: Any) -> dict[str, Any]:
 
 
 VERBS = {"run": _run, "verify": _verify, "preview": _preview, "doctor": _doctor}
+#: ``blender.producto`` keeps verify, preview and doctor; its run is the studio.
+PRODUCTO_VERBS = {**VERBS, "run": _producto_run}
 
 
 # --- blender.assets: Poly Haven skies, textures and models, fetched once.
@@ -687,6 +754,13 @@ def _asset_name(model: str) -> str:
     stem = posixpath.splitext(posixpath.basename(model))[0].lower()
     safe = UNSAFE_NAME.sub("-", stem).strip("-")
     return f"{safe or 'foto'}{ASSET_SUFFIX}"
+
+
+def _part_stem(part: str) -> str:
+    """``escuadra.STL`` -> ``escuadra``: the product asset's base name."""
+    stem = posixpath.splitext(posixpath.basename(part))[0].lower()
+    safe = UNSAFE_NAME.sub("-", stem).strip("-")
+    return safe or "producto"
 
 
 def _version(bpy: Any) -> str:

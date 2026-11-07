@@ -22,6 +22,9 @@ put `blender` on `PATH`); `facet doctor blender` fails with
 - When the model is already a `cad.solid` piece with one CadQuery element per
   piece and a meaningful name (`muros`, `piso`, `cama`, ...), because the name
   is what decides each piece's material.
+- When a person should see one finished part as a catalogue photo:
+  `blender.producto` shoots the STL from `cad.solid` at 1200x1200, with the
+  studio lights scaled to the part's own size.
 - Not for stills from prompts (use `comfy.still`), and not for a line view of
   a part (use `cad.solid`'s SVG).
 

@@ -131,7 +131,7 @@ def test_the_index_carries_the_package_in_order() -> None:
 def test_the_capability_is_the_image_kind() -> None:
     assert CAPABILITY["kind"] == "image"
     assert CAPABILITY["preview"] == {"viewer": "image"}
-    assert MANIFEST["capabilities"].keys() == {"foto", "assets"}
+    assert MANIFEST["capabilities"].keys() == {"foto", "assets", "producto"}
 
 
 def test_the_assets_capability_is_text_with_the_generic_preview() -> None:

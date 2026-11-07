@@ -83,6 +83,30 @@ description = "Exposure in stops under the AgX - Medium High Contrast view trans
 [capabilities.foto.preview]
 viewer = "image"
 
+[capabilities.producto]
+summary = "Studio product photo of a CAD STL under two area lights with Cycles on the GPU (1200x1200, ~10 s)"
+kind = "image"
+
+[capabilities.producto.inputs.part]
+type = "path"
+required = true
+description = "STL (.stl) written by cad.solid beside the piece, resolved relative to the piece file; millimetres, scaled to metres by the runner."
+
+[capabilities.producto.inputs.material]
+type = "enum"
+values = ["aluminio-cepillado", "acero"]
+default = "aluminio-cepillado"
+description = "Metal the whole part is dressed in: brushed aluminium (roughness 0.38) or steel (roughness 0.22); both fully metallic."
+
+[capabilities.producto.inputs.backdrop]
+type = "enum"
+values = ["grafito", "cemento"]
+default = "grafito"
+description = "Seamless backdrop: graphite (near black) or cement (dark grey); both keep the metal's contrast."
+
+[capabilities.producto.preview]
+viewer = "image"
+
 [capabilities.assets]
 summary = "Versioned Poly Haven skies, textures and models fetched once into the shared models dir, with a receipt that verify re-checks."
 kind = "text"

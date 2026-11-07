@@ -89,7 +89,8 @@ class Node:
     def __init__(self, name):
         self.name = name
         self.inputs = {key: Input() for key in (
-            "Base Color", "Roughness", "Transmission Weight", "IOR", "Color", "Strength")}
+            "Base Color", "Metallic", "Roughness", "Transmission Weight", "IOR",
+            "Color", "Strength")}
         self.outputs = {"Color": object()}
         self.sun_elevation = 0.0
         self.sun_rotation = 0.0
@@ -241,14 +242,18 @@ class Camera:
         self.name = name
         self.type = "PERSP"
         self.ortho_scale = 6.0
+        self.lens = 50.0
 
 
 class Light:
     def __init__(self, name, kind="SUN"):
         self.name = name
         self.kind = kind
+        self.type = kind
         self.energy = 0.0
         self.angle = 0.0
+        self.shape = "POINT"
+        self.size = 0.0
 
 
 class World:
@@ -389,24 +394,32 @@ class WmOps:
     def read_factory_settings(self, use_empty=False):
         context.scene = Scene()
 
+    def stl_import(self, filepath):
+        TRAIL["stl_import"] = filepath
+        _load_pieces()
+
 
 class ImportOps:
     def gltf(self, filepath):
         TRAIL["import_filepath"] = filepath
-        source = os.environ.get("STUB_SCENE", "")
-        pieces = json.loads(Path(source).read_text())["pieces"] if source else []
-        for piece in pieces:
-            context.scene.objects.append(
-                Object(
-                    piece["name"],
-                    size=tuple(piece.get("size", (1000.0, 1000.0, 1000.0))),
-                    location=tuple(piece.get("location", (0.0, 0.0, 0.0))),
-                    # The glTF importer leaves every object in QUATERNION mode,
-                    # where Blender ignores rotation_euler. The identity
-                    # quaternion keeps the stub's single-axis geometry exact.
-                    rotation_mode="QUATERNION",
-                )
+        _load_pieces()
+
+
+def _load_pieces():
+    source = os.environ.get("STUB_SCENE", "")
+    pieces = json.loads(Path(source).read_text())["pieces"] if source else []
+    for piece in pieces:
+        context.scene.objects.append(
+            Object(
+                piece["name"],
+                size=tuple(piece.get("size", (1000.0, 1000.0, 1000.0))),
+                location=tuple(piece.get("location", (0.0, 0.0, 0.0))),
+                # The glTF importer leaves every object in QUATERNION mode,
+                # where Blender ignores rotation_euler. The identity
+                # quaternion keeps the stub's single-axis geometry exact.
+                rotation_mode="QUATERNION",
             )
+        )
 
 
 class MeshOps:
@@ -443,24 +456,60 @@ class RenderOps:
         TRAIL["camera"] = None if scene.camera is None else {
             "type": scene.camera.data.type,
             "ortho_scale": scene.camera.data.ortho_scale,
+            "lens": scene.camera.data.lens,
             "location": list(scene.camera.location),
         }
         TRAIL["sun"] = {
             obj.name: obj.data.energy for obj in scene.objects if obj.type == "LIGHT"
         }
+        TRAIL["lights"] = {
+            obj.name: {
+                "type": obj.data.type,
+                "shape": obj.data.shape,
+                "energy": obj.data.energy,
+                "size": obj.data.size,
+                "location": list(obj.location),
+            }
+            for obj in scene.objects
+            if obj.type == "LIGHT"
+        }
+        TRAIL["span"] = _span(meshes)
         TRAIL["floor"] = next(
             (list(obj.location) for obj in scene.objects if obj.name == "suelo"), None
         )
         world = scene.world
+        background = (
+            None if world is None else world.node_tree.nodes["Background"]
+        )
+        TRAIL["backdrop"] = (
+            None if background is None else background.inputs["Color"].default_value
+        )
         TRAIL["sky_strength"] = (
-            None
-            if world is None
-            else world.node_tree.nodes["Background"].inputs["Strength"].default_value
+            None if background is None else background.inputs["Strength"].default_value
         )
         _write_png(scene)
         target = os.environ.get("STUB_TRAIL", "")
         if target:
             Path(target).write_text(json.dumps(TRAIL, default=list))
+
+
+def _span(meshes):
+    """The longest side of every mesh's world bound box, in metres."""
+    points = [
+        [
+            sum(obj.matrix_world[axis][column] * corner[column] for column in range(3))
+            + obj.matrix_world[axis][3]
+            for axis in range(3)
+        ]
+        for obj in meshes
+        for corner in obj.bound_box
+    ]
+    if not points:
+        return 0.0
+    return max(
+        max(point[axis] for point in points) - min(point[axis] for point in points)
+        for axis in range(3)
+    )
 
 
 def _write_png(scene):
