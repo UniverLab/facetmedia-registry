@@ -136,8 +136,9 @@ seed = 7
 
 The voice is a local-only profile id, not a name from a fixed list. The
 runner asks the backend for its profiles and refuses an id that is not
-installed here, naming the profile-creation spec; profiles come from local
-samples and are created by that spec, never by this package. The approved
+installed here. Profiles are created by the `voicestudio.profile` capability
+from the person's local samples and are never vendored: see
+[Making a profile](#making-a-profile-voicestudioprofile). The approved
 pattern lives at
 `projects/prueba-voz/mi-voz/clon/cosyvoice/voz.toml`.
 
@@ -149,6 +150,52 @@ the runner refuses a clone piece naming any engine but `cosyvoice`.
 
 Clone only with the owner's permission (`AGENTS.md:259`). The runner never uploads
 a sample anywhere: it sends text to the local backend and reads the WAV back.
+
+## Making a profile (`voicestudio.profile`)
+
+**Ask the owner first, always.** A cloned voice is that person's voice: only
+make a profile from samples they gave you for it, and only with their
+permission (`AGENTS.md:259`).
+
+`voicestudio.profile` turns a local reference recording into a clone profile
+the backend keeps on this machine. The sample never enters the registry and
+no profile is ever vendored.
+
+```toml
+[inputs]
+name = "mi-voz"
+ref-audio = "samples/mi-voz.wav"   # relative to this piece file
+instruct = "male, low pitch"       # optional: the backend's design vocabulary
+language = "es"
+```
+
+```sh
+facet run voicestudio.profile mi-voz.toml
+```
+
+The reference is 7–30 s of neutral speech, recorded from
+`projects/prueba-voz/guion-grabacion.md`. A questioning or exclamatory start
+contaminates the clone with a sharp attack and skips the first sentences, so
+the runner refuses a take outside that window instead of posting it. It also
+repairs the laptop stereo case: when one channel is digitally silent and the
+other carries the voice, it keeps the live channel (what
+`ffmpeg -af pan=mono|c0=c1` does manually) and prints the repair. Finally it
+takes the reference to −20 LUFS, as the approved reference was, with the
+sample peak capped at −1 dBFS.
+
+`ref-audio` is a `path` input resolved relative to the piece file. The runner
+validates the take, then POSTs it once as the backend's `ref_audio` multipart
+field with `kind=clone`, `name`, `language` and `instruct` (leaving `ref_text`
+empty so the backend transcribes the reference at save time). An empty name
+is refused before any POST, and a backend 4xx/5xx fails the run.
+
+The backend persists the audio under its own app-data `VOICES_DIR`; the run
+writes only `<name>.profile.json` beside the piece, a receipt with the
+returned profile `id`, `name` and `language`. Nothing else is written, and no
+sample or profile enters the registry. `facet run` verifies by default: the
+receipt passes while its id is still in the backend's `GET /profiles`
+listing. `facet preview` writes `<name>.profile.json.preview.json` for the
+`generic` viewer (the receipt's id, name and language).
 
 ## Ready versus health
 

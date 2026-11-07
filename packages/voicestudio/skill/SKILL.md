@@ -8,7 +8,8 @@ Voice text to WAV clips through a VoiceStudio backend. Two engines speak
 the `narradora` clone: `voxcpm2` (Apache-2.0, the default) and `omnivoice`
 (CC-BY-NC, the approved narrator engine). `voicestudio.speak` writes the
 `audio` kind; `voicestudio.clone` speaks a person's own local profile on the
-`cosyvoice` engine (Apache-2.0).
+`cosyvoice` engine (Apache-2.0). `voicestudio.profile` makes that local
+profile from the person's own samples; its recipe lives in the package README.
 
 ## When to use
 

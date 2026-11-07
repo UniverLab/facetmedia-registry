@@ -95,6 +95,12 @@ DEFAULT_PROFILE_ID = "a082932b"
 #: The capability that speaks a local clone profile, and the one engine it uses.
 CLONE_CAPABILITY = "voicestudio.clone"
 CLONE_ENGINE = "cosyvoice"
+#: The capability that turns a local reference into a clone profile.
+PROFILE_CAPABILITY = "voicestudio.profile"
+#: The receipt a profile run writes beside the piece (the sample never is).
+PROFILE_SUFFIX = ".profile.json"
+#: What verify reports as the profile receipt's verifier.
+PROFILE_VERIFIER = "voicestudio-profiles"
 #: Where the missing-profile refusal sends the person: profile creation is its own spec.
 CLONE_PROFILE_SPEC = "create a clone profile from local samples, projects/prueba-voz/mi-voz/"
 #: The recreate recipe for a missing profile, as the backend expects it.
@@ -365,9 +371,77 @@ def _narrate(whisper: Any, base_url: str, clip: dict[str, Any], out_dir: Path) -
     return _asset(clip, path, seed, score, transcript, tries)
 
 
+def _profile_module() -> Any:
+    """The profile helpers, imported only when a profile verb needs them."""
+    return importlib.import_module("profile")
+
+
+def _run_profile(req: Request) -> dict[str, Any]:
+    """Validate the reference, POST one clone profile, write its receipt."""
+    params = dict(req.inputs)
+    name = str(params.get("name", "")).strip()
+    ref = str(params.get("ref-audio") or "")
+    if not ref:
+        raise ValueError("the piece names no ref-audio (the person's reference recording)")
+    path = Path(ref)
+    if not path.is_absolute():
+        path = req.piece_dir / path
+    if not path.is_file():
+        raise ValueError(f"{path}: the reference audio does not exist")
+    if Path(name).name != name:
+        raise ValueError(f"profile name {name!r} must be a bare file stem")
+    library = _profile_module()
+    audio, repairs = library.validate_ref(path)
+    for repair in repairs:
+        print(f"REPAIRED {path.name}: {repair}", flush=True)
+    language = str(params.get("language", "es"))
+    record = library.post_profile(
+        _base_url(),
+        name,
+        audio,
+        instruct=str(params.get("instruct", "")),
+        language=language,
+    )
+    profile_id = str(record.get("id", ""))
+    if not profile_id:
+        raise RuntimeError("the backend returned no profile id")
+    receipt = {
+        "id": profile_id,
+        "name": str(record.get("name") or name),
+        "language": str(record.get("language") or language),
+    }
+    file_name = f"{name}{PROFILE_SUFFIX}"
+    (req.out_dir / file_name).write_text(
+        json.dumps(receipt, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return {
+        "tool": dict(TOOL),
+        "assets": [
+            {
+                "file": file_name,
+                "name": name,
+                "kind": "text",
+                "mime": "application/json",
+                "properties": {
+                    "profile_id": profile_id,
+                    "name": receipt["name"],
+                    "language": receipt["language"],
+                    "target_lufs": library.TARGET_LUFS,
+                    "repairs": repairs,
+                },
+                "params": {"name": name, "ref-audio": ref, "language": language},
+                "seed": 0,
+                "inputs": [],
+            }
+        ],
+    }
+
+
 @runner.verb("run")
 def run(req: Request) -> dict[str, Any]:
     """Connect, wait for readiness, then voice and verify every clip."""
+    if req.capability == PROFILE_CAPABILITY:
+        return _run_profile(req)
     clips = _clips(dict(req.inputs))
     if not clips:
         raise ValueError("the piece has no clips")
@@ -383,9 +457,44 @@ def run(req: Request) -> dict[str, Any]:
     return {"tool": dict(TOOL), "assets": assets}
 
 
+def _read_receipt(path: Path) -> dict[str, Any]:
+    """The receipt's JSON object, named by the file when it does not parse."""
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise ValueError(f"{path.name}: cannot read the receipt ({exc})") from None
+    except ValueError as exc:
+        raise ValueError(f"{path.name}: the receipt is not JSON ({exc})") from None
+    if not isinstance(loaded, dict):
+        raise ValueError(f"{path.name}: the receipt is not a JSON object")
+    return loaded
+
+
+def _verify_profile(path: Path) -> dict[str, Any]:
+    """One receipt passes when its id is still in the backend's profiles."""
+    receipt = _read_receipt(path)
+    profile_id = str(receipt.get("id", ""))
+    if not profile_id:
+        raise ValueError(f"{path.name}: the receipt names no profile id")
+    try:
+        rows = _profile_rows(_base_url())
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        raise RuntimeError(f"GET {PROFILES_PATH} failed: {exc}") from None
+    ids = {str(entry.get("id", "")) for entry in rows}
+    return {
+        "file": path.name,
+        "passed": profile_id in ids,
+        "metrics": {"profile_id": profile_id, "profiles": len(rows)},
+        "thresholds": {},
+        "verifier": PROFILE_VERIFIER,
+    }
+
+
 @runner.verb("verify")
 def verify(req: Request) -> dict[str, Any]:
     """Transcribe each asset and measure it against its clip's text."""
+    if req.capability == PROFILE_CAPABILITY:
+        return {"assets": [_verify_profile(path) for path in req.assets]}
     params = dict(req.inputs)
     clips = {clip["name"]: clip for clip in _clips(params)}
     whisper = _whisper(req)
@@ -417,9 +526,30 @@ def _audio() -> Any:
     return importlib.import_module("facet_lib.audiopreview")
 
 
+def _preview_profile(req: Request, path: Path) -> dict[str, Any]:
+    """The generic viewer's preview file for a profile receipt."""
+    receipt = _read_receipt(path)
+    profile_id = str(receipt.get("id", ""))
+    name = str(receipt.get("name", ""))
+    language = str(receipt.get("language", ""))
+    data = {
+        "preview": 1,
+        "kind": "text",
+        "summary": f"profile {name[:80]} · {language} · {profile_id}",
+        "fields": {"id": profile_id, "name": name, "language": language},
+    }
+    preview_name = f"{path.name}.preview.json"
+    (req.out_dir / preview_name).write_text(
+        json.dumps(data, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return {"file": path.name, "preview": preview_name, "images": []}
+
+
 @runner.verb("preview")
 def preview(req: Request) -> dict[str, Any]:
     """The audio preview file: waveform, loudness, and the speech check."""
+    if req.capability == PROFILE_CAPABILITY:
+        return {"assets": [_preview_profile(req, path) for path in req.assets]}
     params = dict(req.inputs)
     clips = {clip["name"]: clip for clip in _clips(params)}
     whisper = _whisper(req)

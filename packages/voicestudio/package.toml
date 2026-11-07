@@ -156,3 +156,31 @@ thresholds = { wer_max = 0.05 }
 
 [capabilities.clone.preview]
 viewer = "audio"
+
+[capabilities.profile]
+summary = "A local clone profile created from the person's own reference samples; the receipt carries its id"
+kind = "text"
+
+[capabilities.profile.inputs.name]
+type = "string"
+required = true
+description = "Profile name; the run writes <name>.profile.json beside the piece."
+
+[capabilities.profile.inputs.ref-audio]
+type = "path"
+required = true
+description = "The person's reference recording, 7-30 s of neutral speech, resolved relative to the piece file and posted as the backend's ref_audio field."
+
+[capabilities.profile.inputs.instruct]
+type = "string"
+default = ""
+description = "Closed design vocabulary: female/male, child to elderly, very low to very high pitch, whisper; accents apply to English only, Spanish comes out Latin."
+
+[capabilities.profile.inputs.language]
+type = "enum"
+values = ["es"]
+default = "es"
+description = "Profile language."
+
+[capabilities.profile.preview]
+viewer = "generic"
