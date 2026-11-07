@@ -17,6 +17,9 @@ Two engines speak that voice:
 `omnivoice` backend voice. A `voxcpm2` piece asks for nothing; an
 `omnivoice` piece is gated per piece on its recorded acceptance.
 
+A third engine, `cosyvoice` (Apache-2.0), speaks a person's own clone through
+`voicestudio.clone`: see [Cloned voices](#cloned-voices-cosyvoice).
+
 ## The piece format
 
 ```toml
@@ -109,6 +112,44 @@ hint above; a `voxcpm2` piece runs with nothing accepted. The runner never
 re-implements that check. Accepting makes the person who runs facet
 responsible for complying with the terms.
 
+## Cloned voices (cosyvoice)
+
+`voicestudio.clone` speaks a person's own clone on the `cosyvoice` engine
+(Apache-2.0, about 15 s per clip). It is the engine closest to the owner's
+rhythm in the lab comparison: about 5 % faster than the real voice, against
+14 % for `omnivoice` and 19 % for `voxcpm2`, with a pitch band of
+135–144 Hz against the real 136–140 Hz. With the narrator it sounded
+somewhat Spanish-from-Spain, so the clone is the second voice at most,
+never the lead.
+
+```toml
+[inputs]
+voice = "d4e9ee57"       # the local profile id; profiles are never bundled
+model = "cosyvoice"      # the clone engine, the only one this piece may name
+language = "es"
+
+[[inputs.clip]]
+name = "mi-voz"
+text = "En este laboratorio probamos una voz en español."
+seed = 7
+```
+
+The voice is a local-only profile id, not a name from a fixed list. The
+runner asks the backend for its profiles and refuses an id that is not
+installed here, naming the profile-creation spec; profiles come from local
+samples and are created by that spec, never by this package. The approved
+pattern lives at
+`projects/prueba-voz/mi-voz/clon/cosyvoice/voz.toml`.
+
+Two voices are two pieces: the narrator in one file (`narradora` on
+`omnivoice`) and the person in another (`voice = <profile id>` on
+`cosyvoice`), interleaved later in HyperFrames. One `.toml` carries one
+engine only; a two-engine piece fails `invalid_input` before synthesis, and
+the runner refuses a clone piece naming any engine but `cosyvoice`.
+
+Clone only with the owner's permission (`AGENTS.md:259`). The runner never uploads
+a sample anywhere: it sends text to the local backend and reads the WAV back.
+
 ## Ready versus health
 
 `/health` answers `ok` while the backend's background import is still
@@ -176,5 +217,6 @@ recipe as a host hint.
 The VoiceStudio backend is AGPL-3.0-only and runs on the person's machine
 as their tool; the runner talks to it over HTTP and licenses nothing of it.
 The verification model (faster-whisper, ctranslate2) is MIT, the `voxcpm2`
-engine is Apache-2.0, and the `omnivoice` engine's weights are CC-BY-NC
-(non-commercial): see [the licence section](#the-omnivoice-licence-cc-by-nc).
+and `cosyvoice` engines are Apache-2.0, and the `omnivoice` engine's weights
+are CC-BY-NC (non-commercial): see
+[the licence section](#the-omnivoice-licence-cc-by-nc).

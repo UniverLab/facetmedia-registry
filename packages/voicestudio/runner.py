@@ -92,6 +92,11 @@ CLONE_PATH = Path.home() / "Projects" / "open-source" / "VoiceStudio"
 #: The default cloned voice profile (registered locally with POST /profiles).
 DEFAULT_VOICE = "narradora"
 DEFAULT_PROFILE_ID = "a082932b"
+#: The capability that speaks a local clone profile, and the one engine it uses.
+CLONE_CAPABILITY = "voicestudio.clone"
+CLONE_ENGINE = "cosyvoice"
+#: Where the missing-profile refusal sends the person: profile creation is its own spec.
+CLONE_PROFILE_SPEC = "create a clone profile from local samples, projects/prueba-voz/mi-voz/"
 #: The recreate recipe for a missing profile, as the backend expects it.
 PROFILE_RECIPE = (
     "POST /profiles multipart name=narradora kind=clone language=es with "
@@ -366,8 +371,13 @@ def run(req: Request) -> dict[str, Any]:
     clips = _clips(dict(req.inputs))
     if not clips:
         raise ValueError("the piece has no clips")
+    clone = req.capability == CLONE_CAPABILITY
+    if clone:
+        _check_clone_engine(clips)
     base_url = _base_url()
     _wait_ready(base_url)
+    if clone:
+        _check_clone_voice(base_url, clips[0]["voice"])
     whisper = _whisper(req)
     assets = [_narrate(whisper, base_url, clip, req.out_dir) for clip in clips]
     return {"tool": dict(TOOL), "assets": assets}
@@ -662,17 +672,42 @@ def _doctor_backend(base_url: str) -> dict[str, Any]:
     return _verdict("backend", True, f"{state}: {json.dumps(payload)[:120]}")
 
 
+def _profile_rows(base_url: str) -> list[dict[str, Any]]:
+    """The backend's local voice profiles, unwrapped from the response body."""
+    payload = _fetch_json(base_url, PROFILES_PATH, CONNECT_TIMEOUT_S)
+    profiles = payload.get("profiles", payload) if isinstance(payload, dict) else payload
+    if not isinstance(profiles, list):
+        raise ValueError(f"{PROFILES_PATH} answered an unexpected body")
+    return [entry for entry in profiles if isinstance(entry, dict)]
+
+
+def _check_clone_engine(clips: list[dict[str, Any]]) -> None:
+    """A clone piece speaks with cosyvoice only: one engine per piece."""
+    if any(clip["model"] != CLONE_ENGINE for clip in clips):
+        raise ValueError("one engine per piece: voicestudio.clone speaks with cosyvoice only")
+
+
+def _check_clone_voice(base_url: str, voice: str) -> None:
+    """A clone piece speaks only with a profile installed on this machine."""
+    try:
+        profiles = _profile_rows(base_url)
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        raise RuntimeError(f"GET {PROFILES_PATH} failed: {exc}") from None
+    ids = {str(entry.get("id", "")) for entry in profiles}
+    if voice not in ids:
+        raise ValueError(
+            f"clone voice {voice} is not installed in this backend; {CLONE_PROFILE_SPEC}"
+        )
+
+
 def _doctor_profile(base_url: str) -> dict[str, Any]:
     """The default cloned voice exists, or the doctor names the recipe."""
     try:
-        payload = _fetch_json(base_url, PROFILES_PATH, CONNECT_TIMEOUT_S)
+        profiles = _profile_rows(base_url)
     except (urllib.error.URLError, OSError, ValueError) as exc:
         return _verdict("profile", False, f"GET {PROFILES_PATH} failed: {exc}")
-    profiles = payload.get("profiles", payload) if isinstance(payload, dict) else payload
-    if not isinstance(profiles, list):
-        return _verdict("profile", False, f"{PROFILES_PATH} answered an unexpected body")
-    names = {str(entry.get("name", "")) for entry in profiles if isinstance(entry, dict)}
-    ids = {str(entry.get("id", "")) for entry in profiles if isinstance(entry, dict)}
+    names = {str(entry.get("name", "")) for entry in profiles}
+    ids = {str(entry.get("id", "")) for entry in profiles}
     if DEFAULT_VOICE in names or DEFAULT_PROFILE_ID in ids:
         return _verdict("profile", True, f"{DEFAULT_VOICE} ({DEFAULT_PROFILE_ID}) registered")
     return _verdict(

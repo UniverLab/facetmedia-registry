@@ -4,7 +4,7 @@ requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "debpalash (VoiceStudio)"
 tool_name = "VoiceStudio"
-description = "Narration through a self-started VoiceStudio backend with the voxcpm2 or omnivoice engine, checked by transcription"
+description = "Narration through a self-started VoiceStudio backend with the voxcpm2, omnivoice or cosyvoice engine, checked by transcription"
 facet = "voice"
 uses = ["textnorm", "audiopreview"]
 
@@ -34,6 +34,10 @@ spdx = "MIT"
 [[licenses]]
 subject = "ctranslate2"
 spdx = "MIT"
+
+[[licenses]]
+subject = "cosyvoice (the backend engine)"
+spdx = "Apache-2.0"
 
 [[models]]
 id = "faster-whisper-small-verify"
@@ -101,4 +105,54 @@ description = "Synthesis seed; the verification loop regenerates a failed clip w
 thresholds = { wer_max = 0.05 }
 
 [capabilities.speak.preview]
+viewer = "audio"
+
+[capabilities.clone]
+summary = "Cloned voice on cosyvoice (Apache-2.0, ~15 s/clip)"
+kind = "audio"
+
+[capabilities.clone.inputs.voice]
+type = "string"
+required = true
+pattern = "^[0-9a-f]{8}$"
+description = "Local clone profile id registered in this backend (POST /profiles); the runner refuses an id that is not installed here."
+
+[capabilities.clone.inputs.model]
+type = "enum"
+values = ["cosyvoice"]
+default = "cosyvoice"
+description = "Manifest model id of the engine used by the whole piece: the core gates per piece on this value. Exactly one engine per piece (two voices go in two files and interleave in HyperFrames)."
+
+[capabilities.clone.inputs.language]
+type = "enum"
+values = ["es"]
+default = "es"
+description = "Narration language of the piece."
+
+[capabilities.clone.inputs.clip]
+type = "array"
+min_items = 1
+required = true
+description = "Clips to narrate; each writes <name>.wav."
+
+[capabilities.clone.inputs.clip.items.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name."
+
+[capabilities.clone.inputs.clip.items.text]
+type = "string"
+required = true
+description = "Narration text."
+
+[capabilities.clone.inputs.clip.items.seed]
+type = "integer"
+required = true
+description = "Synthesis seed; the verification loop regenerates a failed clip with seed + 1."
+
+[capabilities.clone.verify]
+thresholds = { wer_max = 0.05 }
+
+[capabilities.clone.preview]
 viewer = "audio"

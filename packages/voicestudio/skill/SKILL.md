@@ -6,8 +6,9 @@ description: Narrate Spanish through a started VoiceStudio backend on the voxcpm
 
 Voice text to WAV clips through a VoiceStudio backend. Two engines speak
 the `narradora` clone: `voxcpm2` (Apache-2.0, the default) and `omnivoice`
-(CC-BY-NC, the approved narrator engine). One capability,
-`voicestudio.speak`, writing the `audio` kind.
+(CC-BY-NC, the approved narrator engine). `voicestudio.speak` writes the
+`audio` kind; `voicestudio.clone` speaks a person's own local profile on the
+`cosyvoice` engine (Apache-2.0).
 
 ## When to use
 
@@ -17,6 +18,9 @@ the `narradora` clone: `voxcpm2` (Apache-2.0, the default) and `omnivoice`
   clip with faster-whisper and regenerates the bad ones with another seed.
 - Needs a backend that is already running (its start command lives in the
   package README). For CPU-only narration without a backend, use `kokoro.speak`.
+- When a person's own clone is the point: `voicestudio.clone` takes a local
+  profile id and `cosyvoice`, only with the owner's permission. Two voices are
+  two pieces (narrator on `omnivoice`, person on `cosyvoice`).
 
 ## Pieces
 

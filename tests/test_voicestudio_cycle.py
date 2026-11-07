@@ -26,6 +26,7 @@ import subprocess
 import sys
 import time
 import wave
+from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -154,8 +155,10 @@ import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 STATES = list(json.loads(os.environ["STUB_STATES"]))
+PROFILES = list(json.loads(os.environ.get("STUB_PROFILES", "[]")))
 POLLS = os.environ["STUB_POLLS"]
 BODIES = os.environ["STUB_BODIES"]
+GETS = os.environ["STUB_GETS"]
 CANNED = os.environ["STUB_CANNED"]
 ERROR = os.environ.get("STUB_ERROR", "")
 
@@ -188,6 +191,10 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if self.path == "/profiles":
+            _append(GETS, {"path": self.path})
+            self.send_body(json.dumps({"profiles": PROFILES}).encode(), "application/json")
+            return
         if self.path != "/model/status":
             self.send_error(404)
             return
@@ -209,7 +216,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    for path in (POLLS, BODIES):
+    for path in (POLLS, BODIES, GETS):
         open(path, "a", encoding="utf-8").close()  # the handlers read these before the first append
     parser = argparse.ArgumentParser()
     parser.add_argument("--listen", default="127.0.0.1")
@@ -316,7 +323,10 @@ def _stub_dir(tmp_path: Path) -> Path:
 
 
 def _backend(
-    tmp_path: Path, states: list[str], error: str = ""
+    tmp_path: Path,
+    states: list[str],
+    error: str = "",
+    profiles: list[dict[str, str]] | None = None,
 ) -> tuple[subprocess.Popen[str], str, dict[str, Path]]:
     port = _free_port()
     logs = tmp_path / "stub-logs"
@@ -324,6 +334,7 @@ def _backend(
     files = {
         "pol": logs / "polls.jsonl",
         "bod": logs / "bodies.jsonl",
+        "get": logs / "gets.jsonl",
         "can": logs / "clip.wav",
     }
     server = tmp_path / "stub-backend.py"
@@ -333,9 +344,11 @@ def _backend(
         "STUB_STATES": json.dumps(states),
         "STUB_POLLS": str(files["pol"]),
         "STUB_BODIES": str(files["bod"]),
+        "STUB_GETS": str(files["get"]),
         "STUB_CANNED": str(files["can"]),
         "STUB_CALLS": str(tmp_path / "whisper-calls.jsonl"),
         "STUB_ERROR": error,
+        "STUB_PROFILES": json.dumps(profiles or []),
     }
     process = subprocess.Popen(
         [sys.executable, str(server), "--port", str(port)],
@@ -359,12 +372,12 @@ def _backend(
 
 
 def _request(
-    out_dir: Path, models: dict[str, Path], inputs: dict[str, object]
+    out_dir: Path, models: dict[str, Path], inputs: dict[str, object], capability: str
 ) -> dict[str, object]:
     return {
         "protocol": 1,
         "verb": "run",
-        "capability": "voicestudio.speak",
+        "capability": capability,
         "inputs": inputs,
         "out_dir": str(out_dir),
         "piece_dir": str(out_dir),
@@ -373,7 +386,12 @@ def _request(
     }
 
 
-def _piece_request(tmp_path: Path, model: str = "voxcpm2") -> Path:
+def _piece_request(
+    tmp_path: Path,
+    model: str = "voxcpm2",
+    capability: str = "voicestudio.speak",
+    voice: str = "narradora",
+) -> Path:
     """Write the run request for one clip; the path of its result file."""
     out = tmp_path / "out"
     out.mkdir()
@@ -382,25 +400,40 @@ def _piece_request(tmp_path: Path, model: str = "voxcpm2") -> Path:
     models = {"faster-whisper-small-verify": piece / "faster-whisper-small"}
     models["faster-whisper-small-verify"].mkdir()
     inputs = {
-        "voice": "narradora",
+        "voice": voice,
         "model": model,
         "language": "es",
         "clip": [{"name": "intro", "text": TEXT, "seed": SEED}],
     }
-    request = _request(out, models, inputs)
+    request = _request(out, models, inputs, capability)
     (tmp_path / "run-request.json").write_text(json.dumps(request), encoding="utf-8")
     return tmp_path / "run-result.json"
 
 
+@dataclass(frozen=True)
+class _Piece:
+    """The piece-level values of one run request."""
+
+    model: str = "voxcpm2"
+    capability: str = "voicestudio.speak"
+    voice: str = "narradora"
+    profiles: list[dict[str, str]] | None = None
+
+
 def _run_piece(
-    tmp_path: Path, states: list[str], heard: list[str], error: str = "", model: str = "voxcpm2"
+    tmp_path: Path,
+    states: list[str],
+    heard: list[str],
+    error: str = "",
+    piece: _Piece | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """One `run` verb as a subprocess against the stub backend."""
-    result_path = _piece_request(tmp_path, model)
+    piece = piece or _Piece()
+    result_path = _piece_request(tmp_path, piece.model, piece.capability, piece.voice)
     stub_dir = _stub_dir(tmp_path)
     calls = tmp_path / "whisper-calls.jsonl"
     calls.touch()
-    process, url, _files = _backend(tmp_path, states, error)
+    process, url, _files = _backend(tmp_path, states, error, piece.profiles)
     try:
         env = {
             **os.environ,
@@ -431,9 +464,20 @@ def _run_piece(
 
 
 def _run_cycle(
-    tmp_path: Path, states: list[str], heard: list[str], model: str = "voxcpm2"
+    tmp_path: Path,
+    states: list[str],
+    heard: list[str],
+    model: str = "voxcpm2",
+    capability: str = "voicestudio.speak",
+    voice: str = "narradora",
+    profiles: list[dict[str, str]] | None = None,
 ) -> tuple[dict[str, object], str]:
-    done = _run_piece(tmp_path, states, heard, model=model)
+    done = _run_piece(
+        tmp_path,
+        states,
+        heard,
+        piece=_Piece(model=model, capability=capability, voice=voice, profiles=profiles),
+    )
     assert done.returncode == 0, done.stdout + done.stderr
     return _result(tmp_path / "run-result.json"), done.stdout
 
@@ -513,6 +557,93 @@ def test_an_omnivoice_piece_waits_for_model_status_ready_before_speaking(
     _run_cycle(tmp_path, ["idle", "loading", "ready"], [TEXT], model="omnivoice")
     polls = [str(state) for state in _read_lines(tmp_path / "stub-logs" / "polls.jsonl")]
     assert polls == ["idle", "loading", "ready"]
+
+
+#: The person's own clone, installed only on their machine.
+CLONE_ID = "d4e9ee57"
+CLONE_PROFILES = [{"id": CLONE_ID, "name": "jheison", "kind": "clone"}]
+
+
+def test_a_clone_piece_speaks_the_local_profile_with_cosyvoice(tmp_path: Path) -> None:
+    """`voicestudio.clone` picks the installed profile and the cosyvoice engine."""
+    result, _stdout = _run_cycle(
+        tmp_path,
+        ["ready"],
+        [TEXT],
+        model="cosyvoice",
+        capability="voicestudio.clone",
+        voice=CLONE_ID,
+        profiles=CLONE_PROFILES,
+    )
+    asset = result["assets"][0]
+    assert asset["properties"]["model"] == "cosyvoice"
+    assert asset["properties"]["voice"] == CLONE_ID
+    assert asset["params"]["model"] == "cosyvoice"
+    assert asset["params"]["voice"] == CLONE_ID
+    gets = _read_lines(tmp_path / "stub-logs" / "gets.jsonl")
+    assert [entry["path"] for entry in gets] == ["/profiles"]
+    bodies = _read_lines(tmp_path / "stub-logs" / "bodies.jsonl")
+    assert len(bodies) == 1
+    assert bodies[0]["model"] == "cosyvoice"
+    assert bodies[0]["voice"] == CLONE_ID
+    assert bodies[0]["input"] == TEXT
+
+
+def test_a_clone_profile_not_installed_is_refused_naming_the_spec(tmp_path: Path) -> None:
+    """A profile id absent from the local backend never reaches synthesis."""
+    done = _run_piece(
+        tmp_path,
+        ["ready"],
+        [],
+        piece=_Piece(model="cosyvoice", capability="voicestudio.clone", voice=CLONE_ID),
+    )
+    output = done.stdout + done.stderr
+    assert done.returncode != 0
+    assert CLONE_ID in output
+    assert "is not installed in this backend" in output
+    assert "projects/prueba-voz/mi-voz/" in output
+    gets = _read_lines(tmp_path / "stub-logs" / "gets.jsonl")
+    assert [entry["path"] for entry in gets] == ["/profiles"]
+    assert _read_lines(tmp_path / "stub-logs" / "bodies.jsonl") == []
+
+
+def test_a_broken_profile_listing_is_not_reported_as_a_missing_profile(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An unreadable /profiles never sends the person to create a profile."""
+    module = _import_runner(monkeypatch, tmp_path)
+
+    def broken(_url: str) -> list[dict[str, str]]:
+        raise ValueError("/profiles answered an unexpected body")
+
+    monkeypatch.setattr(module, "_profile_rows", broken)
+    with pytest.raises(RuntimeError) as caught:
+        module._check_clone_voice("http://127.0.0.1:3900", CLONE_ID)
+    assert "GET /profiles failed" in str(caught.value)
+    assert "projects/prueba-voz/mi-voz/" not in str(caught.value)
+
+
+def test_a_two_engine_clone_piece_is_refused_before_speaking(tmp_path: Path) -> None:
+    """One engine per piece: a clone piece naming voxcpm2 fails outright.
+
+    The refusal needs no backend: it happens before the readiness wait, so a
+    mis-engined piece never spends the idle grace and never lists profiles.
+    """
+    done = _run_piece(
+        tmp_path,
+        ["ready"],
+        [],
+        piece=_Piece(
+            model="voxcpm2", capability="voicestudio.clone", voice=CLONE_ID, profiles=CLONE_PROFILES
+        ),
+    )
+    output = done.stdout + done.stderr
+    assert done.returncode != 0
+    assert "one engine per piece" in output
+    logs = tmp_path / "stub-logs"
+    assert _read_lines(logs / "polls.jsonl") == []
+    assert _read_lines(logs / "gets.jsonl") == []
+    assert _read_lines(logs / "bodies.jsonl") == []
 
 
 def test_the_runner_waited_for_readiness_before_speaking(tmp_path: Path) -> None:

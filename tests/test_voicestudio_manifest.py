@@ -24,6 +24,8 @@ MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
 INDEX = tomllib.loads((ROOT / "index.toml").read_text(encoding="utf-8"))
 CAPABILITY = MANIFEST["capabilities"]["speak"]
 INPUTS = CAPABILITY["inputs"]
+CLONE = MANIFEST["capabilities"]["clone"]
+CLONE_INPUTS = CLONE["inputs"]
 CLIP = INPUTS["clip"]
 CLIP_ITEMS = CLIP["items"]
 NAME_PATTERN = re.compile(CLIP_ITEMS["name"]["pattern"])
@@ -253,3 +255,53 @@ def test_the_skill_names_the_startup_traps() -> None:
 )
 def test_the_piece_inputs_are_exactly_the_four(input_name: str, present: bool) -> None:
     assert (input_name in INPUTS) is present
+
+
+def test_the_clone_capability_speaks_with_cosyvoice_alone() -> None:
+    """One capability, one engine: the clone side is cosyvoice and nothing else."""
+    assert CLONE["kind"] == "audio"
+    assert "cosyvoice" in CLONE["summary"]
+    assert CLONE["verify"]["thresholds"] == {"wer_max": 0.05}
+    assert CLONE["preview"] == {"viewer": "audio"}
+    model = CLONE_INPUTS["model"]
+    assert model["values"] == ["cosyvoice"]
+    assert model["default"] == "cosyvoice"
+    assert CLONE_INPUTS["language"]["values"] == ["es"]
+    assert CLONE_INPUTS["language"]["default"] == "es"
+
+
+def test_the_clone_voice_is_a_local_profile_id() -> None:
+    """The voice is a profile id, not a fixed list: profiles live on the machine."""
+    voice = CLONE_INPUTS["voice"]
+    assert voice["type"] == "string"
+    assert voice["required"] is True
+    assert "values" not in voice
+    pattern = re.compile(voice["pattern"])
+    assert pattern.fullmatch("d4e9ee57")
+    assert pattern.fullmatch("d4e9ee5") is None
+    assert pattern.fullmatch("D4E9EE57") is None
+
+
+def test_the_clone_clip_items_are_the_speak_ones() -> None:
+    """The closed item set holds: name, text and the seed the loop retries with."""
+    items = CLONE_INPUTS["clip"]["items"]
+    assert CLONE_INPUTS["clip"]["required"] is True
+    assert set(items) == {"name", "text", "seed"}
+    assert items["seed"]["type"] == "integer"
+    assert items["seed"]["required"] is True
+
+
+def test_the_clone_engine_is_apache_licensed_and_not_a_pulled_model() -> None:
+    """cosyvoice is the backend's engine: a licence entry, never a model entry."""
+    licences = {(entry["subject"], entry["spdx"]) for entry in MANIFEST["licenses"]}
+    assert ("cosyvoice (the backend engine)", "Apache-2.0") in licences
+    assert all(entry["id"] != "cosyvoice" for entry in MANIFEST["models"])
+
+
+def test_the_readme_documents_the_clone_verdict_and_the_two_voice_rule() -> None:
+    """The README carries the engine verdict, the rule and the approved pattern."""
+    assert "cosyvoice" in READ
+    assert "15 s" in READ
+    assert "projects/prueba-voz/mi-voz/clon/cosyvoice/voz.toml" in READ
+    assert "one engine per piece" in READ.lower()
+    assert "never uploads" in READ

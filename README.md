@@ -28,7 +28,7 @@ the core:
 | text | ascii | ASCII art from images and figlet banners in the lab's font |
 | voice | kokoro | Narration from text on CPU (Spanish and English), checked by transcription |
 | voice | whisper | Transcripts and subtitles from audio on CPU, checked by confidence or reference text |
-| voice | voicestudio | Narration from text through a user-started VoiceStudio backend with the voxcpm2 or omnivoice engine, checked by transcription and seed regeneration |
+| voice | voicestudio | Narration from text through a user-started VoiceStudio backend with the voxcpm2, omnivoice or cosyvoice engine, checked by transcription and seed regeneration |
 
 ## How facet uses this repository
 
