@@ -151,6 +151,8 @@ def test_the_tour_is_the_video_kind_with_the_lab_recipe() -> None:
         "seconds",
         "fps",
         "seed",
+        "personas-blend",
+        "personas",
     }
     assert tour["inputs"]["model"]["type"] == "path"
     assert tour["inputs"]["model"]["required"] is True
@@ -222,13 +224,44 @@ def test_the_model_input_is_required_and_relative() -> None:
 
 def test_the_scene_parameters_are_camera_giro_and_exposure() -> None:
     """The scene the approved render sets, no more and no less."""
-    assert set(INPUTS) == {"model", "camera", "giro", "exposure"}
+    assert set(INPUTS) == {
+        "model",
+        "camera",
+        "giro",
+        "exposure",
+        "personas-blend",
+        "personas",
+    }
     camera = INPUTS["camera"]
     assert camera["type"] == "array"
     assert set(camera["items"]) == {"azimut", "elevacion", "escala"}
     assert INPUTS["giro"]["default"] == 0
     assert INPUTS["exposure"]["default"] == EXPOSURE
     assert INPUTS["exposure"]["min"] < EXPOSURE < INPUTS["exposure"]["max"]
+
+
+def test_people_are_piece_data_on_both_scene_capabilities() -> None:
+    """FR1: the prebuilt blend plus one placement item per person, both scenes."""
+    for capability in ("foto", "recorrido"):
+        inputs = MANIFEST["capabilities"][capability]["inputs"]
+        blend = inputs["personas-blend"]
+        assert blend["type"] == "path", capability
+        assert "required" not in blend, capability
+        assert "personas.py" in blend["description"], capability
+        people = inputs["personas"]
+        assert people["type"] == "array", capability
+        assert people["default"] == [], capability
+        assert "required" not in people, capability
+        items = people["items"]
+        assert set(items) == {"nombre", "x", "y", "giro"}, capability
+        assert items["nombre"]["type"] == "string"
+        assert items["nombre"]["required"] is True
+        for axis in ("x", "y"):
+            assert items[axis]["type"] == "number", (capability, axis)
+            assert items[axis]["required"] is True, (capability, axis)
+        assert items["giro"]["type"] == "number"
+        assert items["giro"]["default"] == 0
+        assert "-y" in items["giro"]["description"]
 
 
 def test_the_skill_validates_in_the_core_format() -> None:
@@ -259,3 +292,4 @@ def test_the_readme_documents_the_host_contract_the_route_and_the_rule() -> None
     assert "AgX - Medium High Contrast" in READ
     assert "-0.6" in READ
     assert "machine_cannot" in READ
+    assert "personas-blend" in READ

@@ -95,6 +95,52 @@ transmission per prefix:
 nothing is rendered half-dressed. Add the prefix (or rename the piece) rather
 than letting Blender's default grey stand in.
 
+## People for scale
+
+`blender.foto` and `blender.recorrido` can stand **generated people** in the
+scene, which is what gives the model its scale: a door, a bed or a table only
+reads as its real size next to a person.
+
+The people are **built once, outside this package**. The lab's
+`projects/prueba-render-arq/personas.py` writes `personas.blend` with MPFB
+2.0.18, the MakeHuman CC0 asset pack and traits 0-1: one collection per person,
+arms lowered 40 degrees, the skeleton root at the collection's base. This
+package never generates people, never needs the MPFB add-on and never
+downloads an asset pack: loading a linked collection needs no add-on.
+
+```toml
+[inputs]
+model = "estudio.glb"
+personas-blend = "personas.blend"          # resolved relative to the piece
+personas = [
+  { nombre = "luis", x = 3.0,  y = 2.6,  giro = 90 },
+  { nombre = "ana",  x = 4.5,  y = 3.85, giro = 180 },
+  { nombre = "sara", x = 1.45, y = -1.3, giro = 180 },
+]
+```
+
+- `personas-blend` is the prebuilt collection `.blend`, resolved relative to
+  the piece file. The core resolves it **before the runner starts**, so a
+  missing file is refused with the path's `not_found` wording instead of a
+  failed render.
+- `personas` is one item per person: `nombre` is the collection's name in the
+  blend, `x` and `y` are metres in the scene's own axes, and `giro` is a turn
+  about Z in degrees from the **-y facing** the collections have by default.
+  The triple above is the lab's reference (`escena.py:45`), never a default:
+  without `personas` nobody stands in the scene.
+- Each collection is loaded with `bpy.data.libraries.load`, linked into the
+  scene, and its **single parentless root** is stood at `(x, y, floor_z)`.
+  `floor_z` is the floor plane's own level, the lowest mesh minus one
+  millimetre, so people stand on the ground the sun casts its shadow on.
+- People arrive in metres and are **never scaled or turned with the model**.
+  They load **after** the materials are dressed, so their own MPFB skin and
+  clothing materials are never checked against the prefix set and never
+  cleared.
+- A `nombre` the blend does not hold fails the run with
+  `<nombre> is not a collection in <blend> (has: [...])`; a collection without
+  exactly one root fails with `<nombre>: expected one root object, found <n>`.
+  Both reach the caller as `runner_failed`. Nobody is silently dropped.
+
 ## The exposure rule
 
 The scene is lit by a sun plus a sky texture washing from the same direction.
@@ -118,6 +164,11 @@ What `facet describe blender.foto --json` reports for this manifest:
 | `camera` | array | no | the lab's axonometric view | one item: `{ azimut = -40, elevacion = 48, escala = 11.5 }` (degrees; orthographic scale in metres) |
 | `giro` | number | no | `0` | turn of the whole model about Z in degrees; the sun stays put |
 | `exposure` | number | no | `-0.6` | stops under `AgX - Medium High Contrast` |
+| `personas-blend` | path | no | — | the prebuilt MPFB collection `.blend`, relative to the piece file |
+| `personas` | array | no | `[]` | one item per person: `{ nombre, x, y, giro = 0 }` (metres, degrees about Z) |
+
+`blender.recorrido` takes the same `personas-blend` and `personas` fields; the
+rest of its row set is in "Camera tours".
 
 ## Product photos
 

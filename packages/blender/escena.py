@@ -53,15 +53,17 @@ def scale_roots(scene: Any) -> None:
         obj.location = tuple(side * SCALE for side in obj.location)
 
 
-def floor(bpy: Any, scene: Any, centre: tuple[float, float, float]) -> None:
+def floor(bpy: Any, scene: Any, centre: tuple[float, float, float]) -> float:
     """An outside plane just under the model, so the sun casts a shadow.
 
     It sits below the lowest mesh, never at the model's mid-height: a plane
     through the room would hide the furniture and the slab from the camera.
+    Returns that level, which is where people stand.
     """
     drop = lowest_z(scene) - FLOOR_DROP
     bpy.ops.mesh.primitive_plane_add(size=FLOOR_SIZE, location=(centre[0], centre[1], drop))
     bpy.context.active_object.name = "suelo"
+    return drop
 
 
 def lowest_z(scene: Any) -> float:
@@ -135,6 +137,59 @@ def assign(scene: Any, materials: dict[str, Any]) -> list[str]:
         obj.data.materials.clear()
         obj.data.materials.append(materials[prefix])
     return missing
+
+
+def people(params: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
+    """The prebuilt collection blend and the placements a piece asks for."""
+    blend = params.get("personas-blend")
+    placements = [item for item in params.get("personas") or [] if isinstance(item, dict)]
+    return (str(blend) if blend else ""), placements
+
+
+def personas(
+    bpy: Any,
+    scene: Any,
+    blend: str,
+    placements: list[dict[str, Any]],
+    floor_z: float,
+) -> None:
+    """Stand each named collection of the prebuilt blend at its place.
+
+    People are built once, outside this package, and arrive in metres: only
+    their root moves, never their scale. Loading them after ``dress`` keeps
+    their own MPFB skin and clothing materials, which carry no piece prefix.
+    """
+    if not placements:
+        return
+    if not blend:
+        raise RuntimeError(f"{len(placements)} personas but no personas-blend")
+    for placement in placements:
+        nombre = str(placement["nombre"])
+        collection = _loaded(bpy, blend, nombre, scene)
+        root = _root(collection, nombre)
+        root.location = (float(placement["x"]), float(placement["y"]), floor_z)
+        root.rotation_mode = "XYZ"
+        root.rotation_euler[2] = math.radians(float(placement.get("giro", 0)))
+
+
+def _loaded(bpy: Any, blend: str, nombre: str, scene: Any) -> Any:
+    """Link one named collection of the blend into the scene; raise if absent."""
+    with bpy.data.libraries.load(blend) as (source, target):
+        if nombre not in source.collections:
+            names = sorted(source.collections)
+            raise KeyError(f"{nombre} is not a collection in {blend} (has: {names})")
+        target.collections = [nombre]
+    collection = target.collections[0]
+    scene.collection.children.link(collection)
+    return collection
+
+
+def _root(collection: Any, nombre: str) -> Any:
+    """The collection's single parentless object: the skeleton root."""
+    roots = [obj for obj in collection.objects if obj.parent is None]
+    if len(roots) != 1:
+        raise RuntimeError(f"{nombre}: expected one root object, found {len(roots)}")
+    return roots[0]
 
 
 def sky_and_sun(bpy: Any, scene: Any) -> None:

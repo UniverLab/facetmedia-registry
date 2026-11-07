@@ -393,11 +393,21 @@ def _recorrido_run(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
     name = recorrido.asset_name(model)
     destination = f"{str(request['out_dir']).rstrip('/')}/{name}.mp4"
     windows = _on_windows()
-    recorrido.render(bpy, _host_path(model, windows), _host_path(destination, windows), params)
+    rendered = _host_personas(params, windows)
+    recorrido.render(bpy, _host_path(model, windows), _host_path(destination, windows), rendered)
     return {
         "tool": {"name": "blender", "version": _version(bpy)},
         "assets": [recorrido.asset(params, model)],
     }
+
+
+def _host_personas(params: dict[str, Any], windows: bool) -> dict[str, Any]:
+    """The tour's params with personas-blend converted; the asset keeps it raw."""
+    converted = dict(params)
+    blend = params.get("personas-blend")
+    if blend:
+        converted["personas-blend"] = _host_path(str(blend), windows)
+    return converted
 
 
 def _recorrido_verify(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
@@ -643,8 +653,10 @@ def _render(bpy: Any, model: str, destination: str, params: dict[str, Any]) -> N
     _turn_roots(scene, _giro(params))
     bpy.context.view_layer.update()
     centre = escena.centre(scene)
-    escena.floor(bpy, scene, centre)
+    floor_z = escena.floor(bpy, scene, centre)
     escena.dress(bpy, scene, escena.MATERIALS)
+    blend, placements = escena.people(params)
+    escena.personas(bpy, scene, _host_path(blend, windows), placements, floor_z)
     escena.sky_and_sun(bpy, scene)
     _place_camera(bpy, scene, _camera(params), centre)
     scene.render.resolution_x = RENDER_WIDTH

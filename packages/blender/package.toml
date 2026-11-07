@@ -80,6 +80,35 @@ min = -10
 max = 10
 description = "Exposure in stops under the AgX - Medium High Contrast view transform; -0.6 keeps sun plus sky wash from washing the colours out."
 
+[capabilities.foto.inputs.personas-blend]
+type = "path"
+description = "Prebuilt MPFB collection .blend (one collection per person, the skeleton root at its base), resolved relative to the piece file; the lab builds it once with projects/prueba-render-arq/personas.py. Never generated here."
+
+[capabilities.foto.inputs.personas]
+type = "array"
+default = []
+description = "People to stand in the scene, one { nombre, x, y, giro } item each: the collection name in personas-blend and its place in metres. The lab's three placements are the reference example, never a default."
+
+[capabilities.foto.inputs.personas.items.nombre]
+type = "string"
+required = true
+description = "Collection name in personas-blend; a name the file does not hold fails the run loudly."
+
+[capabilities.foto.inputs.personas.items.x]
+type = "number"
+required = true
+description = "X position in metres, in the scene's own axes; people are never scaled with the model."
+
+[capabilities.foto.inputs.personas.items.y]
+type = "number"
+required = true
+description = "Y position in metres, in the scene's own axes."
+
+[capabilities.foto.inputs.personas.items.giro]
+type = "number"
+default = 0
+description = "Turn about Z in degrees from the -y facing the collection has by default."
+
 [capabilities.foto.preview]
 viewer = "image"
 
@@ -226,6 +255,35 @@ type = "integer"
 default = 0
 min = 0
 description = "Sampling seed; Eevee's render is deterministic, so it only labels the record."
+
+[capabilities.recorrido.inputs.personas-blend]
+type = "path"
+description = "Prebuilt MPFB collection .blend (one collection per person, the skeleton root at its base), resolved relative to the piece file; the lab builds it once with projects/prueba-render-arq/personas.py. Never generated here."
+
+[capabilities.recorrido.inputs.personas]
+type = "array"
+default = []
+description = "People to stand in the scene, one { nombre, x, y, giro } item each: the collection name in personas-blend and its place in metres. The lab's three placements are the reference example, never a default."
+
+[capabilities.recorrido.inputs.personas.items.nombre]
+type = "string"
+required = true
+description = "Collection name in personas-blend; a name the file does not hold fails the run loudly."
+
+[capabilities.recorrido.inputs.personas.items.x]
+type = "number"
+required = true
+description = "X position in metres, in the scene's own axes; people are never scaled with the model."
+
+[capabilities.recorrido.inputs.personas.items.y]
+type = "number"
+required = true
+description = "Y position in metres, in the scene's own axes."
+
+[capabilities.recorrido.inputs.personas.items.giro]
+type = "number"
+default = 0
+description = "Turn about Z in degrees from the -y facing the collection has by default."
 
 [capabilities.recorrido.preview]
 viewer = "video"
