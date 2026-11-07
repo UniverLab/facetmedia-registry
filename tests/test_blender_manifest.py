@@ -153,6 +153,8 @@ def test_the_tour_is_the_video_kind_with_the_lab_recipe() -> None:
         "seed",
         "personas-blend",
         "personas",
+        "autos-blend",
+        "autos",
     }
     assert tour["inputs"]["model"]["type"] == "path"
     assert tour["inputs"]["model"]["required"] is True
@@ -231,6 +233,8 @@ def test_the_scene_parameters_are_camera_giro_and_exposure() -> None:
         "exposure",
         "personas-blend",
         "personas",
+        "autos-blend",
+        "autos",
     }
     camera = INPUTS["camera"]
     assert camera["type"] == "array"
@@ -253,6 +257,30 @@ def test_people_are_piece_data_on_both_scene_capabilities() -> None:
         assert people["default"] == [], capability
         assert "required" not in people, capability
         items = people["items"]
+        assert set(items) == {"nombre", "x", "y", "giro"}, capability
+        assert items["nombre"]["type"] == "string"
+        assert items["nombre"]["required"] is True
+        for axis in ("x", "y"):
+            assert items[axis]["type"] == "number", (capability, axis)
+            assert items[axis]["required"] is True, (capability, axis)
+        assert items["giro"]["type"] == "number"
+        assert items["giro"]["default"] == 0
+        assert "-y" in items["giro"]["description"]
+
+
+def test_cars_are_piece_data_on_both_scene_capabilities() -> None:
+    """FR1: the prebuilt car blend plus one placement item per car, both scenes."""
+    for capability in ("foto", "recorrido"):
+        inputs = MANIFEST["capabilities"][capability]["inputs"]
+        blend = inputs["autos-blend"]
+        assert blend["type"] == "path", capability
+        assert "required" not in blend, capability
+        assert "autos.py" in blend["description"], capability
+        cars = inputs["autos"]
+        assert cars["type"] == "array", capability
+        assert cars["default"] == [], capability
+        assert "required" not in cars, capability
+        items = cars["items"]
         assert set(items) == {"nombre", "x", "y", "giro"}, capability
         assert items["nombre"]["type"] == "string"
         assert items["nombre"]["required"] is True

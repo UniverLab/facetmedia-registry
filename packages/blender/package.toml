@@ -109,6 +109,35 @@ type = "number"
 default = 0
 description = "Turn about Z in degrees from the -y facing the collection has by default."
 
+[capabilities.foto.inputs.autos-blend]
+type = "path"
+description = "Prebuilt car-collection .blend (one collection per car hung from an anchor EMPTY at its base centre, facing -y), resolved relative to the piece file; the lab builds it once with projects/prueba-render-arq/autos.py. Never generated here."
+
+[capabilities.foto.inputs.autos]
+type = "array"
+default = []
+description = "Cars to park in the scene, one { nombre, x, y, giro } item each: the collection name in autos-blend and its place in metres. The lab's sedan, camioneta and compacto placements are the reference example, never a default."
+
+[capabilities.foto.inputs.autos.items.nombre]
+type = "string"
+required = true
+description = "Collection name in autos-blend; a name the file does not hold fails the run loudly."
+
+[capabilities.foto.inputs.autos.items.x]
+type = "number"
+required = true
+description = "X position in metres, in the scene's own axes; cars are never scaled with the model."
+
+[capabilities.foto.inputs.autos.items.y]
+type = "number"
+required = true
+description = "Y position in metres, in the scene's own axes."
+
+[capabilities.foto.inputs.autos.items.giro]
+type = "number"
+default = 0
+description = "Turn about Z in degrees from the -y facing the collection has by default."
+
 [capabilities.foto.preview]
 viewer = "image"
 
@@ -281,6 +310,35 @@ required = true
 description = "Y position in metres, in the scene's own axes."
 
 [capabilities.recorrido.inputs.personas.items.giro]
+type = "number"
+default = 0
+description = "Turn about Z in degrees from the -y facing the collection has by default."
+
+[capabilities.recorrido.inputs.autos-blend]
+type = "path"
+description = "Prebuilt car-collection .blend (one collection per car hung from an anchor EMPTY at its base centre, facing -y), resolved relative to the piece file; the lab builds it once with projects/prueba-render-arq/autos.py. Never generated here."
+
+[capabilities.recorrido.inputs.autos]
+type = "array"
+default = []
+description = "Cars to park in the scene, one { nombre, x, y, giro } item each: the collection name in autos-blend and its place in metres. The lab's sedan, camioneta and compacto placements are the reference example, never a default."
+
+[capabilities.recorrido.inputs.autos.items.nombre]
+type = "string"
+required = true
+description = "Collection name in autos-blend; a name the file does not hold fails the run loudly."
+
+[capabilities.recorrido.inputs.autos.items.x]
+type = "number"
+required = true
+description = "X position in metres, in the scene's own axes; cars are never scaled with the model."
+
+[capabilities.recorrido.inputs.autos.items.y]
+type = "number"
+required = true
+description = "Y position in metres, in the scene's own axes."
+
+[capabilities.recorrido.inputs.autos.items.giro]
 type = "number"
 default = 0
 description = "Turn about Z in degrees from the -y facing the collection has by default."

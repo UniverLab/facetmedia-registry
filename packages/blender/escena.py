@@ -192,6 +192,39 @@ def _root(collection: Any, nombre: str) -> Any:
     return roots[0]
 
 
+def autos_params(params: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
+    """The prebuilt car blend and the placements a piece asks for."""
+    blend = params.get("autos-blend")
+    placements = [item for item in params.get("autos") or [] if isinstance(item, dict)]
+    return (str(blend) if blend else ""), placements
+
+
+def autos(
+    bpy: Any,
+    scene: Any,
+    blend: str,
+    placements: list[dict[str, Any]],
+    floor_z: float,
+) -> None:
+    """Park each named collection of the prebuilt blend at its place.
+
+    Cars are built once, outside this package, and arrive in metres: only
+    their root moves, never their scale. Loading them after ``dress`` keeps
+    the pack's own paint and glass materials, which carry no piece prefix.
+    """
+    if not placements:
+        return
+    if not blend:
+        raise RuntimeError(f"{len(placements)} autos but no autos-blend")
+    for placement in placements:
+        nombre = str(placement["nombre"])
+        collection = _loaded(bpy, blend, nombre, scene)
+        root = _root(collection, nombre)
+        root.location = (float(placement["x"]), float(placement["y"]), floor_z)
+        root.rotation_mode = "XYZ"
+        root.rotation_euler[2] = math.radians(float(placement.get("giro", 0)))
+
+
 def sky_and_sun(bpy: Any, scene: Any) -> None:
     """A sky texture washing the scene from the sun's direction, plus the sun."""
     world = bpy.data.worlds.new("cielo")

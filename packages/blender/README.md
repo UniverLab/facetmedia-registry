@@ -141,6 +141,54 @@ personas = [
   exactly one root fails with `<nombre>: expected one root object, found <n>`.
   Both reach the caller as `runner_failed`. Nobody is silently dropped.
 
+## Cars for scale
+
+The same two capabilities can **park cars** in the scene, which is what gives
+the model its urban scale: a study reads as a street scene only next to
+vehicles.
+
+The cars are **built once, outside this package**. The lab's
+`projects/prueba-render-arq/autos.py` writes `autos.blend` from the Quaternius
+Cars Pack (CC0): one collection per car, hung from an anchor `EMPTY` at the
+car's base centre, every car facing **-y**. This package never generates cars,
+never checks for a pack and never downloads one: loading a linked collection
+needs no add-on.
+
+```toml
+[inputs]
+model = "estudio.glb"
+autos-blend = "autos.blend"            # resolved relative to the piece
+autos = [
+  { nombre = "sedan",      x = -2.7, y = 0.8 },
+  { nombre = "camioneta",  x = -5.1, y = 0.8 },
+  { nombre = "compacto",   x = 1.0,  y = -2.0, giro = 90 },
+]
+```
+
+- `autos-blend` is the prebuilt car-collection `.blend`, resolved relative to
+  the piece file. The core resolves it **before the runner starts**, so a
+  missing file is refused with the path's `not_found` wording instead of a
+  failed render.
+- `autos` is one item per car: `nombre` is the collection's name in the blend,
+  `x` and `y` are metres in the scene's own axes, and `giro` is a turn about Z
+  in degrees from the **-y facing** the collections have by default. The
+  placements above mirror the lab's pair (`escena.py:45`: sedan and camioneta
+  on the car-entry pavement by the left wall) plus a turned compacto; they are
+  the reference example, never a default: without `autos` no car parks.
+- Each collection is loaded with `bpy.data.libraries.load` after the materials
+  are dressed — the pack's own paint and glass materials carry no piece prefix
+  — linked into the scene, and its **single parentless root** (the anchor
+  `EMPTY` at the base centre) is stood at `(x, y, floor_z)`, `floor_z` being
+  the floor plane's level, the lowest mesh minus one millimetre. Cars arrive in
+  metres and are **never scaled or turned with the model**.
+- The failures are the people's, verbatim: an unknown `nombre` raises
+  `<nombre> is not a collection in <blend> (has: [...])` and a collection
+  without exactly one root raises `<nombre>: expected one root object, found
+  <n>`; both reach the caller as `runner_failed`.
+- Cars read as scale only if they stay **about 1.5 m** from a wall or each
+  other: pack a row flush against the facade and the eye reads them as
+  centimetre models, which is the opposite of the point.
+
 ## The exposure rule
 
 The scene is lit by a sun plus a sky texture washing from the same direction.
@@ -166,9 +214,11 @@ What `facet describe blender.foto --json` reports for this manifest:
 | `exposure` | number | no | `-0.6` | stops under `AgX - Medium High Contrast` |
 | `personas-blend` | path | no | — | the prebuilt MPFB collection `.blend`, relative to the piece file |
 | `personas` | array | no | `[]` | one item per person: `{ nombre, x, y, giro = 0 }` (metres, degrees about Z) |
+| `autos-blend` | path | no | — | the prebuilt car-collection `.blend`, relative to the piece file |
+| `autos` | array | no | `[]` | one item per car: `{ nombre, x, y, giro = 0 }` (metres, degrees about Z) |
 
-`blender.recorrido` takes the same `personas-blend` and `personas` fields; the
-rest of its row set is in "Camera tours".
+`blender.recorrido` takes the same `personas-blend`, `personas`, `autos-blend`
+and `autos` fields; the rest of its row set is in "Camera tours".
 
 ## Product photos
 

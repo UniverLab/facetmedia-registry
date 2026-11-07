@@ -135,6 +135,8 @@ def render(bpy: Any, model: str, destination: str, params: dict[str, Any]) -> No
     escena.dress(bpy, scene, escena.MATERIALS)
     blend, placements = escena.people(params)
     escena.personas(bpy, scene, blend, placements, floor_z)
+    car_blend, cars = escena.autos_params(params)
+    escena.autos(bpy, scene, car_blend, cars, floor_z)
     escena.sky_and_sun(bpy, scene)
     camera = _camera(bpy, scene, tour)
     _keyframes(camera, centre, tour)
