@@ -1,0 +1,96 @@
+name = "voicestudio"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "debpalash (VoiceStudio)"
+tool_name = "VoiceStudio"
+description = "Narration through a self-started VoiceStudio backend with the voxcpm2 engine, checked by transcription"
+facet = "voice"
+uses = ["textnorm", "audiopreview"]
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = true
+ram_gb = 8
+disk_gb = 2
+exclusive = true
+platforms = ["linux"]
+
+[[licenses]]
+subject = "VoiceStudio (the backend this package talks to)"
+spdx = "AGPL-3.0-only"
+
+[[licenses]]
+subject = "faster-whisper"
+spdx = "MIT"
+
+[[licenses]]
+subject = "ctranslate2"
+spdx = "MIT"
+
+[[models]]
+id = "faster-whisper-small-verify"
+hf_repo = "Systran/faster-whisper-small"
+revision = "536b0662742c02347bc0e980a01041f333bce120"
+bytes = 486212372
+spdx = "MIT"
+commercial_use = true
+requires_acceptance = false
+terms_url = "https://huggingface.co/Systran/faster-whisper-small"
+
+[capabilities.speak]
+summary = "Narration through a self-started VoiceStudio backend (engine voxcpm2), checked by transcription"
+kind = "audio"
+
+[capabilities.speak.inputs.voice]
+type = "enum"
+values = ["narradora"]
+default = "narradora"
+description = "Cloned voice profile registered in the backend (POST /profiles); clones live on the person's machine."
+
+[capabilities.speak.inputs.model]
+type = "enum"
+values = ["voxcpm2"]
+default = "voxcpm2"
+description = "Engine of the whole piece; exactly one engine per piece (two voices go in two files and interleave in HyperFrames)."
+
+[capabilities.speak.inputs.language]
+type = "enum"
+values = ["es"]
+default = "es"
+description = "Narration language of the piece."
+
+[capabilities.speak.inputs.clip]
+type = "array"
+min_items = 1
+required = true
+description = "Clips to narrate; each writes <name>.wav."
+
+[capabilities.speak.inputs.clip.items.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name."
+
+[capabilities.speak.inputs.clip.items.text]
+type = "string"
+required = true
+description = "Narration text."
+
+[capabilities.speak.inputs.clip.items.seed]
+type = "integer"
+required = true
+description = "Synthesis seed; the verification loop regenerates a failed clip with seed + 1."
+
+[capabilities.speak.verify]
+thresholds = { wer_max = 0.05 }
+
+[capabilities.speak.preview]
+viewer = "audio"

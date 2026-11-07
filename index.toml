@@ -18,3 +18,6 @@ name = "kokoro"
 
 [[packages]]
 name = "whisper"
+
+[[packages]]
+name = "voicestudio"
