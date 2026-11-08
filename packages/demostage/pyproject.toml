@@ -1,0 +1,11 @@
+[project]
+name = "facet-demostage"
+version = "0.1.0"
+description = "Terminal demo gifs and animated SVGs recorded from a hand-written demo.toml score."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[tool.uv]
+package = false

@@ -1,0 +1,40 @@
+name = "demostage"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "UniverLab (demostage)"
+tool_name = "demostage"
+description = "Terminal demo gifs and animated SVGs recorded from a hand-written demo.toml score, with no interactive terminal: demo record allocates its own PTY and demo export renders the recording"
+facet = "video"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 1
+exclusive = true
+platforms = ["linux"]
+host_hint = "curl -fsSL https://get.univerlab.org/demostage | sh"
+
+[[licenses]]
+subject = "demostage"
+spdx = "MIT"
+
+[capabilities.demo]
+summary = "Terminal demo gif and animated SVG from a hand-written demo.toml score, recorded in the demo binary's own PTY with no caller terminal"
+kind = "video"
+
+[capabilities.demo.inputs.partitura]
+type = "path"
+required = true
+description = "Hand-written demo.toml score authored in the piece, never captured, resolved relative to the piece; demo record executes it in its own PTY and demo export renders the gif and svg."
+
+[capabilities.demo.preview]
+viewer = "video"
