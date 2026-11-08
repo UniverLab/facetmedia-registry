@@ -44,6 +44,28 @@ html, body { margin: 0; height: 100%; }
 </style></head><body><section class="slide">deck doctor</section></body></html>
 `;
 
+// The presenter build: the same deck, speaker view and notes attached per slide.
+const PACKAGE = "deck";
+const PACKAGE_VERSION = "0.1.0";
+const PRESENTER = `${PACKAGE}.presenter`;
+const PRESENTER_DIR = path.join(__dirname, "presenter");
+const MIME = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  svg: "image/svg+xml",
+  gif: "image/gif",
+  webp: "image/webp",
+};
+const VIDEO_EXTS = new Set(["mp4", "webm", "ogv", "ogg", "mov", "m4v", "mkv"]);
+const VIDEO_WARNING = (ref) =>
+  `aviso: el video ${ref} no se incrusta; el archivo debe viajar junto a él\n`;
+const NOTES_SEPARATOR_RE = /^\s*---\s*$/m;
+const EMBEDDED_NOTES_RE = /window\.__PZ_NOTES__\s*=\s*(\[[\s\S]*?\])\s*;<\/script>/g;
+const SLIDE_SECTION_RE = /<section\b[^>]*\bclass\s*=\s*("([^"]*)"|'([^']*)')[^>]*>/gi;
+const PRESENT_SUFFIX = ".present.html";
+const NOTES_SUFFIX = ".notes.md";
+
 // --- the entry point and the file protocol.
 
 async function main() {
@@ -84,9 +106,10 @@ function writeResult(file, data) {
 
 async function dispatch(verb, request) {
   if (verb === "doctor") return doctor(request);
-  if (verb === "run") return run(request);
-  if (verb === "verify") return verify(request);
-  if (verb === "preview") return preview(request);
+  const presenter = String(request.capability || "") === PRESENTER;
+  if (verb === "run") return presenter ? runPresenter(request) : runSlides(request);
+  if (verb === "verify") return presenter ? verifyPresenter(request) : verify(request);
+  if (verb === "preview") return presenter ? previewPresenter(request) : preview(request);
   throw new Error(`${verb}: unknown verb (this runner has: run, verify, preview, doctor)`);
 }
 
@@ -295,7 +318,7 @@ function recordedPages(asset) {
 
 // --- the verbs.
 
-async function run(request) {
+async function runSlides(request) {
   const inputs = inputsOf(request);
   const outDir = path.resolve(request.out_dir);
   fs.mkdirSync(outDir, { recursive: true });
@@ -326,10 +349,10 @@ async function run(request) {
 }
 
 function verify(request) {
-  return { assets: (request.assets || []).map(verdictOf) };
+  return { assets: (request.assets || []).map(verdictOfSlides) };
 }
 
-function verdictOf(asset) {
+function verdictOfSlides(asset) {
   const file = path.basename(String(asset));
   const rendered = numberedPages(path.dirname(String(asset))).length;
   const fresh = rendered || pdfPageCount(String(asset));
@@ -375,6 +398,261 @@ function previewOf(asset, seed) {
   };
   fs.writeFileSync(`${asset}.preview.json`, `${JSON.stringify(data, null, 2)}\n`);
   return { file, preview: `${file}.preview.json`, images: [] };
+}
+
+// --- the presenter build: one deck, speaker view and per-slide notes.
+
+function deckBase(source) {
+  return path.basename(source, path.extname(source));
+}
+
+function countSlides(html) {
+  let count = 0;
+  for (const match of html.matchAll(SLIDE_SECTION_RE)) {
+    const classes = (match[2] !== undefined ? match[2] : match[3] || "").split(/\s+/);
+    if (classes.includes("slide")) count += 1;
+  }
+  return count;
+}
+
+function noteOf(item, index, seen, maxPage) {
+  const label = `notas[${index}]`;
+  if (item === null || typeof item !== "object" || Array.isArray(item)) {
+    throw new Error(`${label}: expected a { pagina, texto } table`);
+  }
+  const pagina = item.pagina;
+  if (!Number.isInteger(pagina) || pagina < 1) {
+    throw new Error(`${label}.pagina: must be an integer >= 1`);
+  }
+  if (seen.has(pagina)) throw new Error(`${label}.pagina: ${pagina} is repeated`);
+  if (maxPage !== undefined && pagina > maxPage) {
+    throw new Error(`${label}.pagina: ${pagina} is beyond the deck's ${maxPage} slides`);
+  }
+  seen.add(pagina);
+  const texto = typeof item.texto === "string" ? item.texto.trim() : "";
+  if (!texto) throw new Error(`${label}.texto: must be a non-empty string`);
+  return { pagina, texto };
+}
+
+function normalizeNotes(inputs, maxPage) {
+  const raw = inputs.notas;
+  if (!Array.isArray(raw) || raw.length === 0) {
+    throw new Error("notas: one table per slide is required");
+  }
+  const seen = new Set();
+  const notes = raw.map((item, index) => noteOf(item, index, seen, maxPage));
+  notes.sort((left, right) => left.pagina - right.pagina);
+  return notes;
+}
+
+function inlineData(ref, dir) {
+  if (/^(?:https?:|data:|\/\/|#)/i.test(ref)) return null;
+  const clean = ref.split(/[?#]/)[0];
+  const ext = path.extname(clean).slice(1).toLowerCase();
+  if (VIDEO_EXTS.has(ext) || !MIME[ext]) return null;
+  const file = path.isAbsolute(clean) ? clean : path.join(dir, clean);
+  if (!fs.existsSync(file)) {
+    throw new Error(`ref ${ref}: no file beside the deck to inline`);
+  }
+  return `data:${MIME[ext]};base64,${fs.readFileSync(file).toString("base64")}`;
+}
+
+function inlineResources(html, dir) {
+  let embedded = 0;
+  const inline = (ref) => {
+    const data = inlineData(ref, dir);
+    if (data !== null) embedded += 1;
+    return data;
+  };
+  const withSources = html.replace(/(src=")([^"]+)(")/g, (whole, before, ref, after) => {
+    const data = inline(ref);
+    return data === null ? whole : `${before}${data}${after}`;
+  });
+  const inlined = withSources.replace(/url\((['"]?)([^)'"]+)\1\)/g, (whole, quote, ref) => {
+    const data = inline(ref);
+    return data === null ? whole : `url(${data})`;
+  });
+  const videos = new Set();
+  for (const match of inlined.matchAll(/<(?:video|source)[^>]+src="([^"]+)"/g)) {
+    if (!match[1].startsWith("data:")) videos.add(match[1]);
+  }
+  return { html: inlined, embedded, videos: [...videos] };
+}
+
+function injectPresenter(html, notes) {
+  const css = fs.readFileSync(path.join(PRESENTER_DIR, "runner.css"), "utf8");
+  const js = fs.readFileSync(path.join(PRESENTER_DIR, "runner.js"), "utf8");
+  const data = JSON.stringify(notes.map((note) => note.texto)).replace(/</g, "\\u003c");
+  const inject = `<style>${css}</style>\n<script>window.__PZ_NOTES__=${data};</script>\n<script>${js}</script>\n`;
+  return html.includes("</body>") ? html.replace("</body>", `${inject}</body>`) : html + inject;
+}
+
+function materializeNotes(notes) {
+  return `${notes.map((note) => note.texto).join("\n---\n")}\n`;
+}
+
+function presenterAsset(file, name, kind, mime, properties, params, source) {
+  return {
+    file,
+    name,
+    kind,
+    mime,
+    properties,
+    params,
+    seed: seedOf(params),
+    inputs: [source],
+  };
+}
+
+function runPresenter(request) {
+  const inputs = inputsOf(request);
+  const outDir = path.resolve(request.out_dir);
+  fs.mkdirSync(outDir, { recursive: true });
+  const source = slideFile(request);
+  const html = fs.readFileSync(source, "utf8");
+  const slides = countSlides(html);
+  const notes = normalizeNotes(inputs, slides);
+  const resources = inlineResources(html, path.dirname(source));
+  for (const video of resources.videos) process.stderr.write(VIDEO_WARNING(video));
+  const base = deckBase(source);
+  fs.writeFileSync(path.join(outDir, `${base}${PRESENT_SUFFIX}`), injectPresenter(resources.html, notes));
+  fs.writeFileSync(path.join(outDir, `${base}${NOTES_SUFFIX}`), materializeNotes(notes));
+  const properties = { slides, notes: notes.length };
+  return {
+    tool: { name: PACKAGE, version: PACKAGE_VERSION },
+    assets: [
+      presenterAsset(
+        `${base}${PRESENT_SUFFIX}`,
+        `${base}.present`,
+        "document",
+        "text/html",
+        properties,
+        inputs,
+        source,
+      ),
+      presenterAsset(
+        `${base}${NOTES_SUFFIX}`,
+        `${base}.notes`,
+        "text",
+        "text/markdown",
+        properties,
+        inputs,
+        source,
+      ),
+    ],
+  };
+}
+
+function readText(file) {
+  try {
+    return fs.readFileSync(file, "utf8");
+  } catch (error) {
+    throw new Error(`${path.basename(file)}: cannot read (${error.code || error.message})`);
+  }
+}
+
+function presenterBase(file) {
+  if (file.endsWith(PRESENT_SUFFIX)) return file.slice(0, -PRESENT_SUFFIX.length);
+  if (file.endsWith(NOTES_SUFFIX)) return file.slice(0, -NOTES_SUFFIX.length);
+  throw new Error(`${file}: expected a ${PRESENT_SUFFIX} or ${NOTES_SUFFIX} output`);
+}
+
+function embeddedNotes(html) {
+  for (const match of html.matchAll(EMBEDDED_NOTES_RE)) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (error) {
+      // Not the injected array; keep looking for the script that carries it.
+    }
+  }
+  throw new Error("__PZ_NOTES__: the presenter file embeds no notes array");
+}
+
+function noteSections(text) {
+  const sections = text.split(NOTES_SEPARATOR_RE).map((section) => section.trim());
+  for (let index = 0; index < sections.length; index += 1) {
+    if (!sections[index]) throw new Error(`notas.md: section ${index + 1} is empty`);
+  }
+  return sections;
+}
+
+function checkEmbeddedNotes(html, expected) {
+  const embedded = embeddedNotes(html);
+  if (embedded.length !== expected) {
+    throw new Error(`__PZ_NOTES__: ${embedded.length} notes embedded but notas has ${expected}`);
+  }
+}
+
+function checkNotesFile(file, notes) {
+  const sections = noteSections(readText(file));
+  if (sections.length !== notes.length) {
+    throw new Error(`notas.md: ${sections.length} sections but notas has ${notes.length}`);
+  }
+  for (let index = 0; index < notes.length; index += 1) {
+    if (sections[index] !== notes[index].texto) {
+      throw new Error(`notas.md: section ${index + 1} does not match pagina ${notes[index].pagina}`);
+    }
+  }
+}
+
+function verifyPresenter(request) {
+  const inputs = inputsOf(request);
+  const assets = (request.assets || []).map(String);
+  if (assets.length === 0) return { assets: [] };
+  const dir = path.dirname(assets[0]);
+  const base = presenterBase(path.basename(assets[0]));
+  const html = readText(path.join(dir, `${base}${PRESENT_SUFFIX}`));
+  const notes = normalizeNotes(inputs, countSlides(html));
+  checkEmbeddedNotes(html, notes.length);
+  checkNotesFile(path.join(dir, `${base}${NOTES_SUFFIX}`), notes);
+  return {
+    assets: assets.map((asset) => ({
+      file: path.basename(asset),
+      passed: true,
+      verifier: "presenter",
+    })),
+  };
+}
+
+function documentPreview(asset, file, notes) {
+  const slides = countSlides(readText(asset));
+  const summary = `${file} · ${slides} slide${slides === 1 ? "" : "s"} · ${notes.length} notes`;
+  return {
+    preview: 1,
+    kind: "document",
+    summary: summary.slice(0, MAX_SUMMARY),
+    page_count: 1,
+    pages: [],
+  };
+}
+
+function notesPreview(file, notes) {
+  const summary = `${file} · ${notes.length} speaker note${notes.length === 1 ? "" : "s"}`;
+  return {
+    preview: 1,
+    kind: "text",
+    summary: summary.slice(0, MAX_SUMMARY),
+    fields: { notes: notes.length },
+  };
+}
+
+function previewPresenterOf(asset, notes) {
+  const file = path.basename(asset);
+  let data = null;
+  if (file.endsWith(PRESENT_SUFFIX)) data = documentPreview(asset, file, notes);
+  else if (file.endsWith(NOTES_SUFFIX)) data = notesPreview(file, notes);
+  if (data === null) {
+    throw new Error(`${file}: preview the presenter file or its notes, not this file`);
+  }
+  fs.writeFileSync(`${asset}.preview.json`, `${JSON.stringify(data, null, 2)}\n`);
+  return { file, preview: `${file}.preview.json`, images: [] };
+}
+
+function previewPresenter(request) {
+  const notes = normalizeNotes(inputsOf(request));
+  const entries = (request.assets || []).map((asset) => previewPresenterOf(String(asset), notes));
+  return { assets: entries };
 }
 
 // --- doctor: the machine, and at full depth one throwaway render.

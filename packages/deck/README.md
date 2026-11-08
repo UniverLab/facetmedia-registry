@@ -61,6 +61,35 @@ which is the state a placed asset is in until `preview` rasterizes them —
 compares the count with the record's `page_count`, and stops with
 `runner_failed` on a mismatch.
 
+## The presenter runner
+
+`deck.presenter` builds the speaking copy of the same deck: one source, speaker
+view and notes attached per slide. It takes the same `fuente` and a `notas`
+array of `{ pagina, texto }` tables — one per slide, `pagina` a distinct 1-based
+slide number — orders them by `pagina`, and writes two assets:
+
+- **`<name>.present.html`** — the deck with local resources inlined as data
+  URIs, plus the presenter CSS, `window.__PZ_NOTES__` and the presenter script
+  injected before `</body>`. Kind `document`, mime `text/html`, properties
+  `{ slides, notes }`.
+- **`<name>.notes.md`** — the materialized companion, one non-empty `---`
+  separated section per note in `pagina` order. Kind `text`, the generic
+  viewer, properties `{ slides, notes }`.
+
+A missing non-video ref (an image or stylesheet beside the deck) throws
+`runner_failed` naming the ref; a missing video only warns on stderr with the
+lab's `aviso` and never fails. The presenter files ship beside the runner in
+`presenter/`, the same layout as the lab's `tools/presenter/`.
+
+The runner never serves and never opens: file output only. Serving is the
+core's job, and the core opens a document asset itself in the system browser.
+The lab's `--open` flag stays out; `deck.presenter` has no equivalent.
+
+Its preview writes `<asset>.preview.json`: `document` for
+`<name>.present.html` with `page_count: 1` and an empty `pages` (a
+self-contained HTML page is never rasterized), and a generic `text` preview
+with `{ notes }` for `<name>.notes.md`.
+
 ## Environment
 
 - **`CHROME_PATH`** selects the host browser. Without it the runner still finds

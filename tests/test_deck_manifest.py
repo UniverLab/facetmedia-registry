@@ -137,6 +137,58 @@ def test_the_index_carries_the_package() -> None:
     assert names.count("deck") == 1
 
 
+def test_the_presenter_capability_orders_notes_by_pagina() -> None:
+    capability = MANIFEST["capabilities"]["presenter"]
+    assert capability["kind"] == "document"
+    assert capability["preview"] == {"viewer": "generic"}
+    inputs = capability["inputs"]
+    assert set(inputs) == {"fuente", "notas"}
+    assert inputs["fuente"]["type"] == "path"
+    assert inputs["fuente"]["required"] is True
+    assert inputs["notas"]["type"] == "array"
+    assert inputs["notas"]["required"] is True
+    assert inputs["notas"]["min_items"] == 1
+    items = inputs["notas"]["items"]
+    assert set(items) == {"pagina", "texto"}
+    assert items["pagina"]["type"] == "integer"
+    assert items["pagina"]["required"] is True
+    assert items["pagina"]["min"] == 1
+    assert items["texto"]["type"] == "string"
+    assert items["texto"]["required"] is True
+
+
+def test_the_presenter_files_ship_beside_the_runner() -> None:
+    css_file = PACKAGE / "presenter" / "runner.css"
+    js_file = PACKAGE / "presenter" / "runner.js"
+    assert css_file.is_file()
+    assert js_file.is_file()
+    css = css_file.read_text(encoding="utf-8")
+    js = js_file.read_text(encoding="utf-8")
+    assert ".pz-grid" in css
+    assert "window.__PZ_NOTES__" in js
+    assert "pz-presenter" in js
+
+
+def test_the_presenter_runner_reports_the_manifest_version() -> None:
+    runner = (PACKAGE / "runner.js").read_text(encoding="utf-8")
+    found = re.search(r'const PACKAGE_VERSION = "([^"]+)";', runner)
+    assert found is not None
+    assert found.group(1) == MANIFEST["version"]
+
+
+def test_the_skill_names_the_presenter_capability() -> None:
+    assert "deck.slides" in SKILL
+    assert "deck.presenter" in SKILL
+
+
+def test_the_readme_documents_the_presenter_runner() -> None:
+    assert "## The presenter runner" in READ
+    assert "deck.presenter" in READ
+    assert ".present.html" in READ
+    assert ".notes.md" in READ
+    assert "`--open` flag stays out" in READ
+
+
 def test_the_skill_stub_validates_in_the_core_format() -> None:
     first, second, *rest = SKILL.split("---", 2)
     assert first == ""

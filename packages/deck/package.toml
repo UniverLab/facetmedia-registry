@@ -59,3 +59,32 @@ description = "Recorded seed; the paginated export is deterministic, so it label
 
 [capabilities.slides.preview]
 viewer = "generic"
+
+[capabilities.presenter]
+summary = "Attach one speaker note per slide and build a self-contained presenter file with speaker view and notes from the same deck"
+kind = "document"
+
+[capabilities.presenter.inputs.fuente]
+type = "path"
+required = true
+description = "Deck HTML with one `<section class=\"slide\">` per slide, resolved relative to the piece; local images and stylesheet refs are inlined as data URIs."
+
+[capabilities.presenter.inputs.notas]
+type = "array"
+required = true
+min_items = 1
+description = "One speaker note table per slide; the runner orders them by pagina and materializes the `---` separated notes companion."
+
+[capabilities.presenter.inputs.notas.items.pagina]
+type = "integer"
+required = true
+min = 1
+description = "1-based slide number the note belongs to; every pagina must be distinct and inside the deck."
+
+[capabilities.presenter.inputs.notas.items.texto]
+type = "string"
+required = true
+description = "Speaker note shown for that slide in the presenter view."
+
+[capabilities.presenter.preview]
+viewer = "generic"
