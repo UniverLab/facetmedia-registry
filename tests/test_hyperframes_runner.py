@@ -12,6 +12,7 @@ checked-in MP4 fixture with the host ``ffprobe`` and skip when it is absent.
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
@@ -660,6 +661,170 @@ def test_build_mjs_decodes_gt_only_inside_style(tmp_path: Path) -> None:
     assert "&gt;" not in style.group(1)
     assert ">" in style.group(1)
     assert 'id="my-svg-gpu"' in html
+
+
+GIRO_TEMPLATE = """<!doctype html>
+<html lang="es">
+  <head>
+    <script src="./vendor/gsap.min.js"></script>
+    <script type="importmap">
+      { "imports": { "three": "./vendor/three.module.js",
+                     "three/addons/": "./vendor/three/addons/" } }
+    </script>
+  </head>
+  <body>
+    <canvas id="escena"></canvas>
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+      const GLB = /* GLB */"";
+      const DATA = {
+        /* GIRO */
+        colores: { muros: 0xecebe6 },
+      };
+
+      const renderer = new THREE.WebGLRenderer();
+      const listo = new GLTFLoader().parseAsync(new ArrayBuffer(0), '');
+
+      // The approved lab proof carries this exact comment; naming the
+      // forbidden API is not using it, so the recipe scan must let it pass.
+      // Pure function of time: HyperFrames seeks every frame (no requestAnimationFrame).
+      function renderAt(t) {
+        renderer.render(new THREE.Scene(), new THREE.PerspectiveCamera());
+      }
+      window.addEventListener('hf-seek', (event) => {
+        event.detail.waitUntil(listo.then(() => renderAt(event.detail.time)));
+      });
+    </script>
+  </body>
+</html>
+"""
+#: A vendored third-party file carrying a license URL in a comment the runner
+#: never fetches; the vendor/ subtree is exempt from the remote-URL scan.
+VENDOR_THREE = "// three.module.js 0.170.0 — https://threejs.org/license\n"
+GIRO_MODEL = b"glTF\x02\x00\x00\x00"
+
+
+def _giro_comp(root: Path, template: str = GIRO_TEMPLATE) -> tuple[Path, Path]:
+    piece = root / "piece"
+    comp = piece / "comp"
+    addons = comp / "vendor" / "three" / "addons" / "loaders"
+    addons.mkdir(parents=True)
+    (comp / "assets").mkdir()
+    metadata = {
+        "$schema": "https://hyperframes.heygen.com/schema/hyperframes.json",
+        "registry": "https://raw.githubusercontent.com/heygen-com/hyperframes/main/registry",
+    }
+    (comp / "hyperframes.json").write_text(json.dumps(metadata), encoding="utf-8")
+    (comp / "index.tmpl").write_text(template, encoding="utf-8")
+    (comp / "build.mjs").write_text("export {};\n", encoding="utf-8")
+    (comp / "vendor" / "gsap.min.js").write_text("// gsap 3.14.2\n", encoding="utf-8")
+    (comp / "vendor" / "three.module.js").write_text(VENDOR_THREE, encoding="utf-8")
+    (addons / "GLTFLoader.js").write_text("// GLTFLoader 0.170.0\n", encoding="utf-8")
+    (comp / "assets" / "keep.txt").write_text("vendored\n", encoding="utf-8")
+    model = piece / "modelo.glb"
+    model.write_bytes(GIRO_MODEL)
+    return piece, comp
+
+
+def _giro_request(out: Path, piece: Path, **inputs: Any) -> dict[str, Any]:
+    base: dict[str, Any] = {"composicion": "comp", "modelo-glb": "modelo.glb", "prompt": "brief"}
+    base.update(inputs)
+    return _request("run", out, piece, capability="hyperframes.giro", **base)
+
+
+def test_giro_rejects_request_animation_frame_before_the_cli_runs(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    template = GIRO_TEMPLATE.replace(
+        "function renderAt(t) {",
+        "requestAnimationFrame(function () { renderAt(0); });\nfunction renderAt(t) {",
+    )
+    piece, _comp = _giro_comp(tmp_path, template)
+    out = tmp_path / "out"
+    out.mkdir()
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _giro_request(out, piece),
+        _environment(tmp_path, _dirs(packages)),
+    )
+    assert done.returncode != 0
+    assert result is None
+    assert "requestAnimationFrame" in done.stderr
+    assert _calls(tmp_path) == []
+
+
+def test_giro_rejects_a_remote_url_outside_vendor(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    template = GIRO_TEMPLATE.replace(
+        "</head>",
+        '<link rel="preload" href="https://cdn.example.com/model.bin">\n  </head>',
+    )
+    piece, _comp = _giro_comp(tmp_path, template)
+    out = tmp_path / "out"
+    out.mkdir()
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _giro_request(out, piece),
+        _environment(tmp_path, _dirs(packages)),
+    )
+    assert done.returncode != 0
+    assert result is None
+    assert "index.tmpl" in done.stderr
+    assert "https://cdn.example.com/model.bin" in done.stderr
+    assert _calls(tmp_path) == []
+
+
+def test_giro_does_not_scan_urls_inside_vendor(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    piece, _comp = _giro_comp(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _giro_request(out, piece),
+        _environment(tmp_path, _dirs(packages)),
+    )
+    assert done.returncode == 0, done.stderr
+    assert [call["args"][0] for call in _calls(tmp_path)] == ["check", "render"]
+    assert result is not None
+    copied = (out / "composition" / "vendor" / "three.module.js").read_text(encoding="utf-8")
+    assert "https://threejs.org/license" in copied
+
+
+def test_giro_embeds_the_model_and_injects_the_orbit_scalars(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    piece, _comp = _giro_comp(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    inputs = {
+        "orbita-radio": 7,
+        "orbita-altura": 5,
+        "orbita-desde": 0.2,
+        "orbita-vuelta": 1.5,
+        "centro-x": 1.5,
+        "centro-y": 2.5,
+        "centro-z": -3.5,
+        "duracion": 6,
+    }
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _giro_request(out, piece, **inputs),
+        _environment(tmp_path, _dirs(packages)),
+    )
+    assert done.returncode == 0, done.stderr
+    assert result is not None
+    written = (out / "composition" / "index.tmpl").read_text(encoding="utf-8")
+    assert "/* GLB */" not in written
+    assert "/* GIRO */" not in written
+    assert base64.b64encode(GIRO_MODEL).decode("ascii") in written
+    assert '"orbita":{"radio":7,"altura":5,"desde":0.2,"vuelta":1.5}' in written
+    assert '"centro":[1.5,2.5,-3.5]' in written
+    assert '"duracion":6' in written
 
 
 def test_the_runner_has_no_check_verb(tmp_path: Path) -> None:

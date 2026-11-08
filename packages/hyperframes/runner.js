@@ -15,6 +15,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
+const { giroSetup } = require("./giro.js");
 
 const BROWSER_VAR = "HYPERFRAMES_BROWSER_PATH";
 const LAB_BROWSER = "/usr/bin/google-chrome";
@@ -558,6 +559,11 @@ function seedOf(inputs) {
 function refuseRemoteUrls(root) {
   const allowed = metadataUrls(path.join(root, "hyperframes.json"));
   for (const file of walkFiles(root)) {
+    const relative = path.relative(root, file);
+    // Vendored third-party files carry license and documentation URLs in
+    // comments that are never fetched; only the composition's own files are
+    // held to the self-contained rule.
+    if (relative.split(path.sep)[0] === "vendor") continue;
     if (!TEXT_EXTENSIONS.has(path.extname(file).toLowerCase())) continue;
     let text = fs.readFileSync(file, "utf8");
     if (path.basename(file) === "hyperframes.json") {
@@ -610,6 +616,9 @@ function run(request) {
   copyClips(inputs, pieceBase(request), workDir);
   if (request.capability === "hyperframes.diagrama") {
     diagramaSetup(workDir, inputs, pieceBase(request));
+  }
+  if (request.capability === "hyperframes.giro") {
+    giroSetup(workDir, inputs, pieceBase(request));
   }
   runCli(["check"], workDir);
   runCli(renderArgs(inputs, path.join(outDir, `${name}${extension}`), loop), workDir);

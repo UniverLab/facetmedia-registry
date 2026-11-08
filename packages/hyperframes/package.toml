@@ -608,3 +608,76 @@ description = "Step duration in seconds."
 
 [capabilities.diagrama.preview]
 viewer = "video"
+
+[capabilities.giro]
+summary = "Render a checked Three.js composition that turns an embedded CAD model on a camera orbit, without Cycles frame runs"
+kind = "video"
+
+[capabilities.giro.inputs.composicion]
+type = "path"
+required = true
+description = "Composition directory with hyperframes.json and index.tmpl plus assets/ and vendor/ (pinned gsap.min.js, three.module.js and three/addons/GLTFLoader.js), resolved relative to the piece; the author's offline build.mjs produces the vendored tree and the runner never executes it."
+
+[capabilities.giro.inputs.modelo-glb]
+type = "path"
+required = true
+description = "CAD model as a .glb file, resolved relative to the piece file; base64-embedded into the composition's GLB placeholder before check so nothing is fetched at render time."
+
+[capabilities.giro.inputs.orbita-radio]
+type = "number"
+default = 9
+description = "Camera orbit radius around the model, in scene units."
+
+[capabilities.giro.inputs.orbita-altura]
+type = "number"
+default = 11
+description = "Camera height above the scene floor, in scene units."
+
+[capabilities.giro.inputs.orbita-desde]
+type = "number"
+default = -0.9
+description = "Starting angle of the orbit, in radians."
+
+[capabilities.giro.inputs.orbita-vuelta]
+type = "number"
+default = 0.55
+description = "Fraction of a full turn the camera completes over duracion."
+
+[capabilities.giro.inputs.centro-x]
+type = "number"
+default = 3.0
+description = "X of the model centre the camera looks at."
+
+[capabilities.giro.inputs.centro-y]
+type = "number"
+default = 0.6
+description = "Y (height) of the model centre the camera looks at."
+
+[capabilities.giro.inputs.centro-z]
+type = "number"
+default = -2.25
+description = "Z of the model centre the camera looks at; glTF is Y-up, so this is the negated floor-plane Y."
+
+[capabilities.giro.inputs.duracion]
+type = "number"
+default = 8
+description = "Composition length in seconds; renderAt(t) maps the orbit over this span."
+
+[capabilities.giro.inputs.prompt]
+type = "string"
+required = true
+description = "The brief the composition was authored from; recorded and carried into the video preview."
+
+[capabilities.giro.inputs.seed]
+type = "integer"
+default = 0
+min = 0
+description = "Recorded seed; the seek-based render is deterministic, so it labels the record."
+
+[capabilities.giro.inputs.fps]
+type = "integer"
+min = 1
+description = "Frame rate passed as --fps; the composition's own data-fps applies when omitted."
+
+[capabilities.giro.preview]
+viewer = "video"

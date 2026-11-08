@@ -202,6 +202,46 @@ def test_the_skill_stub_validates_in_the_core_format() -> None:
     assert "hyperframes.render" in body
 
 
+GIRO_SCALARS = {
+    "orbita-radio": 9,
+    "orbita-altura": 11,
+    "orbita-desde": -0.9,
+    "orbita-vuelta": 0.55,
+    "centro-x": 3.0,
+    "centro-y": 0.6,
+    "centro-z": -2.25,
+    "duracion": 8,
+}
+
+
+def test_giro_capability_declares_flat_scalars_only() -> None:
+    """An orbita table or centro array would fail package load; only scalars ship."""
+    giro = MANIFEST["capabilities"]["giro"]
+    assert giro["kind"] == "video"
+    assert giro["preview"] == {"viewer": "video"}
+    inputs = giro["inputs"]
+    assert set(inputs) == {
+        "composicion",
+        "modelo-glb",
+        *GIRO_SCALARS,
+        "prompt",
+        "seed",
+        "fps",
+    }
+    assert inputs["composicion"]["type"] == "path"
+    assert inputs["composicion"]["required"] is True
+    assert inputs["modelo-glb"]["type"] == "path"
+    assert inputs["modelo-glb"]["required"] is True
+    for name, default in GIRO_SCALARS.items():
+        assert inputs[name]["type"] == "number", name
+        assert inputs[name]["default"] == default, name
+    assert inputs["prompt"]["type"] == "string"
+    assert inputs["prompt"]["required"] is True
+    assert (inputs["seed"]["default"], inputs["seed"]["min"]) == (0, 0)
+    assert "required" not in inputs["fps"]
+    assert all(field["type"] != "array" for field in inputs.values())
+
+
 def test_the_readme_documents_the_contract_and_the_traps() -> None:
     assert RUNTIME in READ
     assert "0.8.143" in READ

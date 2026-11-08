@@ -144,6 +144,71 @@ Both proofs live in the Grafics lab and pass `check`:
 - `projects/prueba-diagramas/video-arquitectura/` draws `arquitectura.svg`, an
   architecture diagram with groups, services and `polygon.arrow` arrowheads.
 
+## 3D turns
+
+`hyperframes.giro` renders a checked Three.js scene that turns an embedded CAD
+model on a camera orbit: a camera-friendly clip in seconds instead of a Cycles
+frame run. It runs the same `check`-then-`render` path as `hyperframes.render`,
+with these inputs on top:
+
+- **`modelo-glb`** (path, required): the model, resolved relative to the piece
+  file and embedded as base64 into the composition's GLB placeholder before
+  `check`, so the render fetches nothing.
+- **`orbita-radio`** (`9`), **`orbita-altura`** (`11`), **`orbita-desde`**
+  (`-0.9`, radians), **`orbita-vuelta`** (`0.55`, fraction of a full turn over
+  the clip): the camera orbit.
+- **`centro-x`** (`3.0`), **`centro-y`** (`0.6`), **`centro-z`** (`-2.25`): the
+  point the camera looks at; glTF is Y-up, so `centro-z` is the negated
+  floor-plane Y.
+- **`duracion`** (`8`, seconds): the span `renderAt(t)` maps over.
+
+They are **flat scalars, not an `orbita` table or a `centro` array**: the
+registry input schema allows only `string`, `integer`, `number`, `boolean`,
+`enum`, `path` and `array`, and array items must be tables (`schema.py`
+`_check_array` rejects non-dict items). A table or number array would fail
+package load and piece validation with `invalid_input` before the runner starts.
+
+The scene is a **pure function of time**: `renderAt(t)` is called from the
+`hf-seek` event and the runner validates the recipe before `check` — the
+composition must carry `renderAt`, `hf-seek` and `event.detail.waitUntil`, and
+must not use `requestAnimationFrame` or `performance.now()`, which `check`
+rejects too. `event.detail.waitUntil(promise)` makes HyperFrames wait for the
+model to load. Text stays in HTML over the canvas, so it is crisp.
+
+### Vendoring
+
+The composition is shipped self-contained under `vendor/`, such as:
+
+```
+vendor/gsap.min.js                        (GSAP 3.14.2)
+vendor/three.module.js                    (Three.js 0.170.0)
+vendor/three/addons/loaders/GLTFLoader.js (Three.js 0.170.0)
+```
+
+The importmap pins `three` and `three/addons/` to `./vendor/` paths and the
+runner rejects any other value. The remote-URL scan (`refuseRemoteUrls`, and the
+same check inside `giroSetup`) **skips the top-level `vendor/` subtree**: the
+vendored third-party files carry license and documentation URLs in comments that
+are never fetched, so scanning them would reject the package's own vendor files
+before `check`. The composition's own files remain fully scanned.
+
+The **offline `build.mjs`** in the piece produces this vendored tree and sets up
+the composition; the runner never executes it. The runner-side **`giroSetup`**
+then does only the runtime injection: it base64-embeds `modelo-glb` into the
+`/* GLB */""` placeholder and writes the eight scalars into the `DATA` literal
+at `/* GIRO */`.
+
+Use it for camera-friendly video where a simple lit scene and crisp HTML text
+are enough; Cycles stays for photoreal staging with bounced light.
+
+### Approved example
+
+The lab proof is
+`/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-render-arq/giro/`
+(`renderAt`/`hf-seek`/`waitUntil`/`DATA.orbita` shape, GLB embed); its CDN
+script/importmap lines are the pre-vendor source the shipped composition
+vendors locally.
+
 ## Verifying
 
 `verify` probes every asset with the host `ffprobe`: a video stream with a
