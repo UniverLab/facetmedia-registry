@@ -131,6 +131,20 @@ def test_the_capability_is_the_document_kind_with_the_slide_inputs() -> None:
     assert (inputs["seed"]["default"], inputs["seed"]["min"]) == (0, 0)
 
 
+def test_the_pagina_capability_is_the_document_kind_with_the_piece_inputs() -> None:
+    capability = MANIFEST["capabilities"]["pagina"]
+    assert capability["kind"] == "document"
+    assert capability["preview"] == {"viewer": "generic"}
+    inputs = capability["inputs"]
+    assert set(inputs) == {"fuente", "prompt", "seed"}
+    assert inputs["fuente"]["type"] == "path"
+    assert inputs["fuente"]["required"] is True
+    assert inputs["prompt"]["type"] == "string"
+    assert inputs["prompt"]["required"] is True
+    assert inputs["seed"]["type"] == "integer"
+    assert (inputs["seed"]["default"], inputs["seed"]["min"]) == (0, 0)
+
+
 def test_the_index_carries_the_package() -> None:
     names = [entry["name"] for entry in INDEX["packages"]]
     assert "deck" in names
@@ -178,6 +192,7 @@ def test_the_presenter_runner_reports_the_manifest_version() -> None:
 
 def test_the_skill_names_the_presenter_capability() -> None:
     assert "deck.slides" in SKILL
+    assert "deck.pagina" in SKILL
     assert "deck.presenter" in SKILL
 
 

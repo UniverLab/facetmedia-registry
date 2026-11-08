@@ -61,6 +61,42 @@ which is the state a placed asset is in until `preview` rasterizes them —
 compares the count with the record's `page_count`, and stops with
 `runner_failed` on a mismatch.
 
+## One-page pieces
+
+`deck.pagina` exports a one-page piece — an infographic or a poster written as
+HTML + CSS + SVG — to a single-page PDF plus its `page-01.png`. It takes the
+same `fuente`, `prompt` and `seed` inputs as `deck.slides`, but `fuente` is the
+piece itself: no `@page` rule, no page breaks.
+
+The render is the lab's default path, not the slides print path: the runner
+loads the piece through a `file://` URL at a 1060px viewport, waits for
+`networkidle` and `document.fonts.ready`, switches to **screen** media
+(`emulateMedia({ media: "screen" })`), measures the content height
+(`scrollHeight`, or the body's bottom edge plus its bottom margin when the
+page is shorter than the viewport), and calls `page.pdf` with `printBackground`,
+an explicit `width` of `1060px`, `height` of the measured height plus 2px, and
+`pageRanges: "1"`. The same `pdftoppm` stage as `deck.slides` then rasterizes
+the one-page PDF into `page-01.png`, and the preview file carries the core
+document shape `{ preview, kind, summary, page_count, pages }` with
+`page_count: 1`.
+
+Before exporting, the runner enforces three exact checks, each a plain failure
+that facet reports as `runner_failed` naming the check:
+
+- **`footer-sources`** — the piece must carry a `<footer>` or an element whose
+  class mentions `footer`, `fuentes` or `sources`, with non-empty text. Every
+  visible number needs its source in that footer.
+- **`spanish-numbers`** — the rendered text is extracted with the host
+  `pdftotext` (same poppler-utils dependency as `pdftoppm`) and the first five
+  number runs not adjacent to ASCII letters are checked: a dot-decimal like
+  `8.04` or a comma-thousands like `40,300` fails, while Spanish thousands
+  dots (`1.200`) and comma decimals (`0,9`, `6,00`) pass.
+- **`captioned-images`** — every `<img>` must sit inside a `<figure>` that also
+  holds a non-empty `<figcaption>`; a piece with no `<img>` passes vacuously.
+
+There is no `const DATA` requirement: the piece is plain HTML + CSS + SVG and
+the checks above are the whole contract.
+
 ## The presenter runner
 
 `deck.presenter` builds the speaking copy of the same deck: one source, speaker

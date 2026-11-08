@@ -60,6 +60,29 @@ description = "Recorded seed; the paginated export is deterministic, so it label
 [capabilities.slides.preview]
 viewer = "generic"
 
+[capabilities.pagina]
+summary = "Lay out a one-page infographic or poster from HTML + CSS + SVG, exported to a one-page PDF plus its page PNG through the host Chromium's screen-media measured-height render"
+kind = "document"
+
+[capabilities.pagina.inputs.fuente]
+type = "path"
+required = true
+description = "One-page piece HTML (infographic or poster) with a sources footer and captioned images, resolved relative to the piece."
+
+[capabilities.pagina.inputs.prompt]
+type = "string"
+required = true
+description = "The brief the piece was authored from; recorded and carried into the document preview."
+
+[capabilities.pagina.inputs.seed]
+type = "integer"
+default = 0
+min = 0
+description = "Recorded seed; the one-page export is deterministic, so it labels the record."
+
+[capabilities.pagina.preview]
+viewer = "generic"
+
 [capabilities.presenter]
 summary = "Attach one speaker note per slide and build a self-contained presenter file with speaker view and notes from the same deck"
 kind = "document"

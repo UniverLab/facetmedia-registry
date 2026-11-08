@@ -10,6 +10,11 @@ and a page break separates the slides. The runner waits for the fonts, switches
 to print media and lets the `@page` rule decide the PDF pages, then rasterizes
 every page with the host `pdftoppm`.
 
+`deck.pagina` turns one piece of HTML — an infographic or a poster — into a
+single-page PDF and its page PNG. The runner renders it with screen media and
+the content's measured height, then checks the piece's footer, its numbers and
+its image captions before exporting.
+
 `deck.presenter` builds the same deck for speaking: it attaches one speaker
 note per slide, inlines the local resources, injects the presenter view and
 writes `<base>.present.html` plus its `<base>.notes.md` companion. It never
@@ -39,6 +44,16 @@ seed = 0
 0; }`, and one page break per slide (`.slide { break-after: page; }`, with the
 last slide left without a break). Keep it self-contained: local fonts, images
 and stylesheet, no remote URL.
+
+`deck.pagina` takes the same `fuente`, `prompt` and `seed` inputs, but `fuente`
+is a one-page piece rather than a deck: no `@page` rule and no page breaks. The
+runner measures the content height in screen media and exports exactly one PDF
+page plus `page-01.png`. Before exporting it refuses the piece when it lacks a
+`<footer>` or `footer`/`fuentes`/`sources` element with text (`footer-sources`),
+when an `<img>` sits outside a `<figure>` with a non-empty `<figcaption>`
+(`captioned-images`), or when the rendered text carries an English-style number
+like `8.04` or `40,300` (`spanish-numbers`); each failure stops the run with
+`runner_failed` naming the check.
 
 ```toml
 [inputs]

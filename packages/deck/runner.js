@@ -15,6 +15,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { pathToFileURL } = require("node:url");
+const pagina = require("./pagina.js");
 
 const PLAYWRIGHT = "playwright-core";
 const CHROME_CANDIDATES = [
@@ -29,6 +30,8 @@ const CHROME_MISSING =
 const POPPLER_FIX = "sudo apt-get install -y poppler-utils";
 const POPPLER_MISSING = `poppler-utils is required to rasterize the page PNGs (${POPPLER_FIX})`;
 const PDFINFO_MISSING = `pdfinfo is required to count the PDF's pages (${POPPLER_FIX})`;
+const PDFTOTEXT_MISSING = `pdftotext is required to check the rendered numbers (${POPPLER_FIX})`;
+const PAGINA = "deck.pagina";
 const PDFINFO_PAGE_RE = /^Pages:\s+(\d+)/m;
 const MIN_NODE_MAJOR = 22;
 const MAX_SUMMARY = 160;
@@ -107,7 +110,10 @@ function writeResult(file, data) {
 async function dispatch(verb, request) {
   if (verb === "doctor") return doctor(request);
   const presenter = String(request.capability || "") === PRESENTER;
-  if (verb === "run") return presenter ? runPresenter(request) : runSlides(request);
+  if (verb === "run") {
+    if (presenter) return runPresenter(request);
+    return String(request.capability || "") === PAGINA ? runPagina(request) : runSlides(request);
+  }
   if (verb === "verify") return presenter ? verifyPresenter(request) : verify(request);
   if (verb === "preview") return presenter ? previewPresenter(request) : preview(request);
   throw new Error(`${verb}: unknown verb (this runner has: run, verify, preview, doctor)`);
@@ -329,6 +335,41 @@ async function runSlides(request) {
   const name = deckName(inputs);
   const pdf = path.join(outDir, `${name}.pdf`);
   await renderPdf(source, pdf, chrome);
+  const pages = rasterize(pdf, outDir);
+  const { version } = packageDir(PLAYWRIGHT);
+  return {
+    tool: { name: "deck", version },
+    assets: [
+      {
+        file: `${name}.pdf`,
+        name,
+        kind: "document",
+        mime: "application/pdf",
+        properties: { page_count: pages.length },
+        params: inputs,
+        seed: seedOf(inputs),
+        inputs: [source],
+      },
+    ],
+  };
+}
+
+// --- deck.pagina: one-page pieces through the lab's default render path.
+
+async function runPagina(request) {
+  const inputs = inputsOf(request);
+  const outDir = path.resolve(request.out_dir);
+  fs.mkdirSync(outDir, { recursive: true });
+  const source = slideFile(request);
+  pagina.checkSource(fs.readFileSync(source, "utf8"));
+  const chrome = findChrome();
+  if (!chrome) throw new Error(CHROME_MISSING);
+  if (!which("pdftoppm")) throw new Error(POPPLER_MISSING);
+  if (!which("pdftotext")) throw new Error(PDFTOTEXT_MISSING);
+  const name = deckName(inputs);
+  const pdf = path.join(outDir, `${name}.pdf`);
+  await pagina.renderPdf(source, pdf, chrome);
+  pagina.checkText(pdf);
   const pages = rasterize(pdf, outDir);
   const { version } = packageDir(PLAYWRIGHT);
   return {

@@ -4,10 +4,12 @@ The runner is a subprocess of the host ``node``. Its ``FACET_NODE_PATH`` points
 at a fixture ``playwright-core`` package whose entry records every browser call
 and writes a stub PDF; ``PATH`` carries a stub ``pdftoppm`` that writes one PNG
 per page with single-digit names (the real poppler does the same for small
-counts). That proves the print-media render with ``preferCSSPageSize``, the
-font wait, the page-name normalization to ``page-01.png``, the page-count
+counts) and a stub ``pdftotext`` that prints canned text for the pagina
+number check. That proves the print-media render with ``preferCSSPageSize``,
+the font wait, the page-name normalization to ``page-01.png``, the page-count
 contract, the preview shape and the doctor fixes without a browser, poppler or
-a downloaded tarball.
+a downloaded tarball. The ``deck.pagina`` tests prove the screen-media
+measured-height render and the three source/text checks the same way.
 """
 
 from __future__ import annotations
@@ -59,7 +61,7 @@ module.exports = {
             },
             async evaluate(fn) {
               log({ evaluate: String(fn) });
-              return true;
+              return String(fn).includes("scrollHeight") ? 900 : true;
             },
             async emulateMedia(options) {
               log({ emulateMedia: options && options.media });
@@ -96,6 +98,10 @@ PDFINFO_STUB = """#!/bin/sh
 echo "Pages: ${DECK_STUB_PAGES:-2}"
 """
 
+PDFTOTEXT_STUB = """#!/bin/sh
+printf '%s\\n' "${DECK_STUB_TEXT:-}"
+"""
+
 CHROME_STUB = "#!/bin/sh\nexit 0\n"
 
 SLIDE_HTML = """<!doctype html>
@@ -107,6 +113,28 @@ html, body { margin: 0; }
 <section class="slide">one</section><section class="slide">two</section>
 </body></html>
 """
+
+PAGINA_IMG = (
+    '<figure><img src="chart.png" alt="chart">\n'
+    "<figcaption>Ventas por trimestre</figcaption></figure>"
+)
+PAGINA_IMG_BARE = '<img src="chart.png" alt="chart">'
+PAGINA_FOOTER = '<footer class="sources">Fuentes: 1.200 casos, 0,9 %, 6,00 EUR</footer>'
+
+PAGINA_HTML = f"""<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html, body {{ margin: 0; }}
+footer {{ padding: 8px; }}
+</style></head><body>
+<h1>Infographic</h1>
+{PAGINA_IMG}
+{PAGINA_FOOTER}
+</body></html>
+"""
+
+PAGINA_NO_FOOTER_HTML = PAGINA_HTML.replace(f"{PAGINA_FOOTER}\n", "")
+PAGINA_BARE_IMG_HTML = PAGINA_HTML.replace(PAGINA_IMG, PAGINA_IMG_BARE)
+PAGINA_TEXT = "1.200 casos · 0,9 % · 6,00 EUR"
 
 
 def _package(root: Path) -> Path:
@@ -123,7 +151,11 @@ def _tools(root: Path, *, pages: int = PAGE_COUNT, poppler: bool = True) -> tupl
     bin_dir = root / "bin"
     bin_dir.mkdir()
     if poppler:
-        for name, stub in (("pdftoppm", POPPLER_STUB), ("pdfinfo", PDFINFO_STUB)):
+        for name, stub in (
+            ("pdftoppm", POPPLER_STUB),
+            ("pdfinfo", PDFINFO_STUB),
+            ("pdftotext", PDFTOTEXT_STUB),
+        ):
             script = bin_dir / name
             script.write_text(stub, encoding="utf-8")
             script.chmod(0o755)
@@ -141,6 +173,14 @@ def _slide(root: Path) -> tuple[Path, Path]:
     return piece, html
 
 
+def _pagina(root: Path, html: str = PAGINA_HTML) -> tuple[Path, Path]:
+    piece = root / "piece"
+    piece.mkdir()
+    file = piece / "pagina.html"
+    file.write_text(html, encoding="utf-8")
+    return piece, file
+
+
 def _environment(
     root: Path,
     package_dir: Path,
@@ -149,12 +189,14 @@ def _environment(
     pages: int = PAGE_COUNT,
     chrome: Path | None = None,
     path: str | None = None,
+    text: str = PAGINA_TEXT,
 ) -> dict[str, str]:
     environment = {
         "FACET_NODE": str(NODE),
         "FACET_NODE_PATH": str(package_dir),
         "DECK_STUB_LOG": str(root / "calls.log"),
         "DECK_STUB_PAGES": str(pages),
+        "DECK_STUB_TEXT": text,
         "PATH": path if path is not None else f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
     }
     if chrome is not None:
@@ -162,11 +204,18 @@ def _environment(
     return environment
 
 
-def _request(verb: str, out: Path, piece: Path, **fields: Any) -> dict[str, Any]:
+def _request(
+    verb: str,
+    out: Path,
+    piece: Path,
+    *,
+    capability: str = "deck.slides",
+    **fields: Any,
+) -> dict[str, Any]:
     request: dict[str, Any] = {
         "protocol": 1,
         "verb": verb,
-        "capability": "deck.slides",
+        "capability": capability,
         "inputs": fields.pop("inputs", {}),
         "out_dir": str(out),
         "piece_dir": str(piece),
@@ -437,3 +486,94 @@ def test_an_unknown_verb_is_refused(tmp_path: Path) -> None:
     assert done.returncode != 0
     assert result is None
     assert "unknown verb" in done.stderr
+
+
+def _pagina_run(
+    root: Path, out: Path, piece: Path, env: dict[str, str], *, seed: int = RUN_SEED
+) -> tuple[subprocess.CompletedProcess[str], Any]:
+    inputs = {"fuente": "pagina.html", "prompt": "brief", "seed": seed}
+    request = _request("run", out, piece, capability="deck.pagina", inputs=inputs)
+    return _invoke(root, "run", request, env)
+
+
+def test_pagina_run_renders_a_one_page_pdf_through_the_screen_path(tmp_path: Path) -> None:
+    package = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path, pages=1)
+    piece, html = _pagina(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, package, bin_dir, pages=1, chrome=chrome)
+    done, result = _pagina_run(tmp_path, out, piece, env)
+    assert done.returncode == 0, done.stderr
+    assert result is not None
+    asset = result["assets"][0]
+    assert (asset["file"], asset["name"], asset["kind"], asset["mime"]) == (
+        "pagina.pdf",
+        "pagina",
+        "document",
+        "application/pdf",
+    )
+    assert asset["properties"] == {"page_count": 1}
+    assert asset["seed"] == RUN_SEED
+    assert asset["params"]["prompt"] == "brief"
+    assert asset["inputs"] == [str(html)]
+    assert result["tool"] == {"name": "deck", "version": PLAYWRIGHT_VERSION}
+    assert (out / "pagina.pdf").is_file()
+    assert [path.name for path in out.glob("page-*.png")] == ["page-01.png"]
+    calls = _calls(tmp_path)
+    assert calls[1]["newPage"]["deviceScaleFactor"] == SCALE
+    assert calls[1]["newPage"]["viewport"] == VIEWPORT
+    assert calls[2]["waitUntil"] == "networkidle"
+    assert "document.fonts.ready" in calls[3]["evaluate"]
+    assert calls[4]["emulateMedia"] == "screen"
+    assert "scrollHeight" in calls[5]["evaluate"]
+    assert calls[6]["pdf"]["printBackground"] is True
+    assert calls[6]["pdf"]["width"] == "1060px"
+    assert calls[6]["pdf"]["height"] == "902px"
+    assert calls[6]["pdf"]["pageRanges"] == "1"
+    assert "preferCSSPageSize" not in calls[6]["pdf"]
+    assert calls[6]["pdf"]["path"] == str(out / "pagina.pdf")
+    assert calls[7]["close"] is True
+
+
+def test_pagina_run_fails_runner_failed_without_a_sources_footer(tmp_path: Path) -> None:
+    package = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _pagina(tmp_path, PAGINA_NO_FOOTER_HTML)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, package, bin_dir, chrome=chrome)
+    done, result = _pagina_run(tmp_path, out, piece, env)
+    assert done.returncode != 0
+    assert result is None
+    assert "footer-sources" in done.stderr
+    assert not (tmp_path / "calls.log").exists()
+
+
+def test_pagina_run_fails_runner_failed_on_a_bare_image(tmp_path: Path) -> None:
+    package = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _pagina(tmp_path, PAGINA_BARE_IMG_HTML)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, package, bin_dir, chrome=chrome)
+    done, result = _pagina_run(tmp_path, out, piece, env)
+    assert done.returncode != 0
+    assert result is None
+    assert "captioned-images" in done.stderr
+    assert not (tmp_path / "calls.log").exists()
+
+
+def test_pagina_run_fails_runner_failed_on_an_english_number(tmp_path: Path) -> None:
+    package = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _pagina(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, package, bin_dir, chrome=chrome, text="8.04 por ciento")
+    done, result = _pagina_run(tmp_path, out, piece, env)
+    assert done.returncode != 0
+    assert result is None
+    assert "spanish-numbers" in done.stderr
+    assert "8.04" in done.stderr
+    assert not list(out.glob("page-*.png"))
