@@ -1,0 +1,52 @@
+name = "freecad"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "FreeCAD project"
+tool_name = "FreeCAD"
+description = "Workshop drawings from 3D parts with scripted FreeCAD TechDraw, plus assemblies, FEM and by-hand sessions, never installed on the host"
+facet = "cad"
+
+[engine]
+type = "host-app"
+
+[engine.host_app]
+app = "freecad"
+min_version = "1.1.4"
+config_key = "freecad.path"
+env = "FREECAD_EXE"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+invocation_template = "{{app}} {{entry}} {{verb}} --input {{input}} --result {{result}}"
+
+[requirements]
+gpu = false
+ram_gb = 4
+disk_gb = 0.1
+exclusive = false
+platforms = ["linux"]
+host_libs = ["poppler-utils"]
+host_hint = "sudo apt install poppler-utils"
+
+[[licenses]]
+subject = "FreeCAD (the host application this package drives)"
+spdx = "GPL-2.0-or-later"
+
+[capabilities.plano]
+summary = "Workshop drawing of a 3D part via scripted FreeCAD TechDraw: a paginated PDF plus one PNG per page"
+kind = "document"
+
+[capabilities.plano.inputs.guion]
+type = "path"
+required = true
+description = "FreeCAD script, run inside freecadcmd as <guion> <out_dir>/<name> <pieza>; it must write <name>.pdf, resolved relative to the piece."
+
+[capabilities.plano.inputs.pieza]
+type = "path"
+required = true
+description = "Part file the script opens (STEP or a FreeCAD document), resolved relative to the piece."
+
+[capabilities.plano.preview]
+viewer = "generic"
