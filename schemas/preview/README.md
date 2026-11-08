@@ -8,7 +8,10 @@ declares (`audio`, `cad`, ...) — the same kind names the
 [viewer](../../viewers/README.md). Each schema describes one preview file of
 that kind; a package whose preview does not match it is a review blocker.
 `generic.schema.json` is the fallback for kinds without their own schema,
-including `text`.
+including `text`. A kind the core previews itself has no schema here at all:
+`document` (deck's paginated PDF) is opened in the system browser, and its
+preview shape — `preview`, `kind`, `summary`, `page_count`, `pages` — is the
+core's document fixture, not a schema in this directory.
 
 A field is added only when a viewer or an agent uses it.
 

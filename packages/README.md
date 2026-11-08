@@ -17,10 +17,11 @@ packages/<name>/
 │                       # protocol, provider, tool_name, description,
 │                       # facet, [engine], [transport], capabilities,
 │                       # [requirements], [[licenses]], [[models]]
-├── pyproject.toml      # the environment's dependencies, with
+├── pyproject.toml      # python engine: the environment's dependencies, with
 │                       # [tool.uv] package = false
-├── uv.lock             # the pinned lock, authoritative
-├── runner.py           # the package runner
+├── uv.lock             # python engine: the pinned lock, authoritative
+├── runner.py           # python engine: the package runner
+├── runner.js           # node engine: the package runner instead of runner.py
 ├── README.md           # what the tool is, what the package adds
 ├── skill/
 │   ├── SKILL.md        # the package skill (core's format)
@@ -34,11 +35,13 @@ packages/<name>/
   picks the preview schema and the viewer, and name the viewer directory with
   `[capabilities.<c>.preview] viewer` — the core's default is `generic`, so a
   kind's viewer is reached by naming it.
-- **`pyproject.toml`** — the tool's dependencies for its own environment,
-  with `[tool.uv] package = false` so uv treats it as a virtual project.
-- **`uv.lock`** — the pinned environment; CI checks it against the
-  `pyproject.toml` and audits it.
-- **`runner.py`** — one script, four verbs (below).
+- **`pyproject.toml` / `uv.lock`** — python-engine packages only: the tool's
+  dependencies for its own environment, with `[tool.uv] package = false` so uv
+  treats it as a virtual project, and the pinned lock CI audits. A
+  **node-engine** package (`[engine] type = "node"`) has neither; its pinned
+  npm closure lives in `[[engine.node.packages]]` in the manifest instead.
+- **`runner.py` / `runner.js`** — one script, four verbs (below); `.py` for a
+  python engine, `.js` for a node engine.
 - **`skill/SKILL.md`** — how an agent learns the package, printed by
   `facet skill <package>`; never installed into agent directories.
 
@@ -46,8 +49,9 @@ packages/<name>/
 
 Every package runner implements all four. `facet registry validate` rejects a
 runner that does not register `doctor`; it also rejects a package missing its
-`pyproject.toml`, `uv.lock` or entry, missing the `viewers/<viewer>/index.html`
-a capability names, or missing a valid skill:
+engine's environment files (`pyproject.toml` + `uv.lock` for python, the
+`[[engine.node.packages]]` closure for node) or entry, missing the
+`viewers/<viewer>/index.html` a capability names, or missing a valid skill:
 
 | Verb | What it does |
 |------|--------------|

@@ -26,6 +26,7 @@ the core:
 | cad | cad | 3D parts and 2D plans from CadQuery or ezdxf scripts, checked by volume, bounding box and DXF audit |
 | image | blender | Daylight architectural photos of CadQuery glTF models and studio product shots of CAD parts through a host Blender's Cycles GPU, and animated camera tours in Eevee, checked by pixel size and an MP4 probe; shared CC0 Poly Haven skies, textures and models fetched once into the models dir and re-checked by their receipt |
 | image | comfy | Stills, reference-guided edits, clips and motion drafts with ComfyUI's z-image-turbo, flux2-klein and wan22-i2v flows, checked by pixel size and video probe |
+| presentation | deck | Paginated PDF slide decks plus one PNG per page from a single HTML file with `@page` sizing and one break per slide, rendered through the host Chromium and rasterized by poppler's `pdftoppm`; page count verified against the rendered pages |
 | text | ascii | ASCII art from images and figlet banners in the lab's font |
 | voice | kokoro | Narration from text on CPU (Spanish and English), checked by transcription |
 | voice | whisper | Transcripts and subtitles from audio on CPU, checked by confidence or reference text |
@@ -62,7 +63,9 @@ A package is merged when all of the following hold:
 6. It **fits the reference machine** (8 GB VRAM, 19 GB RAM, one heavy job at a
    time) and says so in `requirements`.
 7. A **`preview`** that writes the preview file of its kind; a kind without a
-   preview schema and a viewer adds both in the same change.
+   preview schema and a viewer adds both in the same change — except a kind
+   the core previews itself, like `document`, which opens the PDF in the
+   system browser and needs neither.
 8. **No text or data inside generated images.**
 9. **Heavy local tests run alone** on the lab machine.
 
