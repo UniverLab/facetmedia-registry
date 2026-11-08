@@ -58,6 +58,9 @@ fails the verb loudly.
 The composition must be self-contained. The runner refuses any `http(s)` URL in
 the copied tree except the `$schema` and `registry` metadata values in
 `hyperframes.json`, naming the file and the URL; vendor remote assets instead.
+It skips the top-level `vendor/` subtree, because vendored third-party files
+carry licence and documentation URLs in comments that are never fetched; the
+composition's own files are scanned in full.
 Each `audio` item's `clip` is copied into the composition by its file name and
 enters as `<audio>`.
 
