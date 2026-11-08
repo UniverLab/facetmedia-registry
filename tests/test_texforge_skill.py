@@ -9,12 +9,15 @@ pull and a `facet registry validate` rely on.
 
 from __future__ import annotations
 
+import re
 import tomllib
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "texforge"
+EXAMPLES = PACKAGE / "examples"
+REFERENCES = PACKAGE / "skill" / "references"
 SKILL = (PACKAGE / "skill" / "SKILL.md").read_text(encoding="utf-8")
 README = (PACKAGE / "README.md").read_text(encoding="utf-8")
 MANIFEST: dict[str, Any] = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
@@ -23,6 +26,29 @@ DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
 INSTALL_LINE = (
     "curl -fsSL https://raw.githubusercontent.com/UniverLab/texforge/main/scripts/install.sh | sh"
+)
+#: The one runnable piece the skill cites, by base name.
+EXAMPLE = "hola-mundo"
+#: A reference the skill cites, as ``references/<name>.md``.
+REFERENCE_RE = re.compile(r"references/([a-z0-9][a-z0-9-]*)\.md")
+#: The real keys the runner writes into the staged ``project.toml``.
+STAGED_KEYS = (
+    "[document]",
+    "[build]",
+    "title =",
+    "author =",
+    'template = "general"',
+    "entry =",
+    "bibliography",
+    "embedded",
+)
+#: The exact argv the runner shells out to, in the reference's own lines.
+INVOCATIONS = (
+    "texforge build",
+    "texforge check",
+    "texforge pdf info",
+    "texforge pdf check",
+    "texforge preview --out <dir>",
 )
 
 
@@ -119,3 +145,35 @@ def test_the_package_has_its_own_uv_project() -> None:
     """The registry wants a pyproject and a lock beside the runner."""
     assert (PACKAGE / "pyproject.toml").is_file()
     assert (PACKAGE / "uv.lock").is_file()
+
+
+def test_every_reference_the_skill_cites_exists() -> None:
+    """A cited reference that is not on disk sends the reader nowhere."""
+    _, body = _front_matter()
+    cited = set(REFERENCE_RE.findall(body))
+    assert cited, "the skill cites at least one reference"
+    for name in cited:
+        path = REFERENCES / f"{name}.md"
+        assert path.is_file(), name
+        assert path.stat().st_size > 0, name
+
+
+def test_the_build_reference_carries_the_keys_and_the_invocations() -> None:
+    """The reference ports the real keys and the five command lines, not prose."""
+    text = (REFERENCES / "build.md").read_text(encoding="utf-8")
+    for key in STAGED_KEYS:
+        assert key in text, key
+    for command in INVOCATIONS:
+        assert command in text, command
+
+
+def test_the_example_is_a_runnable_piece() -> None:
+    """The piece parses, stays inside ``texforge.documento`` and ships its source."""
+    _, body = _front_matter()
+    assert f"examples/{EXAMPLE}.toml" in body
+    inputs = tomllib.loads((EXAMPLES / f"{EXAMPLE}.toml").read_text(encoding="utf-8"))["inputs"]
+    documento = MANIFEST["capabilities"]["documento"]["inputs"]
+    assert set(inputs) <= set(documento)
+    assert re.fullmatch(documento["nombre"]["pattern"], inputs["nombre"])
+    assert inputs["nombre"] == EXAMPLE
+    assert (EXAMPLES / inputs["principal"]).is_file()
