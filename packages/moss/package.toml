@@ -1,0 +1,100 @@
+name = "moss"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "OpenMOSS Team (MOSS-SoundEffect v2)"
+tool_name = "MOSS-SoundEffect v2"
+description = "Described sound effects with MOSS-SoundEffect v2, normalised to a loudness target, at most 30 s per effect."
+facet = "audio"
+uses = ["audiopreview"]
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = true
+ram_gb = 19
+disk_gb = 24
+exclusive = true
+platforms = ["linux"]
+
+[[licenses]]
+subject = "MOSS-SoundEffect v2 (moss-soundeffect-v2)"
+spdx = "Apache-2.0"
+
+[[licenses]]
+subject = "PyTorch"
+spdx = "BSD-3-Clause"
+
+[[licenses]]
+subject = "transformers"
+spdx = "Apache-2.0"
+
+[[licenses]]
+subject = "diffusers"
+spdx = "Apache-2.0"
+
+[[licenses]]
+subject = "descript-audiotools"
+spdx = "MIT"
+
+[[licenses]]
+subject = "soundfile"
+spdx = "BSD-3-Clause"
+
+[[licenses]]
+subject = "pyloudnorm"
+spdx = "MIT"
+
+[[licenses]]
+subject = "numpy"
+spdx = "BSD-3-Clause"
+
+[[models]]
+id = "moss-soundeffect-v2"
+hf_repo = "OpenMOSS-Team/MOSS-SoundEffect-v2.0"
+revision = "e35df4d82fbe87fcd5d14e5d100e349c0c3c076d"
+bytes = 11230170282
+spdx = "Apache-2.0"
+commercial_use = true
+requires_acceptance = false
+terms_url = "https://huggingface.co/OpenMOSS-Team/MOSS-SoundEffect-v2.0"
+
+[capabilities.efecto]
+summary = "Sound effect from an English description, about 40 s per effect whatever its length, at most 30 s."
+kind = "audio"
+
+[capabilities.efecto.inputs.descripcion]
+type = "string"
+required = true
+description = "English effect description; the model appends 'duration: <seconds>s' itself."
+
+[capabilities.efecto.inputs.segundos]
+type = "number"
+required = true
+max = 30
+description = "Seconds of effect, up to 30; the pipeline always denoises 30 s and trims."
+
+[capabilities.efecto.inputs.nombre]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name: writes <name>.wav at 48 kHz mono."
+
+[capabilities.efecto.inputs.target-lufs]
+type = "number"
+default = -23.0
+min = -30
+max = -10
+description = "Normalisation target in LUFS; -23 suits beds under voice, pass a louder target for hits."
+
+[capabilities.efecto.verify]
+thresholds = { lufs_tol = 1.0 }
+
+[capabilities.efecto.preview]
+viewer = "audio"
