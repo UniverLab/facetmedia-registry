@@ -45,3 +45,6 @@ name = "mermaid"
 
 [[packages]]
 name = "rhubarb"
+
+[[packages]]
+name = "svganim"
