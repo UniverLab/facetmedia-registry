@@ -42,7 +42,9 @@ that slipped through, a clipped label or a missing frame is caught by eye.
 ## Pitfalls
 
 - **Text as paths.** A `<text>` element fails `runner_failed`, exit 1 —
-  convert every label with `opentype.js` before writing the SVG.
+  convert every label with `opentype.js` before writing the SVG; the
+  `loadSync`/`getPath`/`toPathData` recipe and the minimal guion skeleton are
+  in `references/build-banners.md`.
 - **No JavaScript.** A `<script>` is refused: GitHub strips it, so animate
   with `@keyframes` inside the document.
 - **The SVG is the source.** The PNG is sharp's first frame at 2x, not a

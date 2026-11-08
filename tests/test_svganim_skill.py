@@ -48,3 +48,23 @@ def test_the_body_names_the_capability_and_the_text_rule() -> None:
     assert "opentype.js" in body
     assert "<text>" in body
     assert "@keyframes" in body
+
+
+def test_the_skill_cites_the_build_banners_reference() -> None:
+    assert "references/build-banners.md" in SKILL
+
+
+def test_the_build_banners_reference_carries_the_recipe() -> None:
+    reference = (PACKAGE / "skill" / "references" / "build-banners.md").read_text(encoding="utf-8")
+    assert reference.strip()
+    for token in (
+        "loadSync",
+        "toPathData",
+        "kerning",
+        "data:image",
+        "argv[2]",
+        "@keyframes",
+    ):
+        assert token in reference
+    for token in ("process.argv", "process.stdout.write", "require("):
+        assert token in reference
