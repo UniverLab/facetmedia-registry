@@ -196,6 +196,11 @@ def test_the_skill_names_the_presenter_capability() -> None:
     assert "deck.presenter" in SKILL
 
 
+def test_the_examples_ship_the_approved_print_piece() -> None:
+    for suffix in ("html", "pdf", "png"):
+        assert (PACKAGE / "examples" / f"modelos-de-lenguaje.{suffix}").is_file(), suffix
+
+
 def test_the_readme_documents_the_presenter_runner() -> None:
     assert "## The presenter runner" in READ
     assert "deck.presenter" in READ

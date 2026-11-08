@@ -112,8 +112,8 @@ slide number — orders them by `pagina`, and writes two assets:
   separated section per note in `pagina` order. Kind `text`, the generic
   viewer, properties `{ slides, notes }`.
 
-A missing non-video ref (an image or stylesheet beside the deck) throws
-`runner_failed` naming the ref; a missing video only warns on stderr with the
+A missing local image ref throws `runner_failed` naming the ref; a missing
+video only warns on stderr with the
 lab's `aviso` and never fails. The presenter files ship beside the runner in
 `presenter/`, the same layout as the lab's `tools/presenter/`.
 
