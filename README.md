@@ -22,6 +22,7 @@ the core:
 
 | Facet | Package | What it does |
 |-------|---------|--------------|
+| audio | acestep | Instrumental beds from an English caption with ACE-Step 1.5, at most 30 s per piece, checked by duration and peak |
 | audio | ffmpeg | Normalise, mix and convert audio clips with FFmpeg, with loudness and duration verified |
 | cad | cad | 3D parts and 2D plans from CadQuery or ezdxf scripts, checked by volume, bounding box and DXF audit |
 | image | blender | Daylight architectural photos of CadQuery glTF models and studio product shots of CAD parts through a host Blender's Cycles GPU, and animated camera tours in Eevee, checked by pixel size and an MP4 probe; shared CC0 Poly Haven skies, textures and models fetched once into the models dir and re-checked by their receipt |
