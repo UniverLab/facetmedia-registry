@@ -1,0 +1,11 @@
+[project]
+name = "facet-texforge"
+version = "0.1.0"
+description = "Long LaTeX documents built to a verified PDF through the person-installed texforge binary."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[tool.uv]
+package = false
