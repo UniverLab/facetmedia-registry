@@ -42,6 +42,7 @@ view, a dimension off the geometry or an empty sheet is caught by eye.
 - FreeCAD is never installed: point `facet config set freecad.path` at 1.1.4
   or newer, or set `FREECAD_EXE`; a missing host is `machine_cannot`.
 - `freecadcmd` exits 0 when a script raises: the runner's wrapper reports the
-  traceback and a non-zero exit, so a failed drawing never looks like a pass.
+  traceback and a non-zero exit, so a failed drawing never looks like a pass;
+  the invocation, sys.argv and the lookup order are in references/wrapper.md.
 - The script receives an output prefix without extension, not a file name:
   write `<prefix>.pdf` yourself.
