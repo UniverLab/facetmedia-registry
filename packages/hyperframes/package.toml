@@ -1,0 +1,507 @@
+name = "hyperframes"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "HeyGen (hyperframes)"
+tool_name = "HyperFrames"
+description = "Checked HTML+GSAP compositions rendered to MP4 with the pinned HyperFrames CLI, verified by an ffprobe probe"
+facet = "video"
+
+[engine]
+type = "node"
+
+[engine.node]
+runtime = "22.21.0"
+runtime_sha256 = "262b84b02f7e2bc017d4bdb81fec85ca0d6190a5cd0781d2d6e84317c08871f8"
+
+[[engine.node.packages]]
+name = "hyperframes"
+version = "0.8.143"
+tarball = "https://registry.npmjs.org/hyperframes/-/hyperframes-0.8.143.tgz"
+integrity = "sha512-kCNOSZXJFTX30hOBt8nyLD/3kCIGOhdRHKHzF1H0fL1aYPFnGQpZPZZbNK0AW8QpYG5TdQ5TZRJr+EuQdX8Rtw=="
+
+[[engine.node.packages]]
+name = "@esbuild/linux-x64"
+version = "0.25.12"
+tarball = "https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.25.12.tgz"
+integrity = "sha512-uqZMTLr/zR/ed4jIGnwSLkaHmPjOjJvnm6TVVitAa08SLS9Z0VM8wIRx7gWbJB5/J54YuIMInDquWyYvQLZkgw=="
+
+[[engine.node.packages]]
+name = "@hono/node-server"
+version = "2.1.6"
+tarball = "https://registry.npmjs.org/@hono/node-server/-/node-server-2.1.6.tgz"
+integrity = "sha512-p/KH9MnfNcsm3sR6x4lNgm5j+QN4Et8srKredl9DZfXiyZ1UQ3aQ2YVpFLbqktYN5JI+DB+VZFKM2PqE5hLKjQ=="
+
+[[engine.node.packages]]
+name = "@img/colour"
+version = "1.1.0"
+tarball = "https://registry.npmjs.org/@img/colour/-/colour-1.1.0.tgz"
+integrity = "sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ=="
+
+[[engine.node.packages]]
+name = "@img/sharp-libvips-linux-x64"
+version = "1.3.4"
+tarball = "https://registry.npmjs.org/@img/sharp-libvips-linux-x64/-/sharp-libvips-linux-x64-1.3.4.tgz"
+integrity = "sha512-GJ//SSXbnwSDes02umB3nDJLFcQzw8a18V8fyhqr6tV515tOEMdImjjxj1AoafMRz56F3PHgftnj1QEKSU1zkw=="
+
+[[engine.node.packages]]
+name = "@img/sharp-linux-x64"
+version = "0.35.5"
+tarball = "https://registry.npmjs.org/@img/sharp-linux-x64/-/sharp-linux-x64-0.35.5.tgz"
+integrity = "sha512-SxFtLTeJInhAA9Q836kux2vZNeOBQEx658qvbboZScr0wIARym3IcGmW7KpVD5sbVg0Ojy+udFQdayYIZyoNog=="
+
+[[engine.node.packages]]
+name = "@puppeteer/browsers"
+version = "3.2.6"
+tarball = "https://registry.npmjs.org/@puppeteer/browsers/-/browsers-3.2.6.tgz"
+integrity = "sha512-MJP29gVoHznmqmwhH1tlZqzfeQ3aylTpSSa6WKZXtkwYUH02i9imBmWGTyZrbnAou5paX78SE4jMAUqnEPf8ug=="
+
+[[engine.node.packages]]
+name = "@swc/helpers"
+version = "0.5.24"
+tarball = "https://registry.npmjs.org/@swc/helpers/-/helpers-0.5.24.tgz"
+integrity = "sha512-6tcXo4kA8HgGO7AVmawB57RYi/piBPYVHVcO6dXjX+SZw8GoHmi262sp4v2Ha2kNP9Cx84qei27yT+fjS1lxgg=="
+
+[[engine.node.packages]]
+name = "adm-zip"
+version = "0.6.1"
+tarball = "https://registry.npmjs.org/adm-zip/-/adm-zip-0.6.1.tgz"
+integrity = "sha512-Xwrja8nx9e5o2N1my4DsKCeKpdrnACyr1wtbPxBDgGzKzKyE9kRtBFA8mWldI+RVlD7CBZNWY/wQ2+ydwOR6kQ=="
+
+[[engine.node.packages]]
+name = "ansi-regex"
+version = "6.5.0"
+tarball = "https://registry.npmjs.org/ansi-regex/-/ansi-regex-6.5.0.tgz"
+integrity = "sha512-zhvbbbdt1kbw7EJ9OQoxmQcuaNR9P5kTj7e/YdmOSU10aHWbycofJxA6jKfoEy3vlLdctOF9ZHaxLtmSm998wQ=="
+
+[[engine.node.packages]]
+name = "ansi-styles"
+version = "6.2.3"
+tarball = "https://registry.npmjs.org/ansi-styles/-/ansi-styles-6.2.3.tgz"
+integrity = "sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg=="
+
+[[engine.node.packages]]
+name = "base64-js"
+version = "1.5.1"
+tarball = "https://registry.npmjs.org/base64-js/-/base64-js-1.5.1.tgz"
+integrity = "sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA=="
+
+[[engine.node.packages]]
+name = "brotli"
+version = "1.3.3"
+tarball = "https://registry.npmjs.org/brotli/-/brotli-1.3.3.tgz"
+integrity = "sha512-oTKjJdShmDuGW94SyyaoQvAjf30dZaHnjJ8uAF+u2/vGJkJbJPJAT1gDiOJP5v1Zb6f9KEyW/1HpuaWIXtGHPg=="
+
+[[engine.node.packages]]
+name = "bundle-name"
+version = "4.1.1"
+tarball = "https://registry.npmjs.org/bundle-name/-/bundle-name-4.1.1.tgz"
+integrity = "sha512-DdH81/zPLVS11EUgWq3tEu/xn+EzljlMYooDNdzWEnFha3R3NBMpMV1UqYIpjYHV/SgpFKMIX1Oh7o06SjM/oA=="
+
+[[engine.node.packages]]
+name = "chromium-bidi"
+version = "157.0.8090-0"
+tarball = "https://registry.npmjs.org/chromium-bidi/-/chromium-bidi-157.0.8090-0.tgz"
+integrity = "sha512-KJw7IQgqXwxpJgJlEIPg5mr2ZoqA+jkTRtc5EABI7sUJ3bu3cpI7NuEBoj4Gn1AsF78CaT9So5WQWspK3/wYag=="
+
+[[engine.node.packages]]
+name = "citty"
+version = "0.2.2"
+tarball = "https://registry.npmjs.org/citty/-/citty-0.2.2.tgz"
+integrity = "sha512-+6vJA3L98yv+IdfKGZHBNiGW5KHn22e/JwID0Strsz8h4S/csAu/OuICwxrg44k5MRiZHWIo8XXuJgQTriRP4w=="
+
+[[engine.node.packages]]
+name = "cliui"
+version = "9.0.1"
+tarball = "https://registry.npmjs.org/cliui/-/cliui-9.0.1.tgz"
+integrity = "sha512-k7ndgKhwoQveBL+/1tqGJYNz097I7WOvwbmmU2AR5+magtbjPWQTS1C5vzGkBC8Ym8UWRzfKUzUUqFLypY4Q+w=="
+
+[[engine.node.packages]]
+name = "clone"
+version = "2.1.2"
+tarball = "https://registry.npmjs.org/clone/-/clone-2.1.2.tgz"
+integrity = "sha512-3Pe/CF1Nn94hyhIYpjtiLhdCoEoz0DqQ+988E9gmeEdQZlojxnOb74wctFyuwWQHzqyf9X7C7MG8juUpqBJT8w=="
+
+[[engine.node.packages]]
+name = "compare-versions"
+version = "6.1.1"
+tarball = "https://registry.npmjs.org/compare-versions/-/compare-versions-6.1.1.tgz"
+integrity = "sha512-4hm4VPpIecmlg59CHXnRDnqGplJFrbLG4aFEl5vl6cK1u76ws3LLvX7ikFnTDl5vo39sjWD6AaDPYodJp/NNHg=="
+
+[[engine.node.packages]]
+name = "css-tree"
+version = "3.2.1"
+tarball = "https://registry.npmjs.org/css-tree/-/css-tree-3.2.1.tgz"
+integrity = "sha512-X7sjQzceUhu1u7Y/ylrRZFU2FS6LRiFVp6rKLPg23y3x3c3DOKAwuXGDp+PAGjh6CSnCjYeAul8pcT8bAl+lSA=="
+
+[[engine.node.packages]]
+name = "debug"
+version = "4.4.3"
+tarball = "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz"
+integrity = "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA=="
+
+[[engine.node.packages]]
+name = "default-browser-id"
+version = "5.0.1"
+tarball = "https://registry.npmjs.org/default-browser-id/-/default-browser-id-5.0.1.tgz"
+integrity = "sha512-x1VCxdX4t+8wVfd1so/9w+vQ4vx7lKd2Qp5tDRutErwmR85OgmfX7RlLRMWafRMY7hbEiXIbudNrjOAPa/hL8Q=="
+
+[[engine.node.packages]]
+name = "default-browser"
+version = "5.5.1"
+tarball = "https://registry.npmjs.org/default-browser/-/default-browser-5.5.1.tgz"
+integrity = "sha512-m1pAzaJgZ/gssEqlOhJkPJp8Xly7QyW6xcrkUa2KKcDeDSEMP7X8xipU3snUcfisTQx0w1AGae+9UtJSfVnXGw=="
+
+[[engine.node.packages]]
+name = "define-lazy-prop"
+version = "3.0.0"
+tarball = "https://registry.npmjs.org/define-lazy-prop/-/define-lazy-prop-3.0.0.tgz"
+integrity = "sha512-N+MeXYoqr3pOgn8xfyRPREN7gHakLYjhsHhWGT3fWAiL4IkAt0iDw14QiiEm2bE30c5XX5q0FtAA3CK5f9/BUg=="
+
+[[engine.node.packages]]
+name = "detect-libc"
+version = "2.1.2"
+tarball = "https://registry.npmjs.org/detect-libc/-/detect-libc-2.1.2.tgz"
+integrity = "sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ=="
+
+[[engine.node.packages]]
+name = "devtools-protocol"
+version = "0.0.1704951"
+tarball = "https://registry.npmjs.org/devtools-protocol/-/devtools-protocol-0.0.1704951.tgz"
+integrity = "sha512-GQhQOs9u/Mvm1zMtJIH872JS4AskuZdUSsPNPk4ChahtWAUqgz6atEtIsMt+nO7MqF1Ic4HxII/k8Cu36JivNg=="
+
+[[engine.node.packages]]
+name = "dfa"
+version = "1.2.0"
+tarball = "https://registry.npmjs.org/dfa/-/dfa-1.2.0.tgz"
+integrity = "sha512-ED3jP8saaweFTjeGX8HQPjeC1YYyZs98jGNZx6IiBvxW7JG5v492kamAQB3m2wop07CvU/RQmzcKr6bgcC5D/Q=="
+
+[[engine.node.packages]]
+name = "emoji-regex"
+version = "10.6.0"
+tarball = "https://registry.npmjs.org/emoji-regex/-/emoji-regex-10.6.0.tgz"
+integrity = "sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A=="
+
+[[engine.node.packages]]
+name = "esbuild"
+version = "0.25.12"
+tarball = "https://registry.npmjs.org/esbuild/-/esbuild-0.25.12.tgz"
+integrity = "sha512-bbPBYYrtZbkt6Os6FiTLCTFxvq4tt3JKall1vRwshA3fdVztsLAatFaZobhkBC8/BrPetoa0oksYoKXoG4ryJg=="
+
+[[engine.node.packages]]
+name = "escalade"
+version = "3.2.0"
+tarball = "https://registry.npmjs.org/escalade/-/escalade-3.2.0.tgz"
+integrity = "sha512-WUj2qlxaQtO4g6Pq5c29GTcWGDyd8itL8zTlipgECz3JesAiiOKotd8JU6otB3PACgG6xkJUyVhboMS+bje/jA=="
+
+[[engine.node.packages]]
+name = "fast-deep-equal"
+version = "3.1.3"
+tarball = "https://registry.npmjs.org/fast-deep-equal/-/fast-deep-equal-3.1.3.tgz"
+integrity = "sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q=="
+
+[[engine.node.packages]]
+name = "fontkit"
+version = "2.0.4"
+tarball = "https://registry.npmjs.org/fontkit/-/fontkit-2.0.4.tgz"
+integrity = "sha512-syetQadaUEDNdxdugga9CpEYVaQIxOwk7GlwZWWZ19//qW4zE5bknOKeMBDYAASwnpaSHKJITRLMF9m1fp3s6g=="
+
+[[engine.node.packages]]
+name = "get-caller-file"
+version = "2.0.5"
+tarball = "https://registry.npmjs.org/get-caller-file/-/get-caller-file-2.0.5.tgz"
+integrity = "sha512-DyFP3BM/3YHTQOCUL/w0OZHR0lpKeGrxotcHWcqNEdnltqFwXVfhEBQ94eIo34AfQpo0rGki4cyIiftY06h2Fg=="
+
+[[engine.node.packages]]
+name = "get-east-asian-width"
+version = "1.7.0"
+tarball = "https://registry.npmjs.org/get-east-asian-width/-/get-east-asian-width-1.7.0.tgz"
+integrity = "sha512-XjH1AECxf0giL2V1aU8vKyRR2ppRUb5c0EvT7zuJTokQ74bNo52zOtghqdWIqrhUD79fo3x0WfKZdOqxF6LG1Q=="
+
+[[engine.node.packages]]
+name = "giget"
+version = "3.3.1"
+tarball = "https://registry.npmjs.org/giget/-/giget-3.3.1.tgz"
+integrity = "sha512-r+mvuDjrjMpsdw46Kmeydb8bdHm7wOKw8wNBtTndkjbPjgAp5oUJUxRE76wZFknxIPokfWvep2qSXK37aXE6zg=="
+
+[[engine.node.packages]]
+name = "hono"
+version = "4.13.17"
+tarball = "https://registry.npmjs.org/hono/-/hono-4.13.17.tgz"
+integrity = "sha512-vZIcbkvjOR5hHRWERbGkr8fGfF0GGM1ooYkuH448iO3b2AdVEr3AXZSw4Z3Kn+1L5z0CVoVeyV29VGYmFh05kQ=="
+
+[[engine.node.packages]]
+name = "ignore"
+version = "5.3.2"
+tarball = "https://registry.npmjs.org/ignore/-/ignore-5.3.2.tgz"
+integrity = "sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g=="
+
+[[engine.node.packages]]
+name = "is-docker"
+version = "3.0.0"
+tarball = "https://registry.npmjs.org/is-docker/-/is-docker-3.0.0.tgz"
+integrity = "sha512-eljcgEDlEns/7AXFosB5K/2nCM4P7FQPkGc/DWLy5rmFEWvZayGrik1d9/QIY5nJ4f9YsVvBkA6kJpHn9rISdQ=="
+
+[[engine.node.packages]]
+name = "is-inside-container"
+version = "1.0.0"
+tarball = "https://registry.npmjs.org/is-inside-container/-/is-inside-container-1.0.0.tgz"
+integrity = "sha512-KIYLCCJghfHZxqjYBE7rEy0OBuTd5xCHS7tHVgvCLkx7StIoaxwNW3hCALgEUjFfeRk+MG/Qxmp/vtETEF3tRA=="
+
+[[engine.node.packages]]
+name = "is-wsl"
+version = "3.1.1"
+tarball = "https://registry.npmjs.org/is-wsl/-/is-wsl-3.1.1.tgz"
+integrity = "sha512-e6rvdUCiQCAuumZslxRJWR/Doq4VpPR82kqclvcS0efgt430SlGIk05vdCN58+VrzgtIcfNODjozVielycD4Sw=="
+
+[[engine.node.packages]]
+name = "mdn-data"
+version = "2.27.1"
+tarball = "https://registry.npmjs.org/mdn-data/-/mdn-data-2.27.1.tgz"
+integrity = "sha512-9Yubnt3e8A0OKwxYSXyhLymGW4sCufcLG6VdiDdUGVkPhpqLxlvP5vl1983gQjJl3tqbrM731mjaZaP68AgosQ=="
+
+[[engine.node.packages]]
+name = "mitt"
+version = "3.0.1"
+tarball = "https://registry.npmjs.org/mitt/-/mitt-3.0.1.tgz"
+integrity = "sha512-vKivATfr97l2/QBCYAkXYDbrIWPM2IIKEl7YPhjCvKlG3kE2gm+uBo6nEXK3M5/Ffh/FLpKExzOQ3JJoJGFKBw=="
+
+[[engine.node.packages]]
+name = "modern-tar"
+version = "0.8.6"
+tarball = "https://registry.npmjs.org/modern-tar/-/modern-tar-0.8.6.tgz"
+integrity = "sha512-LYSks0tNVqbtez/9OB0YFP6qLRSqkdAxJWOQpVaR67lNTbj2zNLyYpowkRMia5lXLCZKzxwoxkxH2MbbBR2aEg=="
+
+[[engine.node.packages]]
+name = "ms"
+version = "2.1.3"
+tarball = "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz"
+integrity = "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA=="
+
+[[engine.node.packages]]
+name = "nanoid"
+version = "3.3.20"
+tarball = "https://registry.npmjs.org/nanoid/-/nanoid-3.3.20.tgz"
+integrity = "sha512-uKdg2G3GNCKQn9byYOpxbGqrT2fGO5KRt5J/8b3pok8rT6qxGWF6hxMyJiEYtAf+FVyYuD9hRaDqX5uPFYJ4ZQ=="
+
+[[engine.node.packages]]
+name = "open"
+version = "10.2.0"
+tarball = "https://registry.npmjs.org/open/-/open-10.2.0.tgz"
+integrity = "sha512-YgBpdJHPyQ2UE5x+hlSXcnejzAvD0b22U2OuAP+8OnlJT+PjWPxtgmGqKKc+RgTM63U9gN0YzrYc71R2WT/hTA=="
+
+[[engine.node.packages]]
+name = "pako"
+version = "0.2.9"
+tarball = "https://registry.npmjs.org/pako/-/pako-0.2.9.tgz"
+integrity = "sha512-NUcwaKxUxWrZLpDG+z/xZaCgQITkA/Dv4V/T6bw7VON6l1Xz/VnrBqrYjZQ12TamKHzITTfOEIYUj48y2KXImA=="
+
+[[engine.node.packages]]
+name = "picocolors"
+version = "1.1.1"
+tarball = "https://registry.npmjs.org/picocolors/-/picocolors-1.1.1.tgz"
+integrity = "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA=="
+
+[[engine.node.packages]]
+name = "postcss"
+version = "8.5.32"
+tarball = "https://registry.npmjs.org/postcss/-/postcss-8.5.32.tgz"
+integrity = "sha512-LJlKCCAUFKOuZxipUdYw1NzIITEsPcgyOG9LkvRJvuKj/bRzbuRY0ARXvL0pWGpsZvn8jku+LMep2eU0seHp8g=="
+
+[[engine.node.packages]]
+name = "prettier"
+version = "3.9.10"
+tarball = "https://registry.npmjs.org/prettier/-/prettier-3.9.10.tgz"
+integrity = "sha512-skGHTH1Yb9QvaTC4hWnRTzEYtCpApF0UMBPz+t/0ZPzP8ihefo/btKd+QA7pUE0fEwA1SbS/NmhyEcstdXOIdA=="
+
+[[engine.node.packages]]
+name = "puppeteer-core"
+version = "25.16.0"
+tarball = "https://registry.npmjs.org/puppeteer-core/-/puppeteer-core-25.16.0.tgz"
+integrity = "sha512-VA5Pf54N8shfopNkZZXCdiiwfnnY8ZJYAMqFQRhlH5mGUhfwf53Ar770GPtdpTDLUqvQeYpIBtC9/G2Jij2IJw=="
+
+[[engine.node.packages]]
+name = "restructure"
+version = "3.0.2"
+tarball = "https://registry.npmjs.org/restructure/-/restructure-3.0.2.tgz"
+integrity = "sha512-gSfoiOEA0VPE6Tukkrr7I0RBdE0s7H1eFCDBk05l1KIQT1UIKNc5JZy6jdyW6eYH3aR3g5b3PuL77rq0hvwtAw=="
+
+[[engine.node.packages]]
+name = "run-applescript"
+version = "7.1.0"
+tarball = "https://registry.npmjs.org/run-applescript/-/run-applescript-7.1.0.tgz"
+integrity = "sha512-DPe5pVFaAsinSaV6QjQ6gdiedWDcRCbUuiQfQa2wmWV7+xC9bGulGI8+TdRmoFkAPaBXk8CrAbnlY2ISniJ47Q=="
+
+[[engine.node.packages]]
+name = "semver"
+version = "7.8.6"
+tarball = "https://registry.npmjs.org/semver/-/semver-7.8.6.tgz"
+integrity = "sha512-9lpSSU4Mly3mrtruwLs1eLK6+gzbzqeBFwRNjIjE+9LuDpWdYctrQlQ3ej1Ilgi7gknpsTRnPoLP8DpCHqHIJw=="
+
+[[engine.node.packages]]
+name = "sharp"
+version = "0.35.5"
+tarball = "https://registry.npmjs.org/sharp/-/sharp-0.35.5.tgz"
+integrity = "sha512-Ywn4OnzGukp7CDMrp08RQ50YKmuwG47brZgIVPTvBaaAfQlRlygrRqSrxdCiL9M+LlzLBiJ68IR1QqvzHyjC7g=="
+
+[[engine.node.packages]]
+name = "source-map-js"
+version = "1.2.2"
+tarball = "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.2.tgz"
+integrity = "sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw=="
+
+[[engine.node.packages]]
+name = "string-width"
+version = "7.2.0"
+tarball = "https://registry.npmjs.org/string-width/-/string-width-7.2.0.tgz"
+integrity = "sha512-tsaTIkKW9b4N+AEj+SVA+WhJzV7/zMhcSu78mLKWSk7cXMOSHsBKFWUs0fWwq8QyK3MgJBQRX6Gbi4kYbdvGkQ=="
+
+[[engine.node.packages]]
+name = "string-width"
+version = "8.3.0"
+tarball = "https://registry.npmjs.org/string-width/-/string-width-8.3.0.tgz"
+integrity = "sha512-ZbmZM0JCihQN91dWnxoipT2KOEyHqEyfRXUyjuRhW8b/xnqPDoq4gWEVApTVa9db2wN8mmoikgFBbjh71+cGeQ=="
+
+[[engine.node.packages]]
+name = "strip-ansi"
+version = "7.2.0"
+tarball = "https://registry.npmjs.org/strip-ansi/-/strip-ansi-7.2.0.tgz"
+integrity = "sha512-yDPMNjp4WyfYBkHnjIRLfca1i6KMyGCtsVgoKe/z1+6vukgaENdgGBZt+ZmKPc4gavvEZ5OgHfHdrazhgNyG7w=="
+
+[[engine.node.packages]]
+name = "tiny-inflate"
+version = "1.0.3"
+tarball = "https://registry.npmjs.org/tiny-inflate/-/tiny-inflate-1.0.3.tgz"
+integrity = "sha512-pkY1fj1cKHb2seWDy0B16HeWyczlJA9/WW3u3c4z/NiWDsO3DOU5D7nhTLE9CF0yXv/QZFY7sEJmj24dK+Rrqw=="
+
+[[engine.node.packages]]
+name = "typed-query-selector"
+version = "2.12.3"
+tarball = "https://registry.npmjs.org/typed-query-selector/-/typed-query-selector-2.12.3.tgz"
+integrity = "sha512-/dtuMZyutHLlrxWhhC1uib00ELUr2dZ8C9B8YzZYsJmeE3V56OxRblrSM2UaF142pcMtak7ehZ6+poWGeehNIg=="
+
+[[engine.node.packages]]
+name = "unicode-properties"
+version = "1.4.1"
+tarball = "https://registry.npmjs.org/unicode-properties/-/unicode-properties-1.4.1.tgz"
+integrity = "sha512-CLjCCLQ6UuMxWnbIylkisbRj31qxHPAurvena/0iwSVbQ2G1VY5/HjV0IRabOEbDHlzZlRdCrD4NhB0JtU40Pg=="
+
+[[engine.node.packages]]
+name = "unicode-trie"
+version = "2.0.0"
+tarball = "https://registry.npmjs.org/unicode-trie/-/unicode-trie-2.0.0.tgz"
+integrity = "sha512-x7bc76x0bm4prf1VLg79uhAzKw8DVboClSN5VxJuQ+LKDOVEW9CdH+VY7SP+vX7xCYQqzzgQpFqz15zeLvAtZQ=="
+
+[[engine.node.packages]]
+name = "webdriver-bidi-protocol"
+version = "1.0.1"
+tarball = "https://registry.npmjs.org/webdriver-bidi-protocol/-/webdriver-bidi-protocol-1.0.1.tgz"
+integrity = "sha512-WXWs/aXF2a6Al1Z2/V/7Gp2oPZOAAmHjJOTmv4KCXRJ122IMj3tSSMc6a4q3K4QOmhQbse/Ahr+oTVJOU2dUiw=="
+
+[[engine.node.packages]]
+name = "wrap-ansi"
+version = "9.0.2"
+tarball = "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-9.0.2.tgz"
+integrity = "sha512-42AtmgqjV+X1VpdOfyTGOYRi0/zsoLqtXQckTmqTeybT+BDIbM/Guxo7x3pE2vtpr1ok6xRqM9OpBe+Jyoqyww=="
+
+[[engine.node.packages]]
+name = "ws"
+version = "8.22.1"
+tarball = "https://registry.npmjs.org/ws/-/ws-8.22.1.tgz"
+integrity = "sha512-oyL6OPYme/CmiFvNuGzeoxCJ4nOrZE2O1FwM9MWM1AsGri6nLXB2pg+lNA8aLeXMSav0J6eIVS1j6vUPzUtK9g=="
+
+[[engine.node.packages]]
+name = "wsl-utils"
+version = "0.1.0"
+tarball = "https://registry.npmjs.org/wsl-utils/-/wsl-utils-0.1.0.tgz"
+integrity = "sha512-h3Fbisa2nKGPxCpm89Hk33lBLsnaGBvctQopaBSOW/uIs6FTe1ATyAnKFJrzVs9vpGdsTe73WF3V4lIsk4Gacw=="
+
+[[engine.node.packages]]
+name = "y18n"
+version = "5.0.8"
+tarball = "https://registry.npmjs.org/y18n/-/y18n-5.0.8.tgz"
+integrity = "sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA=="
+
+[[engine.node.packages]]
+name = "yargs-parser"
+version = "22.0.0"
+tarball = "https://registry.npmjs.org/yargs-parser/-/yargs-parser-22.0.0.tgz"
+integrity = "sha512-rwu/ClNdSMpkSrUb+d6BRsSkLUq1fmfsY6TOpYzTwvwkg1/NRG85KBy3kq++A8LKQwX6lsu+aWad+2khvuXrqw=="
+
+[[engine.node.packages]]
+name = "yargs"
+version = "18.2.0"
+tarball = "https://registry.npmjs.org/yargs/-/yargs-18.2.0.tgz"
+integrity = "sha512-9OpKOLeaoNFecEp7P6iYbzze/5CqWoH7N3SMs/6y1XF4nMvFMspEGZzJ6uFi9MmQwXhyzqYoSEKO3tvA3Z/o2w=="
+
+[[engine.node.packages]]
+name = "zod"
+version = "4.6.7"
+tarball = "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz"
+integrity = "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="
+
+[transport]
+type = "cli"
+entry = "runner.js"
+invocation_template = "{{node}} {{entry}} {{verb}} --input {{input}} --result {{result}}"
+
+[requirements]
+gpu = false
+ram_gb = 4
+disk_gb = 2
+exclusive = true
+platforms = ["linux"]
+
+[[licenses]]
+subject = "hyperframes"
+spdx = "Apache-2.0"
+
+[[licenses]]
+subject = "sharp"
+spdx = "Apache-2.0"
+
+[[licenses]]
+subject = "esbuild"
+spdx = "MIT"
+
+[[licenses]]
+subject = "puppeteer-core"
+spdx = "Apache-2.0"
+
+[capabilities.render]
+summary = "Render a checked HTML+GSAP composition to an MP4 with the pinned HyperFrames CLI"
+kind = "video"
+
+[capabilities.render.inputs.composicion]
+type = "path"
+required = true
+description = "Composition directory with hyperframes.json and index.tmpl (never named .html, which HyperFrames reads as a second composition) plus build.mjs and assets/, resolved relative to the piece; self-contained, vendoring every asset instead of loading a remote URL."
+
+[capabilities.render.inputs.audio]
+type = "array"
+default = []
+description = "Audio clips entering the composition as <audio>, one { clip } item each; each clip is copied into the composition directory by its file name."
+
+[capabilities.render.inputs.audio.items.clip]
+type = "path"
+required = true
+description = "Voice, music or effect clip to place beside the composition, resolved relative to the piece file."
+
+[capabilities.render.inputs.prompt]
+type = "string"
+required = true
+description = "The brief the composition was authored from; recorded and carried into the video preview."
+
+[capabilities.render.inputs.seed]
+type = "integer"
+default = 0
+min = 0
+description = "Recorded seed; the seek-based timeline renders deterministically, so it labels the record."
+
+[capabilities.render.inputs.fps]
+type = "integer"
+min = 1
+description = "Frame rate passed as --fps; the composition's own data-fps applies when omitted."
+
+[capabilities.render.preview]
+viewer = "video"

@@ -17,6 +17,9 @@ name = "comfy"
 name = "ffmpeg"
 
 [[packages]]
+name = "hyperframes"
+
+[[packages]]
 name = "kokoro"
 
 [[packages]]

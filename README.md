@@ -30,6 +30,7 @@ the core:
 | voice | kokoro | Narration from text on CPU (Spanish and English), checked by transcription |
 | voice | whisper | Transcripts and subtitles from audio on CPU, checked by confidence or reference text |
 | voice | voicestudio | Narration from text through a user-started VoiceStudio backend with the voxcpm2, omnivoice or cosyvoice engine, checked by transcription and seed regeneration |
+| video | hyperframes | MP4 clips from checked HTML+GSAP compositions with the pinned HyperFrames CLI, checked first and verified by an ffprobe probe; the host's Chromium and ffmpeg are required |
 
 ## How facet uses this repository
 
