@@ -66,8 +66,8 @@ does the rest.
 
 The lab's approved beds are `clasica-alegre.wav` (Vivaldi-style allegro, 30 s)
 and `clasica-melancolica.wav` (solo piano and string quartet, 30 s): both
-acoustic, no percussion, and 2.5-16 % of their energy below 120 Hz.
-`examples/clasica-alegre.toml` is the approved allegro caption as a piece.
+acoustic, no percussion, and 2.5-16 % of their energy below 120 Hz. Both ship
+as pieces in `examples/`, each with its WAV.
 
 **Sung music is rejected forever.** The lab's verdict stands: this package
 composes instrumental beds only, and a caption asking for voice fails before
@@ -98,7 +98,7 @@ dependencies include PyTorch (**BSD-3-Clause**) and soundfile
 
 ```toml
 [inputs]
-caption = "Lively, joyful Baroque chamber orchestra piece in the style of a Vivaldi allegro. Bright strings playing fast staccato and spiccato runs, harpsichord continuo, playful solo violin and flute melodies. Energetic, festive and elegant. Acoustic instruments only. No drums, no percussion, no bass beat, no synthesizers."
+caption = "Lively, joyful Baroque chamber orchestra piece in the style of a Vivaldi allegro. Bright strings playing fast staccato and spiccato runs, harpsichord continuo, playful solo violin and flute melodies. Energetic, festive and elegant. Acoustic instruments only. No drums, no percussion, no bass beat, no synthesizers, no electronic sounds."
 name = "clasica-alegre"
 duracion = 30
 ```
