@@ -225,6 +225,7 @@ def test_the_index_lists_the_package() -> None:
         "moss",
         "texforge",
         "mermaid",
+        "rhubarb",
     ]
 
 

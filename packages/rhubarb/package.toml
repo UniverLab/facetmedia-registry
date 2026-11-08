@@ -1,0 +1,54 @@
+name = "rhubarb"
+version = "0.1.1"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "DanielSWolf (Rhubarb Lip Sync)"
+tool_name = "rhubarb-lip-sync"
+description = "Mouth cues for a drawn character from a voice clip and its text, with the phonetic recognizer of Rhubarb Lip Sync 1.14.0"
+facet = "video"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 1
+exclusive = true
+platforms = ["linux"]
+
+[[licenses]]
+subject = "rhubarb-lip-sync"
+spdx = "MIT"
+
+[[models]]
+id = "rhubarb-lip-sync-1.14.0-linux"
+url = "https://github.com/DanielSWolf/rhubarb-lip-sync/releases/download/v1.14.0/Rhubarb-Lip-Sync-1.14.0-Linux.zip"
+sha256 = "a9a9074862cff47b2d59b8bf399a678a3b0b74f9452ad6ad94cb292913dd8667"
+bytes = 87225003
+path = "rhubarb-lip-sync-1.14.0-linux/Rhubarb-Lip-Sync-1.14.0-Linux.zip"
+spdx = "MIT"
+commercial_use = true
+requires_acceptance = false
+
+[capabilities.bocas]
+summary = "Mouth cues X..H for a drawn character, timed to a voice clip, from the voice and the text it says"
+kind = "text"
+
+[capabilities.bocas.inputs.voz]
+type = "path"
+required = true
+description = "Voice WAV the mouth follows, resolved relative to the piece."
+
+[capabilities.bocas.inputs.dialogo]
+type = "path"
+required = true
+description = "Plain text file of what the voice says, passed to rhubarb as --dialogFile, resolved relative to the piece."
+
+[capabilities.bocas.preview]
+viewer = "generic"

@@ -42,3 +42,6 @@ name = "texforge"
 
 [[packages]]
 name = "mermaid"
+
+[[packages]]
+name = "rhubarb"
