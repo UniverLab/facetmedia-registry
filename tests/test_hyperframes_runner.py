@@ -562,6 +562,106 @@ def test_verify_probes_the_mp4_and_rejects_a_non_video(tmp_path: Path) -> None:
     assert failed["file"] == "notes.txt" and failed["passed"] is False
 
 
+DIAGRAMA_SVG = ROOT / "tests" / "fixtures" / "diagrama.svg"
+#: One paso per selector form the proofs use: flow node, edge, label, service, group, singleton.
+PROOF_PASOS = [
+    {"selector": '[id^="my-svg-flowchart-datos-"]', "at": 0.8, "kind": "show"},
+    {"selector": "#my-svg-L_datos_pieza_0", "at": 1.2, "kind": "draw", "dur": 0.5},
+    {"selector": '.edgeLabels [data-id="L_datos_pieza_0"]', "at": 1.5, "kind": "fade", "dur": 0.3},
+    {"selector": "#my-svg-service-agente", "at": 1.9, "kind": "show"},
+    {"selector": "#my-svg-group-lab", "at": 2.2, "kind": "fade"},
+    {"selector": "#my-svg-gpu", "at": 2.6, "kind": "fade"},
+]
+BUILD_MJS = """
+import { readFileSync, writeFileSync } from "node:fs";
+const SVG = "../diagrama.svg";
+const svg = readFileSync(new URL(SVG, import.meta.url), "utf8")
+  .replace(/<style>[\\s\\S]*?<\\/style>/g, (style) => style.replaceAll("&gt;", ">"));
+const template = readFileSync(new URL("index.tmpl", import.meta.url), "utf8");
+writeFileSync(new URL("index.html", import.meta.url), template.replace("<!-- DIAGRAMA -->", svg));
+"""
+
+
+def _diagrama_request(out: Path, piece: Path, animacion: list[dict[str, Any]]) -> dict[str, Any]:
+    return _request(
+        "run",
+        out,
+        piece,
+        capability="hyperframes.diagrama",
+        composicion="comp",
+        prompt="brief",
+        **{"diagrama-svg": str(DIAGRAMA_SVG), "animacion": animacion},
+    )
+
+
+def test_diagrama_rejects_an_unknown_selector_before_the_cli_runs(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    piece, _comp, _clip = _composition(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    animacion = [{"selector": "#my-svg-L_nope_x_0", "at": 0.5, "kind": "draw"}]
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _diagrama_request(out, piece, animacion),
+        _environment(tmp_path, _dirs(packages)),
+    )
+    assert done.returncode != 0
+    assert result is None
+    assert "unknown" in done.stderr
+    assert _calls(tmp_path) == []
+
+
+def test_diagrama_renders_the_proof_selectors_and_injects_the_timeline(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    piece, _comp, _clip = _composition(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _diagrama_request(out, piece, PROOF_PASOS),
+        _environment(tmp_path, _dirs(packages)),
+    )
+    assert done.returncode == 0, done.stderr
+    assert [call["args"][0] for call in _calls(tmp_path)] == ["check", "render"]
+    assert (out / "comp.mp4").is_file()
+    assert (out / "diagrama.svg").is_file()
+    template = (out / "composition" / "index.tmpl").read_text(encoding="utf-8")
+    assert "strokeDashoffset" in template
+    assert "__timelines" in template
+    assert result is not None
+    assert result["assets"][0]["file"] == "comp.mp4"
+
+
+def test_build_mjs_decodes_gt_only_inside_style(tmp_path: Path) -> None:
+    comp = tmp_path / "comp"
+    comp.mkdir()
+    (tmp_path / "diagrama.svg").write_text(
+        '<svg><style>#my-svg .node &gt; rect { fill: #fff; }</style><g id="my-svg-gpu"></g></svg>',
+        encoding="utf-8",
+    )
+    (comp / "index.tmpl").write_text(
+        "<!doctype html><html><body><!-- DIAGRAMA --></body></html>", encoding="utf-8"
+    )
+    (comp / "build.mjs").write_text(BUILD_MJS, encoding="utf-8")
+    done = subprocess.run(
+        [str(NODE), "build.mjs"],
+        cwd=comp,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert done.returncode == 0, done.stderr
+    html = (comp / "index.html").read_text(encoding="utf-8")
+    style = re.search(r"<style>(.*?)</style>", html, re.DOTALL)
+    assert style is not None
+    assert "&gt;" not in style.group(1)
+    assert ">" in style.group(1)
+    assert 'id="my-svg-gpu"' in html
+
+
 def test_the_runner_has_no_check_verb(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
     done, result = _invoke(

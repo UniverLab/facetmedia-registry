@@ -85,6 +85,65 @@ same `check` first, same `--workers 2` cap, same vendored-assets rule — with a
   other footage. `verify` requires the probed `pix_fmt` to carry alpha
   (`argb`, `rgba`, `yuva`, …); an opaque MOV fails.
 
+## Diagrams
+
+`hyperframes.diagrama` renders a checked composition with a Mermaid SVG inserted
+into it and a GSAP timeline that draws the diagram. It runs the same
+`check`-then-`render` path as `hyperframes.render`, with these inputs on top:
+`diagrama-svg` (the SVG produced by `tools/mermaid.sh`, for example `ciclo.svg`
+or `arquitectura.svg`) and `animacion`, an array of `{ selector, at, kind, dur }`
+steps where `kind` is `show`, `draw` or `fade` and `dur` defaults to `0.4`.
+
+The runner copies the SVG beside the composition (so a `build.mjs` in the
+composition reaches it as `../<file>.svg`), validates every `animacion[].selector`
+against the ids and data-ids the SVG actually carries, and only then injects a
+paused timeline into `index.tmpl` before `check`. An unknown id throws a plain
+`Error`, exit 1, which facet reports as `runner_failed`; nothing renders.
+
+### Stable Mermaid ids
+
+Selectors are the classic silent failure, so these id shapes are verbatim:
+
+- **Flow nodes**: `my-svg-flowchart-<id>-<n>`; select them by prefix with
+  `[id^="my-svg-flowchart-<id>-"]` (helper `node(id)`).
+- **Flow and architecture edges**: `my-svg-L_<origen>_<destino>_0`; select by
+  exact id `#my-svg-L_<origen>_<destino>_0` (helpers `edge(from, to)` and
+  `byId`).
+- **Edge labels**: `.edgeLabels [data-id="L_<origen>_<destino>_0"]` (helper
+  `label(from, to)`).
+- **Architecture services and groups**: `#my-svg-service-<id>`,
+  `#my-svg-group-<id>`, `#my-svg-group-lab`, `#my-svg-group-gpu`;
+  **singletons**: `#my-svg-gpu`.
+- **Arrowheads**: the `polygon.arrow` right after its edge path, i.e.
+  `path.nextElementSibling`. `draw` fades the arrowhead in with the path.
+
+### Timeline rules
+
+- **Arrows draw with `strokeDashoffset`**: the runner sets
+  `strokeDasharray`/`strokeDashoffset` to the path length and tweens the offset
+  to zero. A `g` edge is resolved to its inner `path` first.
+- **Build selectors by string concatenation**, never a `${}` template: the
+  HyperFrames bundler rejects template literals in selectors.
+- **`build.mjs` owns the `>` fix.** Mermaid writes `>` as `&gt;` inside the
+  SVG's `<style>`; browsers decode it, the HyperFrames CSS parser does not.
+  `build.mjs` replaces `&gt;` with `>` inside `<style>` and inserts the SVG into
+  `index.tmpl` at `<!-- DIAGRAMA -->`. The runner never rewrites the SVG.
+- **Use the font Mermaid measured with**: `@font-face { src: local('Ubuntu') }`.
+  Another build of the font overflows the boxes by about 2px and `check` fails.
+- **`fontSize` is 22px at 1080p** in the SVG style; Mermaid's default is too
+  small for video.
+- **GSAP is vendored**, not loaded from a CDN, like every other composition
+  asset.
+
+### Approved examples
+
+Both proofs live in the Grafics lab and pass `check`:
+
+- `projects/prueba-diagramas/video/` draws `ciclo.svg`, a flowchart with nodes,
+  edges, edge labels and the `my-svg-gpu` singleton.
+- `projects/prueba-diagramas/video-arquitectura/` draws `arquitectura.svg`, an
+  architecture diagram with groups, services and `polygon.arrow` arrowheads.
+
 ## Verifying
 
 `verify` probes every asset with the host `ffprobe`: a video stream with a

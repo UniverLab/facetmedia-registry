@@ -414,6 +414,141 @@ function copyClips(inputs, base, target) {
   }
 }
 
+// --- the diagram: stable Mermaid ids, a validated GSAP timeline.
+
+const DIAGRAMA_KINDS = new Set(["show", "draw", "fade"]);
+const DEFAULT_DUR = 0.4;
+const SVG_NAMESPACE = /^https?:\/\/www\.w3\.org\//;
+
+function diagramaSetup(workDir, inputs, base) {
+  if (!inputs["diagrama-svg"]) throw new Error("diagrama-svg is required");
+  const svgFile = resolveInput(inputs["diagrama-svg"], base);
+  if (!fs.existsSync(svgFile)) throw new Error(`diagrama-svg: ${svgFile} not found`);
+  const svg = fs.readFileSync(svgFile, "utf8");
+  const stray = svgUrls(svg);
+  if (stray) {
+    throw new Error(
+      `diagrama-svg: remote URL ${stray} is not allowed; vendor the asset into the diagram`,
+    );
+  }
+  const { ids, dataIds } = svgIdentifiers(svg);
+  const source = Array.isArray(inputs.animacion) ? inputs.animacion : [];
+  const pasos = source.map((paso, index) => pasoOf(paso, index, ids, dataIds));
+  fs.copyFileSync(svgFile, path.join(path.dirname(workDir), path.basename(svgFile)));
+  injectTimeline(path.join(workDir, "index.tmpl"), pasos);
+}
+
+function svgUrls(svg) {
+  for (const url of svg.match(URL_RE) || []) {
+    if (!SVG_NAMESPACE.test(url)) return url;
+  }
+  return "";
+}
+
+function svgIdentifiers(svg) {
+  const ids = new Set();
+  const dataIds = new Set();
+  for (const match of svg.matchAll(/\bid="([^"]+)"/g)) ids.add(match[1]);
+  for (const match of svg.matchAll(/\bdata-id="([^"]+)"/g)) dataIds.add(match[1]);
+  return { ids, dataIds };
+}
+
+function pasoOf(paso, index, ids, dataIds) {
+  if (!paso || typeof paso !== "object") throw new Error(`animacion[${index}] is not a table`);
+  const selector = String(paso.selector || "");
+  validateSelector(selector, ids, dataIds);
+  if (!DIAGRAMA_KINDS.has(paso.kind)) {
+    const got = paso.kind === undefined ? "nothing" : String(paso.kind);
+    throw new Error(`animacion[${index}]: kind must be show, draw or fade, got ${got}`);
+  }
+  const at = Number(paso.at);
+  if (!Number.isFinite(at)) throw new Error(`animacion[${index}]: at must be a number`);
+  const dur = paso.dur === undefined || paso.dur === null ? DEFAULT_DUR : Number(paso.dur);
+  if (!Number.isFinite(dur) || dur <= 0) {
+    throw new Error(`animacion[${index}]: dur must be a positive number`);
+  }
+  return { selector, at, kind: paso.kind, dur };
+}
+
+function validateSelector(selector, ids, dataIds) {
+  if (!selector) throw new Error("animacion: a paso has no selector");
+  const refs = selectorRefs(selector);
+  if (!refs.length) throw new Error(`animacion: selector ${selector} names no id`);
+  for (const ref of refs) {
+    if (!refPresent(ref, ids, dataIds)) {
+      throw new Error(`animacion: selector ${selector} names an unknown id`);
+    }
+  }
+}
+
+function selectorRefs(selector) {
+  const pattern = /#[\w-]+|\[id\^="([^"]+)"\]|\[id="([^"]+)"\]|\[data-id="([^"]+)"\]/g;
+  const refs = [];
+  for (const match of selector.matchAll(pattern)) {
+    refs.push({ token: match[0], prefix: match[1], id: match[2], dataId: match[3] });
+  }
+  return refs;
+}
+
+function refPresent(ref, ids, dataIds) {
+  if (ref.token.startsWith("#")) return ids.has(ref.token.slice(1));
+  if (ref.prefix !== undefined) return [...ids].some((id) => id.startsWith(ref.prefix));
+  if (ref.id !== undefined) return ids.has(ref.id);
+  return dataIds.has(ref.dataId);
+}
+
+function timelineScript(pasos) {
+  const body = TIMELINE_TEMPLATE.replace("__PASOS__", JSON.stringify(pasos));
+  return ["<script>", body, "</script>"].join("\n");
+}
+
+function injectTimeline(templateFile, pasos) {
+  const template = fs.readFileSync(templateFile, "utf8");
+  const script = timelineScript(pasos);
+  const updated = template.includes("</body>")
+    ? template.replace("</body>", [script, "</body>"].join("\n"))
+    : [template, script].join("\n");
+  fs.writeFileSync(templateFile, updated);
+}
+
+// Selectors are plain strings built by concatenation; the HyperFrames bundler
+// rejects template literals in selectors, so this script carries none.
+const TIMELINE_TEMPLATE = [
+  "(function () {",
+  "  var pasos = __PASOS__;",
+  "  var tl = gsap.timeline({ paused: true });",
+  "  function drawEach(targets, paso) {",
+  "    Array.prototype.forEach.call(targets, function (target) {",
+  '      var path = target.tagName.toLowerCase() === "path" ? target : target.querySelector("path");',
+  '      if (!path || typeof path.getTotalLength !== "function") return;',
+  "      var length = path.getTotalLength();",
+  "      tl.fromTo(path, { strokeDasharray: length, strokeDashoffset: length },",
+  '        { strokeDashoffset: 0, duration: paso.dur, ease: "power1.inOut" }, paso.at);',
+  "      var head = path.nextElementSibling;",
+  '      if (head && head.classList && head.classList.contains("arrow")) {',
+  '        tl.from(head, { opacity: 0, duration: paso.dur * 0.5 }, paso.at + paso.dur * 0.8);',
+  "      }",
+  "    });",
+  "  }",
+  "  pasos.forEach(function (paso) {",
+  "    var targets = document.querySelectorAll(paso.selector);",
+  "    if (!targets.length) return;",
+  '    if (paso.kind === "show") {',
+  '      tl.from(targets, { opacity: 0, scale: 0.85, transformOrigin: "50% 50%", duration: paso.dur, ease: "back.out(2)" }, paso.at);',
+  '    } else if (paso.kind === "fade") {',
+  '      tl.from(targets, { opacity: 0, duration: paso.dur, ease: "power1.out" }, paso.at);',
+  "    } else {",
+  "      drawEach(targets, paso);",
+  "    }",
+  "  });",
+  '  var root = document.querySelector("[data-composition-id]");',
+  '  var name = root ? root.getAttribute("data-composition-id") : "main";',
+  "  window.__timelines = window.__timelines || {};",
+  '  window.__timelines[name || "main"] = tl;',
+  "  tl.seek(0);",
+  "})();",
+].join("\n");
+
 function seedOf(inputs) {
   return Number.isInteger(inputs.seed) ? inputs.seed : 0;
 }
@@ -473,6 +608,9 @@ function run(request) {
   fs.rmSync(workDir, { recursive: true, force: true });
   fs.cpSync(source, workDir, { recursive: true });
   copyClips(inputs, pieceBase(request), workDir);
+  if (request.capability === "hyperframes.diagrama") {
+    diagramaSetup(workDir, inputs, pieceBase(request));
+  }
   runCli(["check"], workDir);
   runCli(renderArgs(inputs, path.join(outDir, `${name}${extension}`), loop), workDir);
   const entry = readManifest(firstPackageDir());

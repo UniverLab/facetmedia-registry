@@ -6,8 +6,12 @@ description: Render checked HTML+GSAP compositions to MP4 with the pinned HyperF
 
 `hyperframes.render` turns an authored HTML+GSAP composition into an MP4.
 `hyperframes.loop` renders the same composition to a looping GIF or an
-alpha-channel MOV. The package wraps the pinned CLI: it runs `check` first,
-then renders at most two workers, and never reimplements either step.
+alpha-channel MOV. `hyperframes.diagrama` inserts a Mermaid SVG (`diagrama-svg`)
+into a checked composition and draws it from an `animacion` list of
+`{ selector, at, kind, dur }` steps; every selector is validated against the
+SVG's ids before anything renders. The package wraps the pinned CLI: it runs
+`check` first, then renders at most two workers, and never reimplements either
+step.
 
 ## When to use
 

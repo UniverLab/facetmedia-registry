@@ -549,3 +549,62 @@ description = "gif renders a looping animation for feeds and embeds; mov-alpha r
 
 [capabilities.loop.preview]
 viewer = "video"
+
+[capabilities.diagrama]
+summary = "Render a Mermaid SVG inside a checked HTML+GSAP composition, drawn by a validated GSAP timeline"
+kind = "video"
+
+[capabilities.diagrama.inputs.composicion]
+type = "path"
+required = true
+description = "Composition directory with hyperframes.json and index.tmpl (never named .html, which HyperFrames reads as a second composition) plus build.mjs and assets/, resolved relative to the piece; self-contained, vendoring every asset instead of loading a remote URL."
+
+[capabilities.diagrama.inputs.prompt]
+type = "string"
+required = true
+description = "The brief the composition was authored from; recorded and carried into the video preview."
+
+[capabilities.diagrama.inputs.seed]
+type = "integer"
+default = 0
+min = 0
+description = "Recorded seed; the seek-based timeline renders deterministically, so it labels the record."
+
+[capabilities.diagrama.inputs.fps]
+type = "integer"
+min = 1
+description = "Frame rate passed as --fps; the composition's own data-fps applies when omitted."
+
+[capabilities.diagrama.inputs.diagrama-svg]
+type = "path"
+required = true
+description = "Mermaid SVG file as produced by tools/mermaid.sh (for example ciclo.svg or arquitectura.svg), resolved relative to the piece; copied beside the composition so build.mjs can insert it into index.tmpl."
+
+[capabilities.diagrama.inputs.animacion]
+type = "array"
+default = []
+description = "Ordered timeline steps drawing the diagram; each paso names a selector from the diagram's stable Mermaid ids, the second it starts at, and what it does."
+
+[capabilities.diagrama.inputs.animacion.items.selector]
+type = "string"
+required = true
+description = "CSS selector into the Mermaid SVG; validated against the ids and data-ids the SVG actually carries before any render."
+
+[capabilities.diagrama.inputs.animacion.items.at]
+type = "number"
+required = true
+description = "Second on the composition timeline at which the step starts."
+
+[capabilities.diagrama.inputs.animacion.items.kind]
+type = "enum"
+values = ["show", "draw", "fade"]
+required = true
+description = "show pops a node in, draw traces an edge with strokeDashoffset, fade dissolves a group or label."
+
+[capabilities.diagrama.inputs.animacion.items.dur]
+type = "number"
+default = 0.4
+description = "Step duration in seconds."
+
+[capabilities.diagrama.preview]
+viewer = "video"
