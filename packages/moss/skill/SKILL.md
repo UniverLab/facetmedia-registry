@@ -50,6 +50,14 @@ Seven effects are approved on the reference machine: `cafe-ambiente`,
 `campana-notificacion`, `clic-interfaz`, `lluvia-ventana`,
 `pagina-libro`, `pasos-madera` and `whoosh-transicion`.
 
+Each approved effect ships as a runnable piece with its WAV:
+`examples/cafe-ambiente.toml`, `examples/campana-notificacion.toml`,
+`examples/clic-interfaz.toml`, `examples/lluvia-ventana.toml`,
+`examples/pagina-libro.toml`, `examples/pasos-madera.toml` and
+`examples/whoosh-transicion.toml`. The seven descriptions, and the piece
+shape, are in
+[references/descriptions.md](references/descriptions.md).
+
 ## Pitfalls
 
 - Descriptions are in English; the pipeline appends `duration: <s>s`
