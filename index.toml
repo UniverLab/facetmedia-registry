@@ -30,3 +30,6 @@ name = "voicestudio"
 
 [[packages]]
 name = "deck"
+
+[[packages]]
+name = "acestep"

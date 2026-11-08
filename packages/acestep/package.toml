@@ -1,0 +1,85 @@
+name = "acestep"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "ace-step (ACE-Step 1.5)"
+tool_name = "ACE-Step 1.5"
+description = "Instrumental beds from an English caption with ACE-Step 1.5, checked by duration and peak, at most 30 s per piece."
+facet = "audio"
+uses = ["audiopreview"]
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[engine.server]
+repo = "https://github.com/ace-step/ACE-Step-1.5.git"
+rev = "ca1e85fe9430179831e6bc6be790c332190a3866"
+requirements = "requirements.txt"
+launch = ["python", "-m", "uvicorn", "acestep.api_server:app", "--host", "127.0.0.1", "--port", "{{port}}", "--workers", "1"]
+health_url = "http://127.0.0.1:{{port}}/health"
+timeout_s = 600
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = true
+ram_gb = 16
+disk_gb = 24
+exclusive = true
+platforms = ["linux"]
+
+[[licenses]]
+subject = "ACE-Step 1.5"
+spdx = "MIT"
+
+[[licenses]]
+subject = "PyTorch"
+spdx = "BSD-3-Clause"
+
+[[licenses]]
+subject = "soundfile"
+spdx = "BSD-3-Clause"
+
+[[models]]
+id = "acestep-v15-turbo"
+backend = true
+spdx = "MIT"
+commercial_use = true
+requires_acceptance = false
+
+[[models]]
+id = "acestep-vae"
+backend = true
+spdx = "MIT"
+commercial_use = true
+requires_acceptance = false
+
+[capabilities.bed]
+summary = "Instrumental bed from an English caption, about 50 s per 30 s track, at most 30 s."
+kind = "audio"
+
+[capabilities.bed.inputs.caption]
+type = "string"
+required = true
+description = "English style caption; ask for acoustic instruments and end with 'No drums, no percussion, no bass beat, no synthesizers'. A caption asking for voice is refused."
+
+[capabilities.bed.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name: writes <name>.wav."
+
+[capabilities.bed.inputs.duracion]
+type = "number"
+required = true
+max = 30
+description = "Seconds of music to compose, at most 30."
+
+[capabilities.bed.verify]
+thresholds = { duration_tolerance_s = 1.0, peak_dbfs_min = -40.0 }
+
+[capabilities.bed.preview]
+viewer = "audio"

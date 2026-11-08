@@ -1,0 +1,15 @@
+[project]
+name = "facet-acestep"
+version = "0.1.0"
+description = "Instrumental beds from an English caption with ACE-Step 1.5, checked by duration and peak."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "numpy==2.5.4",
+  "pyloudnorm==0.2.0",
+  "soundfile==0.13.1",
+]
+
+[tool.uv]
+package = false
