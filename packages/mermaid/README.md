@@ -1,0 +1,118 @@
+# mermaid
+
+Render a `.mmd` Mermaid diagram to SVG and PNG with the pinned
+`@mermaid-js/mermaid-cli` (12.0.0) and the system Chrome. `mermaid.diagrama`
+is the package's only capability: it wraps `mmdc`, never reimplements it, and
+Mermaid is the lab's only diagram tool — what it cannot draw is authored by
+hand in HTML/CSS/SVG and animated in HyperFrames.
+
+## What it wraps
+
+- **Node**: `22.21.0`, the same pinned runtime every node-engine package
+  uses, with the sha256 of nodejs.org's `node-v22.21.0-linux-x64.tar.gz`.
+- **mermaid-cli**: `12.0.0`, the first `[[engine.node.packages]]` entry; its
+  `src/cli.js` is the CLI the staged `runner.js` spawns. The other rows are
+  the pinned production closure resolved from registry.npmjs.org with tarball
+  and SRI integrity, the same procedure hyperframes used.
+- **The system Chrome, never a download.** `run` requires `CHROME_PATH` to
+  name an executable Chrome (for example `/usr/bin/google-chrome`) and writes
+  a puppeteer config pointing at it; `PUPPETEER_SKIP_DOWNLOAD=1` is set on
+  every CLI call. There is no `[browser]` table and no chromium licence: a
+  node package never pulls a browser.
+- **Iconify packs.** Every render passes
+  `--iconPacksNamesAndUrls` with `logos` and `mdi`, so `architecture-beta`
+  services can use `logos:<brand>` and `mdi:<icon>` beside the bundled
+  `cloud`, `database`, `disk`, `internet` and `server` icons.
+
+Because a tarball carries no `node_modules`, `runner.js` links each declared
+package's `dependencies`, non-optional `peerDependencies` and the linux-x64
+`optionalDependencies` into the importing package's own `node_modules`,
+picking the highest extracted version that satisfies each range — including
+the npm hyphen (`1 - 3`) and bare partial (`3`, `0.6`) ranges the d3 packages
+use. A range with no extracted version fails the verb loudly.
+
+## The .mmd header
+
+The style lives in the file's YAML front matter, not in flags:
+
+```yaml
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#eef3fb"
+    primaryBorderColor: "#2a78d6"
+    lineColor: "#555"
+    fontFamily: "Ubuntu"
+    fontSize: "22px"
+---
+flowchart LR
+  ...
+```
+
+`run` validates the header before the CLI runs and a violation throws a plain
+Error — facet reports `runner_failed`, exit 1, naming the trap:
+
+- **`theme` is required** under `config`; without the `---` header there is no
+  style contract at all.
+- **`fontFamily` names one installed family.** A YAML list, or the literal
+  `"Ubuntu Sans"`, renders serif — the trap the lab hit. Write
+  `fontFamily: "Ubuntu"`.
+
+`invalid_input` is facet-side piece/schema errors only; it cannot come out of
+the runner.
+
+## Traps ported from the lab
+
+- **`fontFamily` takes one installed family.** A list or `"Ubuntu Sans"`
+  renders serif (above).
+- **`direction` inside a subgraph linked from outside is ignored.** To keep a
+  subgraph's boxes in a row, chain them with invisible links:
+  `a ~~~ b ~~~ c`, as `ciclo.mmd` does.
+- **`fontSize` for video.** The default is small at 1080p; the approved
+  patterns use `fontSize: "22px"`.
+- **A bottom (`B`) port arrow crosses the service label.** Split a service's
+  exit through a `junction` (`reparto` in `arquitectura.mmd`), then fan out
+  with `R`/`L`/`B` ports.
+- **`architecture-beta`** gives groups (`group ... in ...`), services with
+  icons and port arrows; the bundled icons are `cloud`, `database`, `disk`,
+  `internet`, `server`, plus Iconify `logos:`/`mdi:`.
+- **`look: handDrawn`** gives the Excalidraw-style drawing approved as
+  `ciclo-mano.png`.
+
+## Rejected alternatives
+
+D2, Excalidraw and Python `diagrams` were compared and rejected; Mermaid is
+the lab's only diagram tool. What Mermaid cannot express is drawn by hand in
+HTML/CSS/SVG and animated in HyperFrames (`hyperframes.diagrama` consumes the
+SVG this package writes, using its stable `my-svg-*` ids).
+
+## Approved references
+
+The lab's approved outputs live outside the registry:
+
+- `ciclo.mmd` → `ciclo.svg` + `ciclo.png`, and the hand-drawn
+  `ciclo-mano.png`, under
+  `/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-diagramas/`.
+- `arquitectura.mmd` → `arquitectura.svg` + `arquitectura.png`, same folder.
+
+## Environment
+
+- **`CHROME_PATH` (required for `run`).** The system Chrome executable, for
+  example `export CHROME_PATH=/usr/bin/google-chrome`. `doctor` reports the
+  fix when it is missing; nothing is installed or pulled.
+- **`FACET_NODE` and `FACET_NODE_PATH`** are set by facet; the runner refuses
+  to run outside it.
+- **`PUPPETEER_SKIP_DOWNLOAD=1`** is set by the runner on every CLI call.
+
+## The verbs
+
+- `run` resolves `diagrama` relative to the piece, validates the header,
+  renders `<name>.svg` and `<name>.png` (PNG at `-s 2`) into `out_dir`, and
+  reports both as image assets.
+- `verify` checks each asset: an SVG must carry an `<svg>` element, a PNG a
+  valid signature.
+- `preview` writes `<asset>.preview.json` in the image kind's shape, deriving
+  the prompt from the diagram's type line and using seed 0.
+- `doctor` reports the extracted mermaid-cli package and the Chrome check;
+  a missing Chrome names `export CHROME_PATH=/usr/bin/google-chrome`.

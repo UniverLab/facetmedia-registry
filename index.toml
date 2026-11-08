@@ -39,3 +39,6 @@ name = "moss"
 
 [[packages]]
 name = "texforge"
+
+[[packages]]
+name = "mermaid"

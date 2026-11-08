@@ -1,0 +1,1201 @@
+name = "mermaid"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "mermaid-js (mermaid-cli)"
+tool_name = "mermaid-cli"
+description = "Mermaid diagrams rendered to SVG and PNG with the pinned mermaid-cli and the system Chrome"
+facet = "presentation"
+
+[engine]
+type = "node"
+
+[engine.node]
+runtime = "22.21.0"
+runtime_sha256 = "262b84b02f7e2bc017d4bdb81fec85ca0d6190a5cd0781d2d6e84317c08871f8"
+
+[[engine.node.packages]]
+name = "@mermaid-js/mermaid-cli"
+version = "12.0.0"
+tarball = "https://registry.npmjs.org/@mermaid-js/mermaid-cli/-/mermaid-cli-12.0.0.tgz"
+integrity = "sha512-AA18uaJtWVlM5PX7RGBxrVrqTTesmEaWCmfV+l5RkD6A1CnpUAtPpL+wWhkQAZrDSfyAw5FZyj084MsnDIPY3g=="
+
+[[engine.node.packages]]
+name = "@antfu/install-pkg"
+version = "2.1.0"
+tarball = "https://registry.npmjs.org/@antfu/install-pkg/-/install-pkg-2.1.0.tgz"
+integrity = "sha512-sdg9NxU3zR4Mnawfbc/x6GB5Wf17WYud5qOuEuxXjaKpYpMkISSJEjItGebXJ2bQ4DIcly4NYH23mtkGJjvKUw=="
+
+[[engine.node.packages]]
+name = "@braintree/sanitize-url"
+version = "7.1.2"
+tarball = "https://registry.npmjs.org/@braintree/sanitize-url/-/sanitize-url-7.1.2.tgz"
+integrity = "sha512-jigsZK+sMF/cuiB7sERuo9V7N9jx+dhmHHnQyDSVdpZwVutaBu7WvNYqMDLSgFgfB30n452TP3vjDAvFC973mA=="
+
+[[engine.node.packages]]
+name = "@chevrotain/cst-dts-gen"
+version = "13.2.0"
+tarball = "https://registry.npmjs.org/@chevrotain/cst-dts-gen/-/cst-dts-gen-13.2.0.tgz"
+integrity = "sha512-bA9dvWlhAUcHkNwU+8w9yiUxJPlj/Lm3VqS7MD+NbIR/7LmpNLuK/AWNFdCo/T3SK5ND0/UHf3IJvl/Jn/i6yg=="
+
+[[engine.node.packages]]
+name = "@chevrotain/gast"
+version = "13.2.0"
+tarball = "https://registry.npmjs.org/@chevrotain/gast/-/gast-13.2.0.tgz"
+integrity = "sha512-bCARdAsG+eEbOveSXcOAC7pVxA04I1ionzeMOwIYf5NX7SaS7zgn4Dgug2BSqoL+iyKeMNSorQjsFSHJHsCNwg=="
+
+[[engine.node.packages]]
+name = "@chevrotain/regexp-to-ast"
+version = "13.2.0"
+tarball = "https://registry.npmjs.org/@chevrotain/regexp-to-ast/-/regexp-to-ast-13.2.0.tgz"
+integrity = "sha512-kxpUkLtiaK09ph+dib+Yvm+3sWSnuwlo25gqfKRgTPNmF6H7uW4gVkMjaRdtnN783S9sM6vUNWh9CsxYX4QwKw=="
+
+[[engine.node.packages]]
+name = "@chevrotain/types"
+version = "13.2.0"
+tarball = "https://registry.npmjs.org/@chevrotain/types/-/types-13.2.0.tgz"
+integrity = "sha512-7qrYHRlKfWf2AvBfJi5eVOrKAkbxvMFsy/iIHTGIiApNcEecCaVIdR+mIQhyCBsTDJxBz4JWXHMo6krbhR9hVg=="
+
+[[engine.node.packages]]
+name = "@chevrotain/utils"
+version = "13.2.0"
+tarball = "https://registry.npmjs.org/@chevrotain/utils/-/utils-13.2.0.tgz"
+integrity = "sha512-SzKYY68rseOrb9KILVzPsl6SjkQtdWw01SRGB5aCVI5kFcHltQsOYV3JB0Ffst72DgkvHCyDQ0NLwxtmCCf97Q=="
+
+[[engine.node.packages]]
+name = "@floating-ui/core"
+version = "1.8.0"
+tarball = "https://registry.npmjs.org/@floating-ui/core/-/core-1.8.0.tgz"
+integrity = "sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ=="
+
+[[engine.node.packages]]
+name = "@floating-ui/dom"
+version = "1.8.0"
+tarball = "https://registry.npmjs.org/@floating-ui/dom/-/dom-1.8.0.tgz"
+integrity = "sha512-yXSrzeHZBTZadLOlfyhCkJHNeLJnHRnRInwdZ40L7ZiaAtrBwoYlsDrX3v5zB1Utk7CLfzcOVnVVWoXEky7Ceg=="
+
+[[engine.node.packages]]
+name = "@floating-ui/react"
+version = "0.26.28"
+tarball = "https://registry.npmjs.org/@floating-ui/react/-/react-0.26.28.tgz"
+integrity = "sha512-yORQuuAtVpiRjpMhdc0wJj06b9JFjrYF4qp96j++v2NBpbi6SEGF7donUJ3TMieerQ6qVkAv1tgr7L4r5roTqw=="
+
+[[engine.node.packages]]
+name = "@floating-ui/react"
+version = "0.27.20"
+tarball = "https://registry.npmjs.org/@floating-ui/react/-/react-0.27.20.tgz"
+integrity = "sha512-CMqMy7OaXl9W0eq1Uy7L7i2Y/anPvHmFmESd2CEw0t5YvZhcVCeo4MBevAmswRllX7Y2dEidA4ozGPunLSTQpw=="
+
+[[engine.node.packages]]
+name = "@floating-ui/react-dom"
+version = "2.1.9"
+tarball = "https://registry.npmjs.org/@floating-ui/react-dom/-/react-dom-2.1.9.tgz"
+integrity = "sha512-JDjEFGCpImxDCA7JJKviA0M9+RtmJdj0m/NVU5IMgBK+AmZouAQQ7/+2GLH0GXXY0YMw9oXPB8hKdbPYg5QLYg=="
+
+[[engine.node.packages]]
+name = "@floating-ui/utils"
+version = "0.2.12"
+tarball = "https://registry.npmjs.org/@floating-ui/utils/-/utils-0.2.12.tgz"
+integrity = "sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww=="
+
+[[engine.node.packages]]
+name = "@fontsource-variable/recursive"
+version = "5.3.0"
+tarball = "https://registry.npmjs.org/@fontsource-variable/recursive/-/recursive-5.3.0.tgz"
+integrity = "sha512-4B4/lWCVeZgdbpJdIIU1sOVO/ECjjM673ohuxvyQ6uCK41TPlGzKRNokKY84noUgGYnpwc//MW4k2KrOMY19jQ=="
+
+[[engine.node.packages]]
+name = "@fontsource/open-sans"
+version = "5.3.0"
+tarball = "https://registry.npmjs.org/@fontsource/open-sans/-/open-sans-5.3.0.tgz"
+integrity = "sha512-V1bdMlGNyZrJwzrdusshMOw2YR0aqYDL7kOo9dkxUEKl8dFv66A9HLckOOXl572sG/7ohhDQrCrTFGSn9LZcSw=="
+
+[[engine.node.packages]]
+name = "@fortawesome/fontawesome-free"
+version = "7.3.1"
+tarball = "https://registry.npmjs.org/@fortawesome/fontawesome-free/-/fontawesome-free-7.3.1.tgz"
+integrity = "sha512-wmglKKPDIkgV3aWlZzWECCPoGIkYCulzBwxG9+w7rc5BGapZ6cPMpoPOT8k36J0Ni7PPX6c/rsoMWfS4d1MUMg=="
+
+[[engine.node.packages]]
+name = "@headlessui/react"
+version = "2.2.10"
+tarball = "https://registry.npmjs.org/@headlessui/react/-/react-2.2.10.tgz"
+integrity = "sha512-5pVLNK9wlpxTUTy9GpgbX/SdcRh+HBnPktjM2wbiLTH4p+2EPHBO1aoSryUCuKUIItdDWO9ITlhUL8UnUN/oIA=="
+
+[[engine.node.packages]]
+name = "@headlessui/tailwindcss"
+version = "0.2.2"
+tarball = "https://registry.npmjs.org/@headlessui/tailwindcss/-/tailwindcss-0.2.2.tgz"
+integrity = "sha512-xNe42KjdyA4kfUKLLPGzME9zkH7Q3rOZ5huFihWNWOQFxnItxPB3/67yBI8/qBfY8nwBRx5GHn4VprsoluVMGw=="
+
+[[engine.node.packages]]
+name = "@iconify/types"
+version = "2.0.0"
+tarball = "https://registry.npmjs.org/@iconify/types/-/types-2.0.0.tgz"
+integrity = "sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg=="
+
+[[engine.node.packages]]
+name = "@iconify/utils"
+version = "3.1.7"
+tarball = "https://registry.npmjs.org/@iconify/utils/-/utils-3.1.7.tgz"
+integrity = "sha512-JZHlwdID+dy+lTgbYC8NEC4zeugqeYsc6jewvzb4c58kHauJn+X7rNwQjxz5p2qSjqaEeQoLkCIQ9v/H4PK0/w=="
+
+[[engine.node.packages]]
+name = "@internationalized/date"
+version = "3.12.4"
+tarball = "https://registry.npmjs.org/@internationalized/date/-/date-3.12.4.tgz"
+integrity = "sha512-M1dEn4c1U1HsSlaVR8upZtSqvXrTkHDfv18H01uCSJyjVLDxnBR38v/fMxecmlwXKR4i9HeZcmgQAPE6A+aGJQ=="
+
+[[engine.node.packages]]
+name = "@internationalized/number"
+version = "3.6.9"
+tarball = "https://registry.npmjs.org/@internationalized/number/-/number-3.6.9.tgz"
+integrity = "sha512-GgWy2caO/+hV9sT/oCTWGHvbjmJMPT9kkXzoKRLnkEq7adghhR7UprhvY9sXrKfrp3NcDfhF6QQHXR1KfQbB8g=="
+
+[[engine.node.packages]]
+name = "@internationalized/string"
+version = "3.2.10"
+tarball = "https://registry.npmjs.org/@internationalized/string/-/string-3.2.10.tgz"
+integrity = "sha512-PDx6//vHSpRnHfxqMqto11zQvhsaU74O3mKv2F/0eicGZcl9NLjQmGlbHz/LsJh5tLKp4A4L7ZVTzN1/MmMTvA=="
+
+[[engine.node.packages]]
+name = "@mermaid-js/layout-tidy-tree"
+version = "1.0.1"
+tarball = "https://registry.npmjs.org/@mermaid-js/layout-tidy-tree/-/layout-tidy-tree-1.0.1.tgz"
+integrity = "sha512-suZgFgQQHYuAxiEiNVgPJwOoXi/keXV6DghCL3rT4K9DmX7xYQ2XZI2suiBVs/fj1gn/OoXIWB2DFSmeY7trvw=="
+
+[[engine.node.packages]]
+name = "@mermaid-js/mermaid-zenuml"
+version = "1.0.1"
+tarball = "https://registry.npmjs.org/@mermaid-js/mermaid-zenuml/-/mermaid-zenuml-1.0.1.tgz"
+integrity = "sha512-O5DiRODoFVNgugOVloxcDXmd+bXe/sbGlDh3onnzuE4EWtgTWwaAlWuPPOXbU9QESsztnD4Gtnu7dr+tYLFE0A=="
+
+[[engine.node.packages]]
+name = "@mermaid-js/parser"
+version = "2.0.1"
+tarball = "https://registry.npmjs.org/@mermaid-js/parser/-/parser-2.0.1.tgz"
+integrity = "sha512-j37dj/h6p6pots1L7pLPPNuABEEu9WP4OYg9pW1g+nYG331j0+3canE9OagtYdytYvdSAMG+2fKU5cxep6LgjA=="
+
+[[engine.node.packages]]
+name = "@napi-rs/canvas"
+version = "0.1.100"
+tarball = "https://registry.npmjs.org/@napi-rs/canvas/-/canvas-0.1.100.tgz"
+integrity = "sha512-xglYA6q3XO5P3BNJYxVZ1IV7DLVjp1Py6nwag88YntrS+3vKHyYcMqXVS4ZztJmwz2uGvz1FWhI/4LgbR5uQDA=="
+
+[[engine.node.packages]]
+name = "@napi-rs/canvas-linux-x64-gnu"
+version = "0.1.100"
+tarball = "https://registry.npmjs.org/@napi-rs/canvas-linux-x64-gnu/-/canvas-linux-x64-gnu-0.1.100.tgz"
+integrity = "sha512-1eCvkDCazm7FFhsT7DfGOdSaHgZVK3bt/dSBl5EWHOWmnz+I7j8tPseJqqD81NF+MH21jKUK4wQSDjN0mdhnTg=="
+
+[[engine.node.packages]]
+name = "@puppeteer/browsers"
+version = "3.2.6"
+tarball = "https://registry.npmjs.org/@puppeteer/browsers/-/browsers-3.2.6.tgz"
+integrity = "sha512-MJP29gVoHznmqmwhH1tlZqzfeQ3aylTpSSa6WKZXtkwYUH02i9imBmWGTyZrbnAou5paX78SE4jMAUqnEPf8ug=="
+
+[[engine.node.packages]]
+name = "@react-aria/focus"
+version = "3.22.1"
+tarball = "https://registry.npmjs.org/@react-aria/focus/-/focus-3.22.1.tgz"
+integrity = "sha512-CPxtkyrBi/HYY5P3lE/57sQ6qfa0lN8E55TOm89H0kNGv0lKt+/0zP7lWERzBjRr5IxBVrQX4gFEowBN52LPaA=="
+
+[[engine.node.packages]]
+name = "@react-aria/interactions"
+version = "3.28.1"
+tarball = "https://registry.npmjs.org/@react-aria/interactions/-/interactions-3.28.1.tgz"
+integrity = "sha512-Bqb+HrD5I5MHS2SKBhISYqo2SW8Y2dfzgF/Y1lIJq7xqLxheo9vzxPGEHhz+XzkgGfoqEJx8A6a3C7uiqS3HWA=="
+
+[[engine.node.packages]]
+name = "@react-types/shared"
+version = "3.37.0"
+tarball = "https://registry.npmjs.org/@react-types/shared/-/shared-3.37.0.tgz"
+integrity = "sha512-VNlZuifu4tHdxWPfHvoMfKsHA9kVTCGkduv5vKVTdinm8wHFJNhyVB5RzIMiRFj0q3RKoCbP68u2zaoBSiFueg=="
+
+[[engine.node.packages]]
+name = "@swc/helpers"
+version = "0.5.24"
+tarball = "https://registry.npmjs.org/@swc/helpers/-/helpers-0.5.24.tgz"
+integrity = "sha512-6tcXo4kA8HgGO7AVmawB57RYi/piBPYVHVcO6dXjX+SZw8GoHmi262sp4v2Ha2kNP9Cx84qei27yT+fjS1lxgg=="
+
+[[engine.node.packages]]
+name = "@tanstack/react-virtual"
+version = "3.14.26"
+tarball = "https://registry.npmjs.org/@tanstack/react-virtual/-/react-virtual-3.14.26.tgz"
+integrity = "sha512-HUDlfsrYH6ko5xH56L62Mcl/uzT+AGVNMHFuDNqDJMdZWc1AQa2oeVKNUvZ/RWBZQ4TYtyQerFrNvLnp39h65A=="
+
+[[engine.node.packages]]
+name = "@tanstack/virtual-core"
+version = "3.19.11"
+tarball = "https://registry.npmjs.org/@tanstack/virtual-core/-/virtual-core-3.19.11.tgz"
+integrity = "sha512-/5iHb0RHBvj8Di59FDs4ESNm45jls33aZAi4zccVXZjc/6ZvwQP6nzEYeT6weXjTf9E6/vrp2JhYWRyO+ZP13A=="
+
+[[engine.node.packages]]
+name = "@types/d3"
+version = "7.4.3"
+tarball = "https://registry.npmjs.org/@types/d3/-/d3-7.4.3.tgz"
+integrity = "sha512-lZXZ9ckh5R8uiFVt8ogUNf+pIrK4EsWrx2Np75WvF/eTpJ0FMHNhjXk8CKEx/+gpHbNQyJWehbFaTvqmHWB3ww=="
+
+[[engine.node.packages]]
+name = "@types/d3-array"
+version = "3.2.2"
+tarball = "https://registry.npmjs.org/@types/d3-array/-/d3-array-3.2.2.tgz"
+integrity = "sha512-hOLWVbm7uRza0BYXpIIW5pxfrKe0W+D5lrFiAEYR+pb6w3N2SwSMaJbXdUfSEv+dT4MfHBLtn5js0LAWaO6otw=="
+
+[[engine.node.packages]]
+name = "@types/d3-axis"
+version = "3.0.6"
+tarball = "https://registry.npmjs.org/@types/d3-axis/-/d3-axis-3.0.6.tgz"
+integrity = "sha512-pYeijfZuBd87T0hGn0FO1vQ/cgLk6E1ALJjfkC0oJ8cbwkZl3TpgS8bVBLZN+2jjGgg38epgxb2zmoGtSfvgMw=="
+
+[[engine.node.packages]]
+name = "@types/d3-brush"
+version = "3.0.6"
+tarball = "https://registry.npmjs.org/@types/d3-brush/-/d3-brush-3.0.6.tgz"
+integrity = "sha512-nH60IZNNxEcrh6L1ZSMNA28rj27ut/2ZmI3r96Zd+1jrZD++zD3LsMIjWlvg4AYrHn/Pqz4CF3veCxGjtbqt7A=="
+
+[[engine.node.packages]]
+name = "@types/d3-chord"
+version = "3.0.6"
+tarball = "https://registry.npmjs.org/@types/d3-chord/-/d3-chord-3.0.6.tgz"
+integrity = "sha512-LFYWWd8nwfwEmTZG9PfQxd17HbNPksHBiJHaKuY1XeqscXacsS2tyoo6OdRsjf+NQYeB6XrNL3a25E3gH69lcg=="
+
+[[engine.node.packages]]
+name = "@types/d3-color"
+version = "3.1.3"
+tarball = "https://registry.npmjs.org/@types/d3-color/-/d3-color-3.1.3.tgz"
+integrity = "sha512-iO90scth9WAbmgv7ogoq57O9YpKmFBbmoEoCHDB2xMBY0+/KVrqAaCDyCE16dUspeOvIxFFRI+0sEtqDqy2b4A=="
+
+[[engine.node.packages]]
+name = "@types/d3-contour"
+version = "3.0.6"
+tarball = "https://registry.npmjs.org/@types/d3-contour/-/d3-contour-3.0.6.tgz"
+integrity = "sha512-BjzLgXGnCWjUSYGfH1cpdo41/hgdWETu4YxpezoztawmqsvCeep+8QGfiY6YbDvfgHz/DkjeIkkZVJavB4a3rg=="
+
+[[engine.node.packages]]
+name = "@types/d3-delaunay"
+version = "6.0.4"
+tarball = "https://registry.npmjs.org/@types/d3-delaunay/-/d3-delaunay-6.0.4.tgz"
+integrity = "sha512-ZMaSKu4THYCU6sV64Lhg6qjf1orxBthaC161plr5KuPHo3CNm8DTHiLw/5Eq2b6TsNP0W0iJrUOFscY6Q450Hw=="
+
+[[engine.node.packages]]
+name = "@types/d3-dispatch"
+version = "3.0.7"
+tarball = "https://registry.npmjs.org/@types/d3-dispatch/-/d3-dispatch-3.0.7.tgz"
+integrity = "sha512-5o9OIAdKkhN1QItV2oqaE5KMIiXAvDWBDPrD85e58Qlz1c1kI/J0NcqbEG88CoTwJrYe7ntUCVfeUl2UJKbWgA=="
+
+[[engine.node.packages]]
+name = "@types/d3-drag"
+version = "3.0.7"
+tarball = "https://registry.npmjs.org/@types/d3-drag/-/d3-drag-3.0.7.tgz"
+integrity = "sha512-HE3jVKlzU9AaMazNufooRJ5ZpWmLIoc90A37WU2JMmeq28w1FQqCZswHZ3xR+SuxYftzHq6WU6KJHvqxKzTxxQ=="
+
+[[engine.node.packages]]
+name = "@types/d3-dsv"
+version = "3.0.7"
+tarball = "https://registry.npmjs.org/@types/d3-dsv/-/d3-dsv-3.0.7.tgz"
+integrity = "sha512-n6QBF9/+XASqcKK6waudgL0pf/S5XHPPI8APyMLLUHd8NqouBGLsU8MgtO7NINGtPBtk9Kko/W4ea0oAspwh9g=="
+
+[[engine.node.packages]]
+name = "@types/d3-ease"
+version = "3.0.2"
+tarball = "https://registry.npmjs.org/@types/d3-ease/-/d3-ease-3.0.2.tgz"
+integrity = "sha512-NcV1JjO5oDzoK26oMzbILE6HW7uVXOHLQvHshBUW4UMdZGfiY6v5BeQwh9a9tCzv+CeefZQHJt5SRgK154RtiA=="
+
+[[engine.node.packages]]
+name = "@types/d3-fetch"
+version = "3.0.7"
+tarball = "https://registry.npmjs.org/@types/d3-fetch/-/d3-fetch-3.0.7.tgz"
+integrity = "sha512-fTAfNmxSb9SOWNB9IoG5c8Hg6R+AzUHDRlsXsDZsNp6sxAEOP0tkP3gKkNSO/qmHPoBFTxNrjDprVHDQDvo5aA=="
+
+[[engine.node.packages]]
+name = "@types/d3-force"
+version = "3.0.10"
+tarball = "https://registry.npmjs.org/@types/d3-force/-/d3-force-3.0.10.tgz"
+integrity = "sha512-ZYeSaCF3p73RdOKcjj+swRlZfnYpK1EbaDiYICEEp5Q6sUiqFaFQ9qgoshp5CzIyyb/yD09kD9o2zEltCexlgw=="
+
+[[engine.node.packages]]
+name = "@types/d3-format"
+version = "3.0.4"
+tarball = "https://registry.npmjs.org/@types/d3-format/-/d3-format-3.0.4.tgz"
+integrity = "sha512-fALi2aI6shfg7vM5KiR1wNJnZ7r6UuggVqtDA+xiEdPZQwy/trcQaHnwShLuLdta2rTymCNpxYTiMZX/e09F4g=="
+
+[[engine.node.packages]]
+name = "@types/d3-geo"
+version = "3.1.1"
+tarball = "https://registry.npmjs.org/@types/d3-geo/-/d3-geo-3.1.1.tgz"
+integrity = "sha512-65Emv9fQiQQqphLlRkuQ5ypPsOmWPhtBGCMv61JDPEPMvsx+gzhGf74yw1a78xFKPj6zw4AgQICJoQv0vK9M2w=="
+
+[[engine.node.packages]]
+name = "@types/d3-hierarchy"
+version = "3.1.7"
+tarball = "https://registry.npmjs.org/@types/d3-hierarchy/-/d3-hierarchy-3.1.7.tgz"
+integrity = "sha512-tJFtNoYBtRtkNysX1Xq4sxtjK8YgoWUNpIiUee0/jHGRwqvzYxkq0hGVbbOGSz+JgFxxRu4K8nb3YpG3CMARtg=="
+
+[[engine.node.packages]]
+name = "@types/d3-interpolate"
+version = "3.0.4"
+tarball = "https://registry.npmjs.org/@types/d3-interpolate/-/d3-interpolate-3.0.4.tgz"
+integrity = "sha512-mgLPETlrpVV1YRJIglr4Ez47g7Yxjl1lj7YKsiMCb27VJH9W8NVM6Bb9d8kkpG/uAQS5AmbA48q2IAolKKo1MA=="
+
+[[engine.node.packages]]
+name = "@types/d3-path"
+version = "3.1.1"
+tarball = "https://registry.npmjs.org/@types/d3-path/-/d3-path-3.1.1.tgz"
+integrity = "sha512-VMZBYyQvbGmWyWVea0EHs/BwLgxc+MKi1zLDCONksozI4YJMcTt8ZEuIR4Sb1MMTE8MMW49v0IwI5+b7RmfWlg=="
+
+[[engine.node.packages]]
+name = "@types/d3-polygon"
+version = "3.0.2"
+tarball = "https://registry.npmjs.org/@types/d3-polygon/-/d3-polygon-3.0.2.tgz"
+integrity = "sha512-ZuWOtMaHCkN9xoeEMr1ubW2nGWsp4nIql+OPQRstu4ypeZ+zk3YKqQT0CXVe/PYqrKpZAi+J9mTs05TKwjXSRA=="
+
+[[engine.node.packages]]
+name = "@types/d3-quadtree"
+version = "3.0.6"
+tarball = "https://registry.npmjs.org/@types/d3-quadtree/-/d3-quadtree-3.0.6.tgz"
+integrity = "sha512-oUzyO1/Zm6rsxKRHA1vH0NEDG58HrT5icx/azi9MF1TWdtttWl0UIUsjEQBBh+SIkrpd21ZjEv7ptxWys1ncsg=="
+
+[[engine.node.packages]]
+name = "@types/d3-random"
+version = "3.0.4"
+tarball = "https://registry.npmjs.org/@types/d3-random/-/d3-random-3.0.4.tgz"
+integrity = "sha512-UHYId5WTCx4L4YNel7NU00XUXXgvgpgZOvp10PuvsQENjMDXhh2RyFc0KBjO7B45ne4Ha1yVH7ii0vnzKkuzWA=="
+
+[[engine.node.packages]]
+name = "@types/d3-scale"
+version = "4.0.9"
+tarball = "https://registry.npmjs.org/@types/d3-scale/-/d3-scale-4.0.9.tgz"
+integrity = "sha512-dLmtwB8zkAeO/juAMfnV+sItKjlsw2lKdZVVy6LRr0cBmegxSABiLEpGVmSJJ8O08i4+sGR6qQtb6WtuwJdvVw=="
+
+[[engine.node.packages]]
+name = "@types/d3-scale-chromatic"
+version = "3.1.0"
+tarball = "https://registry.npmjs.org/@types/d3-scale-chromatic/-/d3-scale-chromatic-3.1.0.tgz"
+integrity = "sha512-iWMJgwkK7yTRmWqRB5plb1kadXyQ5Sj8V/zYlFGMUBbIPKQScw+Dku9cAAMgJG+z5GYDoMjWGLVOvjghDEFnKQ=="
+
+[[engine.node.packages]]
+name = "@types/d3-selection"
+version = "3.0.12"
+tarball = "https://registry.npmjs.org/@types/d3-selection/-/d3-selection-3.0.12.tgz"
+integrity = "sha512-Qe/KWYhEiIIxGs7HrAAjMfShxKldx19SJtr5zu53f3afPsdZNz7HHtdTLXo/kqeiWNXVycI24kSnfzBYkTzpgw=="
+
+[[engine.node.packages]]
+name = "@types/d3-shape"
+version = "3.2.0"
+tarball = "https://registry.npmjs.org/@types/d3-shape/-/d3-shape-3.2.0.tgz"
+integrity = "sha512-kVd74ta9eof3eJOvbNd1vGKS/XERRyQbT26Og63hIsvDO84cjD5gEOhsXf26w3FSoNlPVz84DOFcKv/oou+fMw=="
+
+[[engine.node.packages]]
+name = "@types/d3-time"
+version = "3.0.4"
+tarball = "https://registry.npmjs.org/@types/d3-time/-/d3-time-3.0.4.tgz"
+integrity = "sha512-yuzZug1nkAAaBlBBikKZTgzCeA+k1uy4ZFwWANOfKw5z5LRhV0gNA7gNkKm7HoK+HRN0wX3EkxGk0fpbWhmB7g=="
+
+[[engine.node.packages]]
+name = "@types/d3-time-format"
+version = "4.0.3"
+tarball = "https://registry.npmjs.org/@types/d3-time-format/-/d3-time-format-4.0.3.tgz"
+integrity = "sha512-5xg9rC+wWL8kdDj153qZcsJ0FWiFt0J5RB6LYUNZjwSnesfblqrI/bJ1wBdJ8OQfncgbJG5+2F+qfqnqyzYxyg=="
+
+[[engine.node.packages]]
+name = "@types/d3-timer"
+version = "3.0.2"
+tarball = "https://registry.npmjs.org/@types/d3-timer/-/d3-timer-3.0.2.tgz"
+integrity = "sha512-Ps3T8E8dZDam6fUyNiMkekK3XUsaUEik+idO9/YjPtfj2qruF8tFBXS7XhtE4iIXBLxhmLjP3SXpLhVf21I9Lw=="
+
+[[engine.node.packages]]
+name = "@types/d3-transition"
+version = "3.0.9"
+tarball = "https://registry.npmjs.org/@types/d3-transition/-/d3-transition-3.0.9.tgz"
+integrity = "sha512-uZS5shfxzO3rGlu0cC3bjmMFKsXv+SmZZcgp0KD22ts4uGXp5EVYGzu/0YdwZeKmddhcAccYtREJKkPfXkZuCg=="
+
+[[engine.node.packages]]
+name = "@types/d3-zoom"
+version = "3.0.9"
+tarball = "https://registry.npmjs.org/@types/d3-zoom/-/d3-zoom-3.0.9.tgz"
+integrity = "sha512-0sE1406XBYJGiqD3AusTl9ZqC//2mIXix51tbom25gDCA8ri4xnSZg28CaSE8Srl6FClqABUKfsn0qghgdepMA=="
+
+[[engine.node.packages]]
+name = "@types/geojson"
+version = "7946.0.16"
+tarball = "https://registry.npmjs.org/@types/geojson/-/geojson-7946.0.16.tgz"
+integrity = "sha512-6C8nqWur3j98U6+lXDfTUWIfgvZU+EumvpHKcYjujKH7woYyLj2sUmff0tRhrqM7BohUw7Pz3ZB1jj2gW9Fvmg=="
+
+[[engine.node.packages]]
+name = "@types/trusted-types"
+version = "2.0.7"
+tarball = "https://registry.npmjs.org/@types/trusted-types/-/trusted-types-2.0.7.tgz"
+integrity = "sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw=="
+
+[[engine.node.packages]]
+name = "@upsetjs/venn.js"
+version = "2.0.0"
+tarball = "https://registry.npmjs.org/@upsetjs/venn.js/-/venn.js-2.0.0.tgz"
+integrity = "sha512-WbBhLrooyePuQ1VZxrJjtLvTc4NVfpOyKx0sKqioq9bX1C1m7Jgykkn8gLrtwumBioXIqam8DLxp88Adbue6Hw=="
+
+[[engine.node.packages]]
+name = "@zenuml/core"
+version = "3.50.1"
+tarball = "https://registry.npmjs.org/@zenuml/core/-/core-3.50.1.tgz"
+integrity = "sha512-Q18BXvIfhRuGw0JfO4e+pltG04Phhv2E7n35EWTNSZKKH/HEkyE4Sh7KERb9dqaOfjOdRdKvLG0YekjK3fcDXw=="
+
+[[engine.node.packages]]
+name = "ansi-regex"
+version = "6.6.0"
+tarball = "https://registry.npmjs.org/ansi-regex/-/ansi-regex-6.6.0.tgz"
+integrity = "sha512-XZ5apbzreCbXSKwPjJstu8R0zOi247w3XYwWxtwBXgpZrCyc1Ka7p9/xY0A9/diMewmHbEKz+FIraWaEWjlN5g=="
+
+[[engine.node.packages]]
+name = "ansi-styles"
+version = "6.2.3"
+tarball = "https://registry.npmjs.org/ansi-styles/-/ansi-styles-6.2.3.tgz"
+integrity = "sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg=="
+
+[[engine.node.packages]]
+name = "antlr4"
+version = "4.11.0"
+tarball = "https://registry.npmjs.org/antlr4/-/antlr4-4.11.0.tgz"
+integrity = "sha512-GUGlpE2JUjAN+G8G5vY+nOoeyNhHsXoIJwP1XF1oRw89vifA1K46T6SEkwLwr7drihN7I/lf0DIjKc4OZvBX8w=="
+
+[[engine.node.packages]]
+name = "aria-hidden"
+version = "1.2.6"
+tarball = "https://registry.npmjs.org/aria-hidden/-/aria-hidden-1.2.6.tgz"
+integrity = "sha512-ik3ZgC9dY/lYVVM++OISsaYDeg1tb0VtP5uL3ouh1koGOaUMDPpbFIei4JkFimWUFPn90sbMNMXQAIVOlnYKJA=="
+
+[[engine.node.packages]]
+name = "chalk"
+version = "6.0.1"
+tarball = "https://registry.npmjs.org/chalk/-/chalk-6.0.1.tgz"
+integrity = "sha512-/Ce6KNm3vIbWdMlNna6RVIZ/ICQxnJxCicet5LBKK9ZffBkqzDw0xh9EiKSljdRtiIQ1S1z4YgcscUUGzNCWrA=="
+
+[[engine.node.packages]]
+name = "chevrotain"
+version = "13.2.0"
+tarball = "https://registry.npmjs.org/chevrotain/-/chevrotain-13.2.0.tgz"
+integrity = "sha512-GTouk5YzgBxlTPCaDn5q0q2EJKkrYmnPF+HmF8v0Qo4r3iyPG7HJivkN1wthCXZcm3sIcZFpGTRovLPNdJNRCA=="
+
+[[engine.node.packages]]
+name = "chromium-bidi"
+version = "157.0.8090-0"
+tarball = "https://registry.npmjs.org/chromium-bidi/-/chromium-bidi-157.0.8090-0.tgz"
+integrity = "sha512-KJw7IQgqXwxpJgJlEIPg5mr2ZoqA+jkTRtc5EABI7sUJ3bu3cpI7NuEBoj4Gn1AsF78CaT9So5WQWspK3/wYag=="
+
+[[engine.node.packages]]
+name = "class-variance-authority"
+version = "0.7.1"
+tarball = "https://registry.npmjs.org/class-variance-authority/-/class-variance-authority-0.7.1.tgz"
+integrity = "sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg=="
+
+[[engine.node.packages]]
+name = "cliui"
+version = "9.0.1"
+tarball = "https://registry.npmjs.org/cliui/-/cliui-9.0.1.tgz"
+integrity = "sha512-k7ndgKhwoQveBL+/1tqGJYNz097I7WOvwbmmU2AR5+magtbjPWQTS1C5vzGkBC8Ym8UWRzfKUzUUqFLypY4Q+w=="
+
+[[engine.node.packages]]
+name = "clsx"
+version = "2.1.1"
+tarball = "https://registry.npmjs.org/clsx/-/clsx-2.1.1.tgz"
+integrity = "sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA=="
+
+[[engine.node.packages]]
+name = "color-name"
+version = "2.1.1"
+tarball = "https://registry.npmjs.org/color-name/-/color-name-2.1.1.tgz"
+integrity = "sha512-p2FdgwVx1a9yWBHP2wI0VgShkDpgN4kZISkxdNipGBJWpa5G6b04OINlVWCyJj0JmfvcPrgqt95E9k8yvaOJFg=="
+
+[[engine.node.packages]]
+name = "color-string"
+version = "2.1.4"
+tarball = "https://registry.npmjs.org/color-string/-/color-string-2.1.4.tgz"
+integrity = "sha512-Bb6Cq8oq0IjDOe8wJmi4JeNn763Xs9cfrBcaylK1tPypWzyoy2G3l90v9k64kjphl/ZJjPIShFztenRomi8WTg=="
+
+[[engine.node.packages]]
+name = "commander"
+version = "15.1.0"
+tarball = "https://registry.npmjs.org/commander/-/commander-15.1.0.tgz"
+integrity = "sha512-cgnQ88TRrWcC7pVq46RzJVRMktu3W2RcbnoidnfBsl1bmDCBwJS/udcIZpKoCrbAYYaCqsz1yZCVIgbIaU3ddQ=="
+
+[[engine.node.packages]]
+name = "commander"
+version = "7.2.0"
+tarball = "https://registry.npmjs.org/commander/-/commander-7.2.0.tgz"
+integrity = "sha512-QrWXB+ZQSVPmIWIhtEO9H+gwHaMGYiF5ChvoJ+K9ZGHG/sVsa6yiesAD1GC/x46sET00Xlwo1u49RVVVzvcSkw=="
+
+[[engine.node.packages]]
+name = "commander"
+version = "8.3.0"
+tarball = "https://registry.npmjs.org/commander/-/commander-8.3.0.tgz"
+integrity = "sha512-OkTL9umf+He2DZkUq8f8J9of7yL6RJKI24dVITBmNfZBmri9zYZQrKkuXiKhyfPSu8tUhnVBB1iKXevvnlR4Ww=="
+
+[[engine.node.packages]]
+name = "cose-base"
+version = "1.0.3"
+tarball = "https://registry.npmjs.org/cose-base/-/cose-base-1.0.3.tgz"
+integrity = "sha512-s9whTXInMSgAp/NVXVNuVxVKzGH2qck3aQlVHxDCdAEPgtMKwc4Wq6/QKhgdEdgbLSi9rBTAcPoRa6JpiG4ksg=="
+
+[[engine.node.packages]]
+name = "cose-base"
+version = "2.2.0"
+tarball = "https://registry.npmjs.org/cose-base/-/cose-base-2.2.0.tgz"
+integrity = "sha512-AzlgcsCbUMymkADOJtQm3wO9S3ltPfYOFD5033keQn9NJzIbtnZj+UdBJe7DYml/8TdbtHJW3j58SOnKhWY/5g=="
+
+[[engine.node.packages]]
+name = "cytoscape"
+version = "3.34.4"
+tarball = "https://registry.npmjs.org/cytoscape/-/cytoscape-3.34.4.tgz"
+integrity = "sha512-msY99tMY8iWTg+sIPGfSqDcPNOt4xcj+v/K/7qUFaCUxxlqnMkUYLBjRUzn9W5CU/R2hrmtJa5+UtovrEM2ctg=="
+
+[[engine.node.packages]]
+name = "cytoscape-cose-bilkent"
+version = "4.1.0"
+tarball = "https://registry.npmjs.org/cytoscape-cose-bilkent/-/cytoscape-cose-bilkent-4.1.0.tgz"
+integrity = "sha512-wgQlVIUJF13Quxiv5e1gstZ08rnZj2XaLHGoFMYXz7SkNfCDOOteKBE6SYRfA9WxxI/iBc3ajfDoc6hb/MRAHQ=="
+
+[[engine.node.packages]]
+name = "cytoscape-fcose"
+version = "2.2.0"
+tarball = "https://registry.npmjs.org/cytoscape-fcose/-/cytoscape-fcose-2.2.0.tgz"
+integrity = "sha512-ki1/VuRIHFCzxWNrsshHYPs6L7TvLu3DL+TyIGEsRcvVERmxokbf5Gdk7mFxZnTdiGtnA4cfSmjZJMviqSuZrQ=="
+
+[[engine.node.packages]]
+name = "d3"
+version = "7.9.2"
+tarball = "https://registry.npmjs.org/d3/-/d3-7.9.2.tgz"
+integrity = "sha512-ZKb/mONPVKzaO5UlcWcwN8bS4ezvQaYu+bsou+XgNABdGC800kwH651ADTbbTxMPHW13UlvbQafdmJQDk1w7Mg=="
+
+[[engine.node.packages]]
+name = "d3-array"
+version = "2.12.1"
+tarball = "https://registry.npmjs.org/d3-array/-/d3-array-2.12.1.tgz"
+integrity = "sha512-B0ErZK/66mHtEsR1TkPEEkwdy+WDesimkM5gpZr5Dsg54BiTA5RXtYW5qTLIAcekaS9xfZrzBLF/OAkB3Qn1YQ=="
+
+[[engine.node.packages]]
+name = "d3-array"
+version = "3.2.5"
+tarball = "https://registry.npmjs.org/d3-array/-/d3-array-3.2.5.tgz"
+integrity = "sha512-Th8qGXoBalmWsstpkuhmBuTsBQIFqYOJtjlBvNVvBfJ8E3uYusBUwUR8HU20U0qKKQkgCvKyR1YjiozWadk5QA=="
+
+[[engine.node.packages]]
+name = "d3-axis"
+version = "3.0.1"
+tarball = "https://registry.npmjs.org/d3-axis/-/d3-axis-3.0.1.tgz"
+integrity = "sha512-E5QCXfaf/uJZEHHiqoWRq+bQEm2PzoVFv2rDC7CZ3wwI0MjfMW3w83J3ubobG4IJj3lShAI5eiPJhOu/8wHofA=="
+
+[[engine.node.packages]]
+name = "d3-brush"
+version = "3.0.1"
+tarball = "https://registry.npmjs.org/d3-brush/-/d3-brush-3.0.1.tgz"
+integrity = "sha512-L5Glqa/Gb7LU3ndIOMtA5mDzlJ0aXKp5ELP2X09ctWF23jO7+faIUVDbmaIi+D6k3EemXFWn1F3lkfguExoVhA=="
+
+[[engine.node.packages]]
+name = "d3-chord"
+version = "3.0.2"
+tarball = "https://registry.npmjs.org/d3-chord/-/d3-chord-3.0.2.tgz"
+integrity = "sha512-cGmADo5M2PTi3ewJZ2lcE32eURd4JmHtQ5JwRIUcas5L1SXqufG9yPyjWp8fW0gRi7aZi9bgbZPFZO1eyZ+1CQ=="
+
+[[engine.node.packages]]
+name = "d3-color"
+version = "3.1.1"
+tarball = "https://registry.npmjs.org/d3-color/-/d3-color-3.1.1.tgz"
+integrity = "sha512-lfab8x0Bj0UO7SNsY8dZSbNIA6ipbkE3X0NG9nqjCu6CfCHZseuDnOSJY7hidKrjpP++i1M2qT+FlAdPKYRilA=="
+
+[[engine.node.packages]]
+name = "d3-contour"
+version = "4.0.3"
+tarball = "https://registry.npmjs.org/d3-contour/-/d3-contour-4.0.3.tgz"
+integrity = "sha512-5DYURc8KwXPOhSUBblU0P9rVcArsSPxPOxsfO0Eud0s28oU0sB2e80aRHRL9AZW3usT8ikFKyIHpHHLNWLdRVA=="
+
+[[engine.node.packages]]
+name = "d3-delaunay"
+version = "6.0.6"
+tarball = "https://registry.npmjs.org/d3-delaunay/-/d3-delaunay-6.0.6.tgz"
+integrity = "sha512-DMQIEvSJhZCB6pwedcXaAlQ+MeKU5LlM2XakKtc73b/VM+RBiI1SRXycOEOKg2jsKj4zZ9F0KGYG6nCGwwWu/g=="
+
+[[engine.node.packages]]
+name = "d3-dispatch"
+version = "3.0.2"
+tarball = "https://registry.npmjs.org/d3-dispatch/-/d3-dispatch-3.0.2.tgz"
+integrity = "sha512-sAzH4Y4nsLo8eSqw5jKiZt+LU2wZmL/qS+OkxQGjhwazB/D7TY34R/QK1eshfGr7cZEKymKZ/Haem7m+lu98Sg=="
+
+[[engine.node.packages]]
+name = "d3-drag"
+version = "3.0.1"
+tarball = "https://registry.npmjs.org/d3-drag/-/d3-drag-3.0.1.tgz"
+integrity = "sha512-OWeoayCq8J69hUIjvL+Mb6Q6Oaj/fyHV5XaXByEUAG+JUjIfTGDnk3qGpcXrD3VmQ3BSV96fcbM6fqq7C0tbPA=="
+
+[[engine.node.packages]]
+name = "d3-dsv"
+version = "3.0.2"
+tarball = "https://registry.npmjs.org/d3-dsv/-/d3-dsv-3.0.2.tgz"
+integrity = "sha512-FUnXhX7I4/AXyRCZzwfZTDGSq8PGZ4oR0tiCBqNGOZMsDrQ+6sIWNQnBzcCGhzJKZ6uCvCezTwflUqI209RRiQ=="
+
+[[engine.node.packages]]
+name = "d3-ease"
+version = "3.0.2"
+tarball = "https://registry.npmjs.org/d3-ease/-/d3-ease-3.0.2.tgz"
+integrity = "sha512-B5znKqRmKROAN4oHWQ50W/qisVjA9GXh2WMsVKdFVp4DxWmcrOsweqgUOUVsv5th96kwaZlokU6SlV4J3gak1w=="
+
+[[engine.node.packages]]
+name = "d3-fetch"
+version = "3.0.2"
+tarball = "https://registry.npmjs.org/d3-fetch/-/d3-fetch-3.0.2.tgz"
+integrity = "sha512-1wGF62bgjMRbF6mqbD+6rRWBL2hwWVYQjFO2UP3Wm1nIAvJZKaQxXM5caVY7athoCa8wIq9lCf7g44lPWFk50g=="
+
+[[engine.node.packages]]
+name = "d3-force"
+version = "3.0.1"
+tarball = "https://registry.npmjs.org/d3-force/-/d3-force-3.0.1.tgz"
+integrity = "sha512-kAaaHLFebBYwgi5cYBXAI8vKrQFMCD2MEswj2QuPKKbdU1wYLc8WXtS7O8F/b6POCIe3gJjY6hkDstHi1yMETQ=="
+
+[[engine.node.packages]]
+name = "d3-format"
+version = "3.1.3"
+tarball = "https://registry.npmjs.org/d3-format/-/d3-format-3.1.3.tgz"
+integrity = "sha512-+F+/49swqmGuQJmSKnVMIDH/QkEFV5li9QRj0xm/KhyAUBv099O5PrvpQFxBp24PYph17Mnvt9mjKQV0ii0nMA=="
+
+[[engine.node.packages]]
+name = "d3-geo"
+version = "3.1.2"
+tarball = "https://registry.npmjs.org/d3-geo/-/d3-geo-3.1.2.tgz"
+integrity = "sha512-5R8ZgDQorIxmauv7R6gpE/ndz+Z0qAZssigq0aXFdvPHdY41RqtW02jrRUQAL724NdPABYXo1+gQEGBBr7uKNg=="
+
+[[engine.node.packages]]
+name = "d3-hierarchy"
+version = "3.1.3"
+tarball = "https://registry.npmjs.org/d3-hierarchy/-/d3-hierarchy-3.1.3.tgz"
+integrity = "sha512-GRajN5ZcnEwYFWqqdzhG1qJ3+fDg6WWzk47TJg7ePY7yvYAgRfD2r1mUx+wviBOWuCwamCUzjwMSdato43jbGA=="
+
+[[engine.node.packages]]
+name = "d3-interpolate"
+version = "3.0.2"
+tarball = "https://registry.npmjs.org/d3-interpolate/-/d3-interpolate-3.0.2.tgz"
+integrity = "sha512-IRzGU62DtxhvsnSTWMQIdnoZ6gA+BCWwBon1EJI6SjoN595799b6z/QRBzXfFhE8iupUPp3042yBNo0STPqnzQ=="
+
+[[engine.node.packages]]
+name = "d3-path"
+version = "1.0.9"
+tarball = "https://registry.npmjs.org/d3-path/-/d3-path-1.0.9.tgz"
+integrity = "sha512-VLaYcn81dtHVTjEHd8B+pbe9yHWpXKZUC87PzoFmsFrJqgFwDe/qxfp5MlfsfM1V5E/iVt0MmEbWQ7FVIXh/bg=="
+
+[[engine.node.packages]]
+name = "d3-path"
+version = "3.1.1"
+tarball = "https://registry.npmjs.org/d3-path/-/d3-path-3.1.1.tgz"
+integrity = "sha512-jsbgV8zIT38ReB9O7X7gcLndTQRONSqNNd+oGIaTBdUug4r5jFmp0N6RY9R5GWbdUDucn0qoTGyfjapT4tDhcg=="
+
+[[engine.node.packages]]
+name = "d3-polygon"
+version = "3.0.2"
+tarball = "https://registry.npmjs.org/d3-polygon/-/d3-polygon-3.0.2.tgz"
+integrity = "sha512-WAUvPudGU1Dn4mDPfb6+JnnbeVEV53hG/BoT+bxts6AkZsOpTEiV1jHYX+2vtwCICNFG9Wxv8QS+eW1zE/Dwfg=="
+
+[[engine.node.packages]]
+name = "d3-quadtree"
+version = "3.0.2"
+tarball = "https://registry.npmjs.org/d3-quadtree/-/d3-quadtree-3.0.2.tgz"
+integrity = "sha512-9Lu9mqJKRbIk0d6mKDjpvPURaPdwHVK5CYbcdd0/4vBgz4ldz/7TIOse3kNERsByGNfld58KEco507AztJWyTQ=="
+
+[[engine.node.packages]]
+name = "d3-random"
+version = "3.0.2"
+tarball = "https://registry.npmjs.org/d3-random/-/d3-random-3.0.2.tgz"
+integrity = "sha512-PxJi9LNV+7mulaYO77nd+oGurXGL1fhedXjHnB3pWLUcqDnQtF4VASoqnQGHgoXLByVdv5QJ/2kfwkGn5HTS8g=="
+
+[[engine.node.packages]]
+name = "d3-sankey"
+version = "0.12.3"
+tarball = "https://registry.npmjs.org/d3-sankey/-/d3-sankey-0.12.3.tgz"
+integrity = "sha512-nQhsBRmM19Ax5xEIPLMY9ZmJ/cDvd1BG3UVvt5h3WRxKg5zGRbvnteTyWAbzeSvlh3tW7ZEmq4VwR5mB3tutmQ=="
+
+[[engine.node.packages]]
+name = "d3-scale"
+version = "4.0.3"
+tarball = "https://registry.npmjs.org/d3-scale/-/d3-scale-4.0.3.tgz"
+integrity = "sha512-66cWobCNzcMvlfoaDHCxuIv9TBUWG1BLOWdv9kHHFuCr1JdqAWPvTmsaEYDD5NRMyWZ5+7u0GqiCDfMXMqh3hg=="
+
+[[engine.node.packages]]
+name = "d3-scale-chromatic"
+version = "3.1.1"
+tarball = "https://registry.npmjs.org/d3-scale-chromatic/-/d3-scale-chromatic-3.1.1.tgz"
+integrity = "sha512-lA5gfN2yMvmChubmptnDiBfeGpHD7Yb1EbvCz0TZE0WHXhyR6W2allPuhKtzV5ILQRqeOdefF0qYtERReLUBDg=="
+
+[[engine.node.packages]]
+name = "d3-selection"
+version = "3.0.1"
+tarball = "https://registry.npmjs.org/d3-selection/-/d3-selection-3.0.1.tgz"
+integrity = "sha512-ODSf35vqCrlCfp7hrm0eZjvOosSXSYLjqvIlhMBV9q9VOx7EBJG6pc+uXBswEZNJgCGJ+qnKYcWutbZDIxe/Xg=="
+
+[[engine.node.packages]]
+name = "d3-shape"
+version = "1.3.7"
+tarball = "https://registry.npmjs.org/d3-shape/-/d3-shape-1.3.7.tgz"
+integrity = "sha512-EUkvKjqPFUAZyOlhY5gzCxCeI0Aep04LwIRpsZ/mLFelJiUfnK56jo5JMDSE7yyP2kLSb6LtF+S5chMk7uqPqw=="
+
+[[engine.node.packages]]
+name = "d3-shape"
+version = "3.2.1"
+tarball = "https://registry.npmjs.org/d3-shape/-/d3-shape-3.2.1.tgz"
+integrity = "sha512-dm2o+lbKdzg9tY7GEag/dB9hcbodLfwkE/DkvqbELJXaMz0yKzWWhZqhbI7CKubukA7HnRyz0avdtvi7EPxPvw=="
+
+[[engine.node.packages]]
+name = "d3-time"
+version = "3.1.1"
+tarball = "https://registry.npmjs.org/d3-time/-/d3-time-3.1.1.tgz"
+integrity = "sha512-Ze7rjrhMzdeulh0/hjcfFj7XLAHOfowtEMfsoG6DU866HPynQNW7Wfen6hzXcqKTv8XzxvF6Hzr5XD6bMHr2ug=="
+
+[[engine.node.packages]]
+name = "d3-time-format"
+version = "4.1.1"
+tarball = "https://registry.npmjs.org/d3-time-format/-/d3-time-format-4.1.1.tgz"
+integrity = "sha512-22XaqjyCjpqgda20erhsOjGmC3vvYwTNYniKAd45W5UWLDF43moeOuV9qYpRqobIlsnK0UhnKZjUUJm3VgORUA=="
+
+[[engine.node.packages]]
+name = "d3-timer"
+version = "3.0.2"
+tarball = "https://registry.npmjs.org/d3-timer/-/d3-timer-3.0.2.tgz"
+integrity = "sha512-1Il1aliroVSErrv5aulRBxAY+7+DnaoLIWGd1C6SsBTWDeobWiP/V69vwb8vT6abR1kKwaNe1196pmaQ1fK90A=="
+
+[[engine.node.packages]]
+name = "d3-transition"
+version = "3.0.2"
+tarball = "https://registry.npmjs.org/d3-transition/-/d3-transition-3.0.2.tgz"
+integrity = "sha512-RcjCsdFgyFoDB+QXLC5m60ZkTN0k9zH+ovoLlTdJnDS1AbfbcuowiM4pCKSTOclNibS4f4J4cbv2m7O7y8NTOQ=="
+
+[[engine.node.packages]]
+name = "d3-zoom"
+version = "3.0.1"
+tarball = "https://registry.npmjs.org/d3-zoom/-/d3-zoom-3.0.1.tgz"
+integrity = "sha512-kfjD3BDQu/FOatpZ6JdMSyIoDwTxIpI29ySTI2J5ZlDaH1WbuJGQJ2Q9oJkWTEZEW98j6idezoomSD3Cn2zwiw=="
+
+[[engine.node.packages]]
+name = "dagre-d3-es"
+version = "7.0.14"
+tarball = "https://registry.npmjs.org/dagre-d3-es/-/dagre-d3-es-7.0.14.tgz"
+integrity = "sha512-P4rFMVq9ESWqmOgK+dlXvOtLwYg0i7u0HBGJER0LZDJT2VHIPAMZ/riPxqJceWMStH5+E61QxFra9kIS3AqdMg=="
+
+[[engine.node.packages]]
+name = "dayjs"
+version = "1.11.23"
+tarball = "https://registry.npmjs.org/dayjs/-/dayjs-1.11.23.tgz"
+integrity = "sha512-QDTCU0M0MxR3hQfnlDJfwekQiaanm1ubOD231u73WBckQ/fsamwRLiE2GBz6D3a/xF1NgfiDLJjXBa1hYOYTtQ=="
+
+[[engine.node.packages]]
+name = "delaunator"
+version = "5.1.0"
+tarball = "https://registry.npmjs.org/delaunator/-/delaunator-5.1.0.tgz"
+integrity = "sha512-AGrQ4QSgssa1NGmWmLPqN5NY2KajF5MqxetNEO+o0n3ZwZZeTmt7bBnvzHWrmkZFxGgr4HdyFgelzgi06otLuQ=="
+
+[[engine.node.packages]]
+name = "devtools-protocol"
+version = "0.0.1704951"
+tarball = "https://registry.npmjs.org/devtools-protocol/-/devtools-protocol-0.0.1704951.tgz"
+integrity = "sha512-GQhQOs9u/Mvm1zMtJIH872JS4AskuZdUSsPNPk4ChahtWAUqgz6atEtIsMt+nO7MqF1Ic4HxII/k8Cu36JivNg=="
+
+[[engine.node.packages]]
+name = "dompurify"
+version = "3.4.17"
+tarball = "https://registry.npmjs.org/dompurify/-/dompurify-3.4.17.tgz"
+integrity = "sha512-B/pSlYVHQ58kqISD/yDjuJ1yfzI34m1gF4lAod2bwSRhiN4K5Cl3H8Af7hqB2PmTL911tdEudnnXn5FnhRoz0w=="
+
+[[engine.node.packages]]
+name = "elkjs"
+version = "0.12.1"
+tarball = "https://registry.npmjs.org/elkjs/-/elkjs-0.12.1.tgz"
+integrity = "sha512-IhMYKHE4S2vtx0QrhBP3lYOIKDeIiJXBrdq9MGYkuB8ZHqhrBnHNfSUndjXFewrX1CPK8chwq+2NA0K0hliYuw=="
+
+[[engine.node.packages]]
+name = "emoji-regex"
+version = "10.6.0"
+tarball = "https://registry.npmjs.org/emoji-regex/-/emoji-regex-10.6.0.tgz"
+integrity = "sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A=="
+
+[[engine.node.packages]]
+name = "es-toolkit"
+version = "1.53.2"
+tarball = "https://registry.npmjs.org/es-toolkit/-/es-toolkit-1.53.2.tgz"
+integrity = "sha512-iUqZ+NlwH4jUgRmXZUxFBsV/9762TQEa1O4IXLFBmDEjVHScBytKuseX23I0+v9ShZ5MYxEx6WKNzm6IPnex8g=="
+
+[[engine.node.packages]]
+name = "escalade"
+version = "3.2.0"
+tarball = "https://registry.npmjs.org/escalade/-/escalade-3.2.0.tgz"
+integrity = "sha512-WUj2qlxaQtO4g6Pq5c29GTcWGDyd8itL8zTlipgECz3JesAiiOKotd8JU6otB3PACgG6xkJUyVhboMS+bje/jA=="
+
+[[engine.node.packages]]
+name = "get-caller-file"
+version = "2.0.5"
+tarball = "https://registry.npmjs.org/get-caller-file/-/get-caller-file-2.0.5.tgz"
+integrity = "sha512-DyFP3BM/3YHTQOCUL/w0OZHR0lpKeGrxotcHWcqNEdnltqFwXVfhEBQ94eIo34AfQpo0rGki4cyIiftY06h2Fg=="
+
+[[engine.node.packages]]
+name = "get-east-asian-width"
+version = "1.7.0"
+tarball = "https://registry.npmjs.org/get-east-asian-width/-/get-east-asian-width-1.7.0.tgz"
+integrity = "sha512-XjH1AECxf0giL2V1aU8vKyRR2ppRUb5c0EvT7zuJTokQ74bNo52zOtghqdWIqrhUD79fo3x0WfKZdOqxF6LG1Q=="
+
+[[engine.node.packages]]
+name = "hachure-fill"
+version = "0.5.2"
+tarball = "https://registry.npmjs.org/hachure-fill/-/hachure-fill-0.5.2.tgz"
+integrity = "sha512-3GKBOn+m2LX9iq+JC1064cSFprJY4jL1jCXTcpnfER5HYE2l/4EfWSGzkPa/ZDBmYI0ZOEj5VHV/eKnPGkHuOg=="
+
+[[engine.node.packages]]
+name = "highlight.js"
+version = "11.12.0"
+tarball = "https://registry.npmjs.org/highlight.js/-/highlight.js-11.12.0.tgz"
+integrity = "sha512-nbfWpyRMcMrPMmDwJB+dhX/eiaPKtc2RB+0QZskqJ3WjRA/FDS0e9hZrx8EC/lbEv8gXy98FcDbNa/dspAaJMg=="
+
+[[engine.node.packages]]
+name = "html-to-image"
+version = "1.11.13"
+tarball = "https://registry.npmjs.org/html-to-image/-/html-to-image-1.11.13.tgz"
+integrity = "sha512-cuOPoI7WApyhBElTTb9oqsawRvZ0rHhaHwghRLlTuffoD1B2aDemlCruLeZrUIIdvG7gs9xeELEPm6PhuASqrg=="
+
+[[engine.node.packages]]
+name = "iconv-lite"
+version = "0.6.3"
+tarball = "https://registry.npmjs.org/iconv-lite/-/iconv-lite-0.6.3.tgz"
+integrity = "sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw=="
+
+[[engine.node.packages]]
+name = "import-meta-resolve"
+version = "4.2.0"
+tarball = "https://registry.npmjs.org/import-meta-resolve/-/import-meta-resolve-4.2.0.tgz"
+integrity = "sha512-Iqv2fzaTQN28s/FwZAoFq0ZSs/7hMAHJVX+w8PZl3cY19Pxk6jFFalxQoIfW2826i/fDLXv8IiEZRIT0lDuWcg=="
+
+[[engine.node.packages]]
+name = "internmap"
+version = "1.0.1"
+tarball = "https://registry.npmjs.org/internmap/-/internmap-1.0.1.tgz"
+integrity = "sha512-lDB5YccMydFBtasVtxnZ3MRBHuaoE8GKsppq+EchKL2U4nK/DmEpPHNH8MZe5HkMtpSiTSOZwfN0tzYjO/lJEw=="
+
+[[engine.node.packages]]
+name = "internmap"
+version = "2.0.3"
+tarball = "https://registry.npmjs.org/internmap/-/internmap-2.0.3.tgz"
+integrity = "sha512-5Hh7Y1wQbvY5ooGgPbDaL5iYLAPzMTUrjMulskHLH6wnv/A+1q5rgEaiuqEjB+oxGXIVZs1FF+R/KPN3ZSQYYg=="
+
+[[engine.node.packages]]
+name = "jotai"
+version = "2.20.3"
+tarball = "https://registry.npmjs.org/jotai/-/jotai-2.20.3.tgz"
+integrity = "sha512-N8L9FUbeGDP+0qNJw1FebOxt+5hk+jTOwUA2LlRE4C081jUcY6F1T/FSETp4DT2/INMtiSRZyNm2D+yZdzrSgA=="
+
+[[engine.node.packages]]
+name = "katex"
+version = "0.16.47"
+tarball = "https://registry.npmjs.org/katex/-/katex-0.16.47.tgz"
+integrity = "sha512-Eeo8Ys1doU1z+x8AZsPpQu+p/QcZBI5PeOo7QGQdy2x2m0MU/hYagBbGOmXwr5KVbEfVuWv9LpnQWeehogurjg=="
+
+[[engine.node.packages]]
+name = "katex"
+version = "0.18.10"
+tarball = "https://registry.npmjs.org/katex/-/katex-0.18.10.tgz"
+integrity = "sha512-/B6p9eY9DX7aHBfpkHdpirDTZ5QH9xTwL9y837PWuzuv41O5jFdqNQwVQEQsimY0/iVNkwBY4+4hMfhQ7d4Dbw=="
+
+[[engine.node.packages]]
+name = "khroma"
+version = "2.1.0"
+tarball = "https://registry.npmjs.org/khroma/-/khroma-2.1.0.tgz"
+integrity = "sha512-Ls993zuzfayK269Svk9hzpeGUKob/sIgZzyHYdjQoAdQetRKpOLj+k/QQQ/6Qi0Yz65mlROrfd+Ev+1+7dz9Kw=="
+
+[[engine.node.packages]]
+name = "layout-base"
+version = "1.0.2"
+tarball = "https://registry.npmjs.org/layout-base/-/layout-base-1.0.2.tgz"
+integrity = "sha512-8h2oVEZNktL4BH2JCOI90iD1yXwL6iNW7KcCKT2QZgQJR2vbqDsldCTPRU9NifTCqHZci57XvQQ15YTu+sTYPg=="
+
+[[engine.node.packages]]
+name = "layout-base"
+version = "2.0.1"
+tarball = "https://registry.npmjs.org/layout-base/-/layout-base-2.0.1.tgz"
+integrity = "sha512-dp3s92+uNI1hWIpPGH3jK2kxE2lMjdXdr+DH8ynZHpd6PUlH6x6cbuXnoMmiNumznqaNO31xu9e79F0uuZ0JFg=="
+
+[[engine.node.packages]]
+name = "lilconfig"
+version = "3.1.4"
+tarball = "https://registry.npmjs.org/lilconfig/-/lilconfig-3.1.4.tgz"
+integrity = "sha512-zJZyBmQhArDRefuWTypZxwDpFDIYmrj8ypSBvwGD5P13Y95s6DjzKgu4DVdGbeQa5PDEsAOCAPNk4X+QOR006w=="
+
+[[engine.node.packages]]
+name = "lodash-es"
+version = "4.18.1"
+tarball = "https://registry.npmjs.org/lodash-es/-/lodash-es-4.18.1.tgz"
+integrity = "sha512-J8xewKD/Gk22OZbhpOVSwcs60zhd95ESDwezOFuA3/099925PdHJ7OFHNTGtajL3AlZkykD32HykiMo+BIBI8A=="
+
+[[engine.node.packages]]
+name = "marked"
+version = "16.4.2"
+tarball = "https://registry.npmjs.org/marked/-/marked-16.4.2.tgz"
+integrity = "sha512-TI3V8YYWvkVf3KJe1dRkpnjs68JUPyEa5vjKrp1XEEJUAOaQc+Qj+L1qWbPd0SJuAdQkFU0h73sXXqwDYxsiDA=="
+
+[[engine.node.packages]]
+name = "marked"
+version = "4.3.0"
+tarball = "https://registry.npmjs.org/marked/-/marked-4.3.0.tgz"
+integrity = "sha512-PRsaiG84bK+AMvxziE/lCFss8juXjNaWzVbN5tXAm4XjeaS9NAHhop+PjQxz2A9h8Q4M/xGmzP8vqNwy6JeK0A=="
+
+[[engine.node.packages]]
+name = "mermaid"
+version = "12.3.0"
+tarball = "https://registry.npmjs.org/mermaid/-/mermaid-12.3.0.tgz"
+integrity = "sha512-4113TdXeLAsMruJ79OpFL5O8+LTFXhQqZ260rF3tgUmiNAtRm4Uume04I+65PRN6yZ69J4f8rVYWW8zRk65UYw=="
+
+[[engine.node.packages]]
+name = "mitt"
+version = "3.0.1"
+tarball = "https://registry.npmjs.org/mitt/-/mitt-3.0.1.tgz"
+integrity = "sha512-vKivATfr97l2/QBCYAkXYDbrIWPM2IIKEl7YPhjCvKlG3kE2gm+uBo6nEXK3M5/Ffh/FLpKExzOQ3JJoJGFKBw=="
+
+[[engine.node.packages]]
+name = "modern-tar"
+version = "0.8.6"
+tarball = "https://registry.npmjs.org/modern-tar/-/modern-tar-0.8.6.tgz"
+integrity = "sha512-LYSks0tNVqbtez/9OB0YFP6qLRSqkdAxJWOQpVaR67lNTbj2zNLyYpowkRMia5lXLCZKzxwoxkxH2MbbBR2aEg=="
+
+[[engine.node.packages]]
+name = "p-limit"
+version = "7.3.3"
+tarball = "https://registry.npmjs.org/p-limit/-/p-limit-7.3.3.tgz"
+integrity = "sha512-SKgVvDU5TNIxQ4r30U75BNLC6a+6GOEjngrk/ysM5+Zu3oJuk1SC5ApzIzY/7PjCEjoVPMWJ0zho/4QUiEB7TQ=="
+
+[[engine.node.packages]]
+name = "package-manager-detector"
+version = "1.9.0"
+tarball = "https://registry.npmjs.org/package-manager-detector/-/package-manager-detector-1.9.0.tgz"
+integrity = "sha512-zAMfbta9nPA8AKkA4WdmNAT8R8s6Dk0/xwPsqNnRidMFcLo1YkLuPDTgs2f64XdzS8vbLNnoJ+uUIkgbz7oRHA=="
+
+[[engine.node.packages]]
+name = "path-data-parser"
+version = "0.1.0"
+tarball = "https://registry.npmjs.org/path-data-parser/-/path-data-parser-0.1.0.tgz"
+integrity = "sha512-NOnmBpt5Y2RWbuv0LMzsayp3lVylAHLPUTut412ZA3l+C4uw4ZVkQbjShYCQ8TCpUMdPapr4YjUqLYD6v68j+w=="
+
+[[engine.node.packages]]
+name = "points-on-curve"
+version = "0.2.0"
+tarball = "https://registry.npmjs.org/points-on-curve/-/points-on-curve-0.2.0.tgz"
+integrity = "sha512-0mYKnYYe9ZcqMCWhUjItv/oHjvgEsfKvnUTg8sAtnHr3GVy7rGkXCb6d5cSyqrWqL4k81b9CPg3urd+T7aop3A=="
+
+[[engine.node.packages]]
+name = "points-on-path"
+version = "0.2.1"
+tarball = "https://registry.npmjs.org/points-on-path/-/points-on-path-0.2.1.tgz"
+integrity = "sha512-25ClnWWuw7JbWZcgqY/gJ4FQWadKxGWk+3kR/7kD0tCaDtPPMj7oHu2ToLaVhfpnHrZzYby2w6tUA0eOIuUg8g=="
+
+[[engine.node.packages]]
+name = "puppeteer"
+version = "25.16.0"
+tarball = "https://registry.npmjs.org/puppeteer/-/puppeteer-25.16.0.tgz"
+integrity = "sha512-LOr3reYnxAYYfQkpopz1fQnL0LdvqhpR5U2Fu+QnwzTX2gpVTHsn91UETo5NNC1md2/oC54Zu1ChBXgZDNSP1A=="
+
+[[engine.node.packages]]
+name = "puppeteer-core"
+version = "25.16.0"
+tarball = "https://registry.npmjs.org/puppeteer-core/-/puppeteer-core-25.16.0.tgz"
+integrity = "sha512-VA5Pf54N8shfopNkZZXCdiiwfnnY8ZJYAMqFQRhlH5mGUhfwf53Ar770GPtdpTDLUqvQeYpIBtC9/G2Jij2IJw=="
+
+[[engine.node.packages]]
+name = "react"
+version = "19.3.1"
+tarball = "https://registry.npmjs.org/react/-/react-19.3.1.tgz"
+integrity = "sha512-QNhWdt7nrgVWWQG58QuGsAR3jv3Hbe4mb4vz7w2csnHavciZJgda1CPNaldF6eVxv90ud3jUXpKlHL69gO38yw=="
+
+[[engine.node.packages]]
+name = "react-aria"
+version = "3.53.1"
+tarball = "https://registry.npmjs.org/react-aria/-/react-aria-3.53.1.tgz"
+integrity = "sha512-dikisyOjJd3D2fFrIDWmVWzqiLz5B86GzZv1zxs7xI4dVc0JIz/1Wa52I20gYvVL2WXeFXlygYsle/QcOMhtcg=="
+
+[[engine.node.packages]]
+name = "react-dom"
+version = "19.3.1"
+tarball = "https://registry.npmjs.org/react-dom/-/react-dom-19.3.1.tgz"
+integrity = "sha512-Y0bARz53lhEC1NMCASs0/j+faB/zqt3R8hpvg1e8+61ZVJ4UL0UdC4cBbXfZMcIuhrfgeILTLe+ZeBCavQPtKQ=="
+
+[[engine.node.packages]]
+name = "react-stately"
+version = "3.51.0"
+tarball = "https://registry.npmjs.org/react-stately/-/react-stately-3.51.0.tgz"
+integrity = "sha512-YJcmkAXu2XOQP97hO/qz/cC3qv9kni3oVhwBlxWr358BHePJUpY15XwL3YSRMKxYt4EkslPqAz11JRirMfANGw=="
+
+[[engine.node.packages]]
+name = "robust-predicates"
+version = "3.0.3"
+tarball = "https://registry.npmjs.org/robust-predicates/-/robust-predicates-3.0.3.tgz"
+integrity = "sha512-NS3levdsRIUOmiJ8FZWCP7LG3QpJyrs/TE0Zpf1yvZu8cAJJ6QMW92H1c7kWpdIHo8RvmLxN/o2JXTKHp74lUA=="
+
+[[engine.node.packages]]
+name = "roughjs"
+version = "4.6.6"
+tarball = "https://registry.npmjs.org/roughjs/-/roughjs-4.6.6.tgz"
+integrity = "sha512-ZUz/69+SYpFN/g/lUlo2FXcIjRkSu3nDarreVdGGndHEBJ6cXPdKguS8JGxwj5HA5xIbVKSmLgr5b3AWxtRfvQ=="
+
+[[engine.node.packages]]
+name = "rw"
+version = "1.3.3"
+tarball = "https://registry.npmjs.org/rw/-/rw-1.3.3.tgz"
+integrity = "sha512-PdhdWy89SiZogBLaw42zdeqtRJ//zFd2PgQavcICDUgJT5oW10QCRKbJ6bg4r0/UY2M6BWd5tkxuGFRvCkgfHQ=="
+
+[[engine.node.packages]]
+name = "safer-buffer"
+version = "2.1.2"
+tarball = "https://registry.npmjs.org/safer-buffer/-/safer-buffer-2.1.2.tgz"
+integrity = "sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg=="
+
+[[engine.node.packages]]
+name = "scheduler"
+version = "0.28.0"
+tarball = "https://registry.npmjs.org/scheduler/-/scheduler-0.28.0.tgz"
+integrity = "sha512-juorfCmIkIw8tT+p5BXSm6PJjQF/ycEYmKyzURCIt/RaZIhL+PulbQ9Yu2z1HdOJDdqDTlxA1+xKBmHXJsczAw=="
+
+[[engine.node.packages]]
+name = "string-width"
+version = "7.2.0"
+tarball = "https://registry.npmjs.org/string-width/-/string-width-7.2.0.tgz"
+integrity = "sha512-tsaTIkKW9b4N+AEj+SVA+WhJzV7/zMhcSu78mLKWSk7cXMOSHsBKFWUs0fWwq8QyK3MgJBQRX6Gbi4kYbdvGkQ=="
+
+[[engine.node.packages]]
+name = "string-width"
+version = "8.3.0"
+tarball = "https://registry.npmjs.org/string-width/-/string-width-8.3.0.tgz"
+integrity = "sha512-ZbmZM0JCihQN91dWnxoipT2KOEyHqEyfRXUyjuRhW8b/xnqPDoq4gWEVApTVa9db2wN8mmoikgFBbjh71+cGeQ=="
+
+[[engine.node.packages]]
+name = "strip-ansi"
+version = "7.2.0"
+tarball = "https://registry.npmjs.org/strip-ansi/-/strip-ansi-7.2.0.tgz"
+integrity = "sha512-yDPMNjp4WyfYBkHnjIRLfca1i6KMyGCtsVgoKe/z1+6vukgaENdgGBZt+ZmKPc4gavvEZ5OgHfHdrazhgNyG7w=="
+
+[[engine.node.packages]]
+name = "stylis"
+version = "4.4.0"
+tarball = "https://registry.npmjs.org/stylis/-/stylis-4.4.0.tgz"
+integrity = "sha512-5Z9ZpRzfuH6l/UAvCPAPUo3665Nk2wLaZU3x+TLHKVzIz33+sbJqbtrYoC3KD4/uVOr2Zp+L0LySezP9OHV9yA=="
+
+[[engine.node.packages]]
+name = "tabbable"
+version = "6.5.1"
+tarball = "https://registry.npmjs.org/tabbable/-/tabbable-6.5.1.tgz"
+integrity = "sha512-dMCuwDUY6Noz3zVKLefBC4wq+aJV20yc7vWmM7uTNGwtQSFF5kX7OUIUsxuVajz/bdt5Xqdah3/0NLjth+cM5A=="
+
+[[engine.node.packages]]
+name = "tailwind-merge"
+version = "3.7.0"
+tarball = "https://registry.npmjs.org/tailwind-merge/-/tailwind-merge-3.7.0.tgz"
+integrity = "sha512-XPPUyAc+cvspz3lHTcR/QgPfW2A0lv/xQNIjX3HGhLR+Nq2lHaLq5MtTesHn8GUr3W3DguT2KT5x3NVgRtYwmA=="
+
+[[engine.node.packages]]
+name = "tailwindcss"
+version = "4.3.5"
+tarball = "https://registry.npmjs.org/tailwindcss/-/tailwindcss-4.3.5.tgz"
+integrity = "sha512-FcQk9BuffmEHJP2G0XmB2SplU1aLTI7j07Kunk+U74Ny+XiWOtzXz9aujFZ/avntw1e2cOv/3PkgzflQ7gX2vQ=="
+
+[[engine.node.packages]]
+name = "tinyexec"
+version = "1.3.1"
+tarball = "https://registry.npmjs.org/tinyexec/-/tinyexec-1.3.1.tgz"
+integrity = "sha512-GCvB3aoys96IuDFBMcTB46JOR6mdMtAToqwiW8JlWhsoh1mhHi/xn9ss/Dg7N555GiJyEt2qzoG/NHCwM6h1EA=="
+
+[[engine.node.packages]]
+name = "ts-dedent"
+version = "2.3.0"
+tarball = "https://registry.npmjs.org/ts-dedent/-/ts-dedent-2.3.0.tgz"
+integrity = "sha512-JfJeIHke7y2egdGGgRAvpCwYFUsHlM2gPcrVOxFkznt/4uzQ7HFmvE63iFHVLBJNDuyDOQgijDK/tXH/f6Msjg=="
+
+[[engine.node.packages]]
+name = "tslib"
+version = "2.9.1"
+tarball = "https://registry.npmjs.org/tslib/-/tslib-2.9.1.tgz"
+integrity = "sha512-a4Ux9VKuIMHsOS7ENbEq6hK2ZGYIT27Rtl0E4eD9KqwxhKiQeMZE/9xb3IdYwWaSOyIBQLExhQgXDTYoiCxnWA=="
+
+[[engine.node.packages]]
+name = "typed-query-selector"
+version = "2.12.3"
+tarball = "https://registry.npmjs.org/typed-query-selector/-/typed-query-selector-2.12.3.tgz"
+integrity = "sha512-/dtuMZyutHLlrxWhhC1uib00ELUr2dZ8C9B8YzZYsJmeE3V56OxRblrSM2UaF142pcMtak7ehZ6+poWGeehNIg=="
+
+[[engine.node.packages]]
+name = "use-sync-external-store"
+version = "1.7.0"
+tarball = "https://registry.npmjs.org/use-sync-external-store/-/use-sync-external-store-1.7.0.tgz"
+integrity = "sha512-6L+EeigHMQhdaIPNIFUKwfWJSwWFQ8gJbJ2DLOs5sDIegTwR9fRxvnM3uciHKjIZhFz+KAv2emhWMRvDmMcY8A=="
+
+[[engine.node.packages]]
+name = "webdriver-bidi-protocol"
+version = "1.0.1"
+tarball = "https://registry.npmjs.org/webdriver-bidi-protocol/-/webdriver-bidi-protocol-1.0.1.tgz"
+integrity = "sha512-WXWs/aXF2a6Al1Z2/V/7Gp2oPZOAAmHjJOTmv4KCXRJ122IMj3tSSMc6a4q3K4QOmhQbse/Ahr+oTVJOU2dUiw=="
+
+[[engine.node.packages]]
+name = "wrap-ansi"
+version = "9.0.2"
+tarball = "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-9.0.2.tgz"
+integrity = "sha512-42AtmgqjV+X1VpdOfyTGOYRi0/zsoLqtXQckTmqTeybT+BDIbM/Guxo7x3pE2vtpr1ok6xRqM9OpBe+Jyoqyww=="
+
+[[engine.node.packages]]
+name = "ws"
+version = "8.22.2"
+tarball = "https://registry.npmjs.org/ws/-/ws-8.22.2.tgz"
+integrity = "sha512-/rEZ2ejown2N5gxVTHUu9bVVC7ttu0/Tgzf5hbTOixR3Fs7mbbXgn2DbdbcKgJOmpQMtrIUWivtYuVMnp/W/yA=="
+
+[[engine.node.packages]]
+name = "y18n"
+version = "5.0.8"
+tarball = "https://registry.npmjs.org/y18n/-/y18n-5.0.8.tgz"
+integrity = "sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA=="
+
+[[engine.node.packages]]
+name = "yargs"
+version = "18.2.0"
+tarball = "https://registry.npmjs.org/yargs/-/yargs-18.2.0.tgz"
+integrity = "sha512-9OpKOLeaoNFecEp7P6iYbzze/5CqWoH7N3SMs/6y1XF4nMvFMspEGZzJ6uFi9MmQwXhyzqYoSEKO3tvA3Z/o2w=="
+
+[[engine.node.packages]]
+name = "yargs-parser"
+version = "22.0.0"
+tarball = "https://registry.npmjs.org/yargs-parser/-/yargs-parser-22.0.0.tgz"
+integrity = "sha512-rwu/ClNdSMpkSrUb+d6BRsSkLUq1fmfsY6TOpYzTwvwkg1/NRG85KBy3kq++A8LKQwX6lsu+aWad+2khvuXrqw=="
+
+[[engine.node.packages]]
+name = "yocto-queue"
+version = "1.2.2"
+tarball = "https://registry.npmjs.org/yocto-queue/-/yocto-queue-1.2.2.tgz"
+integrity = "sha512-4LCcse/U2MHZ63HAJVE+v71o7yOdIe4cZ70Wpf8D/IyjDKYQLV5GD46B+hSTjJsvV5PztjvHoU580EftxjDZFQ=="
+
+[[engine.node.packages]]
+name = "zod"
+version = "4.6.7"
+tarball = "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz"
+integrity = "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="
+
+[transport]
+type = "cli"
+entry = "runner.js"
+invocation_template = "{{node}} {{entry}} {{verb}} --input {{input}} --result {{result}}"
+
+[requirements]
+gpu = false
+ram_gb = 4
+disk_gb = 2
+exclusive = true
+platforms = ["linux"]
+
+[[licenses]]
+subject = "mermaid-cli"
+spdx = "MIT"
+
+[capabilities.diagrama]
+summary = "Render a .mmd Mermaid diagram to SVG and PNG with the pinned mermaid-cli and the system Chrome"
+kind = "image"
+
+[capabilities.diagrama.inputs.diagrama]
+type = "path"
+required = true
+description = "Mermaid diagram file (.mmd) with its YAML header (theme, themeVariables, fontFamily, fontSize), resolved relative to the piece; flowchart, architecture-beta and the other Mermaid types."
+
+[capabilities.diagrama.preview]
+viewer = "image"
