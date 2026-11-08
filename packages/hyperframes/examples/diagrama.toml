@@ -1,0 +1,38 @@
+[inputs]
+composicion = "diagrama/composicion"
+diagrama-svg = "diagrama/diagrama.svg"
+prompt = "Draw a small Mermaid flow diagram node by node"
+seed = 0
+fps = 24
+
+[[inputs.animacion]]
+selector = '[id^="my-svg-flowchart-datos-"]'
+at = 0.4
+kind = "show"
+
+[[inputs.animacion]]
+selector = "#my-svg-L_datos_pieza_0"
+at = 0.9
+kind = "draw"
+dur = 0.5
+
+[[inputs.animacion]]
+selector = '.edgeLabels [data-id="L_datos_pieza_0"]'
+at = 1.2
+kind = "fade"
+dur = 0.3
+
+[[inputs.animacion]]
+selector = "#my-svg-service-agente"
+at = 1.6
+kind = "show"
+
+[[inputs.animacion]]
+selector = "#my-svg-group-lab"
+at = 1.9
+kind = "fade"
+
+[[inputs.animacion]]
+selector = "#my-svg-gpu"
+at = 2.3
+kind = "fade"

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="./vendor/gsap.min.js"></script>
+    <script type="importmap">
+      { "imports": { "three": "./vendor/three.module.js",
+                     "three/addons/": "./vendor/three/addons/" } }
+    </script>
+    <style>
+      @font-face { font-family: 'Ubuntu'; src: local('Ubuntu'); }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #eef0f2; }
+      #root { position: relative; width: 100%; height: 100%; font-family: 'Ubuntu', sans-serif; color: #22252a; }
+      #escena { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+      #titulo { position: absolute; left: 110px; top: 90px; font-size: 64px; font-weight: 500; letter-spacing: -0.02em; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="8" data-width="1920" data-height="1080" data-fps="24">
+      <canvas id="escena" class="clip" data-start="0" data-duration="8" data-track-index="0" width="1920" height="1080"></canvas>
+      <h1 id="titulo" class="clip" data-start="0" data-duration="8" data-track-index="1">Estudio</h1>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      tl.from('#titulo', { opacity: 0, y: 20, duration: 0.6 }, 0.3);
+      window.__timelines['main'] = tl;
+      tl.seek(0);
+    </script>
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+      const GLB = /* GLB */"";
+      const DATA = {
+        /* GIRO */
+        colores: { muros: 0xecebe6, piso: 0x8a5c3a, vidrio: 0xbfdcef },
+      };
+
+      const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('escena'), antialias: true, preserveDrawingBuffer: true });
+      renderer.setSize(1920, 1080, false);
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xeef0f2);
+      const camera = new THREE.PerspectiveCamera(30, 1920 / 1080, 0.1, 100);
+      scene.add(new THREE.HemisphereLight(0xdfe8f5, 0x8a7f72, 1.4));
+      const suelo = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0xe2e4e6, roughness: 1 }));
+      suelo.rotation.x = -Math.PI / 2;
+      suelo.position.y = -0.121;
+      suelo.receiveShadow = true;
+      scene.add(suelo);
+
+      const bytes = Uint8Array.from(atob(GLB), (c) => c.charCodeAt(0));
+      const listo = new GLTFLoader().parseAsync(bytes.buffer, '').then((gltf) => {
+        gltf.scene.scale.setScalar(0.001);
+        scene.add(gltf.scene);
+      });
+
+      // Pure function of time: HyperFrames seeks every frame.
+      function renderAt(t) {
+        const o = DATA.orbita;
+        const angulo = o.desde + (t / DATA.duracion) * o.vuelta * Math.PI * 2;
+        const [cx, cy, cz] = DATA.centro;
+        camera.position.set(cx + o.radio * Math.cos(angulo), o.altura, cz + o.radio * Math.sin(angulo));
+        camera.lookAt(cx, cy, cz);
+        renderer.render(scene, camera);
+      }
+      window.addEventListener('hf-seek', (event) => {
+        event.detail.waitUntil(listo.then(() => renderAt(event.detail.time)));
+      });
+      listo.then(() => renderAt(0));
+    </script>
+  </body>
+</html>

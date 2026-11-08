@@ -38,8 +38,99 @@ RUNTIME = "22.21.0"
 RUNTIME_SHA256 = "262b84b02f7e2bc017d4bdb81fec85ca0d6190a5cd0781d2d6e84317c08871f8"
 TEMPLATE = "{{node}} {{entry}} {{verb}} --input {{input}} --result {{result}}"
 HEADINGS = ("## When to use", "## Pieces", "## Judging the result", "## Pitfalls")
+PILLARS = ("## Timeline rules", "## SVG id maps", "## Render limits")
+CAPABILITIES = (
+    "hyperframes.render",
+    "hyperframes.loop",
+    "hyperframes.diagrama",
+    "hyperframes.giro",
+    "hyperframes.personaje",
+    "hyperframes.narrado",
+)
+REFERENCES = PACKAGE / "skill" / "references"
+EXAMPLES = PACKAGE / "examples"
+EXAMPLE_PIECES = ("render", "loop", "diagrama", "giro", "personaje", "narrado")
+COMPOSITION_FILES = ("hyperframes.json", "index.tmpl", "build.mjs", "assets", "index.html")
+RENDER_SUFFIXES = frozenset({".mp4", ".gif", ".mov", ".webm", ".mkv"})
+#: A reference the skill cites, as ``references/<name>.md``.
+REFERENCE_RE = re.compile(r"references/([a-z0-9][a-z0-9-]*)\.md")
+#: The contracts the three pillars port verbatim from the lab.
+SKILL_TOKENS = (
+    "gsap.timeline({ paused: true })",
+    "window.__timelines",
+    "textContent",
+    "snap",
+    "{ selector, at, kind, dur }",
+    "renderAt",
+    "hf-seek",
+    "event.detail.waitUntil",
+    "/* GLB */",
+    "/* GIRO */",
+    "/* BOCAS */[]",
+    "const AUDIO_START",
+    "audio-inicio",
+    "data-start",
+    "<!-- SUBS -->",
+    "<!-- AUDIOS -->",
+    "{ start, end, text }",
+    "data-duration",
+    "ducking=true",
+    "duck-db=-12.0",
+    "target-lufs=-16.0",
+    "my-svg-flowchart-",
+    "my-svg-L_",
+    "boca-X",
+    "boca-H",
+    "#boca-X",
+    ".boca { opacity: 0; }",
+    "--workers 2",
+    "vendor/",
+    "HYPERFRAMES_BROWSER_PATH",
+    "ffmpeg",
+    "ffprobe",
+    "check",
+)
 DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
+
+
+def _skill_body() -> str:
+    """The skill's body, after the front matter the core parses."""
+    _first, _second, body = SKILL.split("---", 2)
+    return body
+
+
+def _section(body: str, heading: str) -> str:
+    """One ``##`` section, up to the next ``##`` heading."""
+    rest = body[body.index(heading) + len(heading) :]
+    next_heading = re.search(r"\n## ", rest)
+    return rest[: next_heading.start()] if next_heading else rest
+
+
+def _example_inputs(name: str) -> dict[str, object]:
+    data = tomllib.loads((EXAMPLES / f"{name}.toml").read_text(encoding="utf-8"))
+    return data["inputs"]
+
+
+def _example_paths(name: str, inputs: dict[str, object]) -> list[Path]:
+    """Every path input and array clip a sample declares, resolved beside it."""
+    found: list[Path] = []
+    for key, field in MANIFEST["capabilities"][name]["inputs"].items():
+        value = inputs.get(key)
+        if value is None:
+            continue
+        if field.get("type") == "path":
+            found.append(EXAMPLES / str(value))
+        elif field.get("type") == "array" and "clip" in field.get("items", {}):
+            for item in value if isinstance(value, list) else []:
+                if isinstance(item, dict):
+                    found.append(EXAMPLES / str(item["clip"]))
+    return found
+
+
+def _composition_dir(name: str) -> Path:
+    folder = "basic" if name in {"render", "loop"} else name
+    return EXAMPLES / folder / "composicion"
 
 
 def _pin(name: str, version: str) -> dict[str, object] | None:
@@ -199,8 +290,89 @@ def test_the_skill_stub_validates_in_the_core_format() -> None:
     body = rest[0]
     positions = [body.index(heading) for heading in HEADINGS]
     assert positions == sorted(positions)
-    assert "hyperframes.render" in body
-    assert "hyperframes.narrado" in body
+    for capability in CAPABILITIES:
+        assert capability in body, capability
+    for name in EXAMPLE_PIECES:
+        assert (EXAMPLES / f"{name}.toml").is_file(), name
+
+
+def test_the_three_pillars_sit_between_pieces_and_judging() -> None:
+    """The skill teaches timelines, id maps and limits before the verdict."""
+    body = _skill_body()
+    pieces = body.index("## Pieces")
+    judging = body.index("## Judging the result")
+    positions = [body.index(pillar) for pillar in PILLARS]
+    assert pieces < judging
+    assert all(pieces < position < judging for position in positions)
+    assert positions == sorted(positions)
+
+
+def test_each_pillar_has_one_row_per_capability() -> None:
+    """Every capability appears once under every pillar, not only in the intro."""
+    body = _skill_body()
+    for pillar in PILLARS:
+        section = _section(body, pillar)
+        for capability in CAPABILITIES:
+            assert section.count(f"### {capability}") == 1, (pillar, capability)
+
+
+def test_the_skill_ports_the_timeline_id_and_limit_contracts() -> None:
+    """The snippets and ids are ported, not summarised away."""
+    body = _skill_body()
+    for token in SKILL_TOKENS:
+        assert token in body, token
+
+
+def test_every_reference_the_skill_cites_exists() -> None:
+    """A cited reference that is not on disk sends the reader nowhere."""
+    body = _skill_body()
+    cited = set(REFERENCE_RE.findall(body))
+    assert cited == {"composition", "timeline", "id-maps", "limits"}
+    for name in cited:
+        path = REFERENCES / f"{name}.md"
+        assert path.is_file(), name
+        assert path.stat().st_size > 0, name
+
+
+def test_each_reference_covers_every_capability() -> None:
+    """The three contract references carry one section per capability."""
+    for name in ("timeline", "id-maps", "limits"):
+        text = (REFERENCES / f"{name}.md").read_text(encoding="utf-8")
+        for capability in CAPABILITIES:
+            assert f"## {capability}" in text, (name, capability)
+
+
+def test_the_six_example_pieces_parse_and_stay_inside_their_manifest_inputs() -> None:
+    """A sample input is a key facet resolves for that capability, never a typo."""
+    for name in EXAMPLE_PIECES:
+        inputs = _example_inputs(name)
+        declared = set(MANIFEST["capabilities"][name]["inputs"])
+        assert set(inputs) <= declared, name
+
+
+def test_every_example_input_path_resolves() -> None:
+    """The samples ship beside their piece file; a dead path sends nobody anywhere."""
+    for name in EXAMPLE_PIECES:
+        for path in _example_paths(name, _example_inputs(name)):
+            assert path.exists(), (name, path)
+
+
+def test_every_example_ships_a_complete_composition() -> None:
+    """Each sample is a composition, not a bare piece file."""
+    for name in EXAMPLE_PIECES:
+        comp = _composition_dir(name)
+        for entry in COMPOSITION_FILES:
+            assert (comp / entry).exists(), (name, entry)
+
+
+def test_examples_carry_no_binary_renders() -> None:
+    """Binary renders stay out of the repository; only inputs ship."""
+    renders = [
+        path
+        for path in EXAMPLES.rglob("*")
+        if path.is_file() and path.suffix.lower() in RENDER_SUFFIXES
+    ]
+    assert renders == []
 
 
 GIRO_SCALARS = {

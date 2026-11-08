@@ -1,0 +1,5 @@
+[inputs]
+composicion = "basic/composicion"
+prompt = "A short title with a counter that ticks up"
+seed = 0
+fps = 24

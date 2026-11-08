@@ -1,0 +1,2 @@
+The voice is copied beside the composition by the runner; the character SVG and
+bocas.json are the piece's own inputs. No other media ships with this sample.

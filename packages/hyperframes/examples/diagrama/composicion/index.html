@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="./vendor/gsap.min.js"></script>
+    <style>
+      /* The system Ubuntu, the same font mermaid-cli measured the labels with:
+         another build of it overflows the boxes by about 2px and check fails. */
+      @font-face { font-family: 'Ubuntu'; src: local('Ubuntu'); }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #ffffff; }
+      #root { position: relative; width: 100%; height: 100%; font-family: 'Ubuntu', sans-serif; color: #1d1d1f; }
+      #title { position: absolute; top: 70px; left: 120px; font-size: 64px; font-weight: 500; letter-spacing: -0.02em; }
+      #subtitle { position: absolute; top: 160px; left: 122px; font-size: 30px; color: #5f5e58; }
+      #diagram { position: absolute; left: 120px; right: 120px; top: 250px; bottom: 60px; display: flex; align-items: center; justify-content: center; }
+      #diagram svg { width: 100%; height: 100%; max-width: none !important; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="4" data-width="1920" data-height="1080" data-fps="24">
+      <h1 id="title" class="clip" data-start="0" data-duration="4" data-track-index="0">Cómo se hace una pieza</h1>
+      <p id="subtitle" class="clip" data-start="0" data-duration="4" data-track-index="1">Un diagrama de flujo de Mermaid, dibujado paso a paso</p>
+      <div id="diagram" class="clip" data-start="0" data-duration="4" data-track-index="2"><svg id="my-svg" width="100%" class="flowchart" viewBox="0 0 200 100" role="graphics-document document">
+  <style>#my-svg{font-family:Ubuntu;font-size:22px;fill:#333;}#my-svg .node > rect{fill:#ffffff;}#my-svg .edge-pattern-solid{stroke-dasharray:0;}</style>
+  <g class="nodes">
+    <g id="my-svg-flowchart-datos-0" class="node"><rect width="40" height="20"></rect><text>datos</text></g>
+    <g id="my-svg-service-agente" class="node"><rect width="30" height="20"></rect><text>agente</text></g>
+    <g id="my-svg-group-lab" class="group"><rect width="60" height="40"></rect></g>
+    <g id="my-svg-gpu" class="node"><rect width="30" height="20"></rect></g>
+  </g>
+  <g id="my-svg-L_datos_pieza_0" class="edge-thickness-normal edge-pattern-solid"><path d="M0,0 L10,10" marker-end="url(#my-svg_flowchart-v2-pointEnd)"></path></g>
+  <g class="edgeLabels"><g class="edgeLabel"><text data-id="L_datos_pieza_0">sí</text></g></g>
+</svg>
+</div>
+    </div>
+    <!-- The runner appends the paused diagram timeline here after validating
+         every animacion selector against the SVG ids. -->
+  </body>
+</html>

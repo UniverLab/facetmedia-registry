@@ -1,0 +1,6 @@
+[inputs]
+composicion = "basic/composicion"
+prompt = "The same short title rendered as a looping GIF"
+seed = 0
+fps = 24
+format = "gif"

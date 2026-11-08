@@ -1,0 +1,2 @@
+The Mermaid SVG is copied beside the composition by the runner; build.mjs
+inlines it into index.html. No other media ships with this sample.
