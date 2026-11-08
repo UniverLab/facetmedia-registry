@@ -27,3 +27,6 @@ name = "whisper"
 
 [[packages]]
 name = "voicestudio"
+
+[[packages]]
+name = "deck"

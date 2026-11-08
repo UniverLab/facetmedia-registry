@@ -1,0 +1,61 @@
+name = "deck"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "facet"
+tool_name = "Deck"
+description = "Slide decks authored as HTML with a CSS @page size, exported to a paginated PDF and one PNG per page through the host Chromium and poppler"
+facet = "presentation"
+
+[engine]
+type = "node"
+
+[engine.node]
+runtime = "22.21.0"
+runtime_sha256 = "262b84b02f7e2bc017d4bdb81fec85ca0d6190a5cd0781d2d6e84317c08871f8"
+
+[[engine.node.packages]]
+name = "playwright-core"
+version = "1.64.0"
+tarball = "https://registry.npmjs.org/playwright-core/-/playwright-core-1.64.0.tgz"
+integrity = "sha512-T9r+MZkTECl2+oUcZ26YgZzTrYidTsIhYYkJix+6iDOymOb1FB2RLLSOxRGnZGv5DStt+aduIVbt+E8WygXYpg=="
+
+[transport]
+type = "cli"
+entry = "runner.js"
+invocation_template = "{{node}} {{entry}} {{verb}} --input {{input}} --result {{result}}"
+
+[requirements]
+gpu = false
+ram_gb = 4
+disk_gb = 2
+exclusive = false
+platforms = ["linux"]
+host_libs = ["poppler-utils"]
+
+[[licenses]]
+subject = "playwright-core"
+spdx = "Apache-2.0"
+
+[capabilities.slides]
+summary = "Author slides as HTML with a CSS @page size and one page break per slide, exported to a paginated PDF plus one PNG per page"
+kind = "document"
+
+[capabilities.slides.inputs.fuente]
+type = "path"
+required = true
+description = "Slide HTML carrying an @page size and one page break per slide, resolved relative to the piece."
+
+[capabilities.slides.inputs.prompt]
+type = "string"
+required = true
+description = "The brief the deck was authored from; recorded and carried into the document preview."
+
+[capabilities.slides.inputs.seed]
+type = "integer"
+default = 0
+min = 0
+description = "Recorded seed; the paginated export is deterministic, so it labels the record."
+
+[capabilities.slides.preview]
+viewer = "generic"
