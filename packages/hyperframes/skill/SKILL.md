@@ -4,9 +4,10 @@ description: Render checked HTML+GSAP compositions to MP4 with the pinned HyperF
 ---
 # HyperFrames
 
-`hyperframes.render` turns an authored HTML+GSAP composition into an MP4. The
-package wraps the pinned CLI: it runs `check` first, then renders at most two
-workers, and never reimplements either step.
+`hyperframes.render` turns an authored HTML+GSAP composition into an MP4.
+`hyperframes.loop` renders the same composition to a looping GIF or an
+alpha-channel MOV. The package wraps the pinned CLI: it runs `check` first,
+then renders at most two workers, and never reimplements either step.
 
 ## When to use
 

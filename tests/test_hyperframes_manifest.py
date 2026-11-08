@@ -164,6 +164,21 @@ def test_the_capability_is_the_video_kind_with_the_piece_inputs() -> None:
     assert "required" not in inputs["fps"]
 
 
+def test_loop_capability_declares_formats_and_reuses_render_inputs_shape() -> None:
+    loop = MANIFEST["capabilities"]["loop"]
+    assert loop["kind"] == "video"
+    assert loop["preview"] == {"viewer": "video"}
+    inputs = loop["inputs"]
+    assert set(inputs) == {"composicion", "audio", "prompt", "seed", "fps", "format"}
+    render_inputs = MANIFEST["capabilities"]["render"]["inputs"]
+    for name in ("composicion", "audio", "prompt", "seed", "fps"):
+        assert inputs[name] == render_inputs[name]
+    fmt = inputs["format"]
+    assert fmt["type"] == "enum"
+    assert fmt["values"] == ["gif", "mov-alpha"]
+    assert fmt["required"] is True
+
+
 def test_the_index_carries_the_package_after_ffmpeg() -> None:
     names = [entry["name"] for entry in INDEX["packages"]]
     assert "hyperframes" in names

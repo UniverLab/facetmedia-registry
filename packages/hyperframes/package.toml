@@ -505,3 +505,47 @@ description = "Frame rate passed as --fps; the composition's own data-fps applie
 
 [capabilities.render.preview]
 viewer = "video"
+
+[capabilities.loop]
+summary = "Render a checked HTML+GSAP composition to a looping GIF or a MOV with alpha, from the same source as the MP4"
+kind = "video"
+
+[capabilities.loop.inputs.composicion]
+type = "path"
+required = true
+description = "Composition directory with hyperframes.json and index.tmpl (never named .html, which HyperFrames reads as a second composition) plus build.mjs and assets/, resolved relative to the piece; self-contained, vendoring every asset instead of loading a remote URL."
+
+[capabilities.loop.inputs.audio]
+type = "array"
+default = []
+description = "Audio clips entering the composition as <audio>, one { clip } item each; each clip is copied into the composition directory by its file name."
+
+[capabilities.loop.inputs.audio.items.clip]
+type = "path"
+required = true
+description = "Voice, music or effect clip to place beside the composition, resolved relative to the piece file."
+
+[capabilities.loop.inputs.prompt]
+type = "string"
+required = true
+description = "The brief the composition was authored from; recorded and carried into the video preview."
+
+[capabilities.loop.inputs.seed]
+type = "integer"
+default = 0
+min = 0
+description = "Recorded seed; the seek-based timeline renders deterministically, so it labels the record."
+
+[capabilities.loop.inputs.fps]
+type = "integer"
+min = 1
+description = "Frame rate passed as --fps; the composition's own data-fps applies when omitted."
+
+[capabilities.loop.inputs.format]
+type = "enum"
+values = ["gif", "mov-alpha"]
+required = true
+description = "gif renders a looping animation for feeds and embeds; mov-alpha renders a QuickTime MOV with an alpha channel for overlays on other footage."
+
+[capabilities.loop.preview]
+viewer = "video"

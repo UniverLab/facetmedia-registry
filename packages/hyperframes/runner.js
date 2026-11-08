@@ -8,8 +8,9 @@
 // HyperFrames owns `check` and `render`; this script only resolves the npm
 // dependency tree the pinned tarballs leave without node_modules links,
 // refuses remote URLs, runs check before render, probes the MP4 with the
-// host ffprobe, and writes the video preview. It imports nothing but node
-// builtins, so it runs before any dependency is linked.
+// host ffprobe, and writes the video preview. `hyperframes.loop` reuses the
+// same check-first path for GIF and MOV-with-alpha exports. It imports
+// nothing but node builtins, so it runs before any dependency is linked.
 
 const fs = require("node:fs");
 const path = require("node:path");
@@ -21,6 +22,11 @@ const FFMPEG_MISSING =
   "ffmpeg and ffprobe are required to encode video (sudo apt-get install -y ffmpeg)";
 const WORKERS = "2";
 const MAX_SUMMARY = 160;
+const LOOP_FORMATS = {
+  gif: { extension: ".gif", cli: "gif", mime: "image/gif" },
+  "mov-alpha": { extension: ".mov", cli: "mov", mime: "video/quicktime" },
+};
+const ALPHA_PIX_FMT = /a$|argb|rgba|bgra|abgr|yuva|gbrap/i;
 const METADATA_KEYS = ["$schema", "registry"];
 const TEXT_EXTENSIONS = new Set([
   ".html",
@@ -461,21 +467,23 @@ function run(request) {
   const source = compositionDir(request);
   refuseRemoteUrls(source);
   const name = compositionName(inputs);
+  const loop = loopFormatOf(request);
+  const extension = loop ? loop.extension : ".mp4";
   const workDir = path.join(outDir, "composition");
   fs.rmSync(workDir, { recursive: true, force: true });
   fs.cpSync(source, workDir, { recursive: true });
   copyClips(inputs, pieceBase(request), workDir);
   runCli(["check"], workDir);
-  runCli(renderArgs(inputs, path.join(outDir, `${name}.mp4`)), workDir);
+  runCli(renderArgs(inputs, path.join(outDir, `${name}${extension}`), loop), workDir);
   const entry = readManifest(firstPackageDir());
   return {
     tool: { name: "hyperframes", version: String(entry.version) },
     assets: [
       {
-        file: `${name}.mp4`,
+        file: `${name}${extension}`,
         name,
         kind: "video",
-        mime: "video/mp4",
+        mime: loop ? loop.mime : "video/mp4",
         properties: {},
         params: inputs,
         seed: seedOf(inputs),
@@ -485,9 +493,20 @@ function run(request) {
   };
 }
 
-function renderArgs(inputs, output) {
+function loopFormatOf(request) {
+  if (!request || request.capability !== "hyperframes.loop") return null;
+  const format = String(inputsOf(request).format || "");
+  const spec = LOOP_FORMATS[format];
+  if (!spec) {
+    throw new Error(`hyperframes.loop: format must be gif or mov-alpha, got ${format || "nothing"}`);
+  }
+  return spec;
+}
+
+function renderArgs(inputs, output, loop) {
   const args = ["render", "--workers", WORKERS];
   if (inputs.fps !== undefined && inputs.fps !== null) args.push("--fps", String(inputs.fps));
+  if (loop) args.push("--format", loop.cli);
   args.push("-o", output);
   return args;
 }
@@ -515,15 +534,19 @@ function runCli(args, cwd) {
 
 function verify(request) {
   if (!which("ffprobe")) throw new Error(FFMPEG_MISSING);
-  return { assets: (request.assets || []).map(verdictOf) };
+  return { assets: (request.assets || []).map((asset) => verdictOf(asset, request)) };
 }
 
-function verdictOf(asset) {
+function verdictOf(asset, request) {
   const file = path.basename(String(asset));
   try {
     const metrics = probe(asset);
     const passed =
-      metrics.width > 0 && metrics.height > 0 && metrics.frames > 0 && metrics.fps > 0;
+      metrics.width > 0 &&
+      metrics.height > 0 &&
+      metrics.frames > 0 &&
+      metrics.fps > 0 &&
+      formatOk(asset, request, metrics);
     return { file, passed, metrics, thresholds: {}, verifier: "ffprobe" };
   } catch (error) {
     return {
@@ -542,17 +565,18 @@ function preview(request) {
   const prompt = String(inputs.prompt || "");
   if (!prompt) throw new Error("prompt is required");
   const seed = seedOf(inputs);
-  const entries = (request.assets || []).map((asset) => previewOf(asset, inputs, prompt, seed));
+  const entries = (request.assets || []).map((asset) => previewOf(asset, request, prompt, seed));
   return { assets: entries };
 }
 
-function previewOf(asset, inputs, prompt, seed) {
+function previewOf(asset, request, prompt, seed) {
+  const inputs = inputsOf(request);
   const file = path.basename(String(asset));
   const metrics = probe(asset);
   const data = {
     preview: 1,
     kind: "video",
-    summary: summaryOf(inputs, metrics, seed),
+    summary: summaryOf(inputs, metrics, seed, formatLabelOf(request)),
     name: compositionName(inputs),
     prompt,
     seed,
@@ -568,11 +592,32 @@ function previewOf(asset, inputs, prompt, seed) {
   return { file, preview: `${file}.preview.json`, images: [] };
 }
 
-function summaryOf(inputs, metrics, seed) {
-  const text =
+function formatLabelOf(request) {
+  if (!request || request.capability !== "hyperframes.loop") return "";
+  return String(inputsOf(request).format || "");
+}
+
+function summaryOf(inputs, metrics, seed, format) {
+  let text =
     `${compositionName(inputs)} · ${metrics.width}x${metrics.height} · ` +
     `${metrics.frames}f @ ${metrics.fps}fps · seed ${seed}`;
+  if (format) text += ` · ${format}`;
   return text.slice(0, MAX_SUMMARY);
+}
+
+function formatOk(asset, request, metrics) {
+  const loop = loopFormatOf(request);
+  if (!loop) return true;
+  if (loop.cli === "gif") return gifHasLoop(String(asset));
+  return hasAlphaPixFmt(metrics.pix_fmt);
+}
+
+function hasAlphaPixFmt(pixFmt) {
+  return ALPHA_PIX_FMT.test(String(pixFmt || ""));
+}
+
+function gifHasLoop(file) {
+  return fs.readFileSync(file).includes("NETSCAPE2.0");
 }
 
 function probe(file) {
@@ -595,6 +640,7 @@ function probe(file) {
   return {
     width: Number(stream.width) || 0,
     height: Number(stream.height) || 0,
+    pix_fmt: String(stream.pix_fmt || ""),
     duration_s: Math.round(duration * 1000) / 1000,
     frames,
     fps,

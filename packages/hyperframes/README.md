@@ -70,6 +70,21 @@ pure `renderAt(t)` called from `hf-seek`; `requestAnimationFrame`,
 `performance.now()` and remote imports are rejected by `check`. The lab's notes
 are the authority.
 
+## Loops and transparency
+
+`hyperframes.loop` renders the same checked composition as `hyperframes.render` —
+same `check` first, same `--workers 2` cap, same vendored-assets rule — with a
+`format` input choosing the export:
+
+- **`gif`** writes `<name>.gif` (`--format gif`, mime `image/gif`): the format
+  for loops in feeds, docs and chat. The GIF carries the `NETSCAPE2.0` looping
+  block, and `verify` fails the asset when that block is absent — ffprobe
+  reports no loop count, so the runner checks the bytes itself.
+- **`mov-alpha`** writes `<name>.mov` (`--format mov`, mime
+  `video/quicktime`): a QuickTime MOV with an alpha channel, for overlays on
+  other footage. `verify` requires the probed `pix_fmt` to carry alpha
+  (`argb`, `rgba`, `yuva`, …); an opaque MOV fails.
+
 ## Verifying
 
 `verify` probes the MP4 with the host `ffprobe`: a video stream with a positive

@@ -26,6 +26,9 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "hyperframes"
 RUNNER = PACKAGE / "runner.js"
 CLIP = ROOT / "tests" / "fixtures" / "clip.mp4"
+ALPHA_MOV = ROOT / "tests" / "fixtures" / "clip-alpha.mov"
+LOOP_GIF = ROOT / "tests" / "fixtures" / "loop.gif"
+NOLOOP_GIF = ROOT / "tests" / "fixtures" / "noloop.gif"
 NODE = shutil.which("node")
 FFPROBE = shutil.which("ffprobe")
 BROWSER = shutil.which("sh") or "/bin/sh"
@@ -187,11 +190,13 @@ def _environment(
     }
 
 
-def _request(verb: str, out: Path, piece: Path, **inputs: Any) -> dict[str, Any]:
+def _request(
+    verb: str, out: Path, piece: Path, capability: str = "hyperframes.render", **inputs: Any
+) -> dict[str, Any]:
     return {
         "protocol": 1,
         "verb": verb,
-        "capability": "hyperframes.render",
+        "capability": capability,
         "inputs": inputs,
         "out_dir": str(out),
         "piece_dir": str(piece),
@@ -343,6 +348,116 @@ def test_a_remote_url_is_refused_before_the_cli_runs(tmp_path: Path) -> None:
     assert "index.tmpl" in done.stderr
     assert "https://cdn.example.com/app.js" in done.stderr
     assert _calls(tmp_path) == []
+
+
+def _run_loop(
+    tmp_path: Path, packages: dict[str, Path], fmt: str
+) -> tuple[subprocess.CompletedProcess[str], Any]:
+    piece, _comp, _clip = _composition(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _request(
+            "run",
+            out,
+            piece,
+            capability="hyperframes.loop",
+            composicion="comp",
+            prompt="brief",
+            format=fmt,
+        ),
+        _environment(tmp_path, _dirs(packages)),
+    )
+    return done, result
+
+
+def test_run_loop_gif_passes_the_format_flag(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    done, result = _run_loop(tmp_path, packages, "gif")
+    assert done.returncode == 0, done.stderr
+    calls = _calls(tmp_path)
+    assert [call["args"][0] for call in calls] == ["check", "render"]
+    render = calls[1]["args"]
+    assert render[render.index("--format") + 1] == "gif"
+    assert render[render.index("-o") + 1].endswith("comp.gif")
+    asset = result["assets"][0]
+    assert (asset["file"], asset["kind"], asset["mime"]) == (
+        "comp.gif",
+        "video",
+        "image/gif",
+    )
+
+
+def test_run_loop_mov_alpha_passes_the_format_flag(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    done, result = _run_loop(tmp_path, packages, "mov-alpha")
+    assert done.returncode == 0, done.stderr
+    calls = _calls(tmp_path)
+    assert [call["args"][0] for call in calls] == ["check", "render"]
+    render = calls[1]["args"]
+    assert render[render.index("--format") + 1] == "mov"
+    assert render[render.index("-o") + 1].endswith("comp.mov")
+    asset = result["assets"][0]
+    assert (asset["file"], asset["kind"], asset["mime"]) == (
+        "comp.mov",
+        "video",
+        "video/quicktime",
+    )
+
+
+@pytest.mark.skipif(FFPROBE is None, reason="ffprobe is not available")
+def test_verify_mov_alpha_requires_an_alpha_channel(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    alpha = out / "overlay.mov"
+    shutil.copyfile(ALPHA_MOV, alpha)
+    opaque = out / "plain.mov"
+    shutil.copyfile(CLIP, opaque)
+    request = _request(
+        "verify",
+        out,
+        tmp_path,
+        capability="hyperframes.loop",
+        composicion="comp",
+        prompt="brief",
+        format="mov-alpha",
+    )
+    request["assets"] = [str(alpha), str(opaque)]
+    done, result = _invoke(tmp_path, "verify", request, _environment(tmp_path, _dirs(packages)))
+    assert done.returncode == 0, done.stderr
+    passed, failed = result["assets"]
+    assert passed["file"] == "overlay.mov" and passed["passed"] is True
+    assert passed["metrics"]["pix_fmt"] == "argb"
+    assert failed["file"] == "plain.mov" and failed["passed"] is False
+
+
+@pytest.mark.skipif(FFPROBE is None, reason="ffprobe is not available")
+def test_verify_gif_requires_the_netscape_loop_block(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    looping = out / "loop.gif"
+    shutil.copyfile(LOOP_GIF, looping)
+    still = out / "noloop.gif"
+    shutil.copyfile(NOLOOP_GIF, still)
+    request = _request(
+        "verify",
+        out,
+        tmp_path,
+        capability="hyperframes.loop",
+        composicion="comp",
+        prompt="brief",
+        format="gif",
+    )
+    request["assets"] = [str(looping), str(still)]
+    done, result = _invoke(tmp_path, "verify", request, _environment(tmp_path, _dirs(packages)))
+    assert done.returncode == 0, done.stderr
+    passed, failed = result["assets"]
+    assert passed["file"] == "loop.gif" and passed["passed"] is True
+    assert failed["file"] == "noloop.gif" and failed["passed"] is False
 
 
 def test_a_missing_browser_is_reported_by_doctor(tmp_path: Path) -> None:
