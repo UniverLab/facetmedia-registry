@@ -212,6 +212,102 @@ The lab proof is
 script/importmap lines are the pre-vendor source the shipped composition
 vendors locally.
 
+## Characters
+
+`hyperframes.personaje` makes a **hand-drawn** SVG character speak with
+phonetic mouth sequences timed to the voice. It runs the same
+`check`-then-`render` path as `hyperframes.render`, with these inputs on top:
+
+- **`composicion`** (path, required): the composition directory, resolved
+  relative to the piece.
+- **`personaje-svg`** (path, required): the character SVG, resolved relative to
+  the piece, with one `.boca` shape per Rhubarb letter and ids `boca-X`…`boca-H`.
+- **`voz`** (path, required): the voice audio, resolved relative to the piece and
+  copied beside the composition.
+- **`bocas`** (path, required): `bocas.json`, resolved relative to the piece.
+- **`audio-inicio`** (`0.5`): the shift applied to every mouth cue, matching the
+  `<audio>` element's `data-start`.
+
+`prompt`, `seed` and `fps` behave as in `hyperframes.render`. The inputs are
+flat, like `giro`'s: the registry schema has no nested tables, so blinks and the
+head sway stay fixed times in the template (`[1.6, 4.3, 7.1, 9.8]`) and are not
+inputs.
+
+### Mouth map
+
+One shape per Rhubarb letter, in the character SVG under `#boca`:
+
+| id | letter | mouth |
+| --- | --- | --- |
+| `boca-X` | X | rest |
+| `boca-A` | A | closed (m, b, p) |
+| `boca-B` | B | teeth (most consonants) |
+| `boca-C` | C | open (e) |
+| `boca-D` | D | wide open (a) |
+| `boca-E` | E | round (o) |
+| `boca-F` | F | pursed (u) |
+| `boca-G` | G | teeth on lip (f, v) |
+| `boca-H` | H | tongue (l) |
+
+The CSS carries the rest state, because a `tl.set` at instant 0 never shows:
+
+```css
+.boca { opacity: 0; } #boca-X { opacity: 1; }
+```
+
+The runner requires that rule in `index.tmpl` or in the SVG's own `<style>`; a
+missing shape for a letter in `bocas.json` or a missing rest rule throws a plain
+`Error`, exit 1, which facet reports as `runner_failed`. `check` and `render`
+never run in that case.
+
+### Offline half and runner half
+
+- **Offline, the piece author's `build.mjs`** inlines the character into the
+  composition and replaces the `/* BOCAS */[]` placeholder with the cue array
+  from `bocas.json`. The runner never executes `build.mjs`.
+- **Runner-side, `personajeSetup`** runs in the copied composition before
+  `check`: it validates the mouth shapes and the rest rule, writes the cues into
+  `/* BOCAS */[]`, and writes `audio-inicio` into
+  `const AUDIO_START = <number>;`.
+
+The timeline is one `tl.set` per mouth change, shifted by the audio start, so
+the lips follow the voice:
+
+```js
+CUES.forEach(function (cue) {
+  tl.set('.boca', { opacity: 0 }, AUDIO_START + cue.start)
+    .set('#boca-' + cue.value, { opacity: 1 }, AUDIO_START + cue.start);
+});
+```
+
+### The cue file
+
+`bocas` comes from the upstream Rhubarb CLI, run offline, not from a registry
+package:
+
+```
+rhubarb -r phonetic -f json --dialogFile <texto> <voz> -o bocas.json
+```
+
+The phonetic recognizer is required because the default one is English-only;
+Spanish needs `-r phonetic`. The CLI is quick, about a second. It lives at
+`~/Projects/open-source/rhubarb`; there is no registry package for it.
+
+### Drawn characters only
+
+Only drawn SVG characters are supported. Human avatars generated from a photo
+were rejected: the result falls into the uncanny valley, and that provider was
+removed. The drawn path is the approved one.
+
+### Approved example
+
+The lab proof is
+`/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-personaje/`:
+a fox speaking with the person's voice, an 11.5 s composition whose 10.32 s of
+voice starts at `data-start="0.5"`. Its `index.tmpl` carries the rest rule, the
+nine `boca-X`…`boca-H` shapes and the cue timeline; its `build.mjs` replaces
+`/* BOCAS */[]` with the cues from `bocas.json`.
+
 ## Verifying
 
 `verify` probes every asset with the host `ffprobe`: a video stream with a

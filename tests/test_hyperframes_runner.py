@@ -827,6 +827,131 @@ def test_giro_embeds_the_model_and_injects_the_orbit_scalars(tmp_path: Path) -> 
     assert '"duracion":6' in written
 
 
+PERSONAJE_TEMPLATE = """<!doctype html>
+<html lang="es">
+  <head>
+    <style>
+      .boca { opacity: 0; } #boca-X { opacity: 1; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="11.5">
+      <svg id="zorro" viewBox="-400 -400 800 800"></svg>
+      <audio id="voz" src="../voz.wav" data-start="0.5" data-duration="10.32"></audio>
+    </div>
+    <script>
+      const AUDIO_START = 0.5;
+      const CUES = /* BOCAS */[];
+      const tl = gsap.timeline({ paused: true });
+      CUES.forEach(function (cue) {
+        tl.set('.boca', { opacity: 0 }, AUDIO_START + cue.start)
+          .set('#boca-' + cue.value, { opacity: 1 }, AUDIO_START + cue.start);
+      });
+      window.__timelines['main'] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
+"""
+#: One shape per Rhubarb letter: X rest, A closed, B teeth, C open, D wide open,
+#: E round, F pursed, G teeth on lip, H tongue.
+PERSONAJE_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="-400 -400 800 800">
+  <g id="boca">
+    <path class="boca" id="boca-X" d="M-60,-6 Q0,26 60,-6" fill="none" />
+    <path class="boca" id="boca-A" d="M-52,0 L52,0" />
+    <g class="boca" id="boca-B"><ellipse rx="54" ry="12" /></g>
+    <g class="boca" id="boca-C"><ellipse rx="56" ry="24" /></g>
+    <g class="boca" id="boca-D"><ellipse rx="60" ry="42" /></g>
+    <g class="boca" id="boca-E"><ellipse rx="34" ry="32" /></g>
+    <g class="boca" id="boca-F"><ellipse rx="20" ry="20" /></g>
+    <g class="boca" id="boca-G"><ellipse rx="50" ry="14" /></g>
+    <g class="boca" id="boca-H"><ellipse rx="54" ry="28" /></g>
+  </g>
+</svg>
+"""
+PROOF_CUES = [
+    {"start": round(index / 10, 1), "end": round((index + 1) / 10, 1), "value": letter}
+    for index, letter in enumerate("XABCDEFGH")
+]
+PROOF_BOCAS = {"metadata": {"duration": 0.9}, "mouthCues": PROOF_CUES}
+VOZ_BYTES = b"RIFF0000WAVE"
+
+
+def _personaje_comp(root: Path) -> tuple[Path, Path]:
+    piece = root / "piece"
+    comp = piece / "comp"
+    (comp / "assets").mkdir(parents=True)
+    metadata = {
+        "$schema": "https://hyperframes.heygen.com/schema/hyperframes.json",
+        "registry": "https://raw.githubusercontent.com/heygen-com/hyperframes/main/registry",
+    }
+    (comp / "hyperframes.json").write_text(json.dumps(metadata), encoding="utf-8")
+    (comp / "index.tmpl").write_text(PERSONAJE_TEMPLATE, encoding="utf-8")
+    (comp / "build.mjs").write_text("export {};\n", encoding="utf-8")
+    (comp / "assets" / "keep.txt").write_text("vendored\n", encoding="utf-8")
+    (piece / "zorro.svg").write_text(PERSONAJE_SVG, encoding="utf-8")
+    (piece / "bocas.json").write_text(json.dumps(PROOF_BOCAS), encoding="utf-8")
+    (piece / "voz.wav").write_bytes(VOZ_BYTES)
+    return piece, comp
+
+
+def _personaje_request(out: Path, piece: Path, **inputs: Any) -> dict[str, Any]:
+    base: dict[str, Any] = {
+        "composicion": "comp",
+        "personaje-svg": "zorro.svg",
+        "voz": "voz.wav",
+        "bocas": "bocas.json",
+        "audio-inicio": 0.75,
+        "prompt": "brief",
+    }
+    base.update(inputs)
+    return _request("run", out, piece, capability="hyperframes.personaje", **base)
+
+
+def test_personaje_rejects_a_missing_mouth_shape_before_the_cli_runs(tmp_path: Path) -> None:
+    """Exit 1 is what facet reports as runner_failed; the letter is named."""
+    packages = _fixture(tmp_path)
+    piece, _comp = _personaje_comp(tmp_path)
+    svg = (piece / "zorro.svg").read_text(encoding="utf-8").replace('id="boca-D"', 'id="boca-Q"')
+    (piece / "zorro.svg").write_text(svg, encoding="utf-8")
+    out = tmp_path / "out"
+    out.mkdir()
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _personaje_request(out, piece),
+        _environment(tmp_path, _dirs(packages)),
+    )
+    assert done.returncode == 1
+    assert result is None
+    assert "boca-D" in done.stderr
+    assert "Rhubarb mouth D" in done.stderr
+    assert _calls(tmp_path) == []
+
+
+def test_personaje_injects_the_cues_and_the_audio_start(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    piece, _comp = _personaje_comp(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _personaje_request(out, piece),
+        _environment(tmp_path, _dirs(packages)),
+    )
+    assert done.returncode == 0, done.stderr
+    assert [call["args"][0] for call in _calls(tmp_path)] == ["check", "render"]
+    assert result is not None and result["assets"][0]["file"] == "comp.mp4"
+    written = (out / "composition" / "index.tmpl").read_text(encoding="utf-8")
+    assert "/* BOCAS */" not in written
+    injected = re.search(r"const CUES = (\[.*?\]);", written, re.DOTALL)
+    assert injected is not None
+    assert json.loads(injected.group(1)) == PROOF_CUES
+    assert "const AUDIO_START = 0.75;" in written
+    assert (out / "voz.wav").read_bytes() == VOZ_BYTES
+
+
 def test_the_runner_has_no_check_verb(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
     done, result = _invoke(

@@ -681,3 +681,51 @@ description = "Frame rate passed as --fps; the composition's own data-fps applie
 
 [capabilities.giro.preview]
 viewer = "video"
+
+[capabilities.personaje]
+summary = "Speak a drawn SVG character with Rhubarb mouth cues timed to the voice"
+kind = "video"
+
+[capabilities.personaje.inputs.composicion]
+type = "path"
+required = true
+description = "Composition directory with hyperframes.json and index.tmpl plus assets/ and vendor/, resolved relative to the piece; the piece author's offline build.mjs produces this tree and the runner never executes it."
+
+[capabilities.personaje.inputs.personaje-svg]
+type = "path"
+required = true
+description = "Character SVG with one .boca shape per Rhubarb letter, ids boca-X..H, resolved relative to the piece; the CSS rest rule keeps #boca-X visible at frame 0."
+
+[capabilities.personaje.inputs.voz]
+type = "path"
+required = true
+description = "Voice audio resolved relative to the piece, copied beside the composition."
+
+[capabilities.personaje.inputs.bocas]
+type = "path"
+required = true
+description = "bocas.json produced offline with the upstream Rhubarb CLI (rhubarb -r phonetic -f json --dialogFile <text> <voice> -o bocas.json), resolved relative to the piece."
+
+[capabilities.personaje.inputs.audio-inicio]
+type = "number"
+default = 0.5
+description = "Shift applied to every mouth cue, matching the audio element's data-start."
+
+[capabilities.personaje.inputs.prompt]
+type = "string"
+required = true
+description = "The brief the composition was authored from; recorded and carried into the video preview."
+
+[capabilities.personaje.inputs.seed]
+type = "integer"
+default = 0
+min = 0
+description = "Recorded seed; the seek-based timeline renders deterministically, so it labels the record."
+
+[capabilities.personaje.inputs.fps]
+type = "integer"
+min = 1
+description = "Frame rate passed as --fps; the composition's own data-fps applies when omitted."
+
+[capabilities.personaje.preview]
+viewer = "video"
