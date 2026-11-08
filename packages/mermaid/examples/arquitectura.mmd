@@ -1,0 +1,23 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontFamily: "Ubuntu"
+    fontSize: "18px"
+---
+architecture-beta
+  group lab(cloud)[Grafics Lab en WSL]
+  group gpu(server)[GPU local] in lab
+
+  service agente(logos:claude-icon)[Agente] in lab
+  service toml(disk)[Pieza toml] in lab
+  service voz(mdi:microphone)[VoiceStudio] in gpu
+  service comfy(mdi:image-filter-hdr)[ComfyUI] in gpu
+  service salida(database)[WAV y PNG] in lab
+  junction reparto in lab
+
+  agente:R --> L:toml
+  toml:R -- L:reparto
+  reparto:R --> L:voz
+  reparto:B --> L:comfy
+  voz:R --> L:salida

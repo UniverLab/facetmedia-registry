@@ -17,6 +17,10 @@ the CLI runs: a missing `theme` or a `fontFamily` that is a list or
   icons.
 - When the lab's only diagram tool is enough; what Mermaid cannot draw is
   authored by hand in HTML/CSS/SVG and animated in HyperFrames instead.
+  Mermaid wins the comparison on purpose: D2 duplicates it and its SVG is
+  harder to animate, Excalidraw breaks groups, floats labels over arrows and
+  needs a CDN, and Python `diagrams` needs Graphviz installed with `sudo`
+  while `architecture-beta` already covers its cloud icons.
 - When the host has a system Chrome at `CHROME_PATH`; the package never
   downloads a browser.
 
@@ -34,15 +38,42 @@ the Excalidraw-style drawing. `run` writes `<name>.svg` and `<name>.png`
 beside each other in the output directory; `verify` checks the SVG element
 and the PNG signature; `preview` writes the image kind's preview file.
 
+Copy the header verbatim from `references/headers.md`: `ciclo.mmd` uses
+`theme: base` with `primaryColor`, `primaryBorderColor`, `lineColor`,
+`fontFamily: "Ubuntu"` and `fontSize: "22px"`; `arquitectura.mmd` uses the
+same theme with `fontFamily: "Ubuntu"` and `fontSize: "18px"`, plus the
+`look: handDrawn` snippet. The full `architecture-beta` body — groups,
+services, `L`/`R`/`T`/`B` ports, `cloud`/`database`/`disk`/`internet`/`server`
+icons, Iconify `logos:`/`mdi:` icons and the `junction` split — is in
+`references/architecture.md`. The approved diagrams ship as
+`examples/ciclo.mmd` and `examples/arquitectura.mmd`, each with its SVG and
+PNG beside it.
+
+**Animating the SVG in HyperFrames.** Mermaid's SVG carries stable ids:
+flowchart boxes `my-svg-flowchart-<id>-<n>`, arrows
+`my-svg-L_<origen>_<destino>_0`, arrow labels
+`[data-id="L_<origen>_<destino>_0"]` and groups `my-svg-<id>`. In
+`architecture-beta` the ids are `my-svg-group-<id>`, `my-svg-service-<id>`
+and `my-svg-L_<origen>_<destino>_0`, and each arrowhead is the
+`polygon.arrow` that follows its `path`. Animate arrows by driving
+`strokeDashoffset`. Build the selectors by concatenating text: the
+HyperFrames packager rejects `${}` templates. Declare the font as
+`@font-face { src: local('Ubuntu') }`, the same family Mermaid measured the
+boxes with; with a Google Fonts file a label overflows 2 px and `check`
+fails. Mermaid writes `>` as `&gt;` inside the SVG `<style>`; the browser
+accepts it but the HyperFrames CSS parser does not, so `build.mjs` rewrites
+it. `build.mjs` inserts the SVG into `index.tmpl`, and the template must not
+be named `.html` — HyperFrames would read it as a second composition.
+
 ## Judging the result
 
 `verify` passes an SVG that carries an `<svg>` element and a PNG with a valid
 signature. `preview` writes the image kind's fields — `preview`, `kind`,
 `summary`, `name`, `prompt`, `seed`, `width`, `height` — deriving the prompt
 from the diagram type line and a constant seed. A person then looks at the
-PNG: overlaps, cut text and icon placement are judged by eye. The approved
-references are `ciclo.mmd` and `arquitectura.mmd` under the lab's
-`projects/prueba-diagramas/`.
+PNG: overlaps, cut text and icon placement are judged by eye. Compare against
+the approved diagrams in `examples/`, and use the hand-drawn render at
+`examples/ciclo-mano.png` as the reference for `look: handDrawn`.
 
 ## Pitfalls
 

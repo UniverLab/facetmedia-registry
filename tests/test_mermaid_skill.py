@@ -1,9 +1,10 @@
-"""The mermaid skill stub: front matter, the four headings, the capability.
+"""The mermaid skill: front matter, the four headings, the capability, and the port.
 
-The full prose is deferred to FEAT-61; what the registry validates today is
-the core's skill format: ``name`` and ``description`` in the front matter,
-then ``## When to use``, ``## Pieces``, ``## Judging the result`` and
-``## Pitfalls`` in order, with every capability id named in the body.
+The skill teaches the lab's diagram knowledge: the header traps the runner
+enforces, the two cited reference files, the approved examples, and the stable
+SVG ids that HyperFrames animates. ``name`` and ``description`` live in the
+front matter, then ``## When to use``, ``## Pieces``, ``## Judging the result``
+and ``## Pitfalls`` appear in order, with the capability id named in the body.
 """
 
 from __future__ import annotations
@@ -12,10 +13,28 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SKILL = (ROOT / "packages" / "mermaid" / "skill" / "SKILL.md").read_text(encoding="utf-8")
+PACKAGE = ROOT / "packages" / "mermaid"
+SKILL = (PACKAGE / "skill" / "SKILL.md").read_text(encoding="utf-8")
 HEADINGS = ("## When to use", "## Pieces", "## Judging the result", "## Pitfalls")
 DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
+CITED_REFERENCES = {"headers", "architecture"}
+EXAMPLE_FILES = (
+    "ciclo.mmd",
+    "ciclo.svg",
+    "ciclo.png",
+    "arquitectura.mmd",
+    "arquitectura.svg",
+    "arquitectura.png",
+    "ciclo-mano.png",
+)
+STABLE_ID_TOKENS = (
+    "my-svg-flowchart-",
+    "my-svg-L_",
+    "data-id",
+    "strokeDashoffset",
+    "local('Ubuntu')",
+)
 
 
 def _body() -> str:
@@ -53,8 +72,31 @@ def test_the_skill_teaches_the_header_traps() -> None:
         assert token in body, token
 
 
-def test_no_reference_files_are_cited() -> None:
-    """The stub cites no references/ file that does not exist."""
+def test_every_cited_reference_exists_and_is_non_empty() -> None:
+    """The skill cites exactly the references/ files that ship, and they carry text."""
     cited = set(re.findall(r"references/([a-z0-9][a-z0-9-]*)\.md", _body()))
+    assert cited == CITED_REFERENCES
+    references_dir = PACKAGE / "skill" / "references"
     for name in cited:
-        assert (ROOT / "packages" / "mermaid" / "skill" / "references" / f"{name}.md").is_file()
+        reference = references_dir / f"{name}.md"
+        assert reference.is_file(), reference
+        assert reference.stat().st_size > 0, reference
+
+
+def test_the_skill_pins_the_stable_ids() -> None:
+    """The HyperFrames-animation tokens are named, so an agent can target them."""
+    body = _body()
+    for token in STABLE_ID_TOKENS:
+        assert token in body, token
+
+
+def test_the_approved_examples_ship() -> None:
+    """The skill cites the two approved pieces and all their files are present."""
+    body = _body()
+    assert "examples/ciclo.mmd" in body
+    assert "examples/arquitectura.mmd" in body
+    examples_dir = PACKAGE / "examples"
+    for name in EXAMPLE_FILES:
+        example = examples_dir / name
+        assert example.is_file(), example
+        assert example.stat().st_size > 0, example
