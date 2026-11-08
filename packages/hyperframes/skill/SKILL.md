@@ -11,7 +11,9 @@ into a checked composition and draws it from an `animacion` list of
 `{ selector, at, kind, dur }` steps; every selector is validated against the
 SVG's ids before anything renders. `hyperframes.giro` embeds a `.glb` model and
 turns it on a camera orbit from eight flat scalar inputs. `hyperframes.personaje`
-speaks a hand-drawn SVG character with Rhubarb mouth cues timed to the voice. The
+speaks a hand-drawn SVG character with Rhubarb mouth cues timed to the voice.
+`hyperframes.narrado` assembles a narrated piece from `composicion`, `voz`
+voice clips, the `musica` bed and the whisper `subtitulos` `.srt`. The
 package wraps the pinned CLI: it runs
 `check` first, then renders at most two workers, and never reimplements either
 step.

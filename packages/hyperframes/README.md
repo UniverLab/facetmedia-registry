@@ -308,6 +308,50 @@ voice starts at `data-start="0.5"`. Its `index.tmpl` carries the rest rule, the
 nine `boca-X`…`boca-H` shapes and the cue timeline; its `build.mjs` replaces
 `/* BOCAS */[]` with the cues from `bocas.json`.
 
+## Narration
+
+`hyperframes.narrado` completes a narrated piece on one checked timeline: voice
+files, an instrumental bed and whisper subtitles are assembled by
+`narradoSetup` in the copied composition before the same `check`-then-`render`
+path as `hyperframes.render`. Its inputs are `composicion`, `voz` (one
+`{ clip }` table per voice file, at least one), `musica`, `subtitulos` (the
+`.srt`), plus `prompt`, `seed` and `fps`.
+
+The sources are the real packages: voices are voicestudio files — one engine
+per file, so narrator and clone voices arrive as separate `voz` clips and the
+runner never probes audio provenance; `musica` is the instrumental bed already
+mixed offline with the ffmpeg package; `subtitulos` is the `.srt` that whisper
+`transcribe` writes beside `<name>.txt` and `<name>.json`.
+
+Loudness is an offline author duty: the runner has no loudness probe and no
+warning field, and any assembly violation fails the run. The fixed recipe is to
+run every voice file through ffmpeg `normalize` with `target-lufs` `-16.0` and
+`true-peak-db` `-1.5`, then ffmpeg `mix` the voice layers (`role` `voice`,
+`gain-db` `0.0`) over the bed (`role` `bed`) with `ducking` `true`, `duck-db`
+`-12.0` and `target-lufs` `-16.0`.
+
+`index.tmpl` must carry exactly one `<!-- SUBS -->` marker, exactly one
+`<!-- AUDIOS -->` marker and a positive `data-duration` on the
+`data-composition-id` tag, and its CSS must style `.sub`: the cues are
+opacity-toggled divs burned into the frames, never a sidecar copy.
+`narradoSetup` copies each `voz` clip and `musica` beside the composition,
+replaces the markers with `<audio id="voz-N" src="../<name>">` /
+`<audio id="musica" src="../<name>">` and `<div class="sub" id="sN">` lines,
+parses whisper's `HH:MM:SS,mmm --> HH:MM:SS,mmm` cues (comma or dot
+milliseconds, text joined by spaces) into `{ start, end, text }` rounded to 3
+decimals, requires every cue end to fit `data-duration`, and appends the
+opacity timeline that joins `window.__timelines[...]`. A missing file, a bad
+`.srt`, a missing or duplicated marker, or an overlong cue throws a plain
+`Error`, exit 1, which facet reports as `runner_failed`; `check` and `render`
+never run.
+
+The offline `build.mjs` produces the vendored `assets/` and `vendor/` tree;
+the runner never executes it. The lab proof for the SUBS burn-in shape is
+`/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/demo-hackaton/video/`:
+its `renders/demo.mp4` carries video+audio and its `index.tmpl` burns
+hardcoded SUBS opacity cues. This capability generalizes that proven shape to
+a whisper `.srt` parsed at run time; no end-to-end `.srt` lab proof exists yet.
+
 ## Verifying
 
 `verify` probes every asset with the host `ffprobe`: a video stream with a

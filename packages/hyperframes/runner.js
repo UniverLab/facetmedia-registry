@@ -16,6 +16,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { giroSetup } = require("./giro.js");
+const { narradoSetup } = require("./narrado.js");
 const { personajeSetup } = require("./personaje.js");
 
 const BROWSER_VAR = "HYPERFRAMES_BROWSER_PATH";
@@ -623,6 +624,9 @@ function run(request) {
   }
   if (request.capability === "hyperframes.personaje") {
     personajeSetup(workDir, inputs, pieceBase(request));
+  }
+  if (request.capability === "hyperframes.narrado") {
+    narradoSetup(workDir, inputs, pieceBase(request));
   }
   runCli(["check"], workDir);
   runCli(renderArgs(inputs, path.join(outDir, `${name}${extension}`), loop), workDir);

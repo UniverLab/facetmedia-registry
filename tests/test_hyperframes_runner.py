@@ -964,3 +964,145 @@ def test_the_runner_has_no_check_verb(tmp_path: Path) -> None:
     assert result is None
     assert "unknown verb" in done.stderr
     assert _calls(tmp_path) == []
+
+
+NARRADO_TEMPLATE = """<!doctype html>
+<html lang="es">
+  <head>
+    <style>.sub { position: absolute; opacity: 0; }</style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="10">
+      <!-- SUBS -->
+      <!-- AUDIOS -->
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines['main'] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
+"""
+NARRADO_SRT = """1
+00:00:00,000 --> 00:00:02,500
+Hola <mundo> & adiós
+
+2
+00:00:03,000 --> 00:00:05,000
+Segunda línea
+"""
+NARRADO_SRT_OVERFLOW = """1
+00:00:00,000 --> 00:00:02,500
+Hola <mundo> & adiós
+
+2
+00:00:03,000 --> 00:00:12,500
+Segunda línea
+"""
+
+
+def _narrado_comp(root: Path) -> tuple[Path, Path]:
+    piece = root / "piece"
+    comp = piece / "comp"
+    (comp / "assets").mkdir(parents=True)
+    metadata = {
+        "$schema": "https://hyperframes.heygen.com/schema/hyperframes.json",
+        "registry": "https://raw.githubusercontent.com/heygen-com/hyperframes/main/registry",
+    }
+    (comp / "hyperframes.json").write_text(json.dumps(metadata), encoding="utf-8")
+    (comp / "index.tmpl").write_text(NARRADO_TEMPLATE, encoding="utf-8")
+    (comp / "build.mjs").write_text("export {};\n", encoding="utf-8")
+    (comp / "assets" / "keep.txt").write_text("vendored\n", encoding="utf-8")
+    (piece / "voz-a.wav").write_bytes(VOZ_BYTES)
+    (piece / "voz-b.wav").write_bytes(VOZ_BYTES)
+    (piece / "musica.wav").write_bytes(VOZ_BYTES)
+    (piece / "subtitulos.srt").write_text(NARRADO_SRT, encoding="utf-8")
+    return piece, comp
+
+
+def _narrado_request(out: Path, piece: Path, **inputs: Any) -> dict[str, Any]:
+    base: dict[str, Any] = {
+        "composicion": "comp",
+        "voz": [{"clip": "voz-a.wav"}, {"clip": "voz-b.wav"}],
+        "musica": "musica.wav",
+        "subtitulos": "subtitulos.srt",
+        "prompt": "brief",
+    }
+    base.update(inputs)
+    return _request("run", out, piece, capability="hyperframes.narrado", **base)
+
+
+def test_narrado_rejects_a_missing_music_bed_before_the_cli_runs(tmp_path: Path) -> None:
+    """Exit 1 is what facet reports as runner_failed; the file is named."""
+    packages = _fixture(tmp_path)
+    piece, _comp = _narrado_comp(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _narrado_request(out, piece, musica="falta-musica.wav"),
+        _environment(tmp_path, _dirs(packages)),
+    )
+    assert done.returncode == 1
+    assert result is None
+    assert "musica" in done.stderr
+    assert "falta-musica.wav" in done.stderr
+    assert _calls(tmp_path) == []
+
+
+def test_narrado_rejects_a_cue_past_the_duration_before_the_cli_runs(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    piece, _comp = _narrado_comp(tmp_path)
+    (piece / "subtitulos.srt").write_text(NARRADO_SRT_OVERFLOW, encoding="utf-8")
+    out = tmp_path / "out"
+    out.mkdir()
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _narrado_request(out, piece),
+        _environment(tmp_path, _dirs(packages)),
+    )
+    assert done.returncode == 1
+    assert result is None
+    assert "cue 2" in done.stderr
+    assert "12.5" in done.stderr
+    assert "10" in done.stderr
+    assert _calls(tmp_path) == []
+
+
+def test_narrado_injects_audio_subtitles_and_the_opacity_timeline(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    piece, _comp = _narrado_comp(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _narrado_request(out, piece),
+        _environment(tmp_path, _dirs(packages)),
+    )
+    assert done.returncode == 0, done.stderr
+    assert [call["args"][0] for call in _calls(tmp_path)] == ["check", "render"]
+    assert result is not None and result["assets"][0]["file"] == "comp.mp4"
+    written = (out / "composition" / "index.tmpl").read_text(encoding="utf-8")
+    assert '<audio id="voz-1" src="../voz-a.wav"></audio>' in written
+    assert '<audio id="voz-2" src="../voz-b.wav"></audio>' in written
+    assert '<audio id="musica" src="../musica.wav"></audio>' in written
+    assert '<div class="sub" id="s0">Hola &lt;mundo&gt; &amp; adiós</div>' in written
+    assert '<div class="sub" id="s1">Segunda línea</div>' in written
+    cues = re.search(r"var cues = (\[.*?\]);", written, re.DOTALL)
+    assert cues is not None
+    assert json.loads(cues.group(1)) == [
+        {"start": 0.0, "end": 2.5, "text": "Hola <mundo> & adiós"},
+        {"start": 3.0, "end": 5.0, "text": "Segunda línea"},
+    ]
+    assert "{ opacity: 1 }, cue.start" in written
+    assert "{ opacity: 0 }, cue.end" in written
+    assert "<!-- SUBS -->" not in written
+    assert "<!-- AUDIOS -->" not in written
+    for name in ("voz-a.wav", "voz-b.wav", "musica.wav"):
+        assert (out / name).read_bytes() == VOZ_BYTES
+    assert not (out / "subtitulos.srt").exists()
+    assert not (out / "composition" / "subtitulos.srt").exists()

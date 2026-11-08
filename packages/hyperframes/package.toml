@@ -729,3 +729,52 @@ description = "Frame rate passed as --fps; the composition's own data-fps applie
 
 [capabilities.personaje.preview]
 viewer = "video"
+
+[capabilities.narrado]
+summary = "Assemble a narrated piece: voice clips, a music bed and whisper subtitles on one checked HyperFrames timeline"
+kind = "video"
+
+[capabilities.narrado.inputs.composicion]
+type = "path"
+required = true
+description = "Composition directory with hyperframes.json, index.tmpl plus assets/ and vendor/, resolved relative to the piece; the author's offline build.mjs produces the vendored tree and the runner never executes it. index.tmpl carries one <!-- SUBS --> marker, one <!-- AUDIOS --> marker and a positive data-duration on the data-composition-id tag."
+
+[capabilities.narrado.inputs.voz]
+type = "array"
+required = true
+min_items = 1
+description = "Voice files from voicestudio, one { clip } item each; voicestudio keeps one engine per file, so narrator and clone voices arrive as separate clips. Every clip must resolve relative to the piece; the runner copies them beside the composition and never probes audio provenance."
+
+[capabilities.narrado.inputs.voz.items.clip]
+type = "path"
+required = true
+description = "Voice clip copied beside the composition and injected as <audio id=\"voz-N\" src=\"../<name>\">."
+
+[capabilities.narrado.inputs.musica]
+type = "path"
+required = true
+description = "Instrumental music bed already mixed offline with the ffmpeg package, resolved relative to the piece and copied beside the composition as <audio id=\"musica\">."
+
+[capabilities.narrado.inputs.subtitulos]
+type = "path"
+required = true
+description = "SubRip .srt written offline by whisper transcribe, resolved relative to the piece; parsed into burned-in subtitle cues that must end inside the composition duration."
+
+[capabilities.narrado.inputs.prompt]
+type = "string"
+required = true
+description = "The brief the composition was authored from; recorded and carried into the video preview."
+
+[capabilities.narrado.inputs.seed]
+type = "integer"
+default = 0
+min = 0
+description = "Recorded seed; the seek-based timeline renders deterministically, so it labels the record."
+
+[capabilities.narrado.inputs.fps]
+type = "integer"
+min = 1
+description = "Frame rate passed as --fps; the composition's own data-fps applies when omitted."
+
+[capabilities.narrado.preview]
+viewer = "video"

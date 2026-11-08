@@ -200,6 +200,7 @@ def test_the_skill_stub_validates_in_the_core_format() -> None:
     positions = [body.index(heading) for heading in HEADINGS]
     assert positions == sorted(positions)
     assert "hyperframes.render" in body
+    assert "hyperframes.narrado" in body
 
 
 GIRO_SCALARS = {
@@ -240,6 +241,37 @@ def test_giro_capability_declares_flat_scalars_only() -> None:
     assert (inputs["seed"]["default"], inputs["seed"]["min"]) == (0, 0)
     assert "required" not in inputs["fps"]
     assert all(field["type"] != "array" for field in inputs.values())
+
+
+def test_narrado_capability_assembles_voice_music_and_subtitles() -> None:
+    narrado = MANIFEST["capabilities"]["narrado"]
+    assert narrado["kind"] == "video"
+    assert narrado["preview"] == {"viewer": "video"}
+    inputs = narrado["inputs"]
+    assert set(inputs) == {
+        "composicion",
+        "voz",
+        "musica",
+        "subtitulos",
+        "prompt",
+        "seed",
+        "fps",
+    }
+    assert inputs["composicion"]["type"] == "path"
+    assert inputs["composicion"]["required"] is True
+    voz = inputs["voz"]
+    assert voz["type"] == "array"
+    assert voz["required"] is True
+    assert voz["min_items"] == 1
+    assert voz["items"]["clip"]["type"] == "path"
+    assert voz["items"]["clip"]["required"] is True
+    for name in ("musica", "subtitulos"):
+        assert inputs[name]["type"] == "path"
+        assert inputs[name]["required"] is True
+    assert inputs["prompt"]["type"] == "string"
+    assert inputs["prompt"]["required"] is True
+    assert (inputs["seed"]["default"], inputs["seed"]["min"]) == (0, 0)
+    assert "required" not in inputs["fps"]
 
 
 def test_the_readme_documents_the_contract_and_the_traps() -> None:
