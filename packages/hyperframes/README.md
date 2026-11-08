@@ -87,10 +87,15 @@ same `check` first, same `--workers 2` cap, same vendored-assets rule — with a
 
 ## Verifying
 
-`verify` probes the MP4 with the host `ffprobe`: a video stream with a positive
-width, height, frame count and frame rate passes, and the metrics are the
-probe's. `preview` writes `<asset>.preview.json` with exactly the video
-schema's ten fields. `doctor` reports two checks: the Chromium executable at
+`verify` probes every asset with the host `ffprobe`: a video stream with a
+positive width, height, frame count and frame rate passes, and the metrics are
+the probe's. For `hyperframes.loop` assets the verdict adds two format checks
+the probe cannot express: a `gif` must carry the `NETSCAPE2.0` looping block
+(ffprobe reports no loop count, so the runner inspects the bytes), and a
+`mov-alpha` MOV must have an alpha channel (`pix_fmt` matching `argb`, `rgba`,
+`yuva`, …); an opaque MOV fails. `preview` writes `<asset>.preview.json` with
+exactly the video schema's ten fields, and its summary carries the `format`
+label for loop assets. `doctor` reports two checks: the Chromium executable at
 `HYPERFRAMES_BROWSER_PATH`, and `ffmpeg` plus `ffprobe` on `PATH`.
 
 `facet doctor hyperframes` classifies a missing browser or ffmpeg as
