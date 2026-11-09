@@ -28,6 +28,11 @@ LOSSY: Final[frozenset[str]] = frozenset({"mp3", "ogg"})
 LIMIT: Final[float] = 0.891251
 #: loudnorm's second pass always fixes the loudness range at this.
 LOUDNORM_LRA: Final[float] = 11.0
+#: The dynamics pre-stage both passes run before loudnorm: compress the peaks
+#: first so a hot voice has the headroom the true-peak ceiling demands.
+COMPRESSOR: Final[str] = (
+    "acompressor=threshold=0.177:ratio=6:attack=5:release=50:makeup=1:knee=2.828:detection=peak"
+)
 #: One ``"key" : "value",`` line inside loudnorm's JSON report.
 _JSON_LINE: Final[re.Pattern[str]] = re.compile(r'^\s*"([^"]+)"\s*:\s*"([^"]*)",?\s*$')
 #: One ``ffmpeg -encoders`` listing line: six flag characters, then the name.
@@ -71,7 +76,8 @@ def normalize_args(
     measured: Mapping[str, float],
     sample_rate_hz: int,
 ) -> list[str]:
-    """Pass 2: loudnorm with pass 1's measured values (linear), resampled, to a WAV.
+    """Pass 2: the compressor pre-stage, then loudnorm with pass 1's measured values
+    (linear), resampled, to a WAV.
 
     The trailing alimiter is the true-peak ceiling the verify rule measures:
     loudnorm's own estimate lets about a quarter of a dB through when its
@@ -79,6 +85,7 @@ def normalize_args(
     decoded peak at or below ``true_peak_db`` + 0.1.
     """
     chain = (
+        f"{COMPRESSOR},"
         f"loudnorm=I={num(target_lufs)}:TP={num(true_peak_db)}:LRA={num(LOUDNORM_LRA)}"
         f":measured_I={num(measured['input_i'])}"
         f":measured_TP={num(measured['input_tp'])}"
@@ -93,8 +100,9 @@ def normalize_args(
 
 
 def measure_chain(target_lufs: float, true_peak_db: float) -> str:
-    """Pass 1's loudnorm: measure this input and print its JSON report on stderr."""
+    """Pass 1: compress the input, then loudnorm measures it and prints JSON on stderr."""
     return (
+        f"{COMPRESSOR},"
         f"loudnorm=I={num(target_lufs)}:TP={num(true_peak_db)}:LRA={num(LOUDNORM_LRA)}"
         ":print_format=json"
     )

@@ -55,12 +55,14 @@ bed ducked under the voice:
 
 Every ffmpeg call is a subprocess in its own process group with
 `-nostdin -hide_banner -y`; a non-zero exit reports its stderr tail as
-the runner error. `normalize` is the standard two passes: pass 1 runs
-`loudnorm … print_format=json` and parses the measured values, pass 2
-applies them with `linear=true`, resampled to `sample-rate-hz`, and an
-`alimiter` at the true-peak ceiling (loudnorm's own estimate lets about a
-quarter of a dB through when its 192 kHz stream is decimated, and the
-verification measures the decoded file). `mix` is one filtergraph: every
+the runner error. `normalize` runs both passes through the same
+`acompressor` peak stage first, creating the headroom the true-peak
+ceiling needs on a hot voice: pass 1 runs `loudnorm … print_format=json`
+over the compressed stream and parses the measured values, pass 2 applies
+the same compressor, then the values with `linear=true`, resampled to
+`sample-rate-hz`, and an `alimiter` at the true-peak ceiling (loudnorm's
+own estimate lets about a quarter of a dB through when its 192 kHz stream
+is decimated, and the verification measures the decoded file). `mix` is one filtergraph: every
 layer is delayed (`adelay`) and scaled (`volume`), the voices are summed
 (`amix`, `normalize=0`), the beds are compressed with `sidechaincompress`
 keyed on the padded voice sum so they drop by about `duck-db` while the

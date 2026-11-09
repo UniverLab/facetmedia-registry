@@ -156,12 +156,19 @@ class TestNormalizeArgs(unittest.TestCase):
                 "-i",
                 "in.flac",
                 "-af",
-                "loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=-27.4:measured_TP=-7.13"
+                graph.COMPRESSOR
+                + ",loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=-27.4:measured_TP=-7.13"
                 ":measured_LRA=3.6:measured_thresh=-37.72:offset=1.72"
                 ":linear=true:print_format=summary"
                 ",aresample=48000,alimiter=limit=0.841395:level=false",
                 "out.wav",
             ],
+        )
+
+    def test_measure_chain_compresses_first(self) -> None:
+        self.assertEqual(
+            graph.measure_chain(-16.0, -1.5),
+            graph.COMPRESSOR + ",loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json",
         )
 
     def test_measure_args_decode_to_float_wav(self) -> None:

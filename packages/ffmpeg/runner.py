@@ -130,7 +130,8 @@ def _measure(path: Path, tmp: Path, tag: str) -> dict[str, Any]:
 def _two_pass(
     source: Path, out: Path, target_lufs: float, true_peak_db: float, rate: int, tmp: Path
 ) -> None:
-    """The two loudnorm passes: measure the source, then apply the values linearly."""
+    """The two loudnorm passes: measure the source through the compressor, then apply the
+    same compressor and values linearly."""
     done = _ffmpeg(
         [
             "-i",
