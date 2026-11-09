@@ -44,5 +44,6 @@ def test_the_four_headings_appear_in_order() -> None:
 def test_the_body_names_the_capability_and_the_damero() -> None:
     body = _body()
     assert "rembg.cutout" in body
+    assert "rembg.papel" in body
     assert "damero" in body
     assert "facet pull rembg" in body

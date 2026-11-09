@@ -22,6 +22,30 @@ cutout is deterministic given the weights, so the seed only labels the
 record — and `properties` with the measured `width`/`height` (the
 damero adds `"damero": true`).
 
+## Clean paper
+
+`rembg.papel` returns a plate to clean flat paper, so stains and torn
+corners disappear: the object's silhouette keeps its original pixels while
+everything outside becomes even paper.
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|-------|
+| `lamina` | path | yes | — | PNG, JPEG or WebP, resolved relative to the piece |
+
+`run` writes exactly one asset, `<lamina-stem>-papel.png` (RGB). The mask
+comes from the same `u2netp` session with `only_mask=True`, thresholded at
+40, widened with `MaxFilter(15)` and softened with `GaussianBlur(6)`. The
+paper colour is the median of the border: the first and last 30 rows, 300 px
+in from each side. Outside the silhouette the plate blends into that colour
+plus generated grain (sigma 1.6, `default_rng(7)`); inside it, the original
+RGB is kept untouched. `verify` therefore expects an RGB PNG for `papel`
+(the cutout and its `-damero` sibling keep their RGBA/RGB modes).
+
+Use it for plates photographed on parchment that go to the web, where a
+convincingly flat background matters more than a transparent one. This is a
+port of the lab's `tools/papel_limpio.py`; `lamina_web.py` stays out — it is
+a univerlab.org pipeline, not a Grafics piece.
+
 ## Verification and preview
 
 `verify` re-opens each PNG with Pillow: it must be a readable PNG at the

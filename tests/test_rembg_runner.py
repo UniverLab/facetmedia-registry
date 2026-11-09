@@ -40,6 +40,11 @@ PREVIEW_FIELDS = {
     "height",
 }
 CHECKER_COLORS = {(255, 255, 255), (216, 221, 226)}
+LAMINA_WIDTH = 640
+LAMINA_HEIGHT = 64
+PAPER = (210, 200, 190)
+OBJECT = (20, 120, 60)
+PAPER_TOLERANCE = 8
 
 #: The pull-time SDK surface the runner touches; the real one is copied in.
 STUB_SDK = """
@@ -115,7 +120,15 @@ def new_session(name, providers=None, **kwargs):
     return {"name": name, "providers": providers}
 
 
-def remove(image, session=None, **kwargs):
+def remove(image, session=None, only_mask=False, **kwargs):
+    if only_mask:
+        mask = Image.new("L", image.size, 255)
+        pixels = mask.load()
+        width, height = mask.size
+        for y in range(height):
+            for x in range(width // 2, width):
+                pixels[x, y] = 0
+        return mask
     rgba = image.convert("RGBA")
     pixels = rgba.load()
     width, height = rgba.size
@@ -156,6 +169,19 @@ def _piece(tmp_path: Path) -> Path:
     return piece
 
 
+def _papel_piece(tmp_path: Path) -> Path:
+    """A wide plate: flat paper P on the right, an object O in the left half."""
+    piece = tmp_path / "papel-piece"
+    piece.mkdir()
+    plate = PIL.Image.new("RGB", (LAMINA_WIDTH, LAMINA_HEIGHT), PAPER)
+    pixels = plate.load()
+    for y in range(10, 54):
+        for x in range(10, 100):
+            pixels[x, y] = OBJECT
+    plate.save(piece / "lamina.png")
+    return piece
+
+
 def _request(
     verb: str,
     out_dir: Path,
@@ -163,12 +189,15 @@ def _request(
     models: dict[str, Path],
     assets: tuple[Path, ...] = (),
     inputs: dict[str, object] | None = None,
+    capability: str = "rembg.cutout",
 ) -> dict[str, object]:
+    if inputs is None:
+        inputs = {"foto": "entrada.png"}
     return {
         "protocol": 1,
         "verb": verb,
-        "capability": "rembg.cutout",
-        "inputs": {"foto": "entrada.png", **(inputs or {})},
+        "capability": capability,
+        "inputs": inputs,
         "out_dir": str(out_dir),
         "piece_dir": str(piece_dir),
         "models": {key: str(value) for key, value in models.items()},
@@ -396,3 +425,106 @@ def test_doctor_fails_a_same_size_weights_with_the_wrong_hash(tmp_path: Path) ->
     assert weights_check["ok"] is False
     assert "sha256" in weights_check["detail"]
     assert weights_check["fix"] == "facet pull rembg"
+
+
+def test_run_papel_writes_one_rgb_asset_on_flat_paper(tmp_path: Path) -> None:
+    """Papel keeps the object's pixels and replaces everything else with paper."""
+    stub_dir = _stub_modules(tmp_path)
+    home = tmp_path / "home"
+    weights = _model_file(home)
+    piece = _papel_piece(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(stub_dir, tmp_path)
+    request = _request(
+        "run",
+        out,
+        piece,
+        {"u2netp": weights},
+        inputs={"lamina": "lamina.png"},
+        capability="rembg.papel",
+    )
+    done, result = _call(stub_dir, "run", request, tmp_path, env)
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert result is not None
+    path = out / "lamina-papel.png"
+    assert path.is_file()
+    assert not (out / "lamina-damero.png").exists()
+    with PIL.Image.open(path) as image:
+        assert image.mode == "RGB"
+        assert image.size == (LAMINA_WIDTH, LAMINA_HEIGHT)
+        assert image.getpixel((50, 30)) == OBJECT
+        paper = image.getpixel((500, 30))
+    assert all(abs(got - want) <= PAPER_TOLERANCE for got, want in zip(paper, PAPER, strict=True))
+    session = json.loads((tmp_path / "session.json").read_text(encoding="utf-8"))
+    assert session["name"] == "u2netp"
+    assets = result["assets"]
+    assert [asset["file"] for asset in assets] == ["lamina-papel.png"]
+    assert assets[0]["name"] == "lamina"
+    assert assets[0]["kind"] == "image"
+    assert assets[0]["seed"] == 0
+    assert "damero" not in assets[0]["properties"]
+
+
+def test_verify_papel_expects_rgb_and_rejects_rgba(tmp_path: Path) -> None:
+    """Without the papel branch the RGBA fallback would reject every output."""
+    stub_dir = _stub_modules(tmp_path)
+    home = tmp_path / "home"
+    weights = _model_file(home)
+    piece = _papel_piece(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    good = out / "lamina-papel.png"
+    PIL.Image.new("RGB", (LAMINA_WIDTH, LAMINA_HEIGHT), PAPER).save(good)
+    stale = tmp_path / "stale" / "lamina-papel.png"
+    stale.parent.mkdir()
+    PIL.Image.new("RGBA", (LAMINA_WIDTH, LAMINA_HEIGHT), (*PAPER, 255)).save(stale)
+    env = _environment(stub_dir, tmp_path)
+    request = _request(
+        "verify",
+        out,
+        piece,
+        {"u2netp": weights},
+        assets=(good, stale),
+        inputs={"lamina": "lamina.png"},
+        capability="rembg.papel",
+    )
+    done, result = _call(stub_dir, "verify", request, tmp_path, env)
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert result is not None
+    rgb, rgba = result["assets"]
+    assert rgb["passed"] is True
+    assert rgb["metrics"]["mode"] == "RGB"
+    assert rgba["passed"] is False
+    assert rgba["metrics"]["mode"] == "RGBA"
+
+
+def test_preview_papel_writes_the_image_fields(tmp_path: Path) -> None:
+    stub_dir = _stub_modules(tmp_path)
+    home = tmp_path / "home"
+    weights = _model_file(home)
+    piece = _papel_piece(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    asset = out / "lamina-papel.png"
+    PIL.Image.new("RGB", (LAMINA_WIDTH, LAMINA_HEIGHT), PAPER).save(asset)
+    env = _environment(stub_dir, tmp_path)
+    request = _request(
+        "preview",
+        out,
+        piece,
+        {"u2netp": weights},
+        assets=(asset,),
+        inputs={"lamina": "lamina.png"},
+        capability="rembg.papel",
+    )
+    done, result = _call(stub_dir, "preview", request, tmp_path, env)
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert result is not None
+    assert [entry["file"] for entry in result["assets"]] == ["lamina-papel.png"]
+    data = json.loads((out / "lamina-papel.png.preview.json").read_text(encoding="utf-8"))
+    assert set(data) == PREVIEW_FIELDS
+    assert data["prompt"] == "papel limpio de lamina"
+    assert data["name"] == "lamina"
+    assert data["seed"] == 0
+    assert (data["width"], data["height"]) == (LAMINA_WIDTH, LAMINA_HEIGHT)

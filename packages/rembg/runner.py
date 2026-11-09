@@ -26,10 +26,12 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from facet_runner_sdk import Request, Runner
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 runner = Runner()
 
@@ -44,6 +46,14 @@ CHECKER_FILL = "#d8dde2"
 PULL_FIX = "facet pull rembg"
 #: The cutout is deterministic given the weights; the seed labels the record.
 SEED = 0
+#: Clean paper: the mask threshold, the filter sizes and the paper sampling.
+PAPEL_THRESHOLD = 40
+MAXFILTER = 15
+BLUR = 6
+BORDER_ROWS = 30
+BORDER_INSET = 300
+GRAIN_SIGMA = 1.6
+GRAIN_SEED = 7
 #: What the doctor proves importable, with the distribution each comes from.
 DOCTOR_IMPORTS = (
     ("rembg", "rembg"),
@@ -63,6 +73,11 @@ def _tool() -> dict[str, str]:
     return {"name": str(manifest["tool_name"]), "version": str(manifest["version"])}
 
 
+def _capability(req: Request) -> str:
+    """The bare capability name (cutout or papel) this request asked for."""
+    return req.capability.rsplit(".", 1)[-1]
+
+
 def _foto(params: dict[str, Any], req: Request) -> Path:
     """The piece's photo, resolved against the piece directory."""
     raw = params.get("foto")
@@ -73,6 +88,19 @@ def _foto(params: dict[str, Any], req: Request) -> Path:
         path = req.piece_dir / path
     if not path.is_file():
         raise ValueError(f"{path}: no such foto")
+    return path
+
+
+def _lamina(params: dict[str, Any], req: Request) -> Path:
+    """The piece's plate, resolved against the piece directory."""
+    raw = params.get("lamina")
+    if not raw:
+        raise ValueError("the piece has no lamina")
+    path = Path(str(raw))
+    if not path.is_absolute():
+        path = req.piece_dir / path
+    if not path.is_file():
+        raise ValueError(f"{path}: no such lamina")
     return path
 
 
@@ -113,6 +141,38 @@ def _size(path: Path) -> tuple[int, int]:
         return int(image.width), int(image.height)
 
 
+def _paper_color(rgb: np.ndarray) -> np.ndarray:
+    """The border median: 30 rows top and bottom, 300 px in from each side."""
+    border = np.concatenate(
+        [
+            rgb[:BORDER_ROWS, BORDER_INSET:-BORDER_INSET].reshape(-1, 3),
+            rgb[-BORDER_ROWS:, BORDER_INSET:-BORDER_INSET].reshape(-1, 3),
+        ]
+    )
+    return np.median(border, axis=0)
+
+
+def _papel_mask(mask: Image.Image) -> Image.Image:
+    """The plate silhouette: threshold 40, MaxFilter 15, GaussianBlur 6."""
+    return (
+        mask.convert("L")
+        .point(lambda value: 255 if value > PAPEL_THRESHOLD else 0)
+        .filter(ImageFilter.MaxFilter(MAXFILTER))
+        .filter(ImageFilter.GaussianBlur(BLUR))
+    )
+
+
+def _clean_paper(image: Image.Image, mask: Image.Image) -> Image.Image:
+    """Object pixels kept, everything else blended into even paper with grain."""
+    alpha = np.asarray(mask, dtype=float)[..., None] / 255
+    rgb = np.asarray(image, dtype=float)
+    paper = _paper_color(rgb)
+    rng = np.random.default_rng(GRAIN_SEED)
+    grain = rng.normal(0, GRAIN_SIGMA, rgb.shape[:2])[..., None]
+    clean = np.clip(paper + grain, 0, 255)
+    return Image.fromarray((rgb * alpha + clean * (1 - alpha)).astype(np.uint8))
+
+
 def _asset(foto: Path, path: Path, params: dict[str, Any], damero: bool = False) -> dict[str, Any]:
     """One output record: both PNGs share the foto's stem as their name."""
     width, height = _size(path)
@@ -131,8 +191,22 @@ def _asset(foto: Path, path: Path, params: dict[str, Any], damero: bool = False)
     }
 
 
-@runner.verb("run")
-def run(req: Request) -> dict[str, Any]:
+def _papel_asset(lamina: Path, path: Path, params: dict[str, Any]) -> dict[str, Any]:
+    """The clean-paper output record, named after the lamina's stem."""
+    width, height = _size(path)
+    return {
+        "file": path.name,
+        "name": _asset_name(lamina.stem),
+        "kind": "image",
+        "mime": "image/png",
+        "properties": {"width": width, "height": height},
+        "params": {"lamina": str(params["lamina"])},
+        "seed": SEED,
+        "inputs": [str(params["lamina"])],
+    }
+
+
+def _run_cutout(req: Request) -> dict[str, Any]:
     params = dict(req.inputs)
     foto = _foto(params, req)
     rembg = importlib.import_module("rembg")
@@ -149,12 +223,33 @@ def run(req: Request) -> dict[str, Any]:
     return {"tool": _tool(), "assets": assets}
 
 
+def _run_papel(req: Request) -> dict[str, Any]:
+    params = dict(req.inputs)
+    lamina = _lamina(params, req)
+    rembg = importlib.import_module("rembg")
+    image = Image.open(lamina).convert("RGB")
+    mask = rembg.remove(image, session=_session(req), only_mask=True)
+    clean = _clean_paper(image, _papel_mask(mask))
+    path = req.out_dir / f"{lamina.stem}-papel.png"
+    clean.save(path)
+    return {"tool": _tool(), "assets": [_papel_asset(lamina, path, params)]}
+
+
+@runner.verb("run")
+def run(req: Request) -> dict[str, Any]:
+    if _capability(req) == "papel":
+        return _run_papel(req)
+    return _run_cutout(req)
+
+
 def _expected_mode(req: Request, path: Path) -> str:
-    """RGBA for the cutout, RGB for its ``-damero`` sibling.
+    """RGBA for the cutout, RGB for its ``-damero`` sibling and for clean paper.
 
     The piece's ``foto`` names both files exactly; without it the ``-damero``
     suffix is the fallback.
     """
+    if _capability(req) == "papel":
+        return "RGB"
     foto = dict(req.inputs).get("foto")
     if foto:
         stem = Path(str(foto)).stem
@@ -213,13 +308,22 @@ def _preview_data(path: Path, name: str, prompt: str) -> dict[str, Any]:
     }
 
 
+def _preview_source(req: Request, params: dict[str, Any]) -> tuple[str, str]:
+    """The input's stem and the prompt that labels the record."""
+    if _capability(req) == "papel":
+        lamina = params.get("lamina")
+        stem = Path(str(lamina)).stem if lamina else ""
+        return stem, f"papel limpio de {stem}" if stem else "papel limpio"
+    foto = params.get("foto")
+    stem = Path(str(foto)).stem if foto else ""
+    return stem, f"cutout of {stem}" if stem else "cutout"
+
+
 @runner.verb("preview")
 def preview(req: Request) -> dict[str, Any]:
     params = dict(req.inputs)
-    foto = params.get("foto")
-    stem = Path(str(foto)).stem if foto else ""
+    stem, prompt = _preview_source(req, params)
     name = _asset_name(stem)
-    prompt = f"cutout of {stem}" if stem else "cutout"
     entries = []
     for path in req.assets:
         data = _preview_data(path, name, prompt)

@@ -64,3 +64,15 @@ description = "Photo to cut out (PNG, JPEG or WebP), resolved relative to the pi
 
 [capabilities.cutout.preview]
 viewer = "image"
+
+[capabilities.papel]
+summary = "Clean paper for a plate: the object keeps its original pixels while everything outside its rembg U2NetP silhouette becomes even paper with grain"
+kind = "image"
+
+[capabilities.papel.inputs.lamina]
+type = "path"
+required = true
+description = "Plate photo to clean (PNG, JPEG or WebP), resolved relative to the piece file; writes <lamina-stem>-papel.png as even paper with grain behind the object."
+
+[capabilities.papel.preview]
+viewer = "image"

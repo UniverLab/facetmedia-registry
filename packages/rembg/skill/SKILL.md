@@ -1,6 +1,6 @@
 ---
 name: rembg
-description: Cut the background out of a photo on CPU with rembg's U2NetP, writing an alpha PNG and a checkerboard preview for edge review.
+description: Cut a photo's background out or return a plate to clean paper on CPU with rembg's U2NetP, writing an alpha PNG or an even-paper RGB PNG.
 ---
 # rembg
 
@@ -8,6 +8,11 @@ description: Cut the background out of a photo on CPU with rembg's U2NetP, writi
 `CPUExecutionProvider`: it writes `<foto-stem>.png` with an alpha channel
 and `<foto-stem>-damero.png`, the same cutout over a checkerboard so a
 person can judge thin edges without touching the alpha file.
+
+`rembg.papel` returns a plate to clean flat paper: the object's silhouette
+keeps its original pixels while everything outside it becomes even paper
+with grain, so stains and torn corners go away. It writes exactly one
+asset, `<lamina-stem>-papel.png` (RGB).
 
 ## When to use
 
@@ -29,6 +34,16 @@ foto = "entrada.png"
 `<foto-stem>.png` (RGBA) and `<foto-stem>-damero.png` (the cutout over a
 white-and-grey checkerboard) into the output directory.
 
+For clean paper, give the plate instead:
+
+```toml
+[inputs]
+lamina = "lamina.png"
+```
+
+`lamina` is the plate, resolved the same way relative to the piece file.
+`run` writes `<lamina-stem>-papel.png` (RGB) only.
+
 ## Judging the result
 
 `verify` re-opens both PNGs: the cutout must be RGBA, the damero RGB, and
@@ -47,5 +62,4 @@ a eaten edge or a leftover background patch is caught by eye.
   bigger session model; `rembg.cutout` pins `u2netp` for CPU speed.
 - **The weights come from `facet pull rembg`.** A missing or mismatched
   `u2netp.onnx` fails `doctor` with that fix; tests and CI never download.
-- **`rembg.papel` is coming** in a later change to this same package; this
-  stub names only `rembg.cutout`.
+  `rembg.papel` uses the same `u2netp` session and the same pull.
