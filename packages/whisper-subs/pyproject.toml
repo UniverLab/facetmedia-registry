@@ -1,0 +1,11 @@
+[project]
+name = "facet-whisper-subs"
+version = "0.1.0"
+description = "Validated SRT and VTT subtitles from a whisper JSON sidecar, checked for monotonic non-overlapping times."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[tool.uv]
+package = false

@@ -60,3 +60,6 @@ name = "rembg"
 
 [[packages]]
 name = "pillow"
+
+[[packages]]
+name = "whisper-subs"
