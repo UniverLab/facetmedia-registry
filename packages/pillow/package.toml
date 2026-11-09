@@ -1,0 +1,81 @@
+name = "pillow"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "Jeffrey A. Clark and contributors (Pillow)"
+tool_name = "Pillow"
+description = "Base image operations on CPU with Pillow: convert between PNG, JPEG and WebP, resize with or without aspect, and contact sheets with dividers"
+facet = "image"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 0.2
+exclusive = false
+platforms = ["linux"]
+
+[[licenses]]
+subject = "pillow"
+spdx = "MIT-CMU"
+
+[capabilities.base]
+summary = "Convert a still between PNG, JPEG and WebP, resize it exact or aspect-preserving, or lay a contact sheet of it, one op per table applied in order"
+kind = "image"
+
+[capabilities.base.inputs.imagen]
+type = "path"
+required = true
+description = "Source image (PNG, JPEG, WebP or any Pillow-readable format), resolved relative to the piece file; every op applies to it in order and writes <imagen-stem>-<i>-<operacion>.<ext> beside the piece."
+
+[capabilities.base.inputs.operaciones]
+type = "array"
+min_items = 1
+required = true
+description = "One table per operation, applied in order in memory starting from imagen; each writes one file named <imagen-stem>-<i>-<operacion>.<ext> where i is the 1-based op position."
+
+[capabilities.base.inputs.operaciones.items.operacion]
+type = "enum"
+values = ["convertir", "redimensionar", "hoja"]
+required = true
+description = "The operation: convertir re-encodes the format, redimensionar resizes, hoja lays a contact sheet."
+
+[capabilities.base.inputs.operaciones.items.formato]
+type = "enum"
+values = ["png", "jpeg", "webp"]
+description = "convertir only, required there: the output format; writes .png, .jpg or .webp."
+
+[capabilities.base.inputs.operaciones.items.modo]
+type = "enum"
+values = ["RGB", "RGBA", "L"]
+description = "convertir only: the output mode; jpeg output is always RGB, and RGBA with jpeg is rejected."
+
+[capabilities.base.inputs.operaciones.items.ancho]
+type = "integer"
+min = 1
+description = "redimensionar only: target width; with alto it resizes exact (aspect may change), alone it preserves aspect."
+
+[capabilities.base.inputs.operaciones.items.alto]
+type = "integer"
+min = 1
+description = "redimensionar only: target height; at least one of ancho or alto is required."
+
+[capabilities.base.inputs.operaciones.items.columnas]
+type = "integer"
+min = 1
+description = "hoja only, required there: number of tile columns."
+
+[capabilities.base.inputs.operaciones.items.filas]
+type = "integer"
+min = 1
+description = "hoja only, required there: number of tile rows."
+
+[capabilities.base.preview]
+viewer = "image"

@@ -230,6 +230,7 @@ def test_the_index_lists_the_package() -> None:
         "freecad",
         "demostage",
         "rembg",
+        "pillow",
     ]
 
 

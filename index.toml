@@ -57,3 +57,6 @@ name = "demostage"
 
 [[packages]]
 name = "rembg"
+
+[[packages]]
+name = "pillow"
