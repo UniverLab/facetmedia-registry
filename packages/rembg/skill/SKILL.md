@@ -44,6 +44,9 @@ lamina = "lamina.png"
 `lamina` is the plate, resolved the same way relative to the piece file.
 `run` writes `<lamina-stem>-papel.png` (RGB) only.
 
+This is a port of the lab's `tools/papel_limpio.py`; `lamina_web.py` stays
+out — it is a univerlab.org pipeline, not a Grafics piece.
+
 ## Judging the result
 
 `verify` re-opens both PNGs: the cutout must be RGBA, the damero RGB, and
@@ -52,6 +55,12 @@ kind's fields for each asset with the prompt `cutout of <foto-stem>` and
 seed 0 — the cutout is deterministic given the weights, so the seed only
 labels the record. A person judges the edges on the damero asset: a halo,
 a eaten edge or a leftover background patch is caught by eye.
+
+The lab's `entrada.png` (1344×768) cut out in 1.48 s on CPU with rembg
+2.0.67's U2NetP and left 66.59 % of pixels transparent; the damero view
+kept the figure, the book and the lamp. The package ships that lab run:
+`examples/remover.py` (the script), `examples/medicion.json` (its record),
+`examples/vista-damero.png` (the damero) and `examples/README.md`.
 
 ## Pitfalls
 
@@ -63,3 +72,6 @@ a eaten edge or a leftover background patch is caught by eye.
 - **The weights come from `facet pull rembg`.** A missing or mismatched
   `u2netp.onnx` fails `doctor` with that fix; tests and CI never download.
   `rembg.papel` uses the same `u2netp` session and the same pull.
+- **Attribution.** rembg's code is MIT (Daniel Gatis); the U2NetP weights
+  are U-2-Net, Apache-2.0 (xuebinqin et al.), fetched by
+  `facet pull rembg`; both are recorded in the manifest.
