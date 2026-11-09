@@ -13,12 +13,15 @@ to render identically on GitHub and inside HyperFrames.
 
 ## Text to path with opentype.js
 
-Load each font file once with `loadSync`:
+Never use `loadSync` — removed in opentype.js 2.0.0, it returns undefined; use `parse`.
+
+Load each font file once with `parse` over the file bytes:
 
 ```js
+const fs = require('fs');
 const opentype = require('opentype.js');
-const mono = opentype.loadSync('fonts/SometypeMono-wght.ttf');
-const italic = opentype.loadSync('fonts/OldStandard-Italic.ttf');
+const mono = opentype.parse(fs.readFileSync('fonts/SometypeMono-wght.ttf'));
+const italic = opentype.parse(fs.readFileSync('fonts/OldStandard-Italic.ttf'));
 ```
 
 Outline a string left-anchored at `(x, baselineY)`, kerning on:
@@ -93,7 +96,7 @@ if (!datosPath) {
 }
 const datos = JSON.parse(fs.readFileSync(datosPath, 'utf8'));
 
-const font = opentype.loadSync(path.join(__dirname, 'font.ttf'));
+const font = opentype.parse(fs.readFileSync(path.join(__dirname, 'font.ttf')));
 
 // ...layout arithmetic on spacedPath/textPath widths...
 // ...embed rasters as data:image/...;base64...
