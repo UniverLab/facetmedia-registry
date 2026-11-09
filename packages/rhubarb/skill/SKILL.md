@@ -73,7 +73,8 @@ means the wrong recognizer or a `dialogo` that does not match the audio.
   mouths will lie. The runner owns that flag; never build your own argv.
 - `dialogo` must be what the voice actually says. A mismatched script makes the
   phonetic recognizer place mouths for words nobody spoke.
-- The extraction must keep `res/` beside the ELF: the runner unpacks the zip
-  whole and runs the binary from its own directory for that reason.
+- The extraction keeps `res/` beside the ELF, but the run's cwd is the job out
+  dir, never the ELF's own directory: an ELF-dir cwd dies with
+  `basic_ios::clear: iostream error` after 100% progress.
 - `facet pull rhubarb` downloads 87 MB (the zip) and the environment; pulls and
   runs are exclusive, so a queued run starts only when the previous finishes.

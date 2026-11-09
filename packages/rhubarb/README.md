@@ -30,8 +30,9 @@ and the manifest pins that exact archive:
 and verifies the sha256 before it lands. The runner unpacks it once into
 `_rhubarb-lip-sync-1.14.0-linux/` beside `runner.py`, writing `zip.sha256` as
 its marker, and re-extracts on the next run only when the archive's hash no
-longer matches the marker. Rhubarb reads its `res/` directory relative to its
-own location, so the ELF always runs from the extraction directory.
+longer matches the marker. Rhubarb finds `res/` beside the executable, so the
+ELF is passed absolute; the run's cwd is the job out dir, because an ELF-dir
+cwd dies with `basic_ios::clear: iostream error` after 100% progress.
 
 ## Why a python-env engine and not `[engine.binary]`
 

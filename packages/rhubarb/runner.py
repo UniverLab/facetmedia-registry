@@ -142,7 +142,12 @@ def check_phonetic(argv: Sequence[str]) -> None:
 
 
 def _execute(argv: Sequence[str], cwd: Path) -> None:
-    """Run Rhubarb from its own directory; a non-zero exit fails the run."""
+    """Run Rhubarb from the job out dir; a non-zero exit fails the run.
+
+    An ELF-dir cwd breaks it: beside the binary the same absolute argv dies with
+    ``basic_ios::clear: iostream error`` after 100% progress, while a writable
+    cwd writes ``bocas.json``. The ELF is absolute, so ``res/`` still resolves.
+    """
     try:
         done = subprocess.run(
             argv,
@@ -218,7 +223,7 @@ def run(req: Request) -> dict[str, Any]:
     elf = _elf(req.model_path(MODEL_ID))
     argv = command(elf, voz, dialogo, out)
     check_phonetic(argv)
-    _execute(argv, elf.parent)
+    _execute(argv, req.out_dir)
     data = _read_bocas(out)
     return {"tool": dict(TOOL), "assets": [_asset(params, voz, dialogo, data)]}
 
@@ -338,13 +343,13 @@ def _doctor_binary(req: Request) -> dict[str, Any]:
         return _check("binary", False, str(exc), _pull_fix(False))
     if not os.access(elf, os.X_OK):
         return _check("binary", False, f"{elf}: the extracted ELF is not executable", "")
-    problem = _probe(elf)
+    problem = _probe(elf, req.out_dir)
     if problem is not None:
         return _check("binary", False, f"{elf}: {problem}", "")
     return _check("binary", True, f"{elf}: starts on this machine", "")
 
 
-def _probe(elf: Path) -> str | None:
+def _probe(elf: Path, cwd: Path) -> str | None:
     """Ask the binary for its usage; ``None`` when the kernel can start it.
 
     Any exit code is fine: Rhubarb answers usage with one. Only a failure to
@@ -354,7 +359,7 @@ def _probe(elf: Path) -> str | None:
     try:
         subprocess.run(
             [str(elf), "--help"],
-            cwd=str(elf.parent),
+            cwd=str(cwd),
             capture_output=True,
             text=True,
             timeout=PROBE_TIMEOUT_S,

@@ -118,7 +118,8 @@ def record():
     entry = {
         "argv": sys.argv[1:],
         "cwd": os.getcwd(),
-        "res": Path("res").is_dir(),
+        "cwd_res": Path("res").is_dir(),
+        "elf_res": (Path(sys.argv[0]).resolve().parent / "res").is_dir(),
     }
     with open(log, "a", encoding="utf-8") as stream:
         stream.write(json.dumps(entry) + "\\n")
@@ -130,6 +131,9 @@ def main():
     if args[:1] == ["--help"]:
         print("usage: rhubarb [options] <audio-file>")
         return 0
+    if Path(os.getcwd()) == Path(sys.argv[0]).resolve().parent:
+        print("basic_ios::clear: iostream error", file=sys.stderr)
+        return 1
     if os.environ.get("STUB_RHUBARB_FAIL") == "1":
         print("stub rhubarb: phonetic recognizer exploded", file=sys.stderr)
         return 3
@@ -326,7 +330,7 @@ def _run_cycle(
 
 def test_run_passes_the_phonetic_recognizer_and_json_output(tmp_path: Path) -> None:
     """The flags the spec exists for: ``-r phonetic -f json`` are in the argv."""
-    _result, _printed, entries, _out, _env = _run_cycle(tmp_path)
+    _result, _printed, entries, out, _env = _run_cycle(tmp_path)
     assert len(entries) == 1, entries
     argv = entries[0]["argv"]
     assert "-r" in argv and argv[argv.index("-r") + 1] == "phonetic"
@@ -334,10 +338,41 @@ def test_run_passes_the_phonetic_recognizer_and_json_output(tmp_path: Path) -> N
     assert "--dialogFile" in argv
     assert argv[argv.index("--dialogFile") + 1].endswith(DIALOGO)
     assert argv[argv.index("-o") + 1].endswith("bocas.json")
-    # Rhubarb's argv puts the WAV before -o and needs res/ beside the ELF.
+    # Rhubarb's argv puts the WAV before -o; the ZIP keeps res/ beside the ELF,
+    # but the run's cwd is the writable out dir, not the ELF's own directory.
     voice = next(index for index, token in enumerate(argv) if token.endswith(VOZ))
     assert voice < argv.index("-o")
-    assert entries[0]["res"] is True
+    assert entries[0]["elf_res"] is True
+    assert entries[0]["cwd_res"] is False
+    assert entries[0]["cwd"] == str(out)
+
+
+def test_the_run_uses_the_out_dir_as_cwd(tmp_path: Path) -> None:
+    """The closure fix: the ELF runs from the writable out dir, not its own."""
+    _result, _printed, entries, out, _env = _run_cycle(tmp_path)
+    assert entries[0]["cwd"] == str(out)
+    assert (out / "bocas.json").is_file()
+    cues = json.loads((out / "bocas.json").read_text(encoding="utf-8"))["mouthCues"]
+    assert cues
+    assert all(cue["value"] in "XABCDEFGH" for cue in cues)
+
+
+def test_the_elf_dir_cwd_defect_is_reproduced(tmp_path: Path) -> None:
+    """The closure finding: an ELF-dir cwd dies after 100% progress."""
+    _result, _printed, _entries, _out, env = _run_cycle(tmp_path)
+    elf = Path(env[EXTRACT_ENV]) / "_rhubarb-lip-sync-1.14.0-linux" / TOP_DIR / ELF_NAME
+    old = tmp_path / "old.json"
+    done = subprocess.run(
+        [sys.executable, str(elf), "-r", "phonetic", "-f", "json", "-o", str(old)],
+        cwd=elf.parent,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert done.returncode == 1
+    assert "basic_ios::clear" in done.stderr
+    assert not old.exists()
 
 
 def _runner_module(tmp_path: Path) -> Any:
@@ -550,7 +585,8 @@ def _doctor(tmp_path: Path, models: dict[str, Path], env: dict[str, str]) -> dic
 def test_doctor_passes_the_zip_and_the_extracted_binary(tmp_path: Path) -> None:
     stub_dir = _stubs(tmp_path)
     archive = _declared_model(tmp_path)
-    env = _environment(stub_dir, tmp_path / "extract")
+    log = tmp_path / "probe.jsonl"
+    env = _environment(stub_dir, tmp_path / "extract", {"STUB_RHUBARB_LOG": str(log)})
     checks = _doctor(tmp_path, {MODEL_ID: archive}, env)["checks"]
     by_name = {check["name"]: check for check in checks}
     assert by_name["zip"]["ok"] is True
@@ -558,6 +594,11 @@ def test_doctor_passes_the_zip_and_the_extracted_binary(tmp_path: Path) -> None:
     assert by_name["zip"]["fix"] == ""
     assert by_name["binary"]["ok"] is True
     assert by_name["binary"]["fix"] == ""
+    # The doctor's probe runs from the writable out dir too, never the ELF's.
+    probe = _read_lines(log)
+    assert [entry["argv"] for entry in probe] == [["--help"]]
+    assert probe[0]["cwd"] == str(tmp_path / "doctor-out")
+    assert probe[0]["elf_res"] is True
 
 
 def test_doctor_reports_a_missing_zip_with_the_pull_fix(tmp_path: Path) -> None:
