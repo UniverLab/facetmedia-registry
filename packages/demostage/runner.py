@@ -19,6 +19,7 @@ hand anyway.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import struct
@@ -205,22 +206,23 @@ def run(req: Request) -> dict[str, Any]:
     partitura = Path(str(params["partitura"]))
     score = _score(partitura)
     binary, version = _demo()
-    work = req.out_dir / WORK_DIRNAME
+    out_dir = Path(os.path.abspath(req.out_dir))
+    work = out_dir / WORK_DIRNAME
     work.mkdir(parents=True, exist_ok=True)
     recording = work / RECORDING_NAME
     _execute([binary, "record", str(partitura), "-o", str(recording)], partitura.parent)
     _execute([binary, "export", "gif,svg", str(recording)], work)
     stem = _score_name(score, partitura)
     gif, svg = _collect(score, work, stem)
-    _place(gif, req.out_dir)
-    _place(svg, req.out_dir)
-    probe = _gif_probe(req.out_dir / gif.name)
-    width, height = _svg_size(req.out_dir / svg.name)
+    _place(gif, out_dir)
+    _place(svg, out_dir)
+    probe = _gif_probe(out_dir / gif.name)
+    width, height = _svg_size(out_dir / svg.name)
     fps = _fps(score)
     seed = _seed(score)
     inputs = [str(partitura)]
-    gif_path = req.out_dir / gif.name
-    svg_path = req.out_dir / svg.name
+    gif_path = out_dir / gif.name
+    svg_path = out_dir / svg.name
     gif_name = _preview_name(gif_path.stem)
     svg_name = _preview_name(svg_path.stem)
     return {

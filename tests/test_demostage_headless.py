@@ -281,6 +281,7 @@ def _invoke(
     tmp_path: Path,
     env: dict[str, str],
     tag: str = "",
+    cwd: Path | None = None,
 ) -> tuple[subprocess.CompletedProcess[str], Path]:
     input_path = tmp_path / f"{verb}{tag}-request.json"
     result_path = tmp_path / f"{verb}{tag}-result.json"
@@ -296,6 +297,7 @@ def _invoke(
             str(result_path),
         ],
         env=env,
+        cwd=str(cwd) if cwd is not None else None,
         capture_output=True,
         text=True,
         timeout=120,
@@ -310,8 +312,9 @@ def _call(
     tmp_path: Path,
     env: dict[str, str],
     tag: str = "",
+    cwd: Path | None = None,
 ) -> dict[str, Any]:
-    done, result_path = _invoke(verb, request, tmp_path, env, tag)
+    done, result_path = _invoke(verb, request, tmp_path, env, tag, cwd)
     assert done.returncode == 0, done.stdout + done.stderr
     return json.loads(result_path.read_text(encoding="utf-8"))
 
@@ -374,6 +377,26 @@ def test_run_records_then_exports_and_writes_both_assets(tmp_path: Path) -> None
     assert result["tool"] == {"name": "demostage", "version": "0.4.0"}
     assert (out / f"{NAME}.gif").is_file()
     assert (out / f"{NAME}.svg").is_file()
+
+
+def test_a_relative_out_dir_lands_the_gif_svg_and_recording(tmp_path: Path) -> None:
+    stub_dir, bin_dir = _stubs(tmp_path)
+    log = tmp_path / "demo.jsonl"
+    env = _environment(stub_dir, bin_dir, {"STUB_DEMO_LOG": str(log)})
+    piece_dir, score = _piece(tmp_path)
+    out = tmp_path / "rel-out"
+    out.mkdir()
+    request = _request("run", Path("rel-out"), piece_dir, {"partitura": str(score)})
+    _call("run", request, tmp_path, env, tag="-relative", cwd=tmp_path)
+
+    assert (out / f"{NAME}.gif").is_file()
+    assert (out / f"{NAME}.svg").is_file()
+    assert (out / "_demostage" / "demo.rec").is_file()
+    calls = [entry for entry in _read_lines(log) if entry["argv"][0] in {"record", "export"}]
+    record, export = calls
+    assert Path(record["argv"][record["argv"].index("-o") + 1]).is_absolute()
+    assert Path(export["argv"][2]).is_absolute()
+    assert Path(export["cwd"]) == out / "_demostage"
 
 
 def test_a_failing_record_fails_the_run(tmp_path: Path) -> None:
