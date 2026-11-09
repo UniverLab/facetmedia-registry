@@ -95,6 +95,13 @@ def _clips(params: dict[str, Any]) -> list[dict[str, Any]]:
     return clips
 
 
+def _preview_params(params: dict[str, Any]) -> dict[str, Any]:
+    """The params preview clips from: the run record's flat single clip too."""
+    if params.get("clip") or "name" not in params or "text" not in params:
+        return params
+    return {**params, "clip": [{"name": params["name"], "text": params["text"]}]}
+
+
 def _params(clip: dict[str, Any]) -> dict[str, Any]:
     """The clip's effective piece fields, under their manifest names.
 
@@ -256,7 +263,7 @@ def _verify_clip(model: Any, audio: Any, path: Path, clip: dict[str, Any]) -> di
 @runner.verb("preview")
 def preview(req: Request) -> dict[str, Any]:
     params = dict(req.inputs)
-    clips = {clip["name"]: clip for clip in _clips(params)}
+    clips = {clip["name"]: clip for clip in _clips(_preview_params(params))}
     model = _whisper(req)
     entries = []
     for path in req.assets:
