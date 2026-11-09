@@ -8,14 +8,15 @@
 // renders the slide HTML with the host Chromium through the pinned
 // `playwright-core`, waiting for `document.fonts.ready`, switching to print
 // media and asking for `preferCSSPageSize` so the page's own `@page` rule wins.
-// It then rasterizes one PNG per page with the host `pdftoppm`, records the
-// page count, and never downloads a browser or installs poppler.
+// It then screenshots one PNG per page from the same Chromium run and reads
+// page counts and text through the pinned `pdfjs-dist`, so no host poppler is
+// ever needed and no browser is downloaded.
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { spawnSync } = require("node:child_process");
 const { pathToFileURL } = require("node:url");
 const pagina = require("./pagina.js");
+const raster = require("./raster.js");
 
 const PLAYWRIGHT = "playwright-core";
 const CHROME_CANDIDATES = [
@@ -27,12 +28,7 @@ const CHROME_FIX = "export CHROME_PATH=/usr/bin/google-chrome";
 const CHROME_MISSING =
   "No Chrome/Chromium found; set CHROME_PATH " +
   `(${CHROME_FIX}). Tried: CHROME_PATH, ${CHROME_CANDIDATES.join(", ")}`;
-const POPPLER_FIX = "sudo apt-get install -y poppler-utils";
-const POPPLER_MISSING = `poppler-utils is required to rasterize the page PNGs (${POPPLER_FIX})`;
-const PDFINFO_MISSING = `pdfinfo is required to count the PDF's pages (${POPPLER_FIX})`;
-const PDFTOTEXT_MISSING = `pdftotext is required to check the rendered numbers (${POPPLER_FIX})`;
 const PAGINA = "deck.pagina";
-const PDFINFO_PAGE_RE = /^Pages:\s+(\d+)/m;
 const MIN_NODE_MAJOR = 22;
 const MAX_SUMMARY = 160;
 const VIEWPORT = { width: 1060, height: 800 };
@@ -181,7 +177,7 @@ function slideFile(request) {
   return file;
 }
 
-// --- the host Chromium and poppler.
+// --- the host Chromium; every raster comes from it or from pdfjs-dist.
 
 function isExecutable(file) {
   try {
@@ -192,15 +188,6 @@ function isExecutable(file) {
   }
 }
 
-function which(name) {
-  for (const dir of (process.env.PATH || "").split(path.delimiter)) {
-    if (!dir) continue;
-    const candidate = path.join(dir, name);
-    if (isExecutable(candidate)) return candidate;
-  }
-  return "";
-}
-
 function findChrome() {
   const found = [process.env.CHROME_PATH, ...CHROME_CANDIDATES].find(
     (candidate) => candidate && isExecutable(candidate),
@@ -208,7 +195,31 @@ function findChrome() {
   return found || "";
 }
 
-function renderPdf(htmlPath, pdfPath, chrome) {
+// The page geometry a screenshot clip needs: the `@page` size in px when the
+// stylesheet declares one, else the laid-out width over the pages' share of
+// the scroll height.
+function pageGeometry(pages) {
+  const sheets = Array.from(document.styleSheets || []);
+  for (const sheet of sheets) {
+    let rules = [];
+    try {
+      rules = Array.from(sheet.cssRules || []);
+    } catch (error) {
+      continue;
+    }
+    for (const rule of rules) {
+      const size = rule && rule.style ? rule.style.getPropertyValue("size") : "";
+      const pair = /^(\d+(?:\.\d+)?)px\s+(\d+(?:\.\d+)?)px$/.exec(String(size).trim());
+      if (pair) return { width: Number(pair[1]), height: Number(pair[2]) };
+    }
+  }
+  return {
+    width: document.documentElement.scrollWidth,
+    height: Math.ceil(document.documentElement.scrollHeight / Math.max(1, pages)),
+  };
+}
+
+async function renderPdf(htmlPath, pdfPath, chrome, shotsDir) {
   const { dir } = packageDir(PLAYWRIGHT);
   const playwright = require(dir);
   return playwright.chromium
@@ -227,6 +238,19 @@ function renderPdf(htmlPath, pdfPath, chrome) {
           printBackground: true,
           preferCSSPageSize: true,
         });
+        if (shotsDir) {
+          await page.emulateMedia({ media: "screen" });
+          const count = await raster.pdfPageCount(pdfPath);
+          const geometry = await page.evaluate(pageGeometry, count);
+          // A screenshot clip never reaches past the visible viewport, so the
+          // viewport is one page tall and each page is scrolled into view
+          // before its screenshot. That keeps long decks out of one huge surface.
+          await page.setViewportSize({ width: geometry.width, height: geometry.height });
+          for (let index = 1; index <= count; index += 1) {
+            await page.evaluate((y) => window.scrollTo(0, y), (index - 1) * geometry.height);
+            await page.screenshot({ path: path.join(shotsDir, `page-${index}.png`) });
+          }
+        }
       } finally {
         await browser.close();
       }
@@ -248,10 +272,6 @@ function numberedPages(dir) {
   }
   found.sort((left, right) => left.number - right.number);
   return found;
-}
-
-function pageNames(dir) {
-  return numberedPages(dir).map((item) => item.name);
 }
 
 function clearPages(dir) {
@@ -280,35 +300,6 @@ function normalizePages(dir) {
   });
 }
 
-function rasterize(pdf, dir) {
-  const poppler = which("pdftoppm");
-  if (!poppler) throw new Error(POPPLER_MISSING);
-  clearPages(dir);
-  const prefix = path.join(dir, "page");
-  const done = spawnSync(poppler, ["-png", pdf, prefix], { encoding: "utf8" });
-  if (done.error) throw new Error(`cannot run pdftoppm: ${done.error.message}`);
-  if (done.status !== 0) {
-    const output = `${done.stdout || ""}${done.stderr || ""}`.trim();
-    throw new Error(`pdftoppm exited ${done.status}: ${output}`);
-  }
-  const pages = normalizePages(dir);
-  if (!pages.length) throw new Error(`pdftoppm wrote no page PNGs for ${path.basename(pdf)}`);
-  return pages;
-}
-
-function pdfPageCount(pdf) {
-  const poppler = which("pdfinfo");
-  if (!poppler) throw new Error(PDFINFO_MISSING);
-  const done = spawnSync(poppler, [pdf], { encoding: "utf8" });
-  if (done.error) throw new Error(`cannot run pdfinfo: ${done.error.message}`);
-  const output = `${done.stdout || ""}${done.stderr || ""}`;
-  const match = PDFINFO_PAGE_RE.exec(output);
-  if (done.status !== 0 || !match) {
-    throw new Error(`pdfinfo could not count the pages of ${path.basename(pdf)}`);
-  }
-  return Number(match[1]);
-}
-
 function recordedPages(asset) {
   let stored = null;
   try {
@@ -331,11 +322,12 @@ async function runSlides(request) {
   const source = slideFile(request);
   const chrome = findChrome();
   if (!chrome) throw new Error(CHROME_MISSING);
-  if (!which("pdftoppm")) throw new Error(POPPLER_MISSING);
   const name = deckName(inputs);
   const pdf = path.join(outDir, `${name}.pdf`);
-  await renderPdf(source, pdf, chrome);
-  const pages = rasterize(pdf, outDir);
+  clearPages(outDir);
+  await renderPdf(source, pdf, chrome, outDir);
+  const pages = normalizePages(outDir);
+  if (!pages.length) throw new Error(`the render wrote no page PNGs for ${name}.pdf`);
   const { version } = packageDir(PLAYWRIGHT);
   return {
     tool: { name: "deck", version },
@@ -364,13 +356,18 @@ async function runPagina(request) {
   pagina.checkSource(fs.readFileSync(source, "utf8"));
   const chrome = findChrome();
   if (!chrome) throw new Error(CHROME_MISSING);
-  if (!which("pdftoppm")) throw new Error(POPPLER_MISSING);
-  if (!which("pdftotext")) throw new Error(PDFTOTEXT_MISSING);
   const name = deckName(inputs);
   const pdf = path.join(outDir, `${name}.pdf`);
-  await pagina.renderPdf(source, pdf, chrome);
-  pagina.checkText(pdf);
-  const pages = rasterize(pdf, outDir);
+  clearPages(outDir);
+  await pagina.renderPdf(source, pdf, chrome, outDir);
+  try {
+    await pagina.checkText(pdf);
+  } catch (error) {
+    clearPages(outDir);
+    throw error;
+  }
+  const pages = normalizePages(outDir);
+  if (!pages.length) throw new Error(`the render wrote no page PNGs for ${name}.pdf`);
   const { version } = packageDir(PLAYWRIGHT);
   return {
     tool: { name: "deck", version },
@@ -389,14 +386,16 @@ async function runPagina(request) {
   };
 }
 
-function verify(request) {
-  return { assets: (request.assets || []).map(verdictOfSlides) };
+async function verify(request) {
+  const assets = [];
+  for (const asset of request.assets || []) assets.push(await verdictOfSlides(asset));
+  return { assets };
 }
 
-function verdictOfSlides(asset) {
+async function verdictOfSlides(asset) {
   const file = path.basename(String(asset));
   const rendered = numberedPages(path.dirname(String(asset))).length;
-  const fresh = rendered || pdfPageCount(String(asset));
+  const fresh = rendered || (await raster.pdfPageCount(String(asset)));
   const recorded = recordedPages(asset);
   if (recorded !== null && recorded !== fresh) {
     throw new Error(
@@ -408,7 +407,7 @@ function verdictOfSlides(asset) {
     passed: true,
     metrics: { page_count: fresh },
     thresholds: {},
-    verifier: "pdftoppm",
+    verifier: "chromium-pdfjs",
   };
 }
 
@@ -417,18 +416,19 @@ async function preview(request) {
   const prompt = String(inputs.prompt || "");
   if (!prompt) throw new Error("prompt is required");
   const seed = seedOf(inputs);
-  const entries = (request.assets || []).map((asset) => previewOf(asset, seed));
+  const chrome = findChrome();
+  if (!chrome) throw new Error(CHROME_MISSING);
+  const entries = [];
+  for (const asset of request.assets || []) entries.push(await previewOf(asset, seed, chrome));
   return { assets: entries };
 }
 
-function previewOf(asset, seed) {
+async function previewOf(asset, seed, chrome) {
   const file = path.basename(String(asset));
   const dir = path.dirname(String(asset));
-  let pages = pageNames(dir);
-  const recorded = recordedPages(asset);
-  if (!pages.length || (recorded !== null && pages.length !== recorded)) {
-    pages = rasterize(String(asset), dir);
-  }
+  clearPages(dir);
+  await raster.rasterizePdf(String(asset), dir, chrome);
+  const pages = normalizePages(dir);
   const summary = `${file} · ${pages.length} page${pages.length === 1 ? "" : "s"} · seed ${seed}`;
   const data = {
     preview: 1,
@@ -719,26 +719,8 @@ function chromiumCheck() {
   return { name: "chromium", ok: false, detail: CHROME_MISSING, fix: CHROME_FIX };
 }
 
-function popplerCheck() {
-  const poppler = which("pdftoppm");
-  if (!poppler) {
-    return { name: "pdftoppm", ok: false, detail: POPPLER_MISSING, fix: POPPLER_FIX };
-  }
-  const done = spawnSync(poppler, ["-v"], { encoding: "utf8" });
-  const output = `${done.stdout || ""}${done.stderr || ""}`.trim().split("\n")[0];
-  if (done.error || (done.status !== 0 && !/pdftoppm version/i.test(output))) {
-    return {
-      name: "pdftoppm",
-      ok: false,
-      detail: output || `pdftoppm -v exited ${done.status}`,
-      fix: POPPLER_FIX,
-    };
-  }
-  return { name: "pdftoppm", ok: true, detail: output || `pdftoppm at ${poppler}`, fix: "" };
-}
-
 async function doctor(request) {
-  const checks = [nodeCheck(), chromiumCheck(), popplerCheck()];
+  const checks = [nodeCheck(), chromiumCheck()];
   const depth = String(request.depth || "quick");
   if (depth === "full") checks.push(await throwawayCheck(request));
   return { checks };
@@ -750,16 +732,14 @@ async function throwawayCheck(request) {
   if (!chrome) {
     return { name: "render", ok: false, detail: CHROME_MISSING, fix: CHROME_FIX };
   }
-  if (!which("pdftoppm")) {
-    return { name: "render", ok: false, detail: POPPLER_MISSING, fix: POPPLER_FIX };
-  }
   try {
     fs.mkdirSync(outDir, { recursive: true });
     const html = path.join(outDir, "doctor-deck.html");
     fs.writeFileSync(html, DOCTOR_HTML);
     const pdf = path.join(outDir, "doctor-deck.pdf");
-    await renderPdf(html, pdf, chrome);
-    const pages = rasterize(pdf, outDir);
+    clearPages(outDir);
+    await renderPdf(html, pdf, chrome, outDir);
+    const pages = normalizePages(outDir);
     return {
       name: "render",
       ok: true,

@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>pdfgrab</title></head>
+<body>
+<script>
+(function () {
+  var query = new URLSearchParams(location.search);
+  var lib = document.createElement("script");
+  lib.src = query.get("lib");
+  lib.onload = function () {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = query.get("worker");
+    var scale = Number(query.get("scale") || "2");
+    window.__pdfReady = pdfjsLib
+      .getDocument({ url: query.get("src"), isEvalSupported: false })
+      .promise.then(function (pdf) {
+        var chain = Promise.resolve();
+        for (var index = 1; index <= pdf.numPages; index += 1) {
+          chain = chain.then(function (pageNumber) {
+            return pdf.getPage(pageNumber).then(function (page) {
+              var viewport = page.getViewport({ scale: scale });
+              var canvas = document.createElement("canvas");
+              canvas.setAttribute("data-page", String(pageNumber));
+              canvas.width = Math.floor(viewport.width);
+              canvas.height = Math.floor(viewport.height);
+              document.body.appendChild(canvas);
+              return page.render({
+                canvasContext: canvas.getContext("2d"),
+                viewport: viewport,
+              }).promise;
+            });
+          }.bind(null, index));
+        }
+        return chain.then(function () {
+          return pdf.numPages;
+        });
+      });
+  };
+  document.head.appendChild(lib);
+})();
+</script>
+</body>
+</html>

@@ -4,7 +4,7 @@ requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "facet"
 tool_name = "Deck"
-description = "Slide decks authored as HTML with a CSS @page size, exported to a paginated PDF and one PNG per page through the host Chromium and poppler"
+description = "Slide decks authored as HTML with a CSS @page size, exported to a paginated PDF and one PNG per page through the host Chromium and the bundled pdf.js"
 facet = "presentation"
 
 [engine]
@@ -20,6 +20,12 @@ version = "1.64.0"
 tarball = "https://registry.npmjs.org/playwright-core/-/playwright-core-1.64.0.tgz"
 integrity = "sha512-T9r+MZkTECl2+oUcZ26YgZzTrYidTsIhYYkJix+6iDOymOb1FB2RLLSOxRGnZGv5DStt+aduIVbt+E8WygXYpg=="
 
+[[engine.node.packages]]
+name = "pdfjs-dist"
+version = "3.11.174"
+tarball = "https://registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-3.11.174.tgz"
+integrity = "sha512-TdTZPf1trZ8/UFu5Cx/GXB7GZM30LT+wWUNfsi6Bq8ePLnb+woNKtDymI2mxZYBpMbonNFqKmiz684DIfnd8dA=="
+
 [transport]
 type = "cli"
 entry = "runner.js"
@@ -31,10 +37,13 @@ ram_gb = 4
 disk_gb = 2
 exclusive = false
 platforms = ["linux"]
-host_libs = ["poppler-utils"]
 
 [[licenses]]
 subject = "playwright-core"
+spdx = "Apache-2.0"
+
+[[licenses]]
+subject = "pdfjs-dist"
 spdx = "Apache-2.0"
 
 [capabilities.slides]

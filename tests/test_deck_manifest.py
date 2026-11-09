@@ -37,13 +37,19 @@ PLAYWRIGHT_INTEGRITY = (
     "sha512-T9r+MZkTECl2+oUcZ26YgZzTrYidTsIhYYkJix+6iDOymOb1FB2RLLSOxRGnZGv5D"
     "Stt+aduIVbt+E8WygXYpg=="
 )
+PDFJS = "pdfjs-dist"
+PDFJS_VERSION = "3.11.174"
+PDFJS_INTEGRITY = (
+    "sha512-TdTZPf1trZ8/UFu5Cx/GXB7GZM30LT+wWUNfsi6Bq8ePLnb+woNKtDymI2mxZYBpMbo"
+    "nNFqKmiz684DIfnd8dA=="
+)
 RAM_GB = 4
 DISK_GB = 2
 TEMPLATE = "{{node}} {{entry}} {{verb}} --input {{input}} --result {{result}}"
 HEADINGS = ("## When to use", "## Pieces", "## Judging the result", "## Pitfalls")
 DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
-PIN_COUNT = 1
+PIN_COUNT = 2
 
 
 def _expected_tarball(name: str, version: str) -> str:
@@ -71,7 +77,7 @@ def test_the_engine_is_node_with_the_shared_runtime_and_no_python() -> None:
     assert "browser" not in MANIFEST
 
 
-def test_the_closure_pins_playwright_core_at_the_lab_range() -> None:
+def test_the_closure_pins_playwright_core_and_pdfjs_dist() -> None:
     assert len(PINS) == PIN_COUNT
     entry = PINS[0]
     assert entry["name"] == PLAYWRIGHT
@@ -79,6 +85,11 @@ def test_the_closure_pins_playwright_core_at_the_lab_range() -> None:
     assert entry["version"].startswith("1.64.")
     assert entry["tarball"] == _expected_tarball(PLAYWRIGHT, PLAYWRIGHT_VERSION)
     assert entry["integrity"] == PLAYWRIGHT_INTEGRITY
+    pdfjs = PINS[1]
+    assert pdfjs["name"] == PDFJS
+    assert pdfjs["version"] == PDFJS_VERSION
+    assert pdfjs["tarball"] == _expected_tarball(PDFJS, PDFJS_VERSION)
+    assert pdfjs["integrity"] == PDFJS_INTEGRITY
 
 
 def test_every_pin_meets_the_core_node_rules() -> None:
@@ -100,20 +111,20 @@ def test_the_transport_stages_the_runner_with_the_node_template() -> None:
     assert (PACKAGE / "runner.js").is_file()
 
 
-def test_the_licenses_name_playwright_core_and_never_chromium() -> None:
+def test_the_licenses_name_both_pins_and_never_chromium() -> None:
     licenses = {(item["subject"], item["spdx"]) for item in MANIFEST["licenses"]}
-    assert licenses == {(PLAYWRIGHT, "Apache-2.0")}
+    assert licenses == {(PLAYWRIGHT, "Apache-2.0"), (PDFJS, "Apache-2.0")}
     assert not any("chromium" in subject.lower() for subject, _ in licenses)
 
 
-def test_the_requirements_are_the_lab_machine_and_poppler() -> None:
+def test_the_requirements_are_the_lab_machine_with_no_host_libs() -> None:
     requirements = MANIFEST["requirements"]
     assert requirements["gpu"] is False
     assert requirements["ram_gb"] == RAM_GB
     assert requirements["disk_gb"] == DISK_GB
     assert requirements["exclusive"] is False
     assert requirements["platforms"] == ["linux"]
-    assert requirements["host_libs"] == ["poppler-utils"]
+    assert "host_libs" not in requirements
 
 
 def test_the_capability_is_the_document_kind_with_the_slide_inputs() -> None:
@@ -183,6 +194,11 @@ def test_the_presenter_files_ship_beside_the_runner() -> None:
     assert "pz-presenter" in js
 
 
+def test_the_raster_files_ship_beside_the_runner() -> None:
+    assert (PACKAGE / "raster.js").is_file()
+    assert (PACKAGE / "pdfgrab.html").is_file()
+
+
 def test_the_presenter_runner_reports_the_manifest_version() -> None:
     runner = (PACKAGE / "runner.js").read_text(encoding="utf-8")
     found = re.search(r'const PACKAGE_VERSION = "([^"]+)";', runner)
@@ -233,6 +249,8 @@ def test_the_readme_documents_the_format_outputs_and_host_contract() -> None:
     assert "preferCSSPageSize" in READ
     assert "page-01.png" in READ
     assert "CHROME_PATH" in READ
-    assert "poppler-utils" in READ
-    assert "pdftoppm" in READ
+    assert PDFJS in READ
+    assert "pdfgrab.html" in READ
+    assert "poppler" not in READ
+    assert "pdftoppm" not in READ
     assert "no `[browser]` table" in READ

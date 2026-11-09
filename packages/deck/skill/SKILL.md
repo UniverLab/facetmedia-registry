@@ -7,8 +7,9 @@ description: Author slides as HTML with a CSS @page size, exported to a paginate
 `deck.slides` turns one slide HTML file into a paginated PDF and one PNG per
 page. The HTML owns the page geometry: an `@page` rule sets each slide's size
 and a page break separates the slides. The runner waits for the fonts, switches
-to print media and lets the `@page` rule decide the PDF pages, then rasterizes
-every page with the host `pdftoppm`.
+to print media and lets the `@page` rule decide the PDF pages, then screenshots
+one clipped region per page from the same Chromium run; page counts and text
+come from the bundled pdf.js, never from a host tool.
 
 `deck.pagina` turns one piece of HTML — an infographic or a poster — into a
 single-page PDF and its page PNG. The runner renders it with screen media and
@@ -52,8 +53,9 @@ A complete approved one-page piece — HTML, PDF and PNG — is in
   annotated diagram, a bespoke shape, a chart that is part of the layout — where
   a declarative default fights the design.
 - The host must have a Chromium (resolved from `CHROME_PATH`, then
-  `/usr/bin/google-chrome`, `/usr/bin/chromium`, `/usr/bin/chromium-browser`)
-  and `pdftoppm` from poppler-utils; otherwise `doctor` fails before a run.
+  `/usr/bin/google-chrome`, `/usr/bin/chromium`, `/usr/bin/chromium-browser`);
+  everything else — page PNGs, page counts, text — comes from that browser and
+  the bundled pdf.js. Otherwise `doctor` fails before a run.
 
 ## Pieces
 
@@ -133,7 +135,7 @@ through the content. Copy the snippets from `references/page.md`.
 4. Correct and repeat from step 1. A figure that changed means re-exporting.
 
 `verify` counts the rendered `page-*.png` files beside the asset — or the PDF's
-own `Pages:` count from `pdfinfo` when none are rendered — and compares them
+own page count from pdf.js when none are rendered — and compares them
 with the `page_count` the record holds; a mismatch stops the check with
 `runner_failed`. The preview file carries `preview`, `kind`, `summary`,
 `page_count` and `pages`, and a person's preview opens the PDF itself.
@@ -155,8 +157,10 @@ stops the check with `runner_failed` naming the check.
   is the usual source of a wrong number. Gather first and keep one block.
 - English-style numbers (`8.04`, `40,300`) fail `deck.pagina` with
   `runner_failed`; format with `toLocaleString('es')`.
-- The page PNGs are `page-01.png`, `page-02.png`, ...; they are rasterized by
-  the host poppler, never by a full-page browser screenshot.
+- The page PNGs are `page-01.png`, `page-02.png`, ...; they are clipped
+  screenshots of the rendered pages inside the same headless Chromium run —
+  placed PDFs go through `pdfgrab.html` and the bundled pdf.js — never a host
+  rasterizer.
 - Hand-writing SVG for a standard chart costs more corrections than a
   Vega-Lite spec; a declarative default pulled into an editorial piece that
   needs a bespoke shape costs more than drawing it. Pick per chart, not per

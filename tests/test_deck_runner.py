@@ -1,15 +1,16 @@
-"""The deck runner against a stub playwright, a stub pdftoppm and a stub Chromium.
+"""The deck runner against a stub playwright, a stub pdf.js and a stub Chromium.
 
 The runner is a subprocess of the host ``node``. Its ``FACET_NODE_PATH`` points
 at a fixture ``playwright-core`` package whose entry records every browser call
-and writes a stub PDF; ``PATH`` carries a stub ``pdftoppm`` that writes one PNG
-per page with single-digit names (the real poppler does the same for small
-counts) and a stub ``pdftotext`` that prints canned text for the pagina
-number check. That proves the print-media render with ``preferCSSPageSize``,
-the font wait, the page-name normalization to ``page-01.png``, the page-count
-contract, the preview shape and the doctor fixes without a browser, poppler or
-a downloaded tarball. The ``deck.pagina`` tests prove the screen-media
-measured-height render and the three source/text checks the same way.
+and writes a stub PDF, plus a fixture ``pdfjs-dist`` whose ``build/pdf.js``
+answers the page count and the text check from ``DECK_STUB_PAGES`` and
+``DECK_STUB_TEXT``. ``PATH`` carries only a stub Chromium: no ``pdftoppm``,
+``pdfinfo`` or ``pdftotext`` exists anywhere in the environment, which proves
+the print-media render with ``preferCSSPageSize``, the per-page screenshots,
+the pdf.js page count and text, the preview shape and the doctor checks
+without a browser, poppler or a downloaded tarball. The ``deck.pagina`` tests
+prove the screen-media measured-height render and the three source/text checks
+the same way.
 """
 
 from __future__ import annotations
@@ -28,15 +29,14 @@ PACKAGE = ROOT / "packages" / "deck"
 RUNNER = PACKAGE / "runner.js"
 NODE = shutil.which("node")
 PLAYWRIGHT_VERSION = "1.64.0"
+PDFJS_VERSION = "3.11.174"
 PAGE_COUNT = 2
 SCALE = 2
 VIEWPORT = {"width": 1060, "height": 800}
 RUN_SEED = 3
 PREVIEW_SEED = 7
-POPPLER_VERSION = "pdftoppm version 24.02.0"
 PREVIEW_KEYS = {"preview", "kind", "summary", "page_count", "pages"}
 PAGE_NAMES = ["page-01.png", "page-02.png"]
-POPPLER_FIX = "sudo apt-get install -y poppler-utils"
 
 pytestmark = pytest.mark.skipif(NODE is None, reason="node is not available")
 
@@ -46,6 +46,10 @@ const fs = require("node:fs");
 function log(entry) {
   const file = process.env.DECK_STUB_LOG;
   if (file) fs.appendFileSync(file, JSON.stringify(entry) + "\\n");
+}
+
+function stubPages() {
+  return Number(process.env.DECK_STUB_PAGES || "2");
 }
 
 module.exports = {
@@ -59,9 +63,20 @@ module.exports = {
             async goto(url, options) {
               log({ goto: url, waitUntil: options && options.waitUntil });
             },
-            async evaluate(fn) {
-              log({ evaluate: String(fn) });
-              return String(fn).includes("scrollHeight") ? 900 : true;
+            async evaluate(fn, arg) {
+              const source = String(fn);
+              log({ evaluate: source });
+              if (source.includes("__pdfReady")) return stubPages();
+              if (source.includes("cssRules")) return { width: 1280, height: 720 };
+              if (source.includes("scrollTo")) {
+                log({ scrollTo: arg });
+                return true;
+              }
+              if (source.includes("scrollHeight")) return 900;
+              return true;
+            },
+            async setViewportSize(options) {
+              log({ setViewportSize: options });
             },
             async emulateMedia(options) {
               log({ emulateMedia: options && options.media });
@@ -69,6 +84,20 @@ module.exports = {
             async pdf(options) {
               log({ pdf: options });
               fs.writeFileSync(options.path, "%PDF-1.4\\n");
+            },
+            async screenshot(options) {
+              log({ screenshot: options });
+              fs.writeFileSync(options.path, "PNG");
+            },
+            locator(selector) {
+              return {
+                async screenshot(options) {
+                  log({
+                    elementScreenshot: { selector, path: options && options.path },
+                  });
+                  fs.writeFileSync(options.path, "PNG");
+                },
+              };
             },
           };
         },
@@ -81,25 +110,23 @@ module.exports = {
 };
 """
 
-POPPLER_STUB = """#!/bin/sh
-if [ "$1" = "-v" ]; then
-  echo "pdftoppm version 24.02.0" >&2
-  exit 0
-fi
-pages="${DECK_STUB_PAGES:-2}"
-i=1
-while [ "$i" -le "$pages" ]; do
-  printf '\\211PNG\\r\\n' > "${3}-${i}.png"
-  i=$((i + 1))
-done
-"""
-
-PDFINFO_STUB = """#!/bin/sh
-echo "Pages: ${DECK_STUB_PAGES:-2}"
-"""
-
-PDFTOTEXT_STUB = """#!/bin/sh
-printf '%s\\n' "${DECK_STUB_TEXT:-}"
+PDFJS_STUB = """
+module.exports = {
+  getDocument() {
+    return {
+      promise: Promise.resolve({
+        numPages: Number(process.env.DECK_STUB_PAGES || "2"),
+        async getPage() {
+          return {
+            async getTextContent() {
+              return { items: [{ str: process.env.DECK_STUB_TEXT || "" }] };
+            },
+          };
+        },
+      }),
+    };
+  },
+};
 """
 
 CHROME_STUB = "#!/bin/sh\nexit 0\n"
@@ -137,28 +164,26 @@ PAGINA_BARE_IMG_HTML = PAGINA_HTML.replace(PAGINA_IMG, PAGINA_IMG_BARE)
 PAGINA_TEXT = "1.200 casos · 0,9 % · 6,00 EUR"
 
 
-def _package(root: Path) -> Path:
-    directory = root / "pkgs" / "playwright-core" / PLAYWRIGHT_VERSION
-    directory.mkdir(parents=True)
+def _package(root: Path) -> str:
+    """The FACET_NODE_PATH value: stub playwright-core and pdfjs-dist packages."""
+    playwright = root / "pkgs" / "playwright-core" / PLAYWRIGHT_VERSION
+    playwright.mkdir(parents=True)
     manifest = {"name": "playwright-core", "version": PLAYWRIGHT_VERSION}
-    (directory / "package.json").write_text(json.dumps(manifest), encoding="utf-8")
-    (directory / "index.js").write_text(PLAYWRIGHT_STUB, encoding="utf-8")
-    return directory
+    (playwright / "package.json").write_text(json.dumps(manifest), encoding="utf-8")
+    (playwright / "index.js").write_text(PLAYWRIGHT_STUB, encoding="utf-8")
+    pdfjs = root / "pkgs" / "pdfjs-dist" / PDFJS_VERSION / "build"
+    pdfjs.mkdir(parents=True)
+    (pdfjs.parent / "package.json").write_text(
+        json.dumps({"name": "pdfjs-dist", "version": PDFJS_VERSION}), encoding="utf-8"
+    )
+    (pdfjs / "pdf.js").write_text(PDFJS_STUB, encoding="utf-8")
+    return os.pathsep.join([str(playwright), str(pdfjs.parent)])
 
 
-def _tools(root: Path, *, pages: int = PAGE_COUNT, poppler: bool = True) -> tuple[Path, Path]:
-    """A bin directory with the stub poppler tools (optionally) and a stub Chromium."""
+def _tools(root: Path) -> tuple[Path, Path]:
+    """A bin directory with a stub Chromium and no poppler tools at all."""
     bin_dir = root / "bin"
     bin_dir.mkdir()
-    if poppler:
-        for name, stub in (
-            ("pdftoppm", POPPLER_STUB),
-            ("pdfinfo", PDFINFO_STUB),
-            ("pdftotext", PDFTOTEXT_STUB),
-        ):
-            script = bin_dir / name
-            script.write_text(stub, encoding="utf-8")
-            script.chmod(0o755)
     chrome = bin_dir / "chrome"
     chrome.write_text(CHROME_STUB, encoding="utf-8")
     chrome.chmod(0o755)
@@ -183,7 +208,7 @@ def _pagina(root: Path, html: str = PAGINA_HTML) -> tuple[Path, Path]:
 
 def _environment(
     root: Path,
-    package_dir: Path,
+    node_path: str,
     bin_dir: Path,
     *,
     pages: int = PAGE_COUNT,
@@ -193,7 +218,7 @@ def _environment(
 ) -> dict[str, str]:
     environment = {
         "FACET_NODE": str(NODE),
-        "FACET_NODE_PATH": str(package_dir),
+        "FACET_NODE_PATH": node_path,
         "DECK_STUB_LOG": str(root / "calls.log"),
         "DECK_STUB_PAGES": str(pages),
         "DECK_STUB_TEXT": text,
@@ -253,6 +278,14 @@ def _calls(root: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines() if line]
 
 
+def _call(calls: list[dict[str, Any]], key: str) -> dict[str, Any]:
+    return next(call for call in calls if key in call)
+
+
+def _calls_with(calls: list[dict[str, Any]], key: str) -> list[Any]:
+    return [call[key] for call in calls if key in call]
+
+
 def _inputs(seed: int = RUN_SEED) -> dict[str, Any]:
     return {"fuente": "slides.html", "prompt": "brief", "seed": seed}
 
@@ -263,13 +296,13 @@ def _run(
     return _invoke(root, "run", _request("run", out, piece, inputs=_inputs(seed)), env)
 
 
-def test_run_renders_a_paged_pdf_and_normalizes_the_page_pngs(tmp_path: Path) -> None:
-    package = _package(tmp_path)
+def test_run_renders_a_paged_pdf_and_screenshots_one_png_per_page(tmp_path: Path) -> None:
+    node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
     piece, html = _slide(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    env = _environment(tmp_path, package, bin_dir, chrome=chrome)
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
     done, result = _run(tmp_path, out, piece, env)
     assert done.returncode == 0, done.stderr
     assert result is not None
@@ -290,27 +323,81 @@ def test_run_renders_a_paged_pdf_and_normalizes_the_page_pngs(tmp_path: Path) ->
     assert names == PAGE_NAMES
     assert not (out / "page-1.png").exists()
     calls = _calls(tmp_path)
-    assert calls[0]["launch"]["executablePath"] == str(chrome)
-    assert calls[1]["newPage"]["deviceScaleFactor"] == SCALE
-    assert calls[1]["newPage"]["viewport"] == VIEWPORT
-    assert calls[2]["goto"].endswith("/slides.html")
-    assert calls[2]["goto"].startswith("file://")
-    assert calls[2]["waitUntil"] == "networkidle"
-    assert "document.fonts.ready" in calls[3]["evaluate"]
-    assert calls[4]["emulateMedia"] == "print"
-    assert calls[5]["pdf"]["preferCSSPageSize"] is True
-    assert calls[5]["pdf"]["printBackground"] is True
-    assert calls[5]["pdf"]["path"] == str(out / "slides.pdf")
-    assert calls[6]["close"] is True
+    assert _call(calls, "launch")["launch"]["executablePath"] == str(chrome)
+    new_page = _call(calls, "newPage")["newPage"]
+    assert new_page["deviceScaleFactor"] == SCALE
+    assert new_page["viewport"] == VIEWPORT
+    goto = _call(calls, "goto")
+    assert goto["goto"].startswith("file://")
+    assert goto["goto"].endswith("/slides.html")
+    assert goto["waitUntil"] == "networkidle"
+    evaluations = _calls_with(calls, "evaluate")
+    assert any("document.fonts.ready" in source for source in evaluations)
+    assert any("cssRules" in source for source in evaluations)
+    assert _calls_with(calls, "emulateMedia") == ["print", "screen"]
+    assert _calls_with(calls, "setViewportSize") == [{"width": 1280, "height": 720}]
+    pdf = _call(calls, "pdf")["pdf"]
+    assert pdf["preferCSSPageSize"] is True
+    assert pdf["printBackground"] is True
+    assert pdf["path"] == str(out / "slides.pdf")
+    shots = _calls_with(calls, "screenshot")
+    assert [shot["path"] for shot in shots] == [
+        str(out / "page-1.png"),
+        str(out / "page-2.png"),
+    ]
+    assert all(shot.get("clip") is None for shot in shots)
+    assert _calls_with(calls, "scrollTo") == [0, 720]
+    assert _call(calls, "close")["close"] is True
 
 
-def test_run_refuses_a_missing_slide_html(tmp_path: Path) -> None:
-    package = _package(tmp_path)
+def test_run_writes_one_png_per_pdf_page(tmp_path: Path) -> None:
+    """The screenshot count follows the PDF's own page count, not a fixed two."""
+    node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
     piece, _html = _slide(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    env = _environment(tmp_path, package, bin_dir, chrome=chrome)
+    env = _environment(tmp_path, node_path, bin_dir, pages=3, chrome=chrome)
+    done, result = _run(tmp_path, out, piece, env)
+    assert done.returncode == 0, done.stderr
+    assert result["assets"][0]["properties"] == {"page_count": 3}
+    assert sorted(path.name for path in out.glob("page-*.png")) == [
+        "page-01.png",
+        "page-02.png",
+        "page-03.png",
+    ]
+    calls = _calls(tmp_path)
+    assert _calls_with(calls, "scrollTo") == [0, 720, 1440]
+    assert [shot["path"] for shot in _calls_with(calls, "screenshot")] == [
+        str(out / "page-1.png"),
+        str(out / "page-2.png"),
+        str(out / "page-3.png"),
+    ]
+
+
+def test_run_needs_no_host_poppler(tmp_path: Path) -> None:
+    """An empty PATH still runs: Chromium comes from CHROME_PATH, pages from pdf.js."""
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _slide(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome, path=str(empty))
+    done, result = _run(tmp_path, out, piece, env)
+    assert done.returncode == 0, done.stderr
+    assert result is not None
+    assert sorted(path.name for path in out.glob("page-*.png")) == PAGE_NAMES
+
+
+def test_run_refuses_a_missing_slide_html(tmp_path: Path) -> None:
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _slide(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
     inputs = {"fuente": "missing.html", "prompt": "brief", "seed": RUN_SEED}
     done, result = _invoke(tmp_path, "run", _request("run", out, piece, inputs=inputs), env)
     assert done.returncode != 0
@@ -318,28 +405,13 @@ def test_run_refuses_a_missing_slide_html(tmp_path: Path) -> None:
     assert "fuente" in done.stderr
 
 
-def test_run_requires_a_browser_and_poppler(tmp_path: Path) -> None:
-    package = _package(tmp_path)
-    bin_dir, chrome = _tools(tmp_path, poppler=False)
-    piece, _html = _slide(tmp_path)
-    out = tmp_path / "out"
-    out.mkdir()
-    empty = tmp_path / "empty"
-    empty.mkdir()
-    env = _environment(tmp_path, package, bin_dir, chrome=chrome, path=str(empty))
-    done, result = _run(tmp_path, out, piece, env)
-    assert done.returncode != 0
-    assert result is None
-    assert "poppler-utils" in done.stderr
-
-
 def test_verify_passes_when_the_page_count_matches(tmp_path: Path) -> None:
-    package = _package(tmp_path)
+    node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
     piece, _html = _slide(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    env = _environment(tmp_path, package, bin_dir, chrome=chrome)
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
     _done, _result = _run(tmp_path, out, piece, env)
     asset = out / "slides.pdf"
     request = _request("verify", out, piece, inputs=_inputs(), assets=[str(asset)])
@@ -350,18 +422,18 @@ def test_verify_passes_when_the_page_count_matches(tmp_path: Path) -> None:
         "passed": True,
         "metrics": {"page_count": PAGE_COUNT},
         "thresholds": {},
-        "verifier": "pdftoppm",
+        "verifier": "chromium-pdfjs",
     }
 
 
-def test_verify_falls_back_to_pdfinfo_when_no_pages_are_rendered(tmp_path: Path) -> None:
-    """A placed asset keeps no page PNGs; the PDF's own count still verifies."""
-    package = _package(tmp_path)
+def test_verify_falls_back_to_pdfjs_when_no_pages_are_rendered(tmp_path: Path) -> None:
+    """A placed asset keeps no page PNGs; pdf.js still counts the PDF's pages."""
+    node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
     piece, _html = _slide(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    env = _environment(tmp_path, package, bin_dir, chrome=chrome)
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
     _done, _result = _run(tmp_path, out, piece, env)
     asset = out / "slides.pdf"
     record = out / "slides.pdf.facet.json"
@@ -374,15 +446,16 @@ def test_verify_falls_back_to_pdfinfo_when_no_pages_are_rendered(tmp_path: Path)
     done, result = _invoke(tmp_path, "verify", request, env)
     assert done.returncode == 0, done.stderr
     assert result["assets"][0]["metrics"] == {"page_count": PAGE_COUNT}
+    assert result["assets"][0]["verifier"] == "chromium-pdfjs"
 
 
 def test_verify_fails_runner_failed_when_a_page_is_missing(tmp_path: Path) -> None:
-    package = _package(tmp_path)
+    node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
     piece, _html = _slide(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    env = _environment(tmp_path, package, bin_dir, chrome=chrome)
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
     _done, _result = _run(tmp_path, out, piece, env)
     asset = out / "slides.pdf"
     record = out / "slides.pdf.facet.json"
@@ -398,15 +471,13 @@ def test_verify_fails_runner_failed_when_a_page_is_missing(tmp_path: Path) -> No
 
 
 def test_preview_writes_the_core_document_fixture_keys(tmp_path: Path) -> None:
-    package = _package(tmp_path)
+    node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
     piece, _html = _slide(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    env = _environment(tmp_path, package, bin_dir, chrome=chrome)
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
     _done, _result = _run(tmp_path, out, piece, env)
-    for page in out.glob("page-*.png"):
-        page.unlink()
     asset = out / "slides.pdf"
     request = _request("preview", out, piece, inputs=_inputs(PREVIEW_SEED), assets=[str(asset)])
     done, result = _invoke(tmp_path, "preview", request, env)
@@ -426,46 +497,55 @@ def test_preview_writes_the_core_document_fixture_keys(tmp_path: Path) -> None:
     assert all((out / name).is_file() for name in data["pages"])
 
 
-def test_doctor_quick_reports_the_missing_poppler_fix(tmp_path: Path) -> None:
-    package = _package(tmp_path)
-    bin_dir, chrome = _tools(tmp_path, poppler=False)
-    piece, _html = _slide(tmp_path)
-    out = tmp_path / "out"
-    out.mkdir()
-    empty = tmp_path / "empty"
-    empty.mkdir()
-    env = _environment(tmp_path, package, bin_dir, chrome=chrome, path=str(empty))
-    done, result = _invoke(tmp_path, "doctor", _request("doctor", out, piece), env)
-    assert done.returncode == 0, done.stderr
-    checks = {check["name"]: check for check in result["checks"]}
-    assert checks["node"]["ok"] is True
-    assert checks["chromium"]["ok"] is True
-    assert checks["pdftoppm"]["ok"] is False
-    assert checks["pdftoppm"]["fix"] == POPPLER_FIX
-
-
-def test_doctor_quick_finds_poppler_and_its_version(tmp_path: Path) -> None:
-    package = _package(tmp_path)
+def test_preview_rasterizes_a_placed_pdf_with_no_source_html(tmp_path: Path) -> None:
+    """A bare PDF asset previews through pdfgrab.html: pdf.js pages, canvas shots."""
+    node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
     piece, _html = _slide(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    env = _environment(tmp_path, package, bin_dir, chrome=chrome)
-    done, result = _invoke(tmp_path, "doctor", _request("doctor", out, piece), env)
+    placed = out / "placed.pdf"
+    placed.write_text("%PDF-1.4\n", encoding="utf-8")
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
+    inputs = {"prompt": "brief", "seed": PREVIEW_SEED}
+    request = _request("preview", out, piece, inputs=inputs, assets=[str(placed)])
+    done, result = _invoke(tmp_path, "preview", request, env)
     assert done.returncode == 0, done.stderr
-    checks = {check["name"]: check for check in result["checks"]}
-    assert checks["chromium"]["ok"] is True
-    assert checks["pdftoppm"]["ok"] is True
-    assert POPPLER_VERSION in checks["pdftoppm"]["detail"]
+    assert result["assets"][0]["file"] == "placed.pdf"
+    gotos = _calls_with(_calls(tmp_path), "goto")
+    assert any("pdfgrab.html" in url and "placed.pdf" in url for url in gotos)
+    elements = _calls_with(_calls(tmp_path), "elementScreenshot")
+    assert [element["selector"] for element in elements] == [
+        'canvas[data-page="1"]',
+        'canvas[data-page="2"]',
+    ]
+    data = json.loads((out / "placed.pdf.preview.json").read_text(encoding="utf-8"))
+    assert data["page_count"] == PAGE_COUNT
+    assert data["pages"] == PAGE_NAMES
+    assert all((out / name).is_file() for name in data["pages"])
 
 
-def test_doctor_full_renders_a_one_slide_throwaway(tmp_path: Path) -> None:
-    package = _package(tmp_path)
-    bin_dir, chrome = _tools(tmp_path, pages=1)
+def test_doctor_quick_reports_node_and_chromium_and_no_poppler(tmp_path: Path) -> None:
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
     piece, _html = _slide(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    env = _environment(tmp_path, package, bin_dir, pages=1, chrome=chrome)
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
+    done, result = _invoke(tmp_path, "doctor", _request("doctor", out, piece), env)
+    assert done.returncode == 0, done.stderr
+    checks = result["checks"]
+    assert [check["name"] for check in checks] == ["node", "chromium"]
+    assert all(check["ok"] for check in checks)
+
+
+def test_doctor_full_renders_a_one_slide_throwaway(tmp_path: Path) -> None:
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _slide(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, node_path, bin_dir, pages=1, chrome=chrome)
     request = _request("doctor", out, piece, depth="full")
     done, result = _invoke(tmp_path, "doctor", request, env)
     assert done.returncode == 0, done.stderr
@@ -476,12 +556,12 @@ def test_doctor_full_renders_a_one_slide_throwaway(tmp_path: Path) -> None:
 
 
 def test_an_unknown_verb_is_refused(tmp_path: Path) -> None:
-    package = _package(tmp_path)
+    node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
     piece, _html = _slide(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    env = _environment(tmp_path, package, bin_dir, chrome=chrome)
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
     done, result = _invoke(tmp_path, "bogus", _request("bogus", out, piece), env)
     assert done.returncode != 0
     assert result is None
@@ -497,12 +577,12 @@ def _pagina_run(
 
 
 def test_pagina_run_renders_a_one_page_pdf_through_the_screen_path(tmp_path: Path) -> None:
-    package = _package(tmp_path)
-    bin_dir, chrome = _tools(tmp_path, pages=1)
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
     piece, html = _pagina(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    env = _environment(tmp_path, package, bin_dir, pages=1, chrome=chrome)
+    env = _environment(tmp_path, node_path, bin_dir, pages=1, chrome=chrome)
     done, result = _pagina_run(tmp_path, out, piece, env)
     assert done.returncode == 0, done.stderr
     assert result is not None
@@ -521,28 +601,36 @@ def test_pagina_run_renders_a_one_page_pdf_through_the_screen_path(tmp_path: Pat
     assert (out / "pagina.pdf").is_file()
     assert [path.name for path in out.glob("page-*.png")] == ["page-01.png"]
     calls = _calls(tmp_path)
-    assert calls[1]["newPage"]["deviceScaleFactor"] == SCALE
-    assert calls[1]["newPage"]["viewport"] == VIEWPORT
-    assert calls[2]["waitUntil"] == "networkidle"
-    assert "document.fonts.ready" in calls[3]["evaluate"]
-    assert calls[4]["emulateMedia"] == "screen"
-    assert "scrollHeight" in calls[5]["evaluate"]
-    assert calls[6]["pdf"]["printBackground"] is True
-    assert calls[6]["pdf"]["width"] == "1060px"
-    assert calls[6]["pdf"]["height"] == "902px"
-    assert calls[6]["pdf"]["pageRanges"] == "1"
-    assert "preferCSSPageSize" not in calls[6]["pdf"]
-    assert calls[6]["pdf"]["path"] == str(out / "pagina.pdf")
-    assert calls[7]["close"] is True
+    new_page = _call(calls, "newPage")["newPage"]
+    assert new_page["deviceScaleFactor"] == SCALE
+    assert new_page["viewport"] == VIEWPORT
+    goto = _call(calls, "goto")
+    assert goto["waitUntil"] == "networkidle"
+    evaluations = _calls_with(calls, "evaluate")
+    assert any("document.fonts.ready" in source for source in evaluations)
+    assert any("scrollHeight" in source for source in evaluations)
+    assert _calls_with(calls, "emulateMedia") == ["screen"]
+    pdf = _call(calls, "pdf")["pdf"]
+    assert pdf["printBackground"] is True
+    assert pdf["width"] == "1060px"
+    assert pdf["height"] == "902px"
+    assert pdf["pageRanges"] == "1"
+    assert "preferCSSPageSize" not in pdf
+    assert pdf["path"] == str(out / "pagina.pdf")
+    assert _calls_with(calls, "setViewportSize") == [{"width": 1060, "height": 902}]
+    shot = _call(calls, "screenshot")["screenshot"]
+    assert shot["path"] == str(out / "page-1.png")
+    assert shot.get("clip") is None
+    assert _call(calls, "close")["close"] is True
 
 
 def test_pagina_run_fails_runner_failed_without_a_sources_footer(tmp_path: Path) -> None:
-    package = _package(tmp_path)
+    node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
     piece, _html = _pagina(tmp_path, PAGINA_NO_FOOTER_HTML)
     out = tmp_path / "out"
     out.mkdir()
-    env = _environment(tmp_path, package, bin_dir, chrome=chrome)
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
     done, result = _pagina_run(tmp_path, out, piece, env)
     assert done.returncode != 0
     assert result is None
@@ -551,12 +639,12 @@ def test_pagina_run_fails_runner_failed_without_a_sources_footer(tmp_path: Path)
 
 
 def test_pagina_run_fails_runner_failed_on_a_bare_image(tmp_path: Path) -> None:
-    package = _package(tmp_path)
+    node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
     piece, _html = _pagina(tmp_path, PAGINA_BARE_IMG_HTML)
     out = tmp_path / "out"
     out.mkdir()
-    env = _environment(tmp_path, package, bin_dir, chrome=chrome)
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
     done, result = _pagina_run(tmp_path, out, piece, env)
     assert done.returncode != 0
     assert result is None
@@ -565,12 +653,12 @@ def test_pagina_run_fails_runner_failed_on_a_bare_image(tmp_path: Path) -> None:
 
 
 def test_pagina_run_fails_runner_failed_on_an_english_number(tmp_path: Path) -> None:
-    package = _package(tmp_path)
+    node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
     piece, _html = _pagina(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    env = _environment(tmp_path, package, bin_dir, chrome=chrome, text="8.04 por ciento")
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome, text="8.04 por ciento")
     done, result = _pagina_run(tmp_path, out, piece, env)
     assert done.returncode != 0
     assert result is None

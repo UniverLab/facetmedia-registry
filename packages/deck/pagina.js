@@ -8,15 +8,13 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { spawnSync } = require("node:child_process");
 const { pathToFileURL } = require("node:url");
+const raster = require("./raster.js");
 
 const PLAYWRIGHT = "playwright-core";
 const WIDTH = 1060;
 const VIEWPORT_HEIGHT = 800;
 const SCALE = 2;
-const POPPLER_FIX = "sudo apt-get install -y poppler-utils";
-const PDFTOTEXT_MISSING = `pdftotext is required to check the rendered numbers (${POPPLER_FIX})`;
 
 const COMMENT_RE = /<!--[\s\S]*?-->/g;
 const OPEN_TAG_RE = /<([a-zA-Z][a-zA-Z0-9-]*)((?:"[^"]*"|'[^']*'|[^>"'])*)>/g;
@@ -127,7 +125,7 @@ function packageDir(name) {
   throw new Error(`${name} is not in FACET_NODE_PATH; run this runner through facet`);
 }
 
-function renderPdf(htmlPath, pdfPath, chrome) {
+function renderPdf(htmlPath, pdfPath, chrome, shotsDir) {
   const playwright = require(packageDir(PLAYWRIGHT));
   return playwright.chromium
     .launch({ executablePath: chrome })
@@ -159,6 +157,12 @@ function renderPdf(htmlPath, pdfPath, chrome) {
           height: `${height + 2}px`,
           pageRanges: "1",
         });
+        if (shotsDir) {
+          // A one-page piece can be taller than the viewport, and a clip would
+          // stop at its edge; size the viewport to the page and shoot it whole.
+          await page.setViewportSize({ width: WIDTH, height: height + 2 });
+          await page.screenshot({ path: path.join(shotsDir, "page-1.png") });
+        }
       } finally {
         await browser.close();
       }
@@ -166,24 +170,6 @@ function renderPdf(htmlPath, pdfPath, chrome) {
 }
 
 // --- the rendered-text check: Spanish number formats only.
-
-function isExecutable(file) {
-  try {
-    fs.accessSync(file, fs.constants.X_OK);
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
-
-function which(name) {
-  for (const dir of (process.env.PATH || "").split(path.delimiter)) {
-    if (!dir) continue;
-    const candidate = path.join(dir, name);
-    if (isExecutable(candidate)) return candidate;
-  }
-  return "";
-}
 
 function numberRuns(text) {
   const runs = [];
@@ -200,19 +186,9 @@ function numberRuns(text) {
   return runs;
 }
 
-function checkText(pdfPath) {
-  const tool = which("pdftotext");
-  if (!tool) throw new Error(PDFTOTEXT_MISSING);
-  const done = spawnSync(tool, [pdfPath, "-"], {
-    encoding: "utf8",
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  if (done.error) throw new Error(`cannot run pdftotext: ${done.error.message}`);
-  if (done.status !== 0) {
-    const output = `${done.stdout || ""}${done.stderr || ""}`.trim();
-    throw new Error(`pdftotext exited ${done.status}: ${output}`);
-  }
-  for (const run of numberRuns(done.stdout || "")) {
+async function checkText(pdfPath) {
+  const text = await raster.pdfText(pdfPath);
+  for (const run of numberRuns(text)) {
     if (ENGLISH_DECIMAL_RE.test(run) || ENGLISH_THOUSANDS_RE.test(run)) {
       throw new Error(
         `pagina spanish-numbers: run "${run}" reads as an English decimal or thousands mark`,
