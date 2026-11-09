@@ -32,6 +32,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "ffmpeg"
 RUNNER = PACKAGE / "runner.py"
 PYTHON = PACKAGE / ".venv" / "bin" / "python"
+REAL_VOICE = ROOT / "tests" / "fixtures" / "ffmpeg" / "cierre-voz.wav"
 RATE = 48000
 TP = -1.5
 MARGIN = 0.1
@@ -255,6 +256,19 @@ def test_hot_voice_tracks_each_target(tmp_path: Path, target: float) -> None:
     assert abs(float(properties["lufs"]) - target) <= TOL
     assert float(properties["peak_dbfs"]) <= TP + MARGIN
     assert abs(float(properties["duration_s"]) - HOT_DURATION) <= DURATION_TOL
+
+
+@pytest.mark.parametrize("target", TARGETS)
+def test_real_closure_voice_tracks_each_target(tmp_path: Path, target: float) -> None:
+    """The committed kokoro ef_dora closure voice: every target lands, peak under the ceiling."""
+    assert REAL_VOICE.exists(), f"missing committed fixture {REAL_VOICE}"
+    out = tmp_path / "out"
+    out.mkdir()
+    stub = _stub_dir(tmp_path)
+    request = _normalize_request(out, REAL_VOICE, "cierre-voz", target)
+    properties = _properties(_invoke(tmp_path, stub, request, f"real-{abs(target):g}"))
+    assert abs(float(properties["lufs"]) - target) <= TOL
+    assert float(properties["peak_dbfs"]) <= TP + MARGIN
 
 
 def test_run_then_verify_passes_at_minus_twelve(tmp_path: Path) -> None:

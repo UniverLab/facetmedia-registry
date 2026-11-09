@@ -31,7 +31,7 @@ LOUDNORM_LRA: Final[float] = 11.0
 #: The dynamics pre-stage both passes run before loudnorm: compress the peaks
 #: first so a hot voice has the headroom the true-peak ceiling demands.
 COMPRESSOR: Final[str] = (
-    "acompressor=threshold=0.177:ratio=6:attack=5:release=50:makeup=1:knee=2.828:detection=peak"
+    "acompressor=threshold=0.177:ratio=20:attack=0.01:release=10:makeup=1:knee=1:detection=peak"
 )
 #: One ``"key" : "value",`` line inside loudnorm's JSON report.
 _JSON_LINE: Final[re.Pattern[str]] = re.compile(r'^\s*"([^"]+)"\s*:\s*"([^"]*)",?\s*$')
