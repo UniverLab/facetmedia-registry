@@ -144,9 +144,11 @@ def check_phonetic(argv: Sequence[str]) -> None:
 def _execute(argv: Sequence[str], cwd: Path) -> None:
     """Run Rhubarb from the job out dir; a non-zero exit fails the run.
 
-    An ELF-dir cwd breaks it: beside the binary the same absolute argv dies with
-    ``basic_ios::clear: iostream error`` after 100% progress, while a writable
-    cwd writes ``bocas.json``. The ELF is absolute, so ``res/`` still resolves.
+    The out dir and the ``-o`` path arrive absolute, so this cwd only picks where
+    Rhubarb's relative work happens. A relative ``-o`` combined with a changed
+    cwd writes nowhere and dies with ``basic_ios::clear: iostream error`` after
+    100% progress; an absolute ``-o`` passes from any cwd. The ELF is absolute,
+    so ``res/`` still resolves.
     """
     try:
         done = subprocess.run(
@@ -219,11 +221,12 @@ def run(req: Request) -> dict[str, Any]:
     params = dict(req.inputs)
     voz = Path(str(params["voz"]))
     dialogo = Path(str(params["dialogo"]))
-    out = req.out_dir / OUT_NAME
+    out_dir = Path(os.path.abspath(req.out_dir))
+    out = out_dir / OUT_NAME
     elf = _elf(req.model_path(MODEL_ID))
     argv = command(elf, voz, dialogo, out)
     check_phonetic(argv)
-    _execute(argv, req.out_dir)
+    _execute(argv, out_dir)
     data = _read_bocas(out)
     return {"tool": dict(TOOL), "assets": [_asset(params, voz, dialogo, data)]}
 

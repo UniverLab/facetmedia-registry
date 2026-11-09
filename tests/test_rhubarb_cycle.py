@@ -131,13 +131,15 @@ def main():
     if args[:1] == ["--help"]:
         print("usage: rhubarb [options] <audio-file>")
         return 0
-    if Path(os.getcwd()) == Path(sys.argv[0]).resolve().parent:
-        print("basic_ios::clear: iostream error", file=sys.stderr)
-        return 1
     if os.environ.get("STUB_RHUBARB_FAIL") == "1":
         print("stub rhubarb: phonetic recognizer exploded", file=sys.stderr)
         return 3
     out = Path(args[args.index("-o") + 1])
+    if not out.is_absolute():
+        out = Path(os.getcwd()) / out
+    if not out.parent.is_dir():
+        print("basic_ios::clear: iostream error", file=sys.stderr)
+        return 1
     out.write_text(json.dumps({"metadata": {"duration": 1.2}, "mouthCues": CUES}))
     return 0
 
@@ -263,6 +265,7 @@ def _invoke(
     tmp_path: Path,
     env: dict[str, str],
     tag: str = "",
+    cwd: Path | None = None,
 ) -> tuple[subprocess.CompletedProcess[str], Path]:
     input_path = tmp_path / f"{verb}{tag}-request.json"
     result_path = tmp_path / f"{verb}{tag}-result.json"
@@ -278,6 +281,7 @@ def _invoke(
             str(result_path),
         ],
         env=env,
+        cwd=str(cwd) if cwd is not None else None,
         capture_output=True,
         text=True,
         timeout=120,
@@ -292,8 +296,9 @@ def _call(
     tmp_path: Path,
     env: dict[str, str],
     tag: str = "",
+    cwd: Path | None = None,
 ) -> tuple[dict[str, Any], str]:
-    done, result_path = _invoke(verb, request, tmp_path, env, tag)
+    done, result_path = _invoke(verb, request, tmp_path, env, tag, cwd)
     assert done.returncode == 0, done.stdout + done.stderr
     return json.loads(result_path.read_text(encoding="utf-8")), done.stdout
 
@@ -357,22 +362,58 @@ def test_the_run_uses_the_out_dir_as_cwd(tmp_path: Path) -> None:
     assert all(cue["value"] in "XABCDEFGH" for cue in cues)
 
 
-def test_the_elf_dir_cwd_defect_is_reproduced(tmp_path: Path) -> None:
-    """The closure finding: an ELF-dir cwd dies after 100% progress."""
+def test_the_relative_output_defect_is_reproduced(tmp_path: Path) -> None:
+    """The real closure finding: a relative ``-o`` under a changed cwd writes nothing."""
     _result, _printed, _entries, _out, env = _run_cycle(tmp_path)
     elf = Path(env[EXTRACT_ENV]) / "_rhubarb-lip-sync-1.14.0-linux" / TOP_DIR / ELF_NAME
-    old = tmp_path / "old.json"
-    done = subprocess.run(
-        [sys.executable, str(elf), "-r", "phonetic", "-f", "json", "-o", str(old)],
+    job = tmp_path / ".facet-tmp-1"
+    job.mkdir()
+    nested = job / ".facet-tmp-1" / "bocas.json"
+    failed = subprocess.run(
+        [sys.executable, str(elf), "-r", "phonetic", "-f", "json", "-o", ".facet-tmp-1/bocas.json"],
+        cwd=job,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert failed.returncode == 1
+    assert "basic_ios::clear" in failed.stderr
+    assert not nested.exists()
+
+    absolute = job / "bocas.json"
+    passed = subprocess.run(
+        [sys.executable, str(elf), "-r", "phonetic", "-f", "json", "-o", str(absolute)],
         cwd=elf.parent,
         capture_output=True,
         text=True,
         timeout=120,
         check=False,
     )
-    assert done.returncode == 1
-    assert "basic_ios::clear" in done.stderr
-    assert not old.exists()
+    assert passed.returncode == 0, passed.stderr
+    assert json.loads(absolute.read_text(encoding="utf-8"))["mouthCues"]
+
+
+def test_a_relative_out_dir_lands_bocas_json_with_its_cues(tmp_path: Path) -> None:
+    """facet passes a relative out dir; the runner absolutizes cwd, ``-o`` and the read."""
+    stub_dir = _stubs(tmp_path)
+    archive = _model(tmp_path)
+    log = tmp_path / "relative.jsonl"
+    env = _environment(stub_dir, tmp_path / "extract", {"STUB_RHUBARB_LOG": str(log)})
+    out_name = ".facet-tmp-1"
+    out = tmp_path / out_name
+    out.mkdir()
+    request = _request("run", Path(out_name), _piece(tmp_path), _inputs(), {MODEL_ID: archive})
+    result, _printed = _call("run", request, tmp_path, env, tag="-relative", cwd=tmp_path)
+
+    target = out / "bocas.json"
+    assert target.is_file()
+    cues = json.loads(target.read_text(encoding="utf-8"))["mouthCues"]
+    assert cues
+    assert result["assets"][0]["properties"]["cues"] == len(cues)
+    entry = _read_lines(log)[0]
+    assert entry["cwd"] == str(out)
+    assert Path(entry["argv"][entry["argv"].index("-o") + 1]).is_absolute()
 
 
 def _runner_module(tmp_path: Path) -> Any:
