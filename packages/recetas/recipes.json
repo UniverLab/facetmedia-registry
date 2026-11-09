@@ -1,0 +1,104 @@
+{
+  "recetas": {
+    "video-explicativo": {
+      "summary": "Narrated explainer video: a voice track and a music bed, normalized and mixed, transcribed for subtitles, and assembled by HyperFrames.",
+      "steps": [
+        {
+          "capability": "voicestudio.speak",
+          "handoff": "voz.wav",
+          "verify": "Transcribe the voice."
+        },
+        {
+          "capability": "acestep.bed",
+          "handoff": "cama.wav",
+          "verify": "Probe duration and peak."
+        },
+        {
+          "capability": "ffmpeg.normalize",
+          "handoff": "voz-normalizada.wav (clip voz.wav, target-lufs -16.0, true-peak-db -1.5)",
+          "verify": "Integrated loudness at -16 LUFS."
+        },
+        {
+          "capability": "ffmpeg.mix",
+          "handoff": "mezcla.wav (voice voz-normalizada.wav, bed cama.wav, ducking true, duck-db -12.0, target-lufs -16.0)",
+          "verify": "Integrated loudness at -16 LUFS."
+        },
+        {
+          "capability": "whisper.transcribe",
+          "handoff": "guion.txt + guion.srt + guion.json (audio voz-normalizada.wav)",
+          "verify": "Confidence and no-speech share."
+        },
+        {
+          "capability": "whisper-subs.subtitulos",
+          "handoff": "guion.srt (origen guion.json, formato srt)",
+          "verify": "At least one cue, monotonic and non-overlapping."
+        },
+        {
+          "capability": "hyperframes.narrado",
+          "handoff": "narrado.mp4 (composicion narrado/, voz voz-normalizada.wav, musica cama.wav, subtitulos guion.srt)",
+          "verify": "Check the MP4 with an ffprobe probe."
+        }
+      ]
+    },
+    "render-arq": {
+      "summary": "Architectural render with people: a CAD solid, Poly Haven assets, a daylight photo with people and cars, and a one-page deck.",
+      "steps": [
+        {
+          "capability": "cad.solid",
+          "handoff": "estudio.step + estudio.stl + estudio.svg + estudio.glb (script estudio.py, name estudio)",
+          "verify": "Volume and bounding box."
+        },
+        {
+          "capability": "blender.assets",
+          "handoff": "estudio.assets.json (name estudio)",
+          "verify": "The receipt's files are all present."
+        },
+        {
+          "capability": "blender.foto",
+          "handoff": "estudio-foto.png (model estudio.glb, personas-blend personas.blend + personas, autos-blend autos.blend + autos)",
+          "verify": "Look at the PNG."
+        },
+        {
+          "capability": "deck.pagina",
+          "handoff": "render-arq.pdf + page-01.png (fuente render-arq.html)",
+          "verify": "One PDF page and its page-01 PNG."
+        }
+      ]
+    },
+    "material-voz": {
+      "summary": "Voiced material with music: narration from text, a music bed, and a slide deck.",
+      "steps": [
+        {
+          "capability": "kokoro.speak",
+          "handoff": "voz.wav (clip, voice ef_dora, language es)",
+          "verify": "Transcribe the voice."
+        },
+        {
+          "capability": "acestep.bed",
+          "handoff": "cama.wav",
+          "verify": "Probe duration and peak."
+        },
+        {
+          "capability": "deck.slides",
+          "handoff": "material-voz.pdf + page-01.png (fuente material-voz.html)",
+          "verify": "The page count and the page-01 PNG."
+        }
+      ]
+    },
+    "demo-herramienta": {
+      "summary": "Tool demo: a recorded terminal demo and a slide deck around it.",
+      "steps": [
+        {
+          "capability": "demostage.demo",
+          "handoff": "demo.gif + demo.svg (partitura demo.toml)",
+          "verify": "The gif probe and the svg size."
+        },
+        {
+          "capability": "deck.slides",
+          "handoff": "demo-herramienta.pdf + page-01.png (fuente demo-herramienta.html)",
+          "verify": "The page count and the page-01 PNG."
+        }
+      ]
+    }
+  }
+}

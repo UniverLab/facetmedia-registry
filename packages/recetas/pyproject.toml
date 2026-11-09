@@ -1,0 +1,11 @@
+[project]
+name = "facet-recetas"
+version = "0.1.0"
+description = "Complete-piece recipes that chain existing packages into ordered plans."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[tool.uv]
+package = false

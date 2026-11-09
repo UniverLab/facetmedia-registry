@@ -63,3 +63,6 @@ name = "pillow"
 
 [[packages]]
 name = "whisper-subs"
+
+[[packages]]
+name = "recetas"

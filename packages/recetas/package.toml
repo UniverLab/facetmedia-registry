@@ -1,0 +1,43 @@
+name = "recetas"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "UniverLab (recetas)"
+tool_name = "recetas"
+description = "Complete-piece recipes that chain existing packages into ordered plans: the narrated explainer video, the architectural render with people, voiced material with music and the tool demo"
+facet = "text"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 0.1
+exclusive = false
+platforms = ["linux"]
+
+[[licenses]]
+subject = "recetas"
+spdx = "MIT"
+
+[capabilities.plan]
+summary = "Write an ordered plan for one complete piece, one step per capability to run with its handoff files and its verification"
+kind = "text"
+
+[capabilities.plan.inputs.receta]
+type = "enum"
+values = ["video-explicativo", "render-arq", "material-voz", "demo-herramienta"]
+required = true
+description = "Complete piece to plan: video-explicativo (narrated explainer video), render-arq (architectural render with people), material-voz (voiced material with music) or demo-herramienta (tool demo). The plan is written as <receta>.plan.json beside the piece."
+
+[capabilities.plan.verify]
+thresholds = { steps_min = 1 }
+
+[capabilities.plan.preview]
+viewer = "generic"

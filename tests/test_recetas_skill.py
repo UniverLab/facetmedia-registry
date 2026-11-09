@@ -1,0 +1,126 @@
+"""The recetas skill teaches complete pieces, and every id it names resolves.
+
+The skill is the only place an agent learns the recipes, so these tests pin
+what a person reads: the front matter, the four headings the core requires
+in order, one recipe per complete piece with the same chains the data file
+carries, and that every named capability resolves against the packages in
+this registry. People and cars are ``blender.foto`` inputs, never
+capabilities, and no references directory ships.
+"""
+
+from __future__ import annotations
+
+import json
+import tomllib
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+PACKAGE = ROOT / "packages" / "recetas"
+SKILL = (PACKAGE / "skill" / "SKILL.md").read_text(encoding="utf-8")
+RECIPES = json.loads((PACKAGE / "recipes.json").read_text(encoding="utf-8"))["recetas"]
+HEADINGS = ("## When to use", "## Pieces", "## Judging the result", "## Pitfalls")
+DESCRIPTION_MIN = 20
+MAX_DESCRIPTION = 200
+
+CHAINS = {
+    "video-explicativo": [
+        "voicestudio.speak",
+        "acestep.bed",
+        "ffmpeg.normalize",
+        "ffmpeg.mix",
+        "whisper.transcribe",
+        "whisper-subs.subtitulos",
+        "hyperframes.narrado",
+    ],
+    "render-arq": ["cad.solid", "blender.assets", "blender.foto", "deck.pagina"],
+    "material-voz": ["kokoro.speak", "acestep.bed", "deck.slides"],
+    "demo-herramienta": ["demostage.demo", "deck.slides"],
+}
+
+
+def _body() -> str:
+    _first, _second, body = SKILL.split("---", 2)
+    return body
+
+
+def _registry_capabilities() -> set[str]:
+    """Every capability id declared by a package manifest in this registry."""
+    capabilities: set[str] = set()
+    for manifest_path in ROOT.glob("packages/*/package.toml"):
+        manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+        for name in manifest.get("capabilities", {}):
+            capabilities.add(f"{manifest['name']}.{name}")
+    return capabilities
+
+
+def test_the_front_matter_parses_in_the_core_format() -> None:
+    first, second, _rest = SKILL.split("---", 2)
+    assert first == ""
+    frontmatter = second.strip().splitlines()
+    assert "name: recetas" in frontmatter
+    description = next(
+        line.removeprefix("description:").strip()
+        for line in frontmatter
+        if line.startswith("description:")
+    )
+    assert DESCRIPTION_MIN <= len(description) <= MAX_DESCRIPTION
+
+
+def test_the_four_headings_appear_in_order() -> None:
+    body = _body()
+    positions = [body.index(heading) for heading in HEADINGS]
+    assert positions == sorted(positions)
+
+
+def test_the_data_file_names_the_decided_chains() -> None:
+    assert list(RECIPES) == list(CHAINS)
+    for receta, chain in CHAINS.items():
+        assert [step["capability"] for step in RECIPES[receta]["steps"]] == chain
+
+
+def test_every_named_capability_resolves_in_the_registry() -> None:
+    capabilities = _registry_capabilities()
+    body = _body()
+    for receta, chain in CHAINS.items():
+        assert receta in body, receta
+        for capability in chain:
+            assert capability in capabilities, f"{capability} is missing from the registry"
+            assert capability in body, f"{capability} is missing from the skill"
+
+
+def test_the_skill_carries_each_handoff_and_verification() -> None:
+    body = _body()
+    flat = " ".join(body.lower().split())
+    for receta, recipe in RECIPES.items():
+        for step in recipe["steps"]:
+            assert step["capability"] in body
+            handoff_token = step["handoff"].split(" ", 1)[0]
+            assert handoff_token in body, f"{receta}: {handoff_token} missing"
+            verify = " ".join(step["verify"].rstrip(".").lower().split())
+            assert verify in flat, f"{receta}: {step['verify']} missing"
+
+
+def test_personas_and_autos_are_foto_inputs_not_capabilities() -> None:
+    capabilities = _registry_capabilities()
+    assert "blender.personas" not in capabilities
+    assert "blender.autos" not in capabilities
+    foto = tomllib.loads(
+        (ROOT / "packages" / "blender" / "package.toml").read_text(encoding="utf-8")
+    )["capabilities"]["foto"]["inputs"]
+    assert "personas" in foto and "autos" in foto
+    body = _body()
+    assert "personas-blend" in body and "autos-blend" in body
+    assert "INPUTS, never capabilities" in body
+
+
+def test_the_skill_names_kokoro_only_as_the_video_alternative() -> None:
+    body = _body()
+    flat = " ".join(body.lower().split())
+    assert "kokoro.speak" in body
+    assert "documented voice alternative" in flat
+    video = [step["capability"] for step in RECIPES["video-explicativo"]["steps"]]
+    assert "kokoro.speak" not in video
+
+
+def test_no_references_dir_ships() -> None:
+    assert not (PACKAGE / "skill" / "references").exists()

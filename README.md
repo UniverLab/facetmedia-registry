@@ -35,6 +35,7 @@ the core:
 | presentation | deck | Paginated PDF slide decks plus one PNG per page from a single HTML file with `@page` sizing and one break per slide, rendered through the host Chromium and rasterized by poppler's `pdftoppm`, a presenter build from the same file with one speaker note per slide, written as a self-contained speaker-view page plus its notes companion without serving or opening, and one-page pieces (infographics and posters) from HTML + CSS + SVG exported to a single-page PDF plus its page-01.png; page count verified against the rendered pages |
 | presentation | mermaid | Diagrams to SVG and PNG from `.mmd` files with the pinned mermaid-cli and the system Chrome (`CHROME_PATH`, never a download), style in the YAML header, architecture-beta groups, services, port arrows and bundled plus Iconify icons |
 | text | ascii | ASCII art from images and figlet banners in the lab's font |
+| text | recetas | Complete-piece recipes that chain existing packages into ordered plans — narrated explainer video, architectural render with people, voiced material with music and tool demo — as data a stdlib-only `plan` answers |
 | text | texforge | Long documents (reports, articles, theses) to verified PDF with real pagination, footnotes, indexes, bibliography and math via the person-installed texforge binary, with per-page PNG previews |
 | voice | kokoro | Narration from text on CPU (Spanish and English), checked by transcription |
 | voice | whisper | Transcripts and subtitles from audio on CPU, checked by confidence or reference text |
