@@ -54,3 +54,6 @@ name = "freecad"
 
 [[packages]]
 name = "demostage"
+
+[[packages]]
+name = "rembg"

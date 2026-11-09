@@ -1,0 +1,66 @@
+name = "rembg"
+version = "0.1.0"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "Daniel Gatis (rembg) · xuebinqin (U-2-Net)"
+tool_name = "rembg U2NetP"
+description = "Background removal from photos with rembg's U2NetP on CPU: an alpha PNG plus a checkerboard preview for edge review"
+facet = "image"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 4
+disk_gb = 1.5
+exclusive = true
+platforms = ["linux"]
+
+[[licenses]]
+subject = "rembg"
+spdx = "MIT"
+
+[[licenses]]
+subject = "U-2-Net weights (u2netp)"
+spdx = "Apache-2.0"
+
+[[licenses]]
+subject = "onnxruntime"
+spdx = "MIT"
+
+[[licenses]]
+subject = "pillow"
+spdx = "MIT-CMU"
+
+[[licenses]]
+subject = "numpy"
+spdx = "BSD-3-Clause"
+
+[[models]]
+id = "u2netp"
+url = "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx"
+sha256 = "309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8"
+bytes = 4574861
+path = "u2netp/u2netp.onnx"
+spdx = "Apache-2.0"
+commercial_use = true
+requires_acceptance = false
+terms_url = "https://github.com/xuebinqin/U-2-Net"
+
+[capabilities.cutout]
+summary = "Background removal from a photo with rembg's U2NetP on CPU, writing the alpha PNG and a checkerboard preview for edge review"
+kind = "image"
+
+[capabilities.cutout.inputs.foto]
+type = "path"
+required = true
+description = "Photo to cut out (PNG, JPEG or WebP), resolved relative to the piece file; writes <foto-stem>.png with alpha and <foto-stem>-damero.png over a checkerboard."
+
+[capabilities.cutout.preview]
+viewer = "image"
