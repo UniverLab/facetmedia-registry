@@ -58,7 +58,9 @@ The preview (`<name>.wav.preview.json`) carries the waveform (1200
 bins), the integrated and momentary loudness (400 ms windows every 100
 ms, `null` below −70 LUFS), the silences longer than 1 s below −50 dBFS,
 the clipped samples and, under `speech`, the text, transcript, WER and
-the word alignment that tells you which word to fix.
+the word alignment that tells you which word to fix. `facet preview
+<name>.wav` rebuilds the clip from the params its run record stored, so a
+clip written by `facet run` previews without re-specifying the piece.
 
 `facet doctor kokoro` runs the package's own checks:
 
