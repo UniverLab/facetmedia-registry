@@ -750,6 +750,12 @@ type = "path"
 required = true
 description = "Voice clip copied beside the composition and injected as <audio id=\"voz-N\" src=\"../<name>\">."
 
+[capabilities.narrado.inputs.voz.items.inicio]
+type = "number"
+default = 0
+min = 0
+description = "Seconds on the composition timeline where this clip starts."
+
 [capabilities.narrado.inputs.musica]
 type = "path"
 required = true
@@ -759,6 +765,13 @@ description = "Instrumental music bed already mixed offline with the ffmpeg pack
 type = "path"
 required = true
 description = "SubRip .srt written offline by whisper transcribe, resolved relative to the piece; parsed into burned-in subtitle cues that must end inside the composition duration."
+
+[capabilities.narrado.inputs.volumen-musica]
+type = "number"
+default = 0.25
+min = 0
+max = 1
+description = "The bed's `data-volume` under the voices, where 0.25 is about −12 dB."
 
 [capabilities.narrado.inputs.prompt]
 type = "string"

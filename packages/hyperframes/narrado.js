@@ -18,6 +18,7 @@ const path = require("node:path");
 
 const SUBS_MARKER = "<!-- SUBS -->";
 const AUDIOS_MARKER = "<!-- AUDIOS -->";
+const DEFAULT_MUSIC_VOLUME = 0.25;
 const TIMING_RE =
   /^(\d+):(\d{2}):(\d{2})[,.](\d{1,3})\s*-->\s*(\d+):(\d{2}):(\d{2})[,.](\d{1,3})/;
 const TAG_RE = /<([A-Za-z][\w:-]*)\b[^>]*>/g;
@@ -32,8 +33,13 @@ function narradoSetup(workDir, inputs, base) {
   const template = fs.readFileSync(templateFile, "utf8");
   const duration = compositionDuration(template);
   requireCuesFit(cues, duration);
-  const updated = injectNarration(template, cues, voices, music);
-  copyBeside([...voices, music], path.dirname(workDir));
+  const volumen = musicVolumeOf(inputs);
+  requireVoicesInside(voices, duration);
+  const updated = injectNarration(template, cues, { voices, music, duration, volumen });
+  copyBeside(
+    [...voices.map((voice) => voice.file), music],
+    path.dirname(workDir),
+  );
   fs.writeFileSync(templateFile, updated);
 }
 
@@ -48,7 +54,37 @@ function voiceClips(inputs, base) {
     }
     const file = resolveInput(item.clip, base);
     if (!fs.existsSync(file)) throw new Error(`voz[${index}]: ${file} not found`);
-    return file;
+    return { file, inicio: inicioOf(item, index) };
+  });
+}
+
+function inicioOf(item, index) {
+  const raw = item.inicio === undefined || item.inicio === null ? 0 : item.inicio;
+  const value = Number(raw);
+  if (!Number.isFinite(value)) {
+    throw new Error(`voz[${index}]: inicio must be a finite number, got ${raw}`);
+  }
+  return value;
+}
+
+function musicVolumeOf(inputs) {
+  const raw = inputs["volumen-musica"];
+  if (raw === undefined || raw === null) return DEFAULT_MUSIC_VOLUME;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    throw new Error(`volumen-musica must be a number between 0 and 1, got ${raw}`);
+  }
+  return value;
+}
+
+function requireVoicesInside(voices, duration) {
+  voices.forEach((voice, index) => {
+    if (!(voice.inicio < duration)) {
+      throw new Error(
+        `voz[${index}]: inicio ${secondsText(voice.inicio)} is not inside ` +
+          `the composition duration ${secondsText(duration)}`,
+      );
+    }
   });
 }
 
@@ -155,7 +191,7 @@ function secondsText(value) {
 
 // --- the injection: subtitle divs, audio elements and the opacity timeline.
 
-function injectNarration(template, cues, voices, music) {
+function injectNarration(template, cues, audio) {
   const withSubs = replaceMarker(
     template,
     SUBS_MARKER,
@@ -165,7 +201,7 @@ function injectNarration(template, cues, voices, music) {
   const withAudio = replaceMarker(
     withSubs,
     AUDIOS_MARKER,
-    audioLines(voices, music),
+    audioLines(audio),
     "index.html: <!-- AUDIOS --> marker is required",
   );
   return appendScript(withAudio, cues);
@@ -181,12 +217,19 @@ function subtitleLine(cue, index) {
   return `<div class="sub" id="s${index}">${escapeHtml(cue.text)}</div>`;
 }
 
-function audioLines(voices, music) {
-  const voiceLines = voices.map(
-    (file, index) =>
-      `<audio id="voz-${index + 1}" src="../${escapeAttr(path.basename(file))}"></audio>`,
+function audioLines(audio) {
+  const voiceLines = audio.voices.map(
+    (voice, index) =>
+      `<audio id="voz-${index + 1}" src="../${escapeAttr(path.basename(voice.file))}" ` +
+      `data-start="${secondsText(voice.inicio)}" ` +
+      `data-duration="${secondsText(audio.duration - voice.inicio)}" ` +
+      `data-track-index="${index + 1}" data-volume="1"></audio>`,
   );
-  const musicLine = `<audio id="musica" src="../${escapeAttr(path.basename(music))}"></audio>`;
+  const musicLine =
+    `<audio id="musica" src="../${escapeAttr(path.basename(audio.music))}" ` +
+    `data-start="0" data-duration="${secondsText(audio.duration)}" ` +
+    `data-track-index="${audio.voices.length + 1}" ` +
+    `data-volume="${secondsText(audio.volumen)}"></audio>`;
   return [...voiceLines, musicLine].join("\n      ");
 }
 

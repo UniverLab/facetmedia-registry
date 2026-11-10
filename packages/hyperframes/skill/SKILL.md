@@ -99,9 +99,11 @@ shifted by `audio-inicio`, which must match the voice `<audio data-start>`. See
 
 `index.html` carries one `<!-- SUBS -->` marker, one `<!-- AUDIOS -->` marker
 and a positive `data-duration`. The runner parses the `.srt` into
-`{ start, end, text }` cues and burns them in as `.sub` divs. The cues are
-absolute; a template that gives the voice a `data-start` must start the `.srt`
-at that offset. See `references/timeline.md`.
+`{ start, end, text }` cues and burns them in as `.sub` divs. Each `voz` item
+is `{ clip, inicio }`: `inicio` (default 0) is the seconds on the composition
+timeline where that clip starts and must sit inside `data-duration`;
+`volumen-musica` (default 0.25, about −12 dB) is the bed's `data-volume` under
+the voices. See `references/timeline.md`.
 
 ## SVG id maps
 
@@ -196,13 +198,15 @@ the runner validates every mouth shape and the rest rule before `check`. See
 Loudness is an offline author duty: ffmpeg `normalize` with
 `target-lufs=-16.0` and `true-peak-db=-1.5`, then ffmpeg `mix` the voice layers
 over the bed with `ducking=true`, `duck-db=-12.0` and `target-lufs=-16.0`. The
-markers are required exactly once and every cue must fit `data-duration`. See
+markers are required exactly once and every cue must fit `data-duration`.
+`verify` fails a `narrado` or `personaje` MP4 with no audio stream. See
 `references/limits.md`.
 
 ## Judging the result
 
 `verify` probes the MP4 with `ffprobe`: a video stream with positive width,
-height, frame count and frame rate passes. `preview` writes the video kind's
+height, frame count and frame rate passes, and a `narrado` or `personaje`
+asset additionally needs an audio stream. `preview` writes the video kind's
 ten fields, with the summary `{name} · {width}x{height} · {length}f @ {fps}fps ·
 seed {seed}`. Read the check output too: it is the gate that rejected broken
 timelines before the render. A person then watches the clip.

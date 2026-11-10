@@ -319,8 +319,10 @@ nine `boca-X`…`boca-H` shapes and the cue timeline; its `build.mjs` copies
 files, an instrumental bed and whisper subtitles are assembled by
 `narradoSetup` in the copied composition before the same `check`-then-`render`
 path as `hyperframes.render`. Its inputs are `composicion`, `voz` (one
-`{ clip }` table per voice file, at least one), `musica`, `subtitulos` (the
-`.srt`), plus `prompt`, `seed` and `fps`.
+`{ clip, inicio }` table per voice file, at least one; `inicio` is the seconds
+on the composition timeline where that clip starts, default 0), `musica`,
+`subtitulos` (the `.srt`), `volumen-musica` (the bed's `data-volume` under the
+voices, default 0.25 at about −12 dB, 0 to 1), plus `prompt`, `seed` and `fps`.
 
 The sources are the real packages: voices are voicestudio files — one engine
 per file, so narrator and clone voices arrive as separate `voz` clips and the
@@ -340,15 +342,17 @@ run every voice file through ffmpeg `normalize` with `target-lufs` `-16.0` and
 `data-composition-id` tag, and its CSS must style `.sub`: the cues are
 opacity-toggled divs burned into the frames, never a sidecar copy.
 `narradoSetup` copies each `voz` clip and `musica` beside the composition,
-replaces the markers with `<audio id="voz-N" src="../<name>">` /
-`<audio id="musica" src="../<name>">` and `<div class="sub" id="sN">` lines,
-parses whisper's `HH:MM:SS,mmm --> HH:MM:SS,mmm` cues (comma or dot
-milliseconds, text joined by spaces) into `{ start, end, text }` rounded to 3
-decimals, requires every cue end to fit `data-duration`, and appends the
-opacity timeline that joins `window.__timelines[...]`. A missing file, a bad
-`.srt`, a missing or duplicated marker, or an overlong cue throws a plain
-`Error`, exit 1, which facet reports as `runner_failed`; `check` and `render`
-never run.
+replaces the markers with
+`<audio id="voz-N" src="../<name>" data-start="<inicio>" data-duration="<duration-inicio>" data-track-index="<N>" data-volume="1">` /
+`<audio id="musica" src="../<name>" data-start="0" data-duration="<duration>" data-track-index="<voices+1>" data-volume="<volumen-musica>">`
+and `<div class="sub" id="sN">` lines, parses whisper's
+`HH:MM:SS,mmm --> HH:MM:SS,mmm` cues (comma or dot milliseconds, text joined
+by spaces) into `{ start, end, text }` rounded to 3 decimals, requires every
+cue end to fit `data-duration`, and appends the opacity timeline that joins
+`window.__timelines[...]`. A missing file, a bad `.srt`, a missing or
+duplicated marker, an overlong cue, an `inicio` at or past `data-duration`, or
+a `volumen-musica` outside 0..1 throws a plain `Error`, exit 1, which facet
+reports as `runner_failed`; `check` and `render` never run.
 
 The offline `build.mjs` produces the vendored `assets/` and `vendor/` tree;
 the runner never executes it. The lab proof for the SUBS burn-in shape is
@@ -361,7 +365,8 @@ a whisper `.srt` parsed at run time; no end-to-end `.srt` lab proof exists yet.
 
 `verify` probes every asset with the host `ffprobe`: a video stream with a
 positive width, height, frame count and frame rate passes, and the metrics are
-the probe's. For `hyperframes.loop` assets the verdict adds two format checks
+the probe's. A `hyperframes.narrado` or `hyperframes.personaje` asset with no
+audio stream fails, since the mix needs its voices. For `hyperframes.loop` assets the verdict adds two format checks
 the probe cannot express: a `gif` must carry the `NETSCAPE2.0` looping block
 (ffprobe reports no loop count, so the runner inspects the bytes), and a
 `mov-alpha` MOV must have an alpha channel (`pix_fmt` matching `argb`, `rgba`,

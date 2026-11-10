@@ -425,6 +425,7 @@ def test_narrado_capability_assembles_voice_music_and_subtitles() -> None:
         "voz",
         "musica",
         "subtitulos",
+        "volumen-musica",
         "prompt",
         "seed",
         "fps",
@@ -437,6 +438,11 @@ def test_narrado_capability_assembles_voice_music_and_subtitles() -> None:
     assert voz["min_items"] == 1
     assert voz["items"]["clip"]["type"] == "path"
     assert voz["items"]["clip"]["required"] is True
+    assert voz["items"]["inicio"]["type"] == "number"
+    assert (voz["items"]["inicio"]["default"], voz["items"]["inicio"]["min"]) == (0, 0)
+    volumen = inputs["volumen-musica"]
+    assert volumen["type"] == "number"
+    assert (volumen["default"], volumen["min"], volumen["max"]) == (0.25, 0, 1)
     for name in ("musica", "subtitulos"):
         assert inputs[name]["type"] == "path"
         assert inputs[name]["required"] is True

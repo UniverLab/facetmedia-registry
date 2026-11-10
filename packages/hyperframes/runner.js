@@ -693,6 +693,13 @@ function verify(request) {
   return { assets: (request.assets || []).map((asset) => verdictOf(asset, request)) };
 }
 
+const AUDIO_REQUIRED = new Set(["hyperframes.narrado", "hyperframes.personaje"]);
+
+function audioOk(request, metrics) {
+  if (!AUDIO_REQUIRED.has(request && request.capability)) return true;
+  return metrics.audio_streams > 0;
+}
+
 function verdictOf(asset, request) {
   const file = path.basename(String(asset));
   try {
@@ -702,6 +709,7 @@ function verdictOf(asset, request) {
       metrics.height > 0 &&
       metrics.frames > 0 &&
       metrics.fps > 0 &&
+      audioOk(request, metrics) &&
       formatOk(asset, request, metrics);
     return { file, passed, metrics, thresholds: {}, verifier: "ffprobe" };
   } catch (error) {
@@ -793,6 +801,7 @@ function probe(file) {
   const fps = rateOf(stream.avg_frame_rate || stream.r_frame_rate || "0/1");
   let frames = Number(stream.nb_frames || 0);
   if (!Number.isFinite(frames) || frames <= 0) frames = Math.round(duration * fps);
+  const audioStreams = (data.streams || []).filter((item) => item.codec_type === "audio").length;
   return {
     width: Number(stream.width) || 0,
     height: Number(stream.height) || 0,
@@ -800,6 +809,7 @@ function probe(file) {
     duration_s: Math.round(duration * 1000) / 1000,
     frames,
     fps,
+    audio_streams: audioStreams,
   };
 }
 

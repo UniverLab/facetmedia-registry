@@ -122,6 +122,10 @@ cues.forEach(function (cue, index) {
 ```
 
 Subtitles are burned into the frames as `.sub` divs, never a sidecar copy. The
-narration `<audio>` elements carry no `data-start`: the `.srt` times are
-absolute on the composition, so the cues are not shifted. If a template gives
-the voice a `data-start`, the `.srt` must already start at that offset.
+`.srt` times are absolute on the composition, so the cues are not shifted.
+Every voice is injected as
+`<audio id="voz-N" data-start="<inicio>" data-duration="<duration-inicio>" data-track-index="<N>" data-volume="1">`,
+starting at its `voz` item's `inicio` (default 0, refused at or past
+`data-duration`); the bed is
+`<audio id="musica" data-start="0" data-duration="<duration>" data-track-index="<voices+1>" data-volume="<volumen-musica>">`
+with `volumen-musica` defaulting to 0.25 (about −12 dB, 0 to 1).

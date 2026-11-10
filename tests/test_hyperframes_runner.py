@@ -1113,9 +1113,18 @@ def test_narrado_injects_audio_subtitles_and_the_opacity_timeline(tmp_path: Path
     assert [call["args"][0] for call in _calls(tmp_path)] == ["check", "render"]
     assert result is not None and result["assets"][0]["file"] == "comp.mp4"
     written = (out / "composition" / "index.html").read_text(encoding="utf-8")
-    assert '<audio id="voz-1" src="../voz-a.wav"></audio>' in written
-    assert '<audio id="voz-2" src="../voz-b.wav"></audio>' in written
-    assert '<audio id="musica" src="../musica.wav"></audio>' in written
+    assert (
+        '<audio id="voz-1" src="../voz-a.wav" data-start="0" '
+        'data-duration="10" data-track-index="1" data-volume="1"></audio>'
+    ) in written
+    assert (
+        '<audio id="voz-2" src="../voz-b.wav" data-start="0" '
+        'data-duration="10" data-track-index="2" data-volume="1"></audio>'
+    ) in written
+    assert (
+        '<audio id="musica" src="../musica.wav" data-start="0" '
+        'data-duration="10" data-track-index="3" data-volume="0.25"></audio>'
+    ) in written
     assert '<div class="sub" id="s0">Hola &lt;mundo&gt; &amp; adiós</div>' in written
     assert '<div class="sub" id="s1">Segunda línea</div>' in written
     cues = re.search(r"var cues = (\[.*?\]);", written, re.DOTALL)
@@ -1132,3 +1141,83 @@ def test_narrado_injects_audio_subtitles_and_the_opacity_timeline(tmp_path: Path
         assert (out / name).read_bytes() == VOZ_BYTES
     assert not (out / "subtitulos.srt").exists()
     assert not (out / "composition" / "subtitulos.srt").exists()
+
+
+def test_narrado_refuses_an_inicio_past_the_duration_before_the_cli_runs(
+    tmp_path: Path,
+) -> None:
+    packages = _fixture(tmp_path)
+    piece, _comp = _narrado_comp(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _narrado_request(
+            out,
+            piece,
+            voz=[{"clip": "voz-a.wav"}, {"clip": "voz-b.wav", "inicio": 12}],
+        ),
+        _environment(tmp_path, _dirs(packages)),
+    )
+    assert done.returncode == 1
+    assert result is None
+    assert "inicio 12" in done.stderr
+    assert "composition duration 10" in done.stderr
+    assert _calls(tmp_path) == []
+
+
+def test_narrado_music_volume_reaches_the_bed_data_volume(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    piece, _comp = _narrado_comp(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    request = _narrado_request(out, piece)
+    request["inputs"]["volumen-musica"] = 0.4
+    done, result = _invoke(tmp_path, "run", request, _environment(tmp_path, _dirs(packages)))
+    assert done.returncode == 0, done.stderr
+    written = (out / "composition" / "index.html").read_text(encoding="utf-8")
+    assert 'data-volume="0.4"' in written
+
+
+def test_narrado_refuses_a_music_volume_outside_zero_to_one(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    piece, _comp = _narrado_comp(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    request = _narrado_request(out, piece)
+    request["inputs"]["volumen-musica"] = 1.5
+    done, result = _invoke(tmp_path, "run", request, _environment(tmp_path, _dirs(packages)))
+    assert done.returncode == 1
+    assert result is None
+    assert "volumen-musica" in done.stderr
+    assert _calls(tmp_path) == []
+
+
+@pytest.mark.skipif(FFPROBE is None, reason="ffprobe is not available")
+def test_verify_fails_a_narrado_video_without_an_audio_stream(
+    tmp_path: Path,
+) -> None:
+    packages = _fixture(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    asset = out / "comp.mp4"
+    shutil.copyfile(CLIP, asset)
+    narrado = _request(
+        "verify",
+        out,
+        tmp_path,
+        capability="hyperframes.narrado",
+        composicion="comp",
+        prompt="a brief",
+    )
+    narrado["assets"] = [str(asset)]
+    done, result = _invoke(tmp_path, "verify", narrado, _environment(tmp_path, _dirs(packages)))
+    assert done.returncode == 0, done.stderr
+    assert result["assets"][0]["passed"] is False
+    assert result["assets"][0]["metrics"]["audio_streams"] == 0
+    plain = _request("verify", out, tmp_path, composicion="comp", prompt="a brief")
+    plain["assets"] = [str(asset)]
+    done, result = _invoke(tmp_path, "verify", plain, _environment(tmp_path, _dirs(packages)))
+    assert done.returncode == 0, done.stderr
+    assert result["assets"][0]["passed"] is True
