@@ -66,6 +66,9 @@ def test_the_engine_is_host_app_with_a_cli_transport_and_no_python() -> None:
     template = MANIFEST["transport"]["invocation_template"]
     for token in ("{{app}}", "{{entry}}", "{{verb}}", "{{input}}", "{{result}}"):
         assert token in template
+    # freecadcmd parses dashed args after --pass as its own options; -- stops it.
+    tokens = template.split()
+    assert tokens.index("--") < tokens.index("--input")
 
 
 def test_the_freecad_1_1_4_build_satisfies_the_minimum() -> None:

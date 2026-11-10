@@ -19,7 +19,7 @@ env = "FREECAD_EXE"
 [transport]
 type = "cli"
 entry = "runner.py"
-invocation_template = "{{app}} {{entry}} {{verb}} --input {{input}} --result {{result}}"
+invocation_template = "{{app}} {{entry}} -- {{verb}} --input {{input}} --result {{result}}"
 
 [requirements]
 gpu = false

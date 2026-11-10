@@ -542,6 +542,7 @@ def _launch_host(verb: str, input_path: Path, result_path: Path) -> None:
         wrapper,
         PASS_FLAG,
         runner,
+        "--",
         verb,
         "--input",
         _convert_argument(str(host_input), binary),

@@ -17,8 +17,12 @@ The runner builds the launch line the same way, so the guion and the runner are
 both run through the wrapper:
 
 ```text
-[binary, wrapper, --pass, runner, <verb>, --input <request>, --result <result>]
+[binary, wrapper, --pass, runner, --, <verb>, --input <request>, --result <result>]
 ```
+
+The `--` matters: freecadcmd parses every dashed argument after `--pass` as
+one of its own options and stops at `unrecognised option '--result'`; after
+`--` it passes them through, and the runner drops everything up to it.
 
 ## Inside the script
 
