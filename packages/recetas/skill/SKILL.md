@@ -48,6 +48,8 @@ how to judge them.
    at -16 LUFS.
 4. `ffmpeg.mix` → `mezcla.wav`, voice `voz-normalizada.wav` over bed
    `cama.wav` with `ducking` true, `duck-db` -12.0 and `target-lufs` -16.0.
+   `mezcla.wav` is the stand-alone audio deliverable, for a podcast or
+   audio-only use, and is not an input of step 7.
    Verify: integrated loudness at -16 LUFS.
 5. `whisper.transcribe` → `guion.txt` + `guion.srt` + `guion.json`, from
    `voz-normalizada.wav`. Verify: confidence and no-speech share.
@@ -55,6 +57,8 @@ how to judge them.
    Verify: at least one cue, monotonic and non-overlapping.
 7. `hyperframes.narrado` → `narrado.mp4`, with composition `narrado/`,
    voice `voz-normalizada.wav`, music `cama.wav` and subtitles `guion.srt`.
+   Step 7 places the voices over `cama.wav` at `volumen-musica`; `mezcla.wav`
+   is not an input of this step.
    Verify: check the MP4 with an ffprobe probe.
 
 ### render-arq — the architectural render with people

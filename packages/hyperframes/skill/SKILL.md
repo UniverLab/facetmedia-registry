@@ -105,6 +105,13 @@ timeline where that clip starts and must sit inside `data-duration`;
 `volumen-musica` (default 0.25, about −12 dB) is the bed's `data-volume` under
 the voices. See `references/timeline.md`.
 
+`check` rejects (`sweep_static`) a composition whose timeline stops changing
+before `data-duration` ends: the timeline must keep moving across the whole
+`data-duration`. Keep something animating until the end, such as a reveal
+spread over the whole duration or a looping element. Example (not shipped
+with the package): a bar tweened across the full duration with
+`tl.fromTo('#barra', { scaleX: 0 }, { scaleX: 1, duration: <data-duration>, ease: 'none' }, 0);`.
+
 ## SVG id maps
 
 Selectors pass review and fail the render, so the generated ids are ported

@@ -52,3 +52,12 @@ refused, naming the file and the URL.
 See `references/timeline.md` for what animates, `references/id-maps.md` for the
 ids and markers each capability reads, and `references/limits.md` for the
 machine rules.
+
+## The timeline must span `data-duration`
+
+`check` rejects (`sweep_static`) a composition whose timeline stops changing
+before `data-duration` ends: the timeline must keep moving across the whole
+`data-duration`. Keep something animating until the end, such as a reveal
+spread over the whole duration or a looping element. Example (not shipped
+with the package): a bar tweened across the full duration with
+`tl.fromTo('#barra', { scaleX: 0 }, { scaleX: 1, duration: <data-duration>, ease: 'none' }, 0);`.
