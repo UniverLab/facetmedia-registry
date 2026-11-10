@@ -129,6 +129,7 @@ def render(bpy: Any, model: str, destination: str, params: dict[str, Any], root:
     scene = bpy.context.scene
     bpy.ops.import_scene.gltf(filepath=model)
     escena.scale_roots(scene)
+    escena.bake_pieces(bpy, scene)
     bpy.context.view_layer.update()
     centre = escena.centre(scene)
     floor_z = escena.floor(bpy, scene, centre)

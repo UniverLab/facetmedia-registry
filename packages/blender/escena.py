@@ -66,6 +66,42 @@ def scale_roots(scene: Any) -> None:
         obj.location = tuple(side * SCALE for side in obj.location)
 
 
+def bake_pieces(bpy: Any, scene: Any) -> None:
+    """Clear each mesh's parent and bake its rotation and scale into the mesh.
+
+    The glTF root arrives turned -90 about X, so a parented piece's
+    object-space normal is not its world normal and the BOX projection in
+    ``textured`` smears the image into streaks. After the bake every piece
+    carries identity rotation and unit scale, so its object-space normals
+    equal its world normals. Emptied roots are left alone: they render
+    nothing.
+
+    The update first: the caller's edits (the millimetre-to-metre scale and
+    the turn) are not in the world matrices until the view layer evaluates,
+    and clearing the parent keeps exactly those matrices — without it the
+    pieces would keep the import-time size and unturned.
+    """
+    bpy.context.view_layer.update()
+    for obj in scene.objects:
+        if getattr(obj, "type", "") == "MESH" and obj.parent is not None:
+            _bake_piece(bpy, scene, obj)
+
+
+def _bake_piece(bpy: Any, scene: Any, obj: Any) -> None:
+    """Clear one piece's parent and apply its rotation and scale."""
+    _select_only(bpy, scene, obj)
+    bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+
+
+def _select_only(bpy: Any, scene: Any, obj: Any) -> None:
+    """Select one object alone, so the ops touch only it."""
+    for other in scene.objects:
+        other.select_set(False)
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+
+
 def floor(bpy: Any, scene: Any, centre: tuple[float, float, float]) -> float:
     """An outside plane just under the model, so the sun casts a shadow.
 

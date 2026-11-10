@@ -140,6 +140,7 @@ class MeshData:
     def __init__(self, name):
         self.name = name
         self.materials = []
+        self.baked = False
 
 
 class Euler:
@@ -179,6 +180,7 @@ class Object:
         self.location = list(location)
         self.rotation_mode = rotation_mode
         self._euler = [0.0, 0.0, 0.0]
+        self.selected = False
         if data is not None:
             self.data = data
         elif kind == "MESH":
@@ -200,6 +202,9 @@ class Object:
     @rotation_euler.setter
     def rotation_euler(self, value):
         self._euler = [float(item) for item in value]
+
+    def select_set(self, value):
+        self.selected = value
 
     @property
     def matrix_world(self):
@@ -245,6 +250,7 @@ class World:
 
 class Materials:
     def new(self, name):
+        TRAIL.setdefault("calls", []).append(f"material:{name}")
         material = Material(name)
         ALL_MATERIALS.append(material)
         return material
@@ -391,7 +397,15 @@ class Preferences:
         self.addons = {"cycles": Addon()}
 
 
+class LayerObjects:
+    def __init__(self):
+        self.active = None
+
+
 class ViewLayer:
+    def __init__(self):
+        self.objects = LayerObjects()
+
     def update(self):
         return None
 
@@ -436,8 +450,13 @@ class ImportOps:
 def _load_pieces():
     source = os.environ.get("STUB_SCENE", "")
     pieces = json.loads(Path(source).read_text())["pieces"] if source else []
+    root = Object("estudio", kind="EMPTY")
+    root.rotation_euler = [-math.pi / 2, 0.0, 0.0]
+    context.scene.objects.append(root)
+    REGISTRY.append(root)
     for piece in pieces:
         obj = Object(piece["name"], size=tuple(piece.get("size", (1000,) * 3)))
+        obj.parent = root
         context.scene.objects.append(obj)
         REGISTRY.append(obj)
 
@@ -494,6 +513,16 @@ class RenderOps:
         )
         TRAIL["sky"] = _sky(scene)
         TRAIL["camera"] = None if scene.camera is None else scene.camera.name
+        TRAIL["parents"] = {
+            obj.name: None if obj.parent is None else obj.parent.name
+            for obj in scene.objects
+            if obj.type == "MESH"
+        }
+        TRAIL["baked"] = sorted(
+            obj.name
+            for obj in scene.objects
+            if obj.type == "MESH" and getattr(obj.data, "baked", False)
+        )
         if write_still:
             PIL.Image.new(
                 "RGB", (scene.render.resolution_x, scene.render.resolution_y), (20, 40, 60)
@@ -561,11 +590,28 @@ def _sky(scene):
     }
 
 
+class ObjectOps:
+    def parent_clear(self, **kwargs):
+        assert kwargs == {"type": "CLEAR_KEEP_TRANSFORM"}
+        obj = context.view_layer.objects.active
+        TRAIL.setdefault("calls", []).append(f"parent_clear:{obj.name}")
+        obj.parent = None
+
+    def transform_apply(self, location=False, rotation=True, scale=True):
+        assert location is False and rotation is True and scale is True
+        obj = context.view_layer.objects.active
+        TRAIL.setdefault("calls", []).append(f"bake:{obj.name}")
+        obj.scale = [1.0, 1.0, 1.0]
+        obj._euler = [0.0, 0.0, 0.0]
+        obj.data.baked = True
+
+
 class Ops:
     def __init__(self):
         self.wm = WmOps()
         self.import_scene = ImportOps()
         self.mesh = MeshOps()
+        self.object = ObjectOps()
         self.render = RenderOps()
 
 
@@ -837,3 +883,27 @@ def test_missing_texture_fails_the_run_with_the_exact_message(
         "missing leafy/diff.jpg: fetch it with blender.assets "
         '[[inputs.assets]] with id = "leafy" and res = "2k"'
     )
+
+
+def test_foto_bakes_before_materials(tmp_path: Path, runner, monkeypatch) -> None:
+    """The foto run bakes every piece before any material is created."""
+    model = _model(tmp_path)
+    request = _request(tmp_path, "blender.foto", model=str(model))
+
+    _call(runner, tmp_path, request, monkeypatch)
+
+    trail = _trail(tmp_path)
+    calls = trail["calls"]
+    bakes = [call for call in calls if call.split(":")[0] in {"parent_clear", "bake"}]
+    materials = [call for call in calls if call.startswith("material:")]
+    assert bakes == [
+        "parent_clear:muros",
+        "bake:muros",
+        "parent_clear:piso",
+        "bake:piso",
+        "parent_clear:vidrio-1",
+        "bake:vidrio-1",
+    ]
+    assert max(calls.index(call) for call in bakes) < min(calls.index(call) for call in materials)
+    assert all(parent is None for parent in trail["parents"].values())
+    assert trail["baked"] == ["muros", "piso", "vidrio-1"]

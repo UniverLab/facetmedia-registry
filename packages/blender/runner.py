@@ -662,6 +662,7 @@ def _render(bpy: Any, model: str, destination: str, params: dict[str, Any]) -> N
     bpy.ops.import_scene.gltf(filepath=_host_path(model, windows))
     escena.scale_roots(scene)
     _turn_roots(scene, _giro(params))
+    escena.bake_pieces(bpy, scene)
     bpy.context.view_layer.update()
     centre = escena.centre(scene)
     floor_z = escena.floor(bpy, scene, centre)

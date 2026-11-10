@@ -116,6 +116,7 @@ class MeshData:
     def __init__(self, name):
         self.name = name
         self.materials = []
+        self.baked = False
 
 
 class Object:
@@ -127,6 +128,7 @@ class Object:
         self.location = [0.0, 0.0, 0.0]
         self.rotation_mode = "XYZ"
         self.rotation_euler = [0.0, 0.0, 0.0]
+        self.selected = False
         self.data = data if data is not None else MeshData(name) if kind == "MESH" else object()
         half = [side / 2 for side in size]
         self.bound_box = [
@@ -135,6 +137,9 @@ class Object:
             for y in (-half[1], half[1])
             for z in (-half[2], half[2])
         ]
+
+    def select_set(self, value):
+        self.selected = value
 
     @property
     def matrix_world(self):
@@ -177,6 +182,7 @@ class World:
 
 class Materials:
     def new(self, name):
+        TRAIL.setdefault("events", []).append(f"material:{name}")
         return Material(name)
 
 
@@ -280,7 +286,15 @@ class Scene:
         self.frame_end = 250
 
 
+class LayerObjects:
+    def __init__(self):
+        self.active = None
+
+
 class ViewLayer:
+    def __init__(self):
+        self.objects = LayerObjects()
+
     def update(self):
         return None
 
@@ -306,10 +320,15 @@ class ImportOps:
         TRAIL["import_filepath"] = filepath
         source = os.environ.get("STUB_SCENE", "")
         pieces = json.loads(Path(source).read_text())["pieces"] if source else []
+        root = Object("estudio", kind="EMPTY")
+        root.rotation_euler = [-math.pi / 2, 0.0, 0.0]
+        context.scene.objects.append(root)
         for piece in pieces:
-            context.scene.objects.append(
-                Object(piece["name"], size=tuple(piece.get("size", (1000.0, 1000.0, 1000.0))))
+            obj = Object(
+                piece["name"], size=tuple(piece.get("size", (1000.0, 1000.0, 1000.0)))
             )
+            obj.parent = root
+            context.scene.objects.append(obj)
 
 
 class MeshOps:
@@ -358,6 +377,16 @@ class RenderOps:
             for obj in scene.objects
             if obj.type == "MESH" and obj.data.materials
         }
+        TRAIL["parents"] = {
+            obj.name: None if obj.parent is None else obj.parent.name
+            for obj in scene.objects
+            if obj.type == "MESH"
+        }
+        TRAIL["baked"] = sorted(
+            obj.name
+            for obj in scene.objects
+            if obj.type == "MESH" and getattr(obj.data, "baked", False)
+        )
         TRAIL["sky_strength"] = (
             None if scene.world is None
             else scene.world.node_tree.nodes["Background"].inputs["Strength"].default_value
@@ -369,11 +398,28 @@ class RenderOps:
             Path(target).write_text(json.dumps(TRAIL, default=list))
 
 
+class ObjectOps:
+    def parent_clear(self, **kwargs):
+        assert kwargs == {"type": "CLEAR_KEEP_TRANSFORM"}
+        obj = context.view_layer.objects.active
+        TRAIL.setdefault("events", []).append(f"parent_clear:{obj.name}")
+        obj.parent = None
+
+    def transform_apply(self, location=False, rotation=True, scale=True):
+        assert location is False and rotation is True and scale is True
+        obj = context.view_layer.objects.active
+        TRAIL.setdefault("events", []).append(f"bake:{obj.name}")
+        obj.scale = [1.0, 1.0, 1.0]
+        obj.rotation_euler = [0.0, 0.0, 0.0]
+        obj.data.baked = True
+
+
 class Ops:
     def __init__(self):
         self.wm = WmOps()
         self.import_scene = ImportOps()
         self.mesh = MeshOps()
+        self.object = ObjectOps()
         self.render = RenderOps()
 
 
@@ -501,6 +547,35 @@ def test_the_animation_render_writes_the_mp4(tmp_path: Path, runner, monkeypatch
     calls = _trail(tmp_path)["render_calls"]
     assert calls == [{"animation": True, "write_still": False}]
     assert (tmp_path / "out" / "estudio-recorrido.mp4").is_file()
+
+
+def test_recorrido_bakes_before_materials(tmp_path: Path, runner, monkeypatch) -> None:
+    """The tour bakes every piece before any material is created."""
+    model = _model(tmp_path)
+    request = _request(tmp_path, "run", model=str(model), seconds=2, fps=12)
+    _call(runner, tmp_path, "run", request, monkeypatch)
+
+    trail = _trail(tmp_path)
+    events = trail["events"]
+    bakes = [event for event in events if event.split(":")[0] in {"parent_clear", "bake"}]
+    materials = [event for event in events if event.startswith("material:")]
+    assert bakes == [
+        "parent_clear:muros",
+        "bake:muros",
+        "parent_clear:piso",
+        "bake:piso",
+        "parent_clear:vidrio-1",
+        "bake:vidrio-1",
+        "parent_clear:cama",
+        "bake:cama",
+        "parent_clear:mesa",
+        "bake:mesa",
+    ]
+    assert max(events.index(event) for event in bakes) < min(
+        events.index(event) for event in materials
+    )
+    assert all(parent is None for parent in trail["parents"].values())
+    assert trail["baked"] == ["cama", "mesa", "muros", "piso", "vidrio-1"]
 
 
 def test_one_keyframe_pair_per_frame_across_the_tour(tmp_path: Path, runner, monkeypatch) -> None:
