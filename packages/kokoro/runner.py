@@ -95,8 +95,10 @@ def _clips(params: dict[str, Any]) -> list[dict[str, Any]]:
     return clips
 
 
-def _preview_params(params: dict[str, Any]) -> dict[str, Any]:
-    """The params preview clips from: the run record's flat single clip too."""
+def _clip_params(params: dict[str, Any]) -> dict[str, Any]:
+    """The params the clips come from: a piece's clip array, or the run record's
+    flat single clip.
+    """
     if params.get("clip") or "name" not in params or "text" not in params:
         return params
     return {**params, "clip": [{"name": params["name"], "text": params["text"]}]}
@@ -213,7 +215,7 @@ def _speak(kokoro: Any, clip: dict[str, Any], out_dir: Path) -> dict[str, Any]:
 
 @runner.verb("verify")
 def verify(req: Request) -> dict[str, Any]:
-    params = dict(req.inputs)
+    params = _clip_params(dict(req.inputs))
     clips = {clip["name"]: clip for clip in _clips(params)}
     model = _whisper(req)
     audio = _audio()
@@ -263,7 +265,7 @@ def _verify_clip(model: Any, audio: Any, path: Path, clip: dict[str, Any]) -> di
 @runner.verb("preview")
 def preview(req: Request) -> dict[str, Any]:
     params = dict(req.inputs)
-    clips = {clip["name"]: clip for clip in _clips(_preview_params(params))}
+    clips = {clip["name"]: clip for clip in _clips(_clip_params(params))}
     model = _whisper(req)
     entries = []
     for path in req.assets:

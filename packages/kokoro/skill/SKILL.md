@@ -68,6 +68,9 @@ loudness target (`target-lufs`, default −16.0) is what `run` normalises to,
 capped so the peak never exceeds −1.0 dBFS; the record reports the `lufs`
 actually measured after normalisation.
 
+`facet check <clip>.wav` re-verifies a clip already on disk from the params
+its run record stored, with no piece rerun.
+
 `facet preview <clip>.wav --json` writes `<clip>.wav.preview.json`. To fix
 a failed clip, read `speech.alignment`: one row per word with `ref` (the
 text), `hyp` (what whisper heard) and `op` (`ok`, `sub`, `del`, `ins`).

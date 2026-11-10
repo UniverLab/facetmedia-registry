@@ -1,4 +1,4 @@
-"""The kokoro preview against a stub SDK, whisper and audio helpers.
+"""The kokoro preview and verify against a stub SDK, whisper and audio helpers.
 
 The runner is a subprocess of the host ``python`` with a stub
 ``facet_runner_sdk`` on ``PYTHONPATH`` (the pull-time surface the real one
@@ -25,6 +25,8 @@ PACKAGE = ROOT / "packages" / "kokoro"
 RUNNER = PACKAGE / "runner.py"
 RATE_HZ = 24_000
 TEXT = "En este laboratorio probamos una voz en español."
+#: A different text, so a test can prove which one the clip came from.
+PER_CLIP_TEXT = "Presentamos la voz del laboratorio."
 FLAT_TARGET_LUFS = -18.0
 PIECE_TARGET_LUFS = -16.0
 WHISPER_BEAM_SIZE = 5
@@ -34,6 +36,19 @@ PreviewRun = tuple[
     dict[str, Any] | None,
     list[dict[str, Any]],
 ]
+VerifyRun = tuple[
+    subprocess.CompletedProcess[str],
+    dict[str, Any] | None,
+    list[dict[str, Any]],
+]
+RawRun = tuple[
+    subprocess.CompletedProcess[str],
+    dict[str, Any] | None,
+    Path,
+    list[dict[str, Any]],
+]
+#: The manifest's word error rate, mirrored from the runner under test.
+WER_MAX = 0.05
 
 #: The pull-time SDK surface the runner touches; the real one is copied in.
 STUB_SDK = """
@@ -184,10 +199,11 @@ def _request(
     inputs: dict[str, object],
     asset: Path,
     model: Path,
+    verb: str = "preview",
 ) -> dict[str, object]:
     return {
         "protocol": 1,
-        "verb": "preview",
+        "verb": verb,
         "capability": "kokoro.speak",
         "depth": "quick",
         "inputs": inputs,
@@ -206,14 +222,15 @@ def _transcriptions(calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [call for call in calls if call.get("call") == "transcribe"]
 
 
-def _run_preview(
+def _run_verb(
     tmp_path: Path,
+    verb: str,
     inputs: dict[str, object],
     asset_name: str,
     heard: list[str],
     tag: str,
-) -> PreviewRun:
-    """One ``preview`` verb as a subprocess over the stub environment."""
+) -> RawRun:
+    """One verb as a subprocess over the stub environment, plus its out dir."""
     stub_dir = _stub_dir(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
@@ -228,7 +245,7 @@ def _run_preview(
     request_path = tmp_path / f"{tag}-request.json"
     result_path = tmp_path / f"{tag}-result.json"
     request_path.write_text(
-        json.dumps(_request(out, piece, inputs, asset, model)), encoding="utf-8"
+        json.dumps(_request(out, piece, inputs, asset, model, verb=verb)), encoding="utf-8"
     )
     env = {
         **os.environ,
@@ -240,7 +257,7 @@ def _run_preview(
         [
             sys.executable,
             str(RUNNER),
-            "preview",
+            verb,
             "--input",
             str(request_path),
             "--result",
@@ -253,9 +270,33 @@ def _run_preview(
         check=False,
     )
     result = json.loads(result_path.read_text(encoding="utf-8")) if result_path.exists() else None
+    return done, result, out, _read_lines(calls)
+
+
+def _run_preview(
+    tmp_path: Path,
+    inputs: dict[str, object],
+    asset_name: str,
+    heard: list[str],
+    tag: str,
+) -> PreviewRun:
+    """One ``preview`` verb, with the preview file it wrote."""
+    done, result, out, calls = _run_verb(tmp_path, "preview", inputs, asset_name, heard, tag)
     preview_path = out / f"{asset_name}.preview.json"
     data = json.loads(preview_path.read_text(encoding="utf-8")) if preview_path.exists() else None
-    return done, result, data, _read_lines(calls)
+    return done, result, data, calls
+
+
+def _run_verify(
+    tmp_path: Path,
+    inputs: dict[str, object],
+    asset_name: str,
+    heard: list[str],
+    tag: str,
+) -> VerifyRun:
+    """One ``verify`` verb as a subprocess over the stub environment."""
+    done, result, _out, calls = _run_verb(tmp_path, "verify", inputs, asset_name, heard, tag)
+    return done, result, calls
 
 
 def _assert_speech(data: dict[str, Any]) -> None:
@@ -313,6 +354,61 @@ def test_preview_keeps_the_clip_array_path(tmp_path: Path) -> None:
     _assert_speech(data)
     assert data["loudness"]["target_lufs"] == PIECE_TARGET_LUFS
     assert data["summary"].endswith("· em_alex")
+    heard = _transcriptions(calls)
+    assert len(heard) == 1
+    assert heard[0]["language"] == "es"
+
+
+def test_verify_accepts_flat_record_params(tmp_path: Path) -> None:
+    """The run record's flat per-clip params still name the clip to verify."""
+    inputs = {
+        "name": "voz",
+        "text": TEXT,
+        "voice": "em_alex",
+        "language": "es",
+        "speed": 1.0,
+        "target-lufs": FLAT_TARGET_LUFS,
+    }
+    done, result, calls = _run_verify(tmp_path, inputs, "voz.wav", [TEXT], "verify-flat")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert result is not None
+    assert len(result["assets"]) == 1
+    entry = result["assets"][0]
+    assert entry["file"] == "voz.wav"
+    assert entry["passed"] is True
+    assert entry["metrics"]["wer"] <= WER_MAX
+    assert entry["metrics"]["transcript"] == TEXT
+    assert entry["metrics"]["words"] > 0
+    assert entry["thresholds"]["wer_max"] == WER_MAX
+    heard = _transcriptions(calls)
+    assert len(heard) == 1
+    assert heard[0]["language"] == "es"
+    assert heard[0]["beam_size"] == WHISPER_BEAM_SIZE
+    assert heard[0]["vad_filter"] is True
+
+
+def test_verify_keeps_the_clip_array_path(tmp_path: Path) -> None:
+    """A piece request's clip array is unchanged: its own text wins over flat fields."""
+    inputs = {
+        "name": "intro",
+        "text": TEXT,
+        "language": "es",
+        "voice": "ef_dora",
+        "speed": 1.0,
+        "target-lufs": PIECE_TARGET_LUFS,
+        "clip": [{"name": "intro", "text": PER_CLIP_TEXT, "voice": "em_alex", "speed": 1.5}],
+    }
+    done, result, calls = _run_verify(
+        tmp_path, inputs, "intro.wav", [PER_CLIP_TEXT], "verify-array"
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert result is not None
+    assert len(result["assets"]) == 1
+    entry = result["assets"][0]
+    assert entry["file"] == "intro.wav"
+    assert entry["passed"] is True
+    assert entry["metrics"]["wer"] == 0.0
+    assert entry["thresholds"]["wer_max"] == WER_MAX
     heard = _transcriptions(calls)
     assert len(heard) == 1
     assert heard[0]["language"] == "es"

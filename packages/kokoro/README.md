@@ -50,6 +50,11 @@ above −40 dBFS (silence can never pass), reporting `wer`, `words`,
 `words_per_minute`, `lufs`, `peak_dbfs` and `transcript` under
 `verifier = "faster-whisper-small@536b0662"`.
 
+`facet check <name>.wav` re-verifies one clip from the params its run
+record stored — the run record keeps the asset's own clip flat, not the
+piece's `clip` array — so a clip written by `facet run` is checked
+without re-specifying the piece.
+
 `run` normalises each clip with pyloudnorm (ITU-R BS.1770) to
 `target-lufs`, capping the gain so the sample peak stays at or below
 −1.0 dBFS, and writes PCM 16-bit at 24 kHz.
