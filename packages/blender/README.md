@@ -70,7 +70,13 @@ estudio.export("estudio.glb")  # glTF binary: one element per piece, with its na
   matches its materials against.
 - **The model is in millimetres, Y-up.** CadQuery models in mm; the runner
   scales each top-level piece by `0.001` so Blender works in metres. A model
-  exported in metres comes out a thousand times too small.
+  exported in metres comes out a thousand times too small. The glTF root also
+  arrives turned -90° about X, and every piece inherits that turn: before any
+  material goes on, the runner clears each piece's parent (keeping its world
+  transform) and bakes its rotation and scale into its mesh, so a piece's own
+  normals are its world normals and a box-projected texture lands on its face
+  instead of smearing into streaks. Piece names never change, so the prefixes
+  still match.
 
 ## Materials by name prefix
 
@@ -215,9 +221,11 @@ plantas = [
   the shadows out of it.
 - A texture item box-projects `diff.jpg` at `lado` metres through the
   hue/saturation/value adjust; `rough.jpg` drives the roughness and a 0.15
-  bump. `nor_gl.jpg` is never loaded: the models carry no UVs. A prefix without
-  an item keeps its flat colour, and two items with the same `prefijo` fail the
-  run with `texturas: prefijo repetido: <prefijo>`.
+  bump. `nor_gl.jpg` is never loaded: the models carry no UVs. Every piece
+  takes its prefix's texture, the model's own walls and slabs (`muros`, `piso`)
+  as well as the ground plane. A prefix without an item keeps its flat colour,
+  and two items with the same `prefijo` fail the run with
+  `texturas: prefijo repetido: <prefijo>`.
 - Plants stand at `(x, y, floor_z)` like people and cars, after the dressing.
   Plant models are heavy (`potted_plant_01` is about 96k polygons,
   `island_tree_01` about 3.7M), so use few.
