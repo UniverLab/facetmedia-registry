@@ -288,6 +288,12 @@ def _stub_sdk(tmp_path: Path) -> Path:
     folder = tmp_path / "stub-sdk"
     folder.mkdir()
     (folder / "facet_runner_sdk.py").write_text(STUB_SDK, encoding="utf-8")
+    facet_lib = folder / "facet_lib"
+    facet_lib.mkdir()
+    (facet_lib / "__init__.py").write_text("", encoding="utf-8")
+    (facet_lib / "comfyclient.py").write_text(
+        (ROOT / "lib" / "comfyclient.py").read_text(encoding="utf-8"), encoding="utf-8"
+    )
     return folder
 
 

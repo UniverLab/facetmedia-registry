@@ -215,6 +215,11 @@ def test_index_lists_the_comfy_package() -> None:
     assert "comfy" in names
 
 
+def test_the_package_declares_the_shared_comfy_client() -> None:
+    assert MANIFEST["uses"] == ["comfyclient"]
+    assert (ROOT / "lib" / "comfyclient.py").is_file()
+
+
 def test_the_package_is_the_image_facet_with_still_edit_and_clip() -> None:
     assert MANIFEST["name"] == "comfy"
     assert MANIFEST["facet"] == "image"

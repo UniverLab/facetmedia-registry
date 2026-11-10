@@ -6,6 +6,7 @@ provider = "ComfyUI project"
 tool_name = "ComfyUI"
 description = "Stills, reference-guided edits and clips with ComfyUI's z-image-turbo, flux2-klein and wan22-i2v flows, checked by pixel size and video probe."
 facet = "image"
+uses = ["comfyclient"]
 
 [engine]
 type = "python-env"
