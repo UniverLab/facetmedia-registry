@@ -394,7 +394,10 @@ def _recorrido_run(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
     destination = f"{str(request['out_dir']).rstrip('/')}/{name}.mp4"
     windows = _on_windows()
     rendered = _host_scene(params, windows)
-    recorrido.render(bpy, _host_path(model, windows), _host_path(destination, windows), rendered)
+    root = _dressing_root(params)
+    recorrido.render(
+        bpy, _host_path(model, windows), _host_path(destination, windows), rendered, root
+    )
     return {
         "tool": {"name": "blender", "version": _version(bpy)},
         "assets": [recorrido.asset(params, model)],
@@ -644,6 +647,13 @@ def _manifest_tool() -> dict[str, str]:
 # --- the scene: the lab's daylight recipe, one piece per glTF element.
 
 
+def _dressing_root(params: dict[str, Any]) -> str:
+    """The Poly Haven root the scene reads, or nothing when it dresses nothing."""
+    if params.get("cielo") or params.get("texturas") or params.get("plantas"):
+        return str(_polyhaven_root())
+    return ""
+
+
 def _render(bpy: Any, model: str, destination: str, params: dict[str, Any]) -> None:
     """Import the glTF, dress the scene and render it to ``destination``."""
     windows = _on_windows()
@@ -655,12 +665,14 @@ def _render(bpy: Any, model: str, destination: str, params: dict[str, Any]) -> N
     bpy.context.view_layer.update()
     centre = escena.centre(scene)
     floor_z = escena.floor(bpy, scene, centre)
-    escena.dress(bpy, scene, escena.MATERIALS)
-    blend, placements = escena.people(params)
-    escena.personas(bpy, scene, _host_path(blend, windows), placements, floor_z)
-    car_blend, cars = escena.autos_params(params)
-    escena.autos(bpy, scene, _host_path(car_blend, windows), cars, floor_z)
-    escena.sky_and_sun(bpy, scene)
+    converted = _host_scene(params, windows)
+    root = _dressing_root(params)
+    escena.dress_scene(bpy, scene, converted, root, floor_z)
+    item = escena.cielo_item(converted)
+    if item:
+        escena.sky_hdri(bpy, scene, item, root)
+    else:
+        escena.sky_and_sun(bpy, scene)
     _place_camera(bpy, scene, _camera(params), centre)
     scene.render.resolution_x = RENDER_WIDTH
     scene.render.resolution_y = RENDER_HEIGHT

@@ -177,3 +177,45 @@ def test_skill_lists_every_material_prefix() -> None:
 def test_skill_never_asks_to_extend_materials() -> None:
     """The agent renames its piece; it never edits the package's MATERIALS."""
     assert "Add the prefix to" not in SKILL
+
+
+def _dressing_example() -> dict:
+    """The Dressing section's foto piece: the block that carries cielo."""
+    blocks = re.findall(r"```toml\n(.*?)```", SKILL, re.DOTALL)
+    dressed = [tomllib.loads(block) for block in blocks if "cielo" in block]
+    assert len(dressed) == 1, "one foto piece carries the dressing inputs"
+    return dressed[0]["inputs"]
+
+
+def test_the_dressing_example_uses_only_declared_inputs() -> None:
+    """The example parses and stays inside the manifest: keys, fields, enum."""
+    example = _dressing_example()
+    declared = MANIFEST["capabilities"]["foto"]["inputs"]
+    assert set(example) <= set(declared)
+    assert {"model", "cielo", "texturas", "plantas"} <= set(example)
+    enum = set(declared["texturas"]["items"]["prefijo"]["values"])
+    for name in ("cielo", "texturas", "plantas"):
+        items = declared[name]["items"]
+        required = {key for key, item in items.items() if item.get("required")}
+        defaults = {key for key, item in items.items() if "default" in item}
+        assert set(items) == required | defaults
+        for entry in example[name]:
+            assert set(entry) <= set(items), (name, entry)
+            assert required <= set(entry), (name, entry)
+    assert {entry["prefijo"] for entry in example["texturas"]} <= enum
+
+
+def test_the_dressing_example_fetches_before_rendering() -> None:
+    """The assets piece that fetches the example's ids, with the lab default."""
+    blocks = re.findall(r"```toml\n(.*?)```", SKILL, re.DOTALL)
+    pieces = [tomllib.loads(block) for block in blocks if "assets" in block]
+    assert len(pieces) == 1, "one blender.assets piece fetches the dressing set"
+    entries = {entry["id"]: entry for entry in pieces[0]["inputs"]["assets"]}
+    example = _dressing_example()
+    wanted = {example["cielo"][0]["id"]}
+    wanted |= {entry["id"] for entry in example["texturas"]}
+    wanted |= {entry["id"] for entry in example["plantas"]}
+    assert wanted <= set(entries)
+    for asset_id in wanted:
+        assert entries[asset_id]["res"] in ("1k", "2k")
+    assert "last part" in SKILL and "polyhaven.com" in SKILL

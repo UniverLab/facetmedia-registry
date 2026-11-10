@@ -134,6 +134,69 @@ regenerates them.
 res }` items) and the runner downloads them once into the shared models dir,
 writing `<name>.assets.json` as the receipt `verify` re-checks.
 
+## Dressing the scene
+
+`blender.foto` and `blender.recorrido` render the fetched Poly Haven sky,
+textures and plants when the piece asks for them; without them the procedural
+sky, the flat colours and the empty ground stay exactly as they are. The three
+inputs are arrays of fixed-field items, the way `camera` is, and the runner
+reads only the first `cielo` item:
+
+```toml
+[inputs]
+model = "estudio.glb"
+cielo = [{ id = "kloppenheim_06_puresky", giro = 200, fuerza = 1.0 }]
+texturas = [
+  { prefijo = "suelo", id = "aerial_grass_rock", lado = 3.0, matiz = 0.5, saturacion = 1.0, valor = 0.9 },
+  { prefijo = "piso", id = "brushed_concrete", lado = 2.0, matiz = 0.5, saturacion = 1.0, valor = 1.0 },
+]
+plantas = [
+  { id = "shrub_02", x = 7.4, y = 2.25, giro = 90 },
+]
+```
+
+- `cielo` holds one `{ id, giro, fuerza }` item: the HDRI id, its turn about Z
+  in degrees (200 by default, which sets where the sun falls) and the
+  background strength (1.0 by default). With it the scene has no `sol` lamp:
+  the HDRI lights the render and `use_sun_shadow` pulls the shadows out of it.
+- `texturas` holds one `{ prefijo, id, lado, matiz, saturacion, valor }` item
+  per dressed prefix: the texture id, the tile side in metres (2.0 by default)
+  and the hue/saturation/value adjust (0.5, 1.0 and 1.0 by default). A prefix
+  without an item keeps its flat `MATERIALS` colour, and the ground plane
+  `suelo` is textured by the item with `prefijo = "suelo"`. Two items with the
+  same `prefijo` fail the run with `texturas: prefijo repetido: <prefijo>`.
+- `plantas` holds one `{ id, x, y, giro }` item per plant: the model id, its
+  place in metres on the ground level and its turn about Z (0 by default).
+  Plants stand the way people and cars do, after the dressing, so no prefix
+  check touches them.
+- A referenced id must already be fetched: a missing folder or file fails the
+  run before rendering with the `blender.assets` entry that fetches it. Foto
+  and recorrido never download.
+
+These ids are verified on polyhaven.com; the id is the last part of the
+asset's URL:
+
+| Kind | Id |
+|------|-----|
+| sky | `kloppenheim_06_puresky` |
+| textures | `aerial_grass_rock`, `brick_pavement_02`, `brushed_concrete` |
+| plant models | `shrub_02`, `potted_plant_01`, `jacaranda_tree`, `grass_medium_01`, `island_tree_01` |
+
+Plant models are heavy, so use few: `potted_plant_01` is about 96k polygons
+and `island_tree_01` about 3.7M. Fetch the set first with one `blender.assets`
+piece:
+
+```toml
+[inputs]
+name = "estudio-dressing"
+assets = [
+  { id = "kloppenheim_06_puresky", res = "2k" },
+  { id = "aerial_grass_rock", res = "2k" },
+  { id = "brushed_concrete", res = "2k" },
+  { id = "shrub_02", res = "1k" },
+]
+```
+
 ## Judging the result
 
 `verify` measures the PNG header: it passes at exactly 1600x1000, the recipe's
@@ -166,10 +229,10 @@ or car pack folder: that state lives in the lab, outside this package.
   pieces by 0.001 to metres; a model exported in metres comes out tiny.
 - **A piece without a material prefix fails the whole run** with
   `piezas sin material: [...]`. The accepted prefixes are `muros`, `piso`,
-  `vidrio`, `cama`, `almohada`, `mesa`, `sillas` and `suelo` (the keys of
-  `MATERIALS` in `escena.py`); the prefix is the start of each glTF element
-  name, as the cad export names it. Rename the piece in its model with one of
-  them; nothing is rendered half-dressed.
+  `vidrio`, `cama`, `almohada`, `mesa`, `sillas`, `suelo` and `pavimento`
+  (the keys of `MATERIALS` in `escena.py`); the prefix is the start of each
+  glTF element name, as the cad export names it. Rename the piece in its
+  model with one of them; nothing is rendered half-dressed.
 - **Do not raise the exposure to brighten a dark photo.** Under
   `AgX - Medium High Contrast` at -0.6, `sol + cielo` washes the colours out;
   move the sun or lower `exposure` instead of lighting the scene harder.

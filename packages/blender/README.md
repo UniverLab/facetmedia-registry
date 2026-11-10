@@ -89,6 +89,7 @@ transmission per prefix:
 | `mesa` | dark oak | 0.40 | — |
 | `sillas` | orange | 0.55 | — |
 | `suelo` | pale grey | 0.95 | — |
+| `pavimento` | neutral grey | 0.90 | — |
 
 **A piece left without a prefix fails the run loudly**: the runner raises
 `RuntimeError("piezas sin material: [...])` naming every undressed piece, and
@@ -188,6 +189,43 @@ autos = [
 - Cars read as scale only if they stay **about 1.5 m** from a wall or each
   other: pack a row flush against the facade and the eye reads them as
   centimetre models, which is the opposite of the point.
+
+## Dressing the scene
+
+Both scenes can render the **fetched Poly Haven sky, textures and plants** the
+lab's render used: `cielo` (one `{ id, giro, fuerza }` item), `texturas` (one
+`{ prefijo, id, lado, matiz, saturacion, valor }` item per prefix) and
+`plantas` (one `{ id, x, y, giro }` item per plant). Without them the procedural
+sky, the flat colours and the empty ground stay exactly as they are.
+
+```toml
+[inputs]
+model = "estudio.glb"
+cielo = [{ id = "kloppenheim_06_puresky", giro = 200, fuerza = 1.0 }]
+texturas = [
+  { prefijo = "suelo", id = "aerial_grass_rock", lado = 3.0, matiz = 0.5, saturacion = 1.0, valor = 0.9 },
+]
+plantas = [
+  { id = "shrub_02", x = 7.4, y = 2.25, giro = 90 },
+]
+```
+
+- The HDRI id is the last part of its polyhaven.com URL. With `cielo` the scene
+  has **no `sol` lamp**: the HDRI lights the render and `use_sun_shadow` pulls
+  the shadows out of it.
+- A texture item box-projects `diff.jpg` at `lado` metres through the
+  hue/saturation/value adjust; `rough.jpg` drives the roughness and a 0.15
+  bump. `nor_gl.jpg` is never loaded: the models carry no UVs. A prefix without
+  an item keeps its flat colour, and two items with the same `prefijo` fail the
+  run with `texturas: prefijo repetido: <prefijo>`.
+- Plants stand at `(x, y, floor_z)` like people and cars, after the dressing.
+  Plant models are heavy (`potted_plant_01` is about 96k polygons,
+  `island_tree_01` about 3.7M), so use few.
+- A referenced id must already be fetched: a missing folder or file fails the
+  run with `missing <id>/<file>: fetch it with blender.assets
+  [[inputs.assets]] with id = "<id>" and res = "<res>"` (`2k` for a sky or
+  texture, `1k` for a model). Foto and recorrido never download; fetch the set
+  first with one `blender.assets` piece (see `## Assets` below).
 
 ## The exposure rule
 

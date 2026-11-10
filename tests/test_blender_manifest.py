@@ -13,6 +13,7 @@ from.
 
 from __future__ import annotations
 
+import importlib.util
 import re
 import tomllib
 from pathlib import Path
@@ -41,6 +42,9 @@ EXPOSURE = -0.6
 #: The tour's frame-rate bounds, from the spec.
 FPS_MIN = 12
 FPS_MAX = 60
+#: The dressing defaults the manifest pins for foto and recorrido alike.
+GIRO_DEFAULT = 200
+LADO_DEFAULT = 2.0
 
 
 def _versions(value: str) -> tuple[int, int, int]:
@@ -155,6 +159,9 @@ def test_the_tour_is_the_video_kind_with_the_lab_recipe() -> None:
         "personas",
         "autos-blend",
         "autos",
+        "cielo",
+        "texturas",
+        "plantas",
     }
     assert tour["inputs"]["model"]["type"] == "path"
     assert tour["inputs"]["model"]["required"] is True
@@ -235,6 +242,9 @@ def test_the_scene_parameters_are_camera_giro_and_exposure() -> None:
         "personas",
         "autos-blend",
         "autos",
+        "cielo",
+        "texturas",
+        "plantas",
     }
     camera = INPUTS["camera"]
     assert camera["type"] == "array"
@@ -307,6 +317,59 @@ def test_the_skill_validates_in_the_core_format() -> None:
     positions = [body.index(heading) for heading in HEADINGS]
     assert positions == sorted(positions)
     assert "blender.foto" in body
+
+
+def _load_escena():
+    """The lab's material set, loaded without Blender: escena needs no bpy."""
+    spec = importlib.util.spec_from_file_location("blender_escena", PACKAGE / "escena.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_dressing_inputs_ride_on_both_scene_capabilities() -> None:
+    """cielo, texturas and plantas are arrays of fixed-field items, both scenes."""
+    for capability in ("foto", "recorrido"):
+        inputs = MANIFEST["capabilities"][capability]["inputs"]
+        for name in ("cielo", "texturas", "plantas"):
+            field = inputs[name]
+            assert field["type"] == "array", (capability, name)
+            assert field["default"] == [], (capability, name)
+            assert "required" not in field, (capability, name)
+            assert "one" in field["description"], (capability, name)
+        sky = inputs["cielo"]["items"]
+        assert set(sky) == {"id", "giro", "fuerza"}, capability
+        assert sky["id"]["type"] == "string" and sky["id"]["required"] is True
+        assert sky["giro"]["default"] == GIRO_DEFAULT and sky["giro"]["type"] == "number"
+        assert sky["fuerza"]["default"] == 1.0 and sky["fuerza"]["type"] == "number"
+        cloth = inputs["texturas"]["items"]
+        assert set(cloth) == {"prefijo", "id", "lado", "matiz", "saturacion", "valor"}
+        assert cloth["prefijo"]["type"] == "enum" and cloth["prefijo"]["required"] is True
+        assert cloth["id"]["type"] == "string" and cloth["id"]["required"] is True
+        assert cloth["lado"]["default"] == LADO_DEFAULT and cloth["lado"]["type"] == "number"
+        assert (cloth["matiz"]["default"], cloth["saturacion"]["default"]) == (0.5, 1.0)
+        assert cloth["valor"]["default"] == 1.0
+        greens = inputs["plantas"]["items"]
+        assert set(greens) == {"id", "x", "y", "giro"}, capability
+        assert greens["id"]["required"] is True
+        assert greens["x"]["required"] is True and greens["y"]["required"] is True
+        assert greens["giro"]["default"] == 0
+        for group in (sky, cloth, greens):
+            for item in group.values():
+                assert item["description"], (capability, item)
+
+
+def test_the_prefijo_enum_is_the_material_set() -> None:
+    """The texturas prefijo enum is exactly the keys of escena.MATERIALS."""
+    expected = set(_load_escena().MATERIALS)
+    assert expected and "pavimento" in expected
+    for capability in ("foto", "recorrido"):
+        values = MANIFEST["capabilities"][capability]["inputs"]["texturas"]["items"]["prefijo"][
+            "values"
+        ]
+        assert set(values) == expected, capability
+        assert values == sorted(values), capability
 
 
 def test_the_readme_documents_the_host_contract_the_route_and_the_rule() -> None:

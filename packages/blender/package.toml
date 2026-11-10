@@ -138,6 +138,87 @@ type = "number"
 default = 0
 description = "Turn about Z in degrees from the -y facing the collection has by default."
 
+[capabilities.foto.inputs.cielo]
+type = "array"
+default = []
+description = "Sky as one { id, giro, fuerza } item: the Poly Haven HDRI id, its turn about Z in degrees and the background strength; the scene then has no sun lamp. The runner reads only the first item."
+
+[capabilities.foto.inputs.cielo.items.id]
+type = "string"
+required = true
+description = "Poly Haven HDRI id, the last part of its polyhaven.com URL; it must already be fetched with blender.assets."
+
+[capabilities.foto.inputs.cielo.items.giro]
+type = "number"
+default = 200
+description = "Turn of the HDRI about Z in degrees, which sets where the sun falls."
+
+[capabilities.foto.inputs.cielo.items.fuerza]
+type = "number"
+default = 1.0
+description = "Background strength of the HDRI sky."
+
+[capabilities.foto.inputs.texturas]
+type = "array"
+default = []
+description = "Textures by piece prefix, one { prefijo, id, lado, matiz, saturacion, valor } item each; a prefix without an item keeps its flat MATERIALS colour."
+
+[capabilities.foto.inputs.texturas.items.prefijo]
+type = "enum"
+values = ["almohada", "cama", "mesa", "muros", "pavimento", "piso", "sillas", "suelo", "vidrio"]
+required = true
+description = "Piece prefix the texture dresses, one of the keys of MATERIALS in escena.py."
+
+[capabilities.foto.inputs.texturas.items.id]
+type = "string"
+required = true
+description = "Poly Haven texture id, the last part of its polyhaven.com URL; it must already be fetched with blender.assets."
+
+[capabilities.foto.inputs.texturas.items.lado]
+type = "number"
+default = 2.0
+description = "Tile side in metres of the box projection."
+
+[capabilities.foto.inputs.texturas.items.matiz]
+type = "number"
+default = 0.5
+description = "Hue adjust of the lab's ajuste triple; 0.5 keeps the hue."
+
+[capabilities.foto.inputs.texturas.items.saturacion]
+type = "number"
+default = 1.0
+description = "Saturation adjust of the lab's ajuste triple."
+
+[capabilities.foto.inputs.texturas.items.valor]
+type = "number"
+default = 1.0
+description = "Value adjust of the lab's ajuste triple."
+
+[capabilities.foto.inputs.plantas]
+type = "array"
+default = []
+description = "Plants to stand in the scene, one { id, x, y, giro } item each: the Poly Haven model id and its place in metres."
+
+[capabilities.foto.inputs.plantas.items.id]
+type = "string"
+required = true
+description = "Poly Haven model id, the last part of its polyhaven.com URL; it must already be fetched with blender.assets."
+
+[capabilities.foto.inputs.plantas.items.x]
+type = "number"
+required = true
+description = "X position in metres, in the scene's own axes."
+
+[capabilities.foto.inputs.plantas.items.y]
+type = "number"
+required = true
+description = "Y position in metres, in the scene's own axes."
+
+[capabilities.foto.inputs.plantas.items.giro]
+type = "number"
+default = 0
+description = "Turn about Z in degrees."
+
 [capabilities.foto.preview]
 viewer = "image"
 
@@ -342,6 +423,87 @@ description = "Y position in metres, in the scene's own axes."
 type = "number"
 default = 0
 description = "Turn about Z in degrees from the -y facing the collection has by default."
+
+[capabilities.recorrido.inputs.cielo]
+type = "array"
+default = []
+description = "Sky as one { id, giro, fuerza } item: the Poly Haven HDRI id, its turn about Z in degrees and the background strength; the scene then has no sun lamp. The runner reads only the first item."
+
+[capabilities.recorrido.inputs.cielo.items.id]
+type = "string"
+required = true
+description = "Poly Haven HDRI id, the last part of its polyhaven.com URL; it must already be fetched with blender.assets."
+
+[capabilities.recorrido.inputs.cielo.items.giro]
+type = "number"
+default = 200
+description = "Turn of the HDRI about Z in degrees, which sets where the sun falls."
+
+[capabilities.recorrido.inputs.cielo.items.fuerza]
+type = "number"
+default = 1.0
+description = "Background strength of the HDRI sky."
+
+[capabilities.recorrido.inputs.texturas]
+type = "array"
+default = []
+description = "Textures by piece prefix, one { prefijo, id, lado, matiz, saturacion, valor } item each; a prefix without an item keeps its flat MATERIALS colour."
+
+[capabilities.recorrido.inputs.texturas.items.prefijo]
+type = "enum"
+values = ["almohada", "cama", "mesa", "muros", "pavimento", "piso", "sillas", "suelo", "vidrio"]
+required = true
+description = "Piece prefix the texture dresses, one of the keys of MATERIALS in escena.py."
+
+[capabilities.recorrido.inputs.texturas.items.id]
+type = "string"
+required = true
+description = "Poly Haven texture id, the last part of its polyhaven.com URL; it must already be fetched with blender.assets."
+
+[capabilities.recorrido.inputs.texturas.items.lado]
+type = "number"
+default = 2.0
+description = "Tile side in metres of the box projection."
+
+[capabilities.recorrido.inputs.texturas.items.matiz]
+type = "number"
+default = 0.5
+description = "Hue adjust of the lab's ajuste triple; 0.5 keeps the hue."
+
+[capabilities.recorrido.inputs.texturas.items.saturacion]
+type = "number"
+default = 1.0
+description = "Saturation adjust of the lab's ajuste triple."
+
+[capabilities.recorrido.inputs.texturas.items.valor]
+type = "number"
+default = 1.0
+description = "Value adjust of the lab's ajuste triple."
+
+[capabilities.recorrido.inputs.plantas]
+type = "array"
+default = []
+description = "Plants to stand in the scene, one { id, x, y, giro } item each: the Poly Haven model id and its place in metres."
+
+[capabilities.recorrido.inputs.plantas.items.id]
+type = "string"
+required = true
+description = "Poly Haven model id, the last part of its polyhaven.com URL; it must already be fetched with blender.assets."
+
+[capabilities.recorrido.inputs.plantas.items.x]
+type = "number"
+required = true
+description = "X position in metres, in the scene's own axes."
+
+[capabilities.recorrido.inputs.plantas.items.y]
+type = "number"
+required = true
+description = "Y position in metres, in the scene's own axes."
+
+[capabilities.recorrido.inputs.plantas.items.giro]
+type = "number"
+default = 0
+description = "Turn about Z in degrees."
 
 [capabilities.recorrido.preview]
 viewer = "video"

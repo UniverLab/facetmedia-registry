@@ -17,6 +17,7 @@ rendered half-dressed.
 from __future__ import annotations
 
 import math
+from pathlib import Path
 from typing import Any
 
 #: glTF arrives in millimetres; Blender works in metres.
@@ -40,10 +41,22 @@ MATERIALS = {
     "mesa": ((0.40, 0.26, 0.15), 0.4, 0.0),
     "sillas": ((0.90, 0.40, 0.18), 0.55, 0.0),
     "suelo": ((0.80, 0.80, 0.78), 0.95, 0.0),
+    "pavimento": ((0.55, 0.55, 0.55), 0.9, 0.0),
 }
 
 #: One material recipe: base colour, roughness and glass transmission.
 Recipe = tuple[tuple[float, float, float], float, float]
+
+#: Poly Haven fetch resolutions: 2k for skies and textures, 1k for models.
+SKY_RES = "2k"
+TEXTURE_RES = "2k"
+MODEL_RES = "1k"
+#: The HDRI's turn about Z in degrees and its strength, when a piece asks for none.
+GIRO = 200.0
+FUERZA = 1.0
+#: The texture tile's side in metres and its hue/saturation/value adjust, by default.
+LADO = 2.0
+AJUSTE = (0.5, 1.0, 1.0)
 
 
 def scale_roots(scene: Any) -> None:
@@ -102,12 +115,206 @@ def world_point(matrix: Any, corner: Any) -> tuple[float, float, float]:
     return (point[0], point[1], point[2])
 
 
-def dress(bpy: Any, scene: Any, recipes: dict[str, Recipe]) -> None:
+def fetched(root: str, asset_id: str, name: str, res: str) -> Path:
+    """The fetched file, or the failure naming the assets entry that fetches it."""
+    target = Path(root) / asset_id / name
+    if target.is_file():
+        return target
+    raise RuntimeError(
+        f"missing {asset_id}/{name}: fetch it with blender.assets "
+        f'[[inputs.assets]] with id = "{asset_id}" and res = "{res}"'
+    )
+
+
+def cielo_item(params: dict[str, Any]) -> dict[str, Any]:
+    """The piece's sky: the first cielo item, the way _camera reads camera."""
+    items = params.get("cielo")
+    if isinstance(items, list) and items and isinstance(items[0], dict):
+        return dict(items[0])
+    return {}
+
+
+def texturas(params: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """The piece's textures by prefix; a repeated prefix fails loudly."""
+    recipes: dict[str, dict[str, Any]] = {}
+    for item in params.get("texturas") or []:
+        if not isinstance(item, dict):
+            continue
+        prefix = str(item.get("prefijo", ""))
+        if prefix in recipes:
+            raise RuntimeError(f"texturas: prefijo repetido: {prefix}")
+        recipes[prefix] = item
+    return recipes
+
+
+def plantas(params: dict[str, Any]) -> list[dict[str, Any]]:
+    """The piece's plant placements, in the order it lists them."""
+    return [item for item in params.get("plantas") or [] if isinstance(item, dict)]
+
+
+def dress(
+    bpy: Any,
+    scene: Any,
+    recipes: dict[str, Recipe],
+    textures: dict[str, dict[str, Any]],
+    root: str,
+) -> None:
     """Assign each mesh the material of its name prefix; none left over."""
-    materials = {prefix: material(bpy, prefix, recipe) for prefix, recipe in recipes.items()}
+    materials = build_materials(bpy, recipes, textures, root)
     missing = assign(scene, materials)
     if missing:
         raise RuntimeError(f"piezas sin material: {missing}")
+
+
+def build_materials(
+    bpy: Any,
+    recipes: dict[str, Recipe],
+    textures: dict[str, dict[str, Any]],
+    root: str,
+) -> dict[str, Any]:
+    """One material per prefix: textured where the piece asks, flat elsewhere."""
+    dressed: dict[str, Any] = {}
+    for prefix, recipe in recipes.items():
+        if prefix in textures:
+            dressed[prefix] = textured(bpy, prefix, textures[prefix], root)
+        else:
+            dressed[prefix] = material(bpy, prefix, recipe)
+    return dressed
+
+
+def _textura(bpy: Any, nodes: Any, links: Any, vector: Any, archivo: Path, color: bool) -> Any:
+    """One box-projected image tap: sRGB for colour, Non-Color for data."""
+    img = nodes.new("ShaderNodeTexImage")
+    img.image = bpy.data.images.load(str(archivo), check_existing=True)
+    img.image.colorspace_settings.name = "sRGB" if color else "Non-Color"
+    img.projection, img.projection_blend = "BOX", 0.25
+    links.new(vector, img.inputs["Vector"])
+    return img.outputs["Color"]
+
+
+def textured(bpy: Any, prefix: str, item: dict[str, Any], root: str) -> Any:
+    """One Poly Haven texture material: diff, rough and a bump from the rough.
+
+    Ported from the lab's ``textura``/``material``: the world-space position is
+    box-projected at ``1/lado`` metres, ``diff.jpg`` tints the base colour
+    through the hue/saturation/value adjust, and ``rough.jpg`` drives both the
+    roughness and a 0.15 bump. ``nor_gl.jpg`` is never loaded: the lab's models
+    carry no UVs for a normal map.
+    """
+    asset_id = str(item["id"])
+    lado = float(item.get("lado", LADO))
+    diff = fetched(root, asset_id, "diff.jpg", TEXTURE_RES)
+    rough = fetched(root, asset_id, "rough.jpg", TEXTURE_RES)
+    block = bpy.data.materials.new(prefix)
+    block.use_nodes = True
+    nodes, links = block.node_tree.nodes, block.node_tree.links
+    bsdf = nodes["Principled BSDF"]
+    geo = nodes.new("ShaderNodeNewGeometry")
+    mapping = nodes.new("ShaderNodeMapping")
+    mapping.inputs["Scale"].default_value = [1 / lado] * 3
+    links.new(geo.outputs["Position"], mapping.inputs["Vector"])
+    vector = mapping.outputs["Vector"]
+    colour = _textura(bpy, nodes, links, vector, diff, True)
+    ajuste = (
+        float(item.get("matiz", AJUSTE[0])),
+        float(item.get("saturacion", AJUSTE[1])),
+        float(item.get("valor", AJUSTE[2])),
+    )
+    tint = nodes.new("ShaderNodeHueSaturation")
+    for key, value in zip(("Hue", "Saturation", "Value"), ajuste, strict=True):
+        tint.inputs[key].default_value = value
+    links.new(colour, tint.inputs["Color"])
+    colour = tint.outputs["Color"]
+    links.new(colour, bsdf.inputs["Base Color"])
+    roughness = _textura(bpy, nodes, links, vector, rough, False)
+    links.new(roughness, bsdf.inputs["Roughness"])
+    bump = nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = 0.15
+    links.new(roughness, bump.inputs["Height"])
+    links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
+    return block
+
+
+def place_plants(
+    bpy: Any, scene: Any, placements: list[dict[str, Any]], root: str, floor_z: float
+) -> None:
+    """Import each Poly Haven model and stand its base centre at its place."""
+    for placement in placements:
+        asset_id = str(placement["id"])
+        route = fetched(root, asset_id, f"{asset_id}.gltf", MODEL_RES)
+        _place_plant(bpy, scene, asset_id, route, placement, floor_z)
+
+
+def _place_plant(
+    bpy: Any,
+    scene: Any,
+    asset_id: str,
+    route: Path,
+    placement: dict[str, Any],
+    floor_z: float,
+) -> None:
+    """One plant: anchored like the lab's colocar, placed like people and cars."""
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=str(route))
+    bpy.context.view_layer.update()
+    nuevos = [obj for obj in bpy.data.objects if obj not in before]
+    points = [
+        world_point(obj.matrix_world, corner)
+        for obj in nuevos
+        if getattr(obj, "type", "") == "MESH"
+        for corner in obj.bound_box
+    ]
+    base = (
+        sum(point[0] for point in points) / len(points),
+        sum(point[1] for point in points) / len(points),
+        min(point[2] for point in points),
+    )
+    anchor = bpy.data.objects.new(f"{asset_id}-ancla", None)
+    scene.collection.objects.link(anchor)
+    anchor.location = list(base)
+    bpy.context.view_layer.update()
+    for obj in nuevos:
+        if obj.parent is None:
+            obj.parent = anchor
+            obj.matrix_parent_inverse = anchor.matrix_world.inverted()
+    anchor.location = [float(placement["x"]), float(placement["y"]), floor_z]
+    anchor.rotation_mode = "XYZ"
+    anchor.rotation_euler[2] = math.radians(float(placement.get("giro", 0)))
+
+
+def sky_hdri(bpy: Any, scene: Any, item: dict[str, Any], root: str) -> None:
+    """The fetched HDRI sky: an environment texture turned by giro, no lamp.
+
+    Ported from the lab's ``cielo``: the Mapping node turns the HDRI about Z,
+    which sets where the sun falls, and ``use_sun_shadow`` lets Eevee pull a
+    shadow-casting sun out of the HDRI. There is no "sol" lamp beside it.
+    """
+    asset_id = str(item["id"])
+    route = fetched(root, asset_id, "sky.hdr", SKY_RES)
+    world = bpy.data.worlds.new("cielo")
+    scene.world = world
+    world.use_nodes = True
+    nodes, links = world.node_tree.nodes, world.node_tree.links
+    coords = nodes.new("ShaderNodeTexCoord")
+    mapping = nodes.new("ShaderNodeMapping")
+    hdri = nodes.new("ShaderNodeTexEnvironment")
+    hdri.image = bpy.data.images.load(str(route))
+    mapping.inputs["Rotation"].default_value[2] = math.radians(float(item.get("giro", GIRO)))
+    links.new(coords.outputs["Generated"], mapping.inputs["Vector"])
+    links.new(mapping.outputs["Vector"], hdri.inputs["Vector"])
+    links.new(hdri.outputs["Color"], nodes["Background"].inputs["Color"])
+    nodes["Background"].inputs["Strength"].default_value = float(item.get("fuerza", FUERZA))
+    world.use_sun_shadow = True
+
+
+def dress_scene(bpy: Any, scene: Any, params: dict[str, Any], root: str, floor_z: float) -> None:
+    """The whole dressed scene: materials, people, cars and plants, in order."""
+    dress(bpy, scene, dict(MATERIALS), texturas(params), root)
+    blend, placements = people(params)
+    personas(bpy, scene, blend, placements, floor_z)
+    car_blend, cars = autos_params(params)
+    autos(bpy, scene, car_blend, cars, floor_z)
+    place_plants(bpy, scene, plantas(params), root, floor_z)
 
 
 def material(bpy: Any, name: str, recipe: Recipe) -> Any:

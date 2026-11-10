@@ -122,7 +122,7 @@ def _at(pair: Pair, t: float) -> float:
     return pair[0] + (pair[1] - pair[0]) * t
 
 
-def render(bpy: Any, model: str, destination: str, params: dict[str, Any]) -> None:
+def render(bpy: Any, model: str, destination: str, params: dict[str, Any], root: str = "") -> None:
     """Import the glTF, keyframe the tour and render it to ``destination``."""
     tour = plan(params)
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -132,12 +132,12 @@ def render(bpy: Any, model: str, destination: str, params: dict[str, Any]) -> No
     bpy.context.view_layer.update()
     centre = escena.centre(scene)
     floor_z = escena.floor(bpy, scene, centre)
-    escena.dress(bpy, scene, escena.MATERIALS)
-    blend, placements = escena.people(params)
-    escena.personas(bpy, scene, blend, placements, floor_z)
-    car_blend, cars = escena.autos_params(params)
-    escena.autos(bpy, scene, car_blend, cars, floor_z)
-    escena.sky_and_sun(bpy, scene)
+    escena.dress_scene(bpy, scene, params, root, floor_z)
+    item = escena.cielo_item(params)
+    if item:
+        escena.sky_hdri(bpy, scene, item, root)
+    else:
+        escena.sky_and_sun(bpy, scene)
     camera = _camera(bpy, scene, tour)
     _keyframes(camera, centre, tour)
     _settings(scene, tour)
