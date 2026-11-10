@@ -179,7 +179,7 @@ def _run(request: dict[str, Any]) -> dict[str, Any]:
                 "properties": {"page_count": len(pages)},
                 "params": params,
                 "seed": None,
-                "inputs": [guion, pieza, *(str(sheet.path) for sheet in sheets)],
+                "inputs": [guion, pieza],
             }
         ],
     }

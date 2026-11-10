@@ -424,7 +424,7 @@ def test_run_converts_the_arguments_and_writes_the_preview(tmp_path: Path) -> No
     assert asset["properties"] == {"page_count": 1}
     sheet = out / f"{PDF_NAME}-01.svg"
     assert sheet.is_file()
-    assert asset["inputs"] == [str(script), str(part), str(sheet)]
+    assert asset["inputs"] == [str(script), str(part)]
     assert (out / f"{PDF_NAME}.pdf").is_file()
 
     converted = (tmp_path / "wslpath.log").read_text(encoding="utf-8").splitlines()
@@ -459,12 +459,9 @@ def test_run_renders_two_sheets_into_two_pages(tmp_path: Path) -> None:
     assert result is not None
     asset = result["assets"][0]
     assert asset["properties"] == {"page_count": 2}
-    assert asset["inputs"] == [
-        str(script),
-        str(part),
-        str(out / f"{PDF_NAME}-01.svg"),
-        str(out / f"{PDF_NAME}-02.svg"),
-    ]
+    assert asset["inputs"] == [str(script), str(part)]
+    assert (out / f"{PDF_NAME}-01.svg").is_file()
+    assert (out / f"{PDF_NAME}-02.svg").is_file()
     raw = (out / f"{PDF_NAME}.pdf").read_bytes()
     assert b"/Type /Pages" in raw and f"/Count {PAGE_COUNT_TWO}".encode() in raw
     assert b"/MediaBox [0 0 420 297]" in raw

@@ -60,8 +60,8 @@ sheets with FreeCAD's bundled Qt (`QSvgRenderer` into `preview/page-NN.png`
 at 150 dpi, `QPdfWriter` into `<name>.pdf` at 300 dpi) and writes
 `<name>.pdf.preview.json` in the core document shape `{preview, kind,
 summary, page_count, pages}` — no new schema or viewer. The sheets stay in
-the output directory next to the PDF as editable sources and are listed in
-the asset's `inputs` after the guion and the part.
+the output directory next to the PDF as editable sources; they are outputs
+of the guion, so the asset's `inputs` list only the guion and the part.
 
 ## A piece
 
