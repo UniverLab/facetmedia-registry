@@ -43,7 +43,7 @@ description = "glTF (.glb) exported by cad.solid from a CadQuery Assembly, one e
 
 [capabilities.foto.inputs.camera]
 type = "array"
-description = "Camera view as one { azimut, elevacion, escala } item: degrees for the two angles, the orthographic scale in metres; the lab's axonometric view when omitted."
+description = "Camera view as one { azimut, elevacion, escala } item: degrees for the two angles, the orthographic scale in metres; when escala is omitted it is computed to fit the whole model with a 10% margin."
 
 [capabilities.foto.inputs.camera.items.azimut]
 type = "number"
@@ -61,10 +61,9 @@ description = "Elevation in degrees above the floor."
 
 [capabilities.foto.inputs.camera.items.escala]
 type = "number"
-default = 11.5
 min = 0.5
 max = 200
-description = "Orthographic scale in metres: the width of the frame the camera fits."
+description = "Orthographic scale in metres: the width of the frame the camera fits; when omitted, computed to fit the whole model with a 10% margin."
 
 [capabilities.foto.inputs.giro]
 type = "number"

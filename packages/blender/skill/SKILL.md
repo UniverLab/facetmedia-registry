@@ -71,6 +71,8 @@ exposure = -0.9
 camera = [{ azimut = 25, elevacion = 40, escala = 12 }]
 ```
 
+Omit `escala` to fit the whole model; set it smaller to crop in.
+
 Run it with `facet run blender.foto <piece>.toml --out build/`; the asset lands
 as `<model>-foto.png` beside the piece unless `--out` says otherwise.
 

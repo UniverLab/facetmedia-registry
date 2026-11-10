@@ -257,7 +257,7 @@ What `facet describe blender.foto --json` reports for this manifest:
 | Field | Type | Required | Default | Notes |
 |-------|------|----------|---------|-------|
 | `model` | path | yes | — | the `.glb` from CadQuery's `Assembly`, relative to the piece file |
-| `camera` | array | no | the lab's axonometric view | one item: `{ azimut = -40, elevacion = 48, escala = 11.5 }` (degrees; orthographic scale in metres) |
+| `camera` | array | no | the lab's axonometric view | one item: `{ azimut = -40, elevacion = 48, escala }` (degrees for the two angles; `escala` is the orthographic scale in metres, and when omitted it is fitted to the whole model with a 10% margin) |
 | `giro` | number | no | `0` | turn of the whole model about Z in degrees; the sun stays put |
 | `exposure` | number | no | `-0.6` | stops under `AgX - Medium High Contrast` |
 | `personas-blend` | path | no | — | the prebuilt MPFB collection `.blend`, relative to the piece file |

@@ -26,6 +26,7 @@ import threading
 from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from types import SimpleNamespace
 
 import PIL.Image
 import pytest
@@ -44,7 +45,10 @@ HEIGHT = 1000
 #: The recipe the approved lab render pinned: Cycles on the GPU, denoised.
 SAMPLES = 128
 EXPOSURE = -0.6
-DEFAULT_ORTHO_SCALE = 11.5
+#: The frame's height over its width, the ratio fit_escala renders with.
+ASPECT = HEIGHT / WIDTH
+#: The smallest scale fit_escala returns, so a tiny piece stays a piece.
+SCALE_FLOOR = 4.0
 SKY_STRENGTH = 0.2
 SUN_FORCE = 3.0
 #: The preview's one-line summary cap, from the image schema.
@@ -586,6 +590,17 @@ def _load_runner():
 runner = _load_runner()
 
 
+def _load_escena():
+    spec = importlib.util.spec_from_file_location("blender_escena", PACKAGE / "escena.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+escena = _load_escena()
+
+
 def _stub_bpy(tmp_path: Path) -> Path:
     folder = tmp_path / "stub-bpy"
     folder.mkdir()
@@ -761,9 +776,111 @@ def test_the_recipe_scales_to_metres_and_lights_the_scene(tmp_path: Path) -> Non
     assert render["look"] == "AgX - Medium High Contrast"
     assert render["filepath"] == str(tmp_path / "out" / "estudio-foto.png")
     assert trail["camera"]["type"] == "ORTHO"
-    assert trail["camera"]["ortho_scale"] == DEFAULT_ORTHO_SCALE
+    assert trail["camera"]["ortho_scale"] == pytest.approx(_expected_scale())
     assert trail["sky_strength"] == SKY_STRENGTH
     assert trail["sun"]["sol"] == SUN_FORCE
+
+
+def _box_corners(size: tuple[float, float, float]) -> list[tuple[float, float, float]]:
+    """The eight corners of a box of ``size`` metres centred at the origin."""
+    half = [side / 2 for side in size]
+    return [
+        (x, y, z)
+        for x in (-half[0], half[0])
+        for y in (-half[1], half[1])
+        for z in (-half[2], half[2])
+    ]
+
+
+def _stub_corners() -> list[tuple[float, float, float]]:
+    """The stub study's world corners in metres: millimetre sizes at the origin."""
+    corners: list[tuple[float, float, float]] = []
+    for _name, size in PIECES:
+        half = [side / 2 * 0.001 for side in size]
+        corners.extend(
+            (x, y, z)
+            for x in (-half[0], half[0])
+            for y in (-half[1], half[1])
+            for z in (-half[2], half[2])
+        )
+    return corners
+
+
+def _expected_scale() -> float:
+    """The scale the recipe fits to the stub study when the piece omits escala."""
+    return escena.fit_escala(_stub_corners(), (0.0, 0.0, 0.0), -40.0, 48.0, ASPECT)
+
+
+def _projected(
+    corner: tuple[float, float, float],
+    centre: tuple[float, float, float],
+    azimut: float,
+    elevacion: float,
+) -> tuple[float, float]:
+    """One corner's frame coordinates along the camera's own right and up axes."""
+    azimuth, elevation = math.radians(azimut), math.radians(elevacion)
+    right = (-math.sin(azimuth), math.cos(azimuth), 0.0)
+    up = (
+        -math.sin(elevation) * math.cos(azimuth),
+        -math.sin(elevation) * math.sin(azimuth),
+        math.cos(elevation),
+    )
+    offset = [corner[axis] - centre[axis] for axis in range(3)]
+    across = sum(offset[axis] * right[axis] for axis in range(3))
+    upright = sum(offset[axis] * up[axis] for axis in range(3))
+    return across, upright
+
+
+def test_fit_escala_floors_a_one_metre_cube_at_four_metres() -> None:
+    """A 1 m cube needs less than 4 m, so the floor holds: the photo stays a piece."""
+    corners = _box_corners((1.0, 1.0, 1.0))
+    assert escena.fit_escala(corners, (0.0, 0.0, 0.0), -40.0, 48.0, ASPECT) == SCALE_FLOOR
+
+
+def test_fit_escala_frames_a_wide_low_block() -> None:
+    """A 16 x 12 x 3 m block: every projected corner lands inside the frame."""
+    corners = _box_corners((16.0, 12.0, 3.0))
+    centre = (0.0, 0.0, 0.0)
+    escala = escena.fit_escala(corners, centre, -40.0, 48.0, ASPECT)
+    assert escala > SCALE_FLOOR
+    for corner in corners:
+        across, upright = _projected(corner, centre, -40.0, 48.0)
+        assert abs(across) <= escala / 2
+        assert abs(upright) <= escala * ASPECT / 2
+
+
+def test_fit_escala_is_driven_by_height_for_a_tall_tower() -> None:
+    """A 4 x 4 x 16 m tower: the height over the aspect beats the width."""
+    corners = _box_corners((4.0, 4.0, 16.0))
+    centre = (0.0, 0.0, 0.0)
+    spans = [_projected(corner, centre, -40.0, 48.0) for corner in corners]
+    width = 2 * max(abs(across) for across, _upright in spans)
+    height = 2 * max(abs(upright) for _across, upright in spans)
+    assert height / ASPECT > width
+    assert escena.fit_escala(corners, centre, -40.0, 48.0, ASPECT) == pytest.approx(
+        1.1 * height / ASPECT
+    )
+
+
+def test_model_corners_skips_the_floor_plane() -> None:
+    """model_corners reads every MESH but the suelo the recipe adds."""
+    scene = SimpleNamespace(
+        objects=[
+            SimpleNamespace(
+                type="MESH",
+                name="muros",
+                matrix_world=[[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0]],
+                bound_box=[[2.0, 3.0, 4.0]],
+            ),
+            SimpleNamespace(
+                type="MESH",
+                name="suelo",
+                matrix_world=[[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0]],
+                bound_box=[[5.0, 6.0, 7.0]],
+            ),
+        ]
+    )
+    assert escena.model_corners(scene) == [(2.0, 3.0, 4.0)]
 
 
 def test_the_piece_camera_the_turn_and_the_exposure_reach_the_scene(tmp_path: Path) -> None:

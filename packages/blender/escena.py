@@ -151,6 +151,55 @@ def world_point(matrix: Any, corner: Any) -> tuple[float, float, float]:
     return (point[0], point[1], point[2])
 
 
+def model_corners(scene: Any) -> list[tuple[float, float, float]]:
+    """Every model mesh's world bound-box corners, without the floor plane."""
+    return [
+        world_point(obj.matrix_world, corner)
+        for obj in scene.objects
+        if getattr(obj, "type", "") == "MESH" and obj.name != "suelo"
+        for corner in obj.bound_box
+    ]
+
+
+def fit_escala(
+    corners: list[tuple[float, float, float]],
+    centre: tuple[float, float, float],
+    azimut_deg: float,
+    elevacion_deg: float,
+    aspect: float,
+) -> float:
+    """The orthographic scale framing every corner, with a 10% margin.
+
+    The frame is ``escala`` wide and ``escala * aspect`` high, so the scale
+    is the wider of the projected width and the projected height over the
+    aspect; a tall model counts as much as a wide one. Never below 4 m, so
+    a tiny piece still photographs as a piece and not a pixel.
+    """
+    azimuth, elevation = math.radians(azimut_deg), math.radians(elevacion_deg)
+    right = (-math.sin(azimuth), math.cos(azimuth), 0.0)
+    up = (
+        -math.sin(elevation) * math.cos(azimuth),
+        -math.sin(elevation) * math.sin(azimuth),
+        math.cos(elevation),
+    )
+    across = _reach(corners, centre, right)
+    upright = _reach(corners, centre, up)
+    return max(4.0, 1.1 * max(2 * across, 2 * upright / aspect))
+
+
+def _reach(
+    corners: list[tuple[float, float, float]],
+    centre: tuple[float, float, float],
+    direction: tuple[float, float, float],
+) -> float:
+    """How far the furthest corner strays from the centre along one axis."""
+    offsets = [
+        abs(sum((corner[axis] - centre[axis]) * direction[axis] for axis in range(3)))
+        for corner in corners
+    ]
+    return max(offsets, default=0.0)
+
+
 def fetched(root: str, asset_id: str, name: str, res: str) -> Path:
     """The fetched file, or the failure naming the assets entry that fetches it."""
     target = Path(root) / asset_id / name

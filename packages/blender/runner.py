@@ -53,8 +53,9 @@ RENDER_HEIGHT = 1000
 #: Cycles on the GPU: 128 samples with denoise is the lab's 8-10 s recipe.
 SAMPLES = 128
 DEFAULT_EXPOSURE = -0.6
-#: The lab's axonometric view: azimut and elevacion in degrees, escala in metres.
-DEFAULT_CAMERA = {"azimut": -40.0, "elevacion": 48.0, "escala": 11.5}
+#: The lab's axonometric view: azimut and elevacion in degrees. The escala is
+#: fitted to the whole model when the piece omits it.
+DEFAULT_CAMERA = {"azimut": -40.0, "elevacion": 48.0}
 #: How far the orthographic camera sits from the model, in frame widths.
 CAMERA_DISTANCE = 2.5
 #: What the run appends to the model's stem: ``estudio.glb`` -> ``estudio-foto.png``.
@@ -665,6 +666,15 @@ def _render(bpy: Any, model: str, destination: str, params: dict[str, Any]) -> N
     escena.bake_pieces(bpy, scene)
     bpy.context.view_layer.update()
     centre = escena.centre(scene)
+    camera = _camera(params)
+    if "escala" not in camera:
+        camera["escala"] = escena.fit_escala(
+            escena.model_corners(scene),
+            centre,
+            camera["azimut"],
+            camera["elevacion"],
+            RENDER_HEIGHT / RENDER_WIDTH,
+        )
     floor_z = escena.floor(bpy, scene, centre)
     converted = _host_scene(params, windows)
     root = _dressing_root(params)
@@ -674,7 +684,7 @@ def _render(bpy: Any, model: str, destination: str, params: dict[str, Any]) -> N
         escena.sky_hdri(bpy, scene, item, root)
     else:
         escena.sky_and_sun(bpy, scene)
-    _place_camera(bpy, scene, _camera(params), centre)
+    _place_camera(bpy, scene, camera, centre)
     scene.render.resolution_x = RENDER_WIDTH
     scene.render.resolution_y = RENDER_HEIGHT
     scene.view_settings.exposure = _exposure(params)
@@ -745,11 +755,18 @@ def _cycles(bpy: Any, scene: Any) -> None:
 
 
 def _camera(params: dict[str, Any]) -> dict[str, float]:
-    """The piece's camera view, one ``{ azimut, elevacion, escala }`` item."""
+    """The piece's camera view: azimut and elevacion, plus escala when given.
+
+    An omitted escala is fitted to the whole model in ``_render``; an explicit
+    one always wins, so it travels here only when the piece gives it.
+    """
     view = dict(DEFAULT_CAMERA)
     items = params.get("camera")
     if isinstance(items, list) and items and isinstance(items[0], dict):
-        view.update({key: float(value) for key, value in items[0].items() if key in view})
+        first = items[0]
+        view.update({key: float(value) for key, value in first.items() if key in view})
+        if "escala" in first:
+            view["escala"] = float(first["escala"])
     return view
 
 
