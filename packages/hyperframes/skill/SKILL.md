@@ -44,7 +44,9 @@ audio = [{ clip = "assets/voz.wav" }]
 ```
 
 `composicion` names the directory holding `hyperframes.json`, `index.tmpl`,
-`build.mjs` and `assets/`. The template is never named `.html`. Each audio clip
+`index.html`, `build.mjs` and `assets/`. The template is never named `.html`.
+The runner injects the recipe values into the copied `index.html`, the file
+HyperFrames renders. Each audio clip
 is copied into the composition by its file name and enters as `<audio>`.
 `fps` passes `--fps`; without it the composition's `data-fps` applies. The
 composition layout and the offline/runner split are in
@@ -95,7 +97,7 @@ shifted by `audio-inicio`, which must match the voice `<audio data-start>`. See
 
 ### hyperframes.narrado
 
-`index.tmpl` carries one `<!-- SUBS -->` marker, one `<!-- AUDIOS -->` marker
+`index.html` carries one `<!-- SUBS -->` marker, one `<!-- AUDIOS -->` marker
 and a positive `data-duration`. The runner parses the `.srt` into
 `{ start, end, text }` cues and burns them in as `.sub` divs. The cues are
 absolute; a template that gives the voice a `data-start` must start the `.srt`

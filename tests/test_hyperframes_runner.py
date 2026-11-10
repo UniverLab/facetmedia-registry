@@ -171,6 +171,7 @@ def _composition(root: Path) -> tuple[Path, Path, Path]:
     }
     (comp / "hyperframes.json").write_text(json.dumps(metadata), encoding="utf-8")
     (comp / "index.tmpl").write_text("<!doctype html><html><body></body></html>", encoding="utf-8")
+    (comp / "index.html").write_text("<!doctype html><html><body></body></html>", encoding="utf-8")
     (comp / "build.mjs").write_text("export {};\n", encoding="utf-8")
     (comp / "assets" / "keep.txt").write_text("vendored\n", encoding="utf-8")
     clip = root / "voz.wav"
@@ -336,6 +337,9 @@ def test_a_remote_url_is_refused_before_the_cli_runs(tmp_path: Path) -> None:
     (comp / "index.tmpl").write_text(
         '<script src="https://cdn.example.com/app.js"></script>', encoding="utf-8"
     )
+    (comp / "index.html").write_text(
+        '<script src="https://cdn.example.com/app.js"></script>', encoding="utf-8"
+    )
     out = tmp_path / "out"
     out.mkdir()
     done, result = _invoke(
@@ -346,8 +350,27 @@ def test_a_remote_url_is_refused_before_the_cli_runs(tmp_path: Path) -> None:
     )
     assert done.returncode != 0
     assert result is None
-    assert "index.tmpl" in done.stderr
+    assert "index.tmpl" in done.stderr or "index.html" in done.stderr
     assert "https://cdn.example.com/app.js" in done.stderr
+    assert _calls(tmp_path) == []
+
+
+def test_a_composition_without_index_html_fails_before_the_cli_runs(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    piece, comp, _clip = _composition(tmp_path)
+    (comp / "index.html").unlink()
+    out = tmp_path / "out"
+    out.mkdir()
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _request("run", out, piece, composicion="comp", prompt="brief"),
+        _environment(tmp_path, _dirs(packages)),
+    )
+    assert done.returncode != 0
+    assert result is None
+    assert "has no index.html" in done.stderr
+    assert "build.mjs" in done.stderr
     assert _calls(tmp_path) == []
 
 
@@ -628,7 +651,7 @@ def test_diagrama_renders_the_proof_selectors_and_injects_the_timeline(tmp_path:
     assert [call["args"][0] for call in _calls(tmp_path)] == ["check", "render"]
     assert (out / "comp.mp4").is_file()
     assert (out / "diagrama.svg").is_file()
-    template = (out / "composition" / "index.tmpl").read_text(encoding="utf-8")
+    template = (out / "composition" / "index.html").read_text(encoding="utf-8")
     assert "strokeDashoffset" in template
     assert "__timelines" in template
     assert result is not None
@@ -718,6 +741,7 @@ def _giro_comp(root: Path, template: str = GIRO_TEMPLATE) -> tuple[Path, Path]:
     }
     (comp / "hyperframes.json").write_text(json.dumps(metadata), encoding="utf-8")
     (comp / "index.tmpl").write_text(template, encoding="utf-8")
+    (comp / "index.html").write_text(template, encoding="utf-8")
     (comp / "build.mjs").write_text("export {};\n", encoding="utf-8")
     (comp / "vendor" / "gsap.min.js").write_text("// gsap 3.14.2\n", encoding="utf-8")
     (comp / "vendor" / "three.module.js").write_text(VENDOR_THREE, encoding="utf-8")
@@ -772,7 +796,7 @@ def test_giro_rejects_a_remote_url_outside_vendor(tmp_path: Path) -> None:
     )
     assert done.returncode != 0
     assert result is None
-    assert "index.tmpl" in done.stderr
+    assert "index.tmpl" in done.stderr or "index.html" in done.stderr
     assert "https://cdn.example.com/model.bin" in done.stderr
     assert _calls(tmp_path) == []
 
@@ -818,7 +842,7 @@ def test_giro_embeds_the_model_and_injects_the_orbit_scalars(tmp_path: Path) -> 
     )
     assert done.returncode == 0, done.stderr
     assert result is not None
-    written = (out / "composition" / "index.tmpl").read_text(encoding="utf-8")
+    written = (out / "composition" / "index.html").read_text(encoding="utf-8")
     assert "/* GLB */" not in written
     assert "/* GIRO */" not in written
     assert base64.b64encode(GIRO_MODEL).decode("ascii") in written
@@ -887,6 +911,7 @@ def _personaje_comp(root: Path) -> tuple[Path, Path]:
     }
     (comp / "hyperframes.json").write_text(json.dumps(metadata), encoding="utf-8")
     (comp / "index.tmpl").write_text(PERSONAJE_TEMPLATE, encoding="utf-8")
+    (comp / "index.html").write_text(PERSONAJE_TEMPLATE, encoding="utf-8")
     (comp / "build.mjs").write_text("export {};\n", encoding="utf-8")
     (comp / "assets" / "keep.txt").write_text("vendored\n", encoding="utf-8")
     (piece / "zorro.svg").write_text(PERSONAJE_SVG, encoding="utf-8")
@@ -943,7 +968,7 @@ def test_personaje_injects_the_cues_and_the_audio_start(tmp_path: Path) -> None:
     assert done.returncode == 0, done.stderr
     assert [call["args"][0] for call in _calls(tmp_path)] == ["check", "render"]
     assert result is not None and result["assets"][0]["file"] == "comp.mp4"
-    written = (out / "composition" / "index.tmpl").read_text(encoding="utf-8")
+    written = (out / "composition" / "index.html").read_text(encoding="utf-8")
     assert "/* BOCAS */" not in written
     injected = re.search(r"const CUES = (\[.*?\]);", written, re.DOTALL)
     assert injected is not None
@@ -1012,6 +1037,7 @@ def _narrado_comp(root: Path) -> tuple[Path, Path]:
     }
     (comp / "hyperframes.json").write_text(json.dumps(metadata), encoding="utf-8")
     (comp / "index.tmpl").write_text(NARRADO_TEMPLATE, encoding="utf-8")
+    (comp / "index.html").write_text(NARRADO_TEMPLATE, encoding="utf-8")
     (comp / "build.mjs").write_text("export {};\n", encoding="utf-8")
     (comp / "assets" / "keep.txt").write_text("vendored\n", encoding="utf-8")
     (piece / "voz-a.wav").write_bytes(VOZ_BYTES)
@@ -1086,7 +1112,7 @@ def test_narrado_injects_audio_subtitles_and_the_opacity_timeline(tmp_path: Path
     assert done.returncode == 0, done.stderr
     assert [call["args"][0] for call in _calls(tmp_path)] == ["check", "render"]
     assert result is not None and result["assets"][0]["file"] == "comp.mp4"
-    written = (out / "composition" / "index.tmpl").read_text(encoding="utf-8")
+    written = (out / "composition" / "index.html").read_text(encoding="utf-8")
     assert '<audio id="voz-1" src="../voz-a.wav"></audio>' in written
     assert '<audio id="voz-2" src="../voz-b.wav"></audio>' in written
     assert '<audio id="musica" src="../musica.wav"></audio>' in written

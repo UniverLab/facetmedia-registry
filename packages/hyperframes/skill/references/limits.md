@@ -49,7 +49,7 @@ vendored tree, the host Chromium and the host `ffmpeg`/`ffprobe`. `fps` passes
 - **`build.mjs` owns the `>` fix.** Mermaid writes `>` as `&gt;` inside the
   SVG's `<style>`; browsers decode it, the HyperFrames CSS parser does not.
   `build.mjs` replaces `&gt;` with `>` inside `<style>` and inserts the SVG into
-  `index.tmpl` at `<!-- DIAGRAMA -->`. The runner never rewrites the SVG.
+  `index.html` at `<!-- DIAGRAMA -->`. The runner never rewrites the SVG.
 - **Use the font Mermaid measured with**: `@font-face { src: local('Ubuntu') }`.
   Another build of the font overflows the boxes by about 2px and `check` fails.
 - **`fontSize` is 22px at 1080p** in the SVG style; Mermaid's default is too
@@ -84,7 +84,7 @@ vendored tree, the host Chromium and the host `ffmpeg`/`ffprobe`. `fps` passes
   Spanish needs `-r phonetic`.
 - **The runner validates before `check`**: every letter in `bocas.json` has its
   `#boca-<letter>` shape, and the rest rule `.boca { opacity: 0; } #boca-X { opacity: 1; }`
-  exists in `index.tmpl` or the SVG. A failure throws a plain `Error`, exit 1,
+  exists in `index.html` or the SVG. A failure throws a plain `Error`, exit 1,
   which facet reports as `runner_failed`.
 
 ## hyperframes.narrado

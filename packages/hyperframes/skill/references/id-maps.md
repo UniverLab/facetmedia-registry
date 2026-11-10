@@ -96,7 +96,7 @@ The CSS carries the rest state, because a `tl.set` at instant 0 never shows:
 .boca { opacity: 0; } #boca-X { opacity: 1; }
 ```
 
-The runner requires that rule in `index.tmpl` or in the SVG's own `<style>`, and
+The runner requires that rule in `index.html` or in the SVG's own `<style>`, and
 requires `#boca-<letter>` for every letter `bocas.json` uses.
 
 ## hyperframes.narrado

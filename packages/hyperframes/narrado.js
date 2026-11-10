@@ -9,7 +9,7 @@
 // module runs in the copied workDir before HyperFrames' check: it copies the
 // audio beside the composition, parses the .srt into subtitle cues, requires
 // the cues to fit data-duration, and injects the audio elements, the burned-in
-// subtitle divs and the opacity timeline into index.tmpl.
+// subtitle divs and the opacity timeline into index.html.
 //
 // It imports only node builtins so it runs before any dependency is linked.
 
@@ -27,8 +27,8 @@ function narradoSetup(workDir, inputs, base) {
   const music = requiredFile(inputs, "musica", base);
   const subtitles = requiredFile(inputs, "subtitulos", base);
   const cues = readSrt(subtitles);
-  const templateFile = path.join(workDir, "index.tmpl");
-  if (!fs.existsSync(templateFile)) throw new Error("composicion: index.tmpl not found");
+  const templateFile = path.join(workDir, "index.html");
+  if (!fs.existsSync(templateFile)) throw new Error("composicion: index.html not found");
   const template = fs.readFileSync(templateFile, "utf8");
   const duration = compositionDuration(template);
   requireCuesFit(cues, duration);
@@ -123,13 +123,13 @@ function compositionDuration(template) {
     const duration = Number(raw);
     if (!Number.isFinite(duration) || duration <= 0) {
       throw new Error(
-        `index.tmpl: data-duration on the data-composition-id tag must be a ` +
+        `index.html: data-duration on the data-composition-id tag must be a ` +
           `positive number, got ${raw || "nothing"}`,
       );
     }
     return duration;
   }
-  throw new Error("index.tmpl: no data-composition-id tag");
+  throw new Error("index.html: no data-composition-id tag");
 }
 
 function attribute(tag, name) {
@@ -160,13 +160,13 @@ function injectNarration(template, cues, voices, music) {
     template,
     SUBS_MARKER,
     cues.map((cue, index) => subtitleLine(cue, index)).join("\n      "),
-    "index.tmpl: <!-- SUBS --> marker is required",
+    "index.html: <!-- SUBS --> marker is required",
   );
   const withAudio = replaceMarker(
     withSubs,
     AUDIOS_MARKER,
     audioLines(voices, music),
-    "index.tmpl: <!-- AUDIOS --> marker is required",
+    "index.html: <!-- AUDIOS --> marker is required",
   );
   return appendScript(withAudio, cues);
 }

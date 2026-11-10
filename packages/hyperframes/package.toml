@@ -737,7 +737,7 @@ kind = "video"
 [capabilities.narrado.inputs.composicion]
 type = "path"
 required = true
-description = "Composition directory with hyperframes.json, index.tmpl plus assets/ and vendor/, resolved relative to the piece; the author's offline build.mjs produces the vendored tree and the runner never executes it. index.tmpl carries one <!-- SUBS --> marker, one <!-- AUDIOS --> marker and a positive data-duration on the data-composition-id tag."
+description = "Composition directory with hyperframes.json, index.tmpl plus assets/ and vendor/, resolved relative to the piece; the author's offline build.mjs produces the vendored tree and the runner never executes it. index.tmpl carries one <!-- SUBS --> marker, one <!-- AUDIOS --> marker and a positive data-duration on the data-composition-id tag. The author's offline build.mjs writes those markers into index.html, and the runner injects into the copied index.html, the file HyperFrames renders."
 
 [capabilities.narrado.inputs.voz]
 type = "array"

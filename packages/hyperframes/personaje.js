@@ -27,8 +27,8 @@ function personajeSetup(workDir, inputs, base) {
   const cues = mouthCues(inputs, base);
   const svg = characterSvg(inputs, base);
   requireShapes(svg, cues);
-  const templateFile = path.join(workDir, "index.tmpl");
-  if (!fs.existsSync(templateFile)) throw new Error("composicion: index.tmpl not found");
+  const templateFile = path.join(workDir, "index.html");
+  if (!fs.existsSync(templateFile)) throw new Error("composicion: index.html not found");
   const template = fs.readFileSync(templateFile, "utf8");
   requireRestRule(template, svg);
   const audioStart = audioStartOf(inputs);
@@ -101,7 +101,7 @@ function requireRestRule(template, svg) {
     if (hasRestRule(source)) return;
   }
   throw new Error(
-    "index.tmpl: the rest rule .boca { opacity: 0; } #boca-X { opacity: 1; } " +
+    "index.html: the rest rule .boca { opacity: 0; } #boca-X { opacity: 1; } " +
       "is required so the rest mouth shows at frame 0",
   );
 }
@@ -123,12 +123,12 @@ function inject(template, cues, audioStart) {
     template,
     BOCAS_MARKER,
     JSON.stringify(cues),
-    "index.tmpl: /* BOCAS */[] marker is required",
+    "index.html: /* BOCAS */[] marker is required",
   );
   const declarations = withCues.match(new RegExp(AUDIO_START_DECLARATION, "g")) || [];
   if (declarations.length !== 1) {
     throw new Error(
-      `index.tmpl: const AUDIO_START = <number>; is required; found ${declarations.length}`,
+      `index.html: const AUDIO_START = <number>; is required; found ${declarations.length}`,
     );
   }
   return withCues.replace(AUDIO_START_DECLARATION, `const AUDIO_START = ${audioStart};`);

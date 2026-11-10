@@ -381,10 +381,11 @@ function compositionDir(request) {
   if (!inputs.composicion) throw new Error("composicion is required");
   const dir = resolveInput(inputs.composicion, pieceBase(request));
   if (!isDirectory(dir)) throw new Error(`composicion: ${dir} is not a directory`);
-  for (const name of ["hyperframes.json", "index.tmpl"]) {
-    if (!fs.existsSync(path.join(dir, name))) {
-      throw new Error(`composicion: ${dir} has no ${name}`);
-    }
+  if (!fs.existsSync(path.join(dir, "hyperframes.json"))) {
+    throw new Error(`composicion: ${dir} has no hyperframes.json`);
+  }
+  if (!fs.existsSync(path.join(dir, "index.html"))) {
+    throw new Error(`composicion: ${dir} has no index.html; run the composition's build.mjs first`);
   }
   return dir;
 }
@@ -438,7 +439,7 @@ function diagramaSetup(workDir, inputs, base) {
   const source = Array.isArray(inputs.animacion) ? inputs.animacion : [];
   const pasos = source.map((paso, index) => pasoOf(paso, index, ids, dataIds));
   fs.copyFileSync(svgFile, path.join(path.dirname(workDir), path.basename(svgFile)));
-  injectTimeline(path.join(workDir, "index.tmpl"), pasos);
+  injectTimeline(path.join(workDir, "index.html"), pasos);
 }
 
 function svgUrls(svg) {

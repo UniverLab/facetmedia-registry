@@ -50,8 +50,11 @@ fails the verb loudly.
 `composicion` is a directory resolved relative to the piece, holding:
 
 - `hyperframes.json`, the CLI's own manifest;
-- `index.tmpl`, the entry template — **never named `.html`**, which HyperFrames
+- `index.tmpl`, the author source — **never named `.html`**, which HyperFrames
   reads as a second composition;
+- `index.html`, written from the template by `build.mjs`; the runner injects
+  the recipe values into this copied file, the one HyperFrames renders, so
+  `build.mjs` must keep the runner's markers in it;
 - `build.mjs`, the bundler script that writes `index.html` from the template;
 - `assets/`, the vendored media.
 
@@ -100,7 +103,7 @@ steps where `kind` is `show`, `draw` or `fade` and `dur` defaults to `0.4`.
 The runner copies the SVG beside the composition (so a `build.mjs` in the
 composition reaches it as `../<file>.svg`), validates every `animacion[].selector`
 against the ids and data-ids the SVG actually carries, and only then injects a
-paused timeline into `index.tmpl` before `check`. An unknown id throws a plain
+paused timeline into `index.html` before `check`. An unknown id throws a plain
 `Error`, exit 1, which facet reports as `runner_failed`; nothing renders.
 
 ### Stable Mermaid ids
@@ -130,7 +133,7 @@ Selectors are the classic silent failure, so these id shapes are verbatim:
 - **`build.mjs` owns the `>` fix.** Mermaid writes `>` as `&gt;` inside the
   SVG's `<style>`; browsers decode it, the HyperFrames CSS parser does not.
   `build.mjs` replaces `&gt;` with `>` inside `<style>` and inserts the SVG into
-  `index.tmpl` at `<!-- DIAGRAMA -->`. The runner never rewrites the SVG.
+  `index.html` at `<!-- DIAGRAMA -->`. The runner never rewrites the SVG.
 - **Use the font Mermaid measured with**: `@font-face { src: local('Ubuntu') }`.
   Another build of the font overflows the boxes by about 2px and `check` fails.
 - **`fontSize` is 22px at 1080p** in the SVG style; Mermaid's default is too
@@ -197,9 +200,9 @@ before `check`. The composition's own files remain fully scanned.
 
 The **offline `build.mjs`** in the piece produces this vendored tree and sets up
 the composition; the runner never executes it. The runner-side **`giroSetup`**
-then does only the runtime injection: it base64-embeds `modelo-glb` into the
-`/* GLB */""` placeholder and writes the eight scalars into the `DATA` literal
-at `/* GIRO */`.
+reads and writes the copied `index.html` and does only the runtime injection:
+it base64-embeds `modelo-glb` into the `/* GLB */""` placeholder and writes
+the eight scalars into the `DATA` literal at `/* GIRO */`.
 
 Use it for camera-friendly video where a simple lit scene and crisp HTML text
 are enough; Cycles stays for photoreal staging with bounced light.
@@ -255,7 +258,7 @@ The CSS carries the rest state, because a `tl.set` at instant 0 never shows:
 .boca { opacity: 0; } #boca-X { opacity: 1; }
 ```
 
-The runner requires that rule in `index.tmpl` or in the SVG's own `<style>`; a
+The runner requires that rule in `index.html` or in the SVG's own `<style>`; a
 missing shape for a letter in `bocas.json` or a missing rest rule throws a plain
 `Error`, exit 1, which facet reports as `runner_failed`. `check` and `render`
 never run in that case.
@@ -263,8 +266,8 @@ never run in that case.
 ### Offline half and runner half
 
 - **Offline, the piece author's `build.mjs`** inlines the character into the
-  composition and replaces the `/* BOCAS */[]` placeholder with the cue array
-  from `bocas.json`. The runner never executes `build.mjs`.
+  composition and keeps the `/* BOCAS */[]` placeholder empty. The mouth cues
+  come only from the runner's `bocas` input. The runner never executes `build.mjs`.
 - **Runner-side, `personajeSetup`** runs in the copied composition before
   `check`: it validates the mouth shapes and the rest rule, writes the cues into
   `/* BOCAS */[]`, and writes `audio-inicio` into
@@ -305,8 +308,10 @@ The lab proof is
 `/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-personaje/`:
 a fox speaking with the person's voice, an 11.5 s composition whose 10.32 s of
 voice starts at `data-start="0.5"`. Its `index.tmpl` carries the rest rule, the
-nine `boca-X`…`boca-H` shapes and the cue timeline; its `build.mjs` replaces
-`/* BOCAS */[]` with the cues from `bocas.json`.
+nine `boca-X`…`boca-H` shapes and the cue timeline; its `build.mjs` copies
+`index.tmpl` to `index.html` keeping `/* BOCAS */[]` empty, and the runner's
+`personajeSetup` injects the cues from the `bocas` input into the copied
+`index.html`.
 
 ## Narration
 
@@ -330,7 +335,7 @@ run every voice file through ffmpeg `normalize` with `target-lufs` `-16.0` and
 `gain-db` `0.0`) over the bed (`role` `bed`) with `ducking` `true`, `duck-db`
 `-12.0` and `target-lufs` `-16.0`.
 
-`index.tmpl` must carry exactly one `<!-- SUBS -->` marker, exactly one
+`index.html` must carry exactly one `<!-- SUBS -->` marker, exactly one
 `<!-- AUDIOS -->` marker and a positive `data-duration` on the
 `data-composition-id` tag, and its CSS must style `.sub`: the cues are
 opacity-toggled divs burned into the frames, never a sidecar copy.
@@ -348,7 +353,7 @@ never run.
 The offline `build.mjs` produces the vendored `assets/` and `vendor/` tree;
 the runner never executes it. The lab proof for the SUBS burn-in shape is
 `/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/demo-hackaton/video/`:
-its `renders/demo.mp4` carries video+audio and its `index.tmpl` burns
+its `renders/demo.mp4` carries video+audio and its `index.html` burns
 hardcoded SUBS opacity cues. This capability generalizes that proven shape to
 a whisper `.srt` parsed at run time; no end-to-end `.srt` lab proof exists yet.
 

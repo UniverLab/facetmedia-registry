@@ -23,7 +23,7 @@ tl.seek(0);
 ## hyperframes.render
 
 The composition carries its own paused timeline. Nothing is injected from the
-runtime: the author's `index.tmpl` is the timeline, and `audio` clips enter as
+runtime: the author's `index.html` is the timeline, and `audio` clips enter as
 `<audio>` elements. `fps` only changes the export frame rate; `data-fps` on the
 composition applies when `fps` is omitted.
 
@@ -38,7 +38,7 @@ the timeline for a loop: a GIF and a MOV with alpha are the same frames.
 `animacion` is an ordered list of `{ selector, at, kind, dur }` steps. `kind` is
 `show`, `draw` or `fade`, and `dur` defaults to `0.4`. The runner validates
 every selector against the ids the SVG carries, then injects this paused
-timeline into `index.tmpl` before `check`:
+timeline into `index.html` before `check`:
 
 ```js
 const tl = gsap.timeline({ paused: true });
@@ -108,7 +108,7 @@ stay at fixed times in the template; they are not piece inputs.
 
 ## hyperframes.narrado
 
-`index.tmpl` carries exactly one `<!-- SUBS -->` marker, exactly one
+`index.html` carries exactly one `<!-- SUBS -->` marker, exactly one
 `<!-- AUDIOS -->` marker and a positive `data-duration` on the
 `data-composition-id` tag. The runner parses the `.srt` into
 `{ start, end, text }` cues, requires every cue end to fit `data-duration`, and

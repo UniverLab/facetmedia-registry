@@ -23,6 +23,9 @@ resolved relative to the piece file and shipped self-contained.
 - **`build.mjs`** is the piece author's offline bundler. It writes
   `index.html` from `index.tmpl`, and for a capability it also inlines the
   Mermaid SVG or the character. The runner never executes it.
+- **`index.html`** is the copy the runner edits: every setup reads and writes
+  the copied `index.html`, the file HyperFrames renders, so `build.mjs` must
+  keep the runner's markers in the `index.html` it writes.
 - **`assets/`** holds the composition's own media.
 - **`vendor/`** holds pinned third-party code. The remote-URL scan skips the
   top-level `vendor/` subtree, because license and documentation URLs in those
@@ -35,7 +38,7 @@ The split is the same in every capability:
 
 | Half | Who runs it | What it produces |
 |------|-------------|------------------|
-| Offline | the piece author's `build.mjs` | `index.html`, the vendored tree and the inlined SVG or character |
+| Offline | the piece author's `build.mjs` | `index.html` keeping the runner's markers, the vendored tree and the inlined SVG or character |
 | Runner-side | the package runner in the copied composition | the runtime values: audio injection, the GLB, the eight orbit scalars, the mouth cues, `AUDIO_START`, the SUBS and AUDIOS markers and the timeline |
 
 The runner copies the composition into `<out>/composition` and runs its

@@ -5,7 +5,7 @@
 //
 // The piece author builds the vendored tree offline with its own build.mjs;
 // this module runs in the copied workDir, embeds the model and the eight orbit
-// scalars into index.tmpl, and enforces the recipe rules before HyperFrames'
+// scalars into index.html, and enforces the recipe rules before HyperFrames'
 // check and render. A composition that would stop being a pure function of
 // time, or that would fetch a remote asset, fails here instead.
 //
@@ -49,8 +49,8 @@ const DEFAULTS = {
 
 function giroSetup(workDir, inputs, base) {
   const encoded = modelBase64(inputs, base);
-  const templateFile = path.join(workDir, "index.tmpl");
-  if (!fs.existsSync(templateFile)) throw new Error("composicion: index.tmpl not found");
+  const templateFile = path.join(workDir, "index.html");
+  if (!fs.existsSync(templateFile)) throw new Error("composicion: index.html not found");
   const template = fs.readFileSync(templateFile, "utf8");
   validateRecipe(template);
   refuseRemoteUrls(workDir);
