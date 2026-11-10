@@ -44,6 +44,16 @@ MODEL_DIRS = {
     "wan2v2-fastwan-lora": "models/loras",
 }
 #: The 64x48, 24 fps, 49-frame MP4 the stub serves for a clip.
+FLOW_WAN = json.loads((PACKAGE / "flows" / "wan22-i2v.json").read_text(encoding="utf-8"))
+#: Wan's official Chinese negative: what a clip submits when the entry omits it.
+WAN_DEFAULT_NEGATIVE = FLOW_WAN["params"]["negative"]
+#: The lab's engraved-plate negative: it names text and subtitles on purpose.
+CLIP_NEGATIVE = (
+    "static, still image, frozen, motionless, no movement, 3D render, CGI, photorealistic, "
+    "metallic reflections, glossy metal, smooth shading, gradients, color change, "
+    "oversaturated, camera movement, zoom, blur, text, subtitles, paper sheet, new objects, "
+    "deformed machine, melting, morphing"
+)
 CLIP_FIXTURE = ROOT / "tests" / "fixtures" / "clip.mp4"
 #: The same 64x48 and 49 frames at 12 fps: verify must fail on the rate alone.
 CLIP_12FPS_FIXTURE = ROOT / "tests" / "fixtures" / "clip-12fps.mp4"
@@ -576,9 +586,9 @@ def _assert_klein_graph(graph_file: Path) -> None:
     assert graph["vae"]["inputs"]["vae_name"] == Path(MODEL_PATHS["flux2-klein-vae"]).name
 
 
-def _clip_entry(source: Path) -> dict[str, object]:
+def _clip_entry(source: Path, negative: str | None = None) -> dict[str, object]:
     """One clip: the still is the first frame, the prompt describes the movement."""
-    return {
+    entry: dict[str, object] = {
         "name": "bosque-niebla",
         "image": str(source),
         "prompt": CLIP_PROMPT,
@@ -587,6 +597,9 @@ def _clip_entry(source: Path) -> dict[str, object]:
         "height": HEIGHT,
         "length": CLIP_LENGTH,
     }
+    if negative is not None:
+        entry["negative"] = negative
+    return entry
 
 
 def test_a_clip_uploads_its_first_frame_and_returns_the_mp4(tmp_path: Path) -> None:
@@ -625,7 +638,7 @@ def test_a_clip_uploads_its_first_frame_and_returns_the_mp4(tmp_path: Path) -> N
         assert asset["properties"] == {"width": WIDTH, "height": HEIGHT, "seed": SEED}
         assert (out / "bosque-niebla.mp4").read_bytes() == CLIP_FIXTURE.read_bytes()
         _assert_links(checkout, models)
-        _assert_wan_graph(graph_file)
+        _assert_wan_graph(graph_file, WAN_DEFAULT_NEGATIVE)
         _assert_upload(upload_file, source)
     finally:
         process.terminate()
@@ -633,7 +646,76 @@ def test_a_clip_uploads_its_first_frame_and_returns_the_mp4(tmp_path: Path) -> N
     _assert_clip_verdicts(stub_dir, home, url, out, models, tmp_path, entry)
 
 
-def _assert_wan_graph(graph_file: Path) -> None:
+def test_a_clip_negative_reaches_the_wan_graph_unchanged(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    models = _model_files(home)
+    graph_file = tmp_path / "graph.json"
+    upload_file = tmp_path / "upload.bin"
+    stub_dir = _stub_sdk(tmp_path)
+    checkout = _clone(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    source = tmp_path / "primer-cuadro.png"
+    PIL.Image.new("RGB", (WIDTH, HEIGHT), (12, 34, 56)).save(source)
+    entry = _clip_entry(source, negative=CLIP_NEGATIVE)
+    port = _free_port()
+    url = f"http://127.0.0.1:{port}"
+    process = _launch(checkout, graph_file, upload_file, port)
+    try:
+        assert _wait_healthy(f"{url}/system_stats"), "the stub ComfyUI never became healthy"
+        env = _environment(stub_dir, home, url)
+        request = _request(
+            "run",
+            out,
+            tmp_path,
+            models,
+            inputs={"image": [entry]},
+            capability="comfy.clip",
+        )
+        result, _ = _call(stub_dir, "run", request, tmp_path, env)
+        assert result["assets"][0]["params"]["negative"] == CLIP_NEGATIVE
+        _assert_wan_graph(graph_file, CLIP_NEGATIVE)
+    finally:
+        process.terminate()
+        process.wait(timeout=10)
+
+
+def test_a_clip_without_a_negative_submits_the_flow_default(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    models = _model_files(home)
+    graph_file = tmp_path / "graph.json"
+    upload_file = tmp_path / "upload.bin"
+    stub_dir = _stub_sdk(tmp_path)
+    checkout = _clone(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    source = tmp_path / "primer-cuadro.png"
+    PIL.Image.new("RGB", (WIDTH, HEIGHT), (12, 34, 56)).save(source)
+    entry = _clip_entry(source)
+    assert "negative" not in entry
+    port = _free_port()
+    url = f"http://127.0.0.1:{port}"
+    process = _launch(checkout, graph_file, upload_file, port)
+    try:
+        assert _wait_healthy(f"{url}/system_stats"), "the stub ComfyUI never became healthy"
+        env = _environment(stub_dir, home, url)
+        request = _request(
+            "run",
+            out,
+            tmp_path,
+            models,
+            inputs={"image": [entry]},
+            capability="comfy.clip",
+        )
+        result, _ = _call(stub_dir, "run", request, tmp_path, env)
+        assert "negative" not in result["assets"][0]["params"]
+        _assert_wan_graph(graph_file, WAN_DEFAULT_NEGATIVE)
+    finally:
+        process.terminate()
+        process.wait(timeout=10)
+
+
+def _assert_wan_graph(graph_file: Path, expected_negative: str) -> None:
     graph = json.loads(graph_file.read_text(encoding="utf-8"))["prompt"]
     assert graph["start"]["class_type"] == "LoadImage"
     assert graph["start"]["inputs"]["image"] == "source.png"
@@ -647,7 +729,7 @@ def _assert_wan_graph(graph_file: Path) -> None:
     assert graph["latent"]["inputs"]["height"] == HEIGHT
     assert graph["video"]["inputs"]["fps"] == CLIP_FPS
     assert graph["save"]["inputs"]["filename_prefix"] == "bosque-niebla"
-    assert graph["negative"]["inputs"]["text"].strip()
+    assert graph["negative"]["inputs"]["text"] == expected_negative
     assert "$" not in json.dumps(graph)
     assert graph["unet"]["inputs"]["unet_name"] == Path(MODEL_PATHS["wan2v2-unet"]).name
     assert graph["clip"]["inputs"]["clip_name"] == Path(MODEL_PATHS["wan2v2-clip"]).name

@@ -117,6 +117,7 @@ The fields below are what `facet describe comfy.clip --json` reports.
 | `image[].width` | integer | no | `1280` | 64 to 2048, a multiple of 64 |
 | `image[].height` | integer | no | `704` | 64 to 2048, a multiple of 64 |
 | `image[].length` | integer | no | `49` | frames at 24 fps: `49` ≈ 2 s, `121` ≈ 5 s |
+| `image[].negative` | string | no | flow default | what to keep out of the clip; omitting it keeps Wan's official Chinese negative, and `wan22-i2v-rapido` at cfg 1 ignores it |
 | `workflow` | enum | no | `"wan22-i2v"` | `"wan22-i2v"`, or `"wan22-i2v-rapido"` for a draft-only clip |
 
 The length must be `4n+1` frames — 49, 121 — because the Wan latent keeps one

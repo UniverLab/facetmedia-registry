@@ -2,8 +2,9 @@
 
 The registry suite runs without the core, so the checks here read the
 manifest and the flow as data. The closed item set pins what the core turns
-into ``invalid_input``: a capability's items are exactly five fields, so a
-piece that adds a sixth key is rejected before anything runs. The guard is
+into ``invalid_input``: each capability's items are pinned exactly, so a
+piece that adds a key the manifest does not declare is rejected before
+anything runs. The guard is
 the manifest's own ``pattern``, applied the way ``facetmedia.schema`` applies
 it (``re.fullmatch``), and the four lab-approved prompts are its regression
 test.
@@ -102,6 +103,23 @@ LAB_CLIP_PROMPTS = (
     "camera, shallow depth of field, calm product shot",
     "Slow camera pan to the right along the colonial street, clouds drifting over the green "
     "mountains, watercolor painting style preserved, gentle movement",
+)
+
+#: The lab's engraved-plate clip: the motion first, then the engraving style,
+#: with the custom negative that keeps invented hands and new objects out.
+PLATE_PROMPT = (
+    "The large spoked flywheel of the antique printing press spins clockwise continuously, "
+    "making several full turns, its spokes clearly rotating; the foot treadle pumps up and "
+    "down again and again; the round ink disc on top keeps turning. Constant steady "
+    "mechanical motion through the whole clip. The image stays a 19th-century copperplate "
+    "engraving: fine black ink hatching on flat cream paper, identical drawing style in "
+    "every frame. Static camera, nothing else changes."
+)
+PLATE_NEGATIVE = (
+    "static, still image, frozen, motionless, no movement, 3D render, CGI, photorealistic, "
+    "metallic reflections, glossy metal, smooth shading, gradients, color change, "
+    "oversaturated, camera movement, zoom, blur, text, subtitles, paper sheet, new objects, "
+    "deformed machine, melting, morphing"
 )
 
 #: The ten models the lab's clone holds, pinned by sha256, size and path.
@@ -329,7 +347,16 @@ def test_the_clip_capability_is_a_video_from_a_first_frame() -> None:
 
 
 def test_the_clip_entries_carry_their_own_first_frame() -> None:
-    assert set(CLIP_ITEMS) == {"name", "image", "prompt", "seed", "width", "height", "length"}
+    assert set(CLIP_ITEMS) == {
+        "name",
+        "image",
+        "prompt",
+        "seed",
+        "width",
+        "height",
+        "length",
+        "negative",
+    }
     assert CLIP_ITEMS["name"]["pattern"] == ITEMS["name"]["pattern"]
     assert CLIP_ITEMS["image"]["type"] == "path"
     assert CLIP_ITEMS["image"]["required"] is True
@@ -339,6 +366,98 @@ def test_the_clip_entries_carry_their_own_first_frame() -> None:
     assert CLIP_ITEMS["width"]["default"] == DEFAULT_CLIP_WIDTH
     assert CLIP_ITEMS["height"]["default"] == DEFAULT_CLIP_HEIGHT
     assert CLIP_ITEMS["length"]["default"] == DEFAULT_CLIP_LENGTH
+
+
+def test_the_clip_negative_is_an_optional_patternless_string() -> None:
+    negative = CLIP_ITEMS["negative"]
+    assert negative["type"] == "string"
+    assert negative["required"] is False
+    # A negative legitimately names text, subtitles and logos: no guard pattern.
+    assert "pattern" not in negative
+    assert "default" not in negative
+    assert "default" in negative["description"]
+    assert "rapido" in negative["description"]
+
+
+def test_still_and_edit_have_no_negative() -> None:
+    assert "negative" not in ITEMS
+    assert "negative" not in EDIT_ITEMS
+
+
+def _assert_valid_clip_entry(entry: dict[str, object]) -> None:
+    """The manifest's clip item schema, applied the way ``facet run`` does."""
+    assert set(entry) <= set(CLIP_ITEMS)
+    for key, field in CLIP_ITEMS.items():
+        if field.get("required", False):
+            assert key in entry, key
+    assert re.fullmatch(CLIP_ITEMS["name"]["pattern"], str(entry["name"]))
+    assert GUARD.fullmatch(str(entry["prompt"])) is not None
+    assert isinstance(entry["seed"], int)
+    for side in ("width", "height"):
+        field = CLIP_ITEMS[side]
+        value = entry.get(side, field.get("default"))
+        assert field["min"] <= int(str(value)) <= field["max"]
+    length = entry.get("length", CLIP_ITEMS["length"].get("default"))
+    assert int(str(length)) % 4 == 1
+    pattern = CLIP_ITEMS["negative"].get("pattern")
+    if pattern is not None:
+        assert re.fullmatch(pattern, str(entry.get("negative", ""))) is not None
+
+
+def test_a_clip_piece_with_a_negative_validates() -> None:
+    _assert_valid_clip_entry(
+        {
+            "name": "texforge-anim-c",
+            "image": "texforge-lamina.png",
+            "prompt": PLATE_PROMPT,
+            "negative": PLATE_NEGATIVE,
+            "seed": 11,
+            "width": 1280,
+            "height": 736,
+            "length": 49,
+        }
+    )
+
+
+def test_a_negative_naming_text_and_subtitles_validates() -> None:
+    assert "text, subtitles" in PLATE_NEGATIVE
+    assert "pattern" not in CLIP_ITEMS["negative"]
+    _assert_valid_clip_entry(
+        {
+            "name": "bosque-niebla",
+            "image": "fondo-video.png",
+            "prompt": LAB_CLIP_PROMPTS[0],
+            "negative": "static, blur, text, subtitles",
+            "seed": 51,
+        }
+    )
+
+
+def test_the_skill_teaches_the_engraved_plate_recipe() -> None:
+    text = (PACKAGE / "skill" / "SKILL.md").read_text(encoding="utf-8")
+    assert "Animating an engraved plate" in text
+    assert "wan22-i2v" in text
+    assert PLATE_PROMPT in text
+    assert PLATE_NEGATIVE in text
+
+
+def test_the_skill_plate_example_validates() -> None:
+    text = (PACKAGE / "skill" / "SKILL.md").read_text(encoding="utf-8")
+    blocks = re.findall(r"```toml\n(.*?)```", text, re.DOTALL)
+    pieces = [tomllib.loads(block) for block in blocks]
+    matches = [
+        entry
+        for piece in pieces
+        for entry in piece.get("inputs", {}).get("image", [])
+        if entry.get("name") == "texforge-anim-c"
+    ]
+    assert len(matches) == 1
+    entry = matches[0]
+    assert entry["image"] == "texforge-lamina.png"
+    assert entry["prompt"] == PLATE_PROMPT
+    assert entry["negative"] == PLATE_NEGATIVE
+    assert (entry["seed"], entry["width"], entry["height"], entry["length"]) == (11, 1280, 736, 49)
+    _assert_valid_clip_entry(entry)
 
 
 def test_the_clip_workflow_is_the_wan_enum() -> None:

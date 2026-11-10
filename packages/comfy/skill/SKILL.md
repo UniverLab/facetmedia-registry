@@ -112,6 +112,36 @@ no draft passes for a final. Wan2.2-TI2V-5B-Turbo was rejected (no declared
 licence) and LTX-2 was rejected (own licence, quantized-only at 8 GB); the
 lab's approved draft sample is `examples/bosque-niebla-rapido.mp4`.
 
+## Animating an engraved plate
+
+The lab's winning recipe for animating an engraved plate — a still that must
+stay a 19th-century copperplate engraving while something mechanical moves
+inside it — runs on the full `wan22-i2v` flow, never rapido: at cfg 1 rapido
+ignores the negative and drifts halfway through. Describe the motion first,
+explicitly and constant through the whole clip ("spins clockwise
+continuously", "up and down again and again", "keeps turning", "constant
+steady mechanical motion through the whole clip"), then the style sentence
+(the engraving, the hatching, the identical drawing style, the static
+camera). The trap is the negative: Wan's default keeps invented hands and new
+objects out, but a custom negative that drops "static" barely moves — keep
+"static, still image, frozen, motionless, no movement" in it even though the
+shot itself is a static camera.
+
+```toml
+[inputs]
+workflow = "wan22-i2v"
+
+[[inputs.image]]
+name = "texforge-anim-c"
+image = "texforge-lamina.png"
+prompt = "The large spoked flywheel of the antique printing press spins clockwise continuously, making several full turns, its spokes clearly rotating; the foot treadle pumps up and down again and again; the round ink disc on top keeps turning. Constant steady mechanical motion through the whole clip. The image stays a 19th-century copperplate engraving: fine black ink hatching on flat cream paper, identical drawing style in every frame. Static camera, nothing else changes."
+negative = "static, still image, frozen, motionless, no movement, 3D render, CGI, photorealistic, metallic reflections, glossy metal, smooth shading, gradients, color change, oversaturated, camera movement, zoom, blur, text, subtitles, paper sheet, new objects, deformed machine, melting, morphing"
+seed = 11
+width = 1280
+height = 736
+length = 49
+```
+
 ## Judging the result
 
 `verify` opens every `<name>.png` with Pillow and passes when its pixel size

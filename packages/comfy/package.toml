@@ -289,6 +289,11 @@ type = "integer"
 default = 49
 description = "Clip length in frames at 24 fps: 49 is about 2 s, 121 about 5 s (4n+1)."
 
+[capabilities.clip.inputs.image.items.negative]
+type = "string"
+required = false
+description = "Custom negative prompt for the clip. Omitting it keeps the flow default (Wan's official Chinese negative). The wan22-i2v-rapido flow runs at cfg 1 and ignores the negative."
+
 [capabilities.clip.inputs.workflow]
 type = "enum"
 values = ["wan22-i2v", "wan22-i2v-rapido"]
