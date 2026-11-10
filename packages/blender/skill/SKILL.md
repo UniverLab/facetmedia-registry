@@ -165,8 +165,11 @@ or car pack folder: that state lives in the lab, outside this package.
 - **The glTF is in millimetres and Y-up.** The runner scales the top-level
   pieces by 0.001 to metres; a model exported in metres comes out tiny.
 - **A piece without a material prefix fails the whole run** with
-  `piezas sin material: [...]`. Add the prefix to `MATERIALS` in `runner.py`
-  or rename the piece; nothing is rendered half-dressed.
+  `piezas sin material: [...]`. The accepted prefixes are `muros`, `piso`,
+  `vidrio`, `cama`, `almohada`, `mesa`, `sillas` and `suelo` (the keys of
+  `MATERIALS` in `escena.py`); the prefix is the start of each glTF element
+  name, as the cad export names it. Rename the piece in its model with one of
+  them; nothing is rendered half-dressed.
 - **Do not raise the exposure to brighten a dark photo.** Under
   `AgX - Medium High Contrast` at -0.6, `sol + cielo` washes the colours out;
   move the sun or lower `exposure` instead of lighting the scene harder.

@@ -76,7 +76,7 @@ estudio.export("estudio.glb")  # glTF binary: one element per piece, with its na
 
 Each mesh takes the material whose name is a **prefix** of the mesh's own
 name, case-insensitively: `muros` dresses `muros`, `vidrio-1` and `vidrio-2`
-are glass. The lab's set (`MATERIALS` in `runner.py`) is colour, roughness and
+are glass. The lab's set (`MATERIALS` in `escena.py`) is colour, roughness and
 transmission per prefix:
 
 | Prefix | Colour | Roughness | Transmission |

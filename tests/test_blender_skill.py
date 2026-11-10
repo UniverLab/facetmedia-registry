@@ -10,6 +10,7 @@ files.
 
 from __future__ import annotations
 
+import importlib.util
 import re
 import tomllib
 from pathlib import Path
@@ -151,3 +152,28 @@ def test_references_exist() -> None:
 def test_the_skill_never_cites_mannequin() -> None:
     """Mannequin appears in neither lab source, so the skill never names it."""
     assert "mannequin" not in SKILL.lower()
+
+
+def _load_escena():
+    """The lab's material set, loaded without Blender: escena needs no bpy."""
+    spec = importlib.util.spec_from_file_location("blender_escena", PACKAGE / "escena.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_skill_lists_every_material_prefix() -> None:
+    """The Pitfalls bullet names each accepted prefix, so the agent renames."""
+    _, body = _front_matter()
+    pitfalls = body.split("## Pitfalls", 1)[1]
+    assert "piezas sin material" in pitfalls
+    match = re.search(r"[Tt]he accepted prefixes are (.*?)\(the keys of", pitfalls, re.DOTALL)
+    assert match is not None, "the Pitfalls bullet lists the accepted prefixes"
+    listed = set(re.findall(r"`([a-z]+)`", match.group(1)))
+    assert listed == set(_load_escena().MATERIALS)
+
+
+def test_skill_never_asks_to_extend_materials() -> None:
+    """The agent renames its piece; it never edits the package's MATERIALS."""
+    assert "Add the prefix to" not in SKILL
