@@ -41,6 +41,8 @@ TOOLS: dict[str, dict[str, str]] = {
 }
 #: What each capability writes: extension -> mime, in asset order.
 SOLID_FILES: dict[str, str] = {"step": "model/step", "stl": "model/stl", "svg": "image/svg+xml"}
+#: Written only when the script wrote it: extension -> mime. Never required.
+OPTIONAL_SOLID_FILES: dict[str, str] = {"glb": "model/gltf-binary"}
 DRAWING_FILES: dict[str, str] = {
     "dxf": "image/vnd.dxf",
     "svg": "image/svg+xml",
@@ -116,8 +118,17 @@ def _require(stem: Path, extension: str, done: subprocess.CompletedProcess[str])
     return path
 
 
+def _optional_files(stem: Path) -> list[tuple[str, Path, str]]:
+    """Files the script may have written: only those present on disk."""
+    return [
+        (extension, stem.with_suffix(f".{extension}"), mime)
+        for extension, mime in OPTIONAL_SOLID_FILES.items()
+        if stem.with_suffix(f".{extension}").is_file()
+    ]
+
+
 def _run_solid(req: Request, params: dict[str, Any]) -> dict[str, Any]:
-    """The script's STEP, then the STL and SVG views it left out."""
+    """The script's STEP, then the STL and SVG views it left out, plus its glb."""
     script = Path(str(params["script"]))
     stem = req.out_dir / str(params["name"])
     done = _execute(script, stem)
@@ -135,6 +146,7 @@ def _run_solid(req: Request, params: dict[str, Any]) -> dict[str, Any]:
         (extension, stem.with_suffix(f".{extension}"), mime)
         for extension, mime in SOLID_FILES.items()
     ]
+    files += _optional_files(stem)
     return {"tool": _tool(req.capability), "assets": _assets(params, files, properties, script)}
 
 
@@ -189,6 +201,7 @@ def _verify_asset(params: Mapping[str, Any], path: Path) -> dict[str, Any]:
         ".step": lambda: _verify_step(params, path),
         ".dxf": lambda: _verify_dxf(params, path),
         ".stl": lambda: _verify_stl(path),
+        ".glb": lambda: _verify_glb(path),
         ".svg": lambda: _verify_svg(path),
         ".png": lambda: _verify_png(path),
     }
@@ -286,6 +299,19 @@ def _verify_dxf(params: Mapping[str, Any], path: Path) -> dict[str, Any]:
     thresholds = {"audit_errors_max": 0, "audit_fixes_max": 0, "expect_layers": expected}
     passed = audit["errors"] == 0 and audit["fixes"] == 0 and not missing
     return _verdict(path.name, passed, metrics, "ezdxf", thresholds)
+
+
+#: The first four bytes of every binary glTF file.
+GLB_MAGIC = b"glTF"
+
+
+def _verify_glb(path: Path) -> dict[str, Any]:
+    """A glb passes when it exists, is non-empty and starts with the glTF magic."""
+    try:
+        head = path.read_bytes()[:4]
+    except OSError as exc:
+        return _verdict(path.name, False, {"error": str(exc)}, "cad-derived")
+    return _verdict(path.name, head == GLB_MAGIC, {"bytes": path.stat().st_size}, "cad-derived")
 
 
 def _verify_stl(path: Path) -> dict[str, Any]:

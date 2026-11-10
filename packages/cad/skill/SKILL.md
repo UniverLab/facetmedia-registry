@@ -6,7 +6,8 @@ description: 3D parts and 2D plans from CadQuery or ezdxf scripts, verified by v
 
 Run your own CadQuery or ezdxf script inside the package environment and get
 CAD assets back, checked: `cad.solid` executes a CadQuery script and writes
-`<name>.step`, `<name>.stl` and `<name>.svg` (the `cad` kind, shown in the
+`<name>.step`, `<name>.stl` and `<name>.svg`, plus the optional `<name>.glb`
+the script writes (the `cad` kind, shown in the
 CAD viewer); `cad.drawing` executes an ezdxf script and writes `<name>.dxf`,
 `<name>.svg` and `<name>.png`. The part is verified by volume and bounding
 box; the plan by a clean DXF audit and its layers. CPU only.
@@ -92,6 +93,25 @@ Run a piece with `facet run cad.solid <piece.toml> --out build/`; without
 `--out` the assets land in the piece's directory. The runner completes what
 the script leaves out (a missing STL, SVG or PNG view), so writing only the
 required file is fine.
+
+## Model for blender
+
+Blender reads glTF, not STEP. When the model is headed for blender, have the
+script also export an `Assembly` to `<out>.glb` in millimetres, Y-up, with
+one named element per piece; each element name must start with one of the
+blender skill's `MATERIALS` prefixes (see the blender skill):
+
+```python
+import cadquery as cq
+
+assembly = cq.Assembly(name="estudio")
+assembly.add(muros, name="muros")
+assembly.add(losa, name="losa")
+assembly.export(str(out.with_suffix(".glb")))
+```
+
+facet keeps the `<name>.glb` the script writes as one more asset of the
+piece; it never generates one itself.
 
 ## Judging the result
 

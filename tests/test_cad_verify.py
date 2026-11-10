@@ -201,6 +201,82 @@ def test_verify_svg_reports_broken_xml(tmp_path: Path) -> None:
     assert "error" in verdict["metrics"]
 
 
+def _run_solid(tmp_path: Path, writes: tuple[str, ...]) -> list[dict]:
+    """Run the solid runner against a stub script that writes the named files."""
+    writes_lines = "\n".join(
+        f'(out.with_suffix(".{extension}")).write_bytes(b"x")' for extension in writes
+    )
+    script = tmp_path / "piece.py"
+    script.write_text(
+        "import sys\nfrom pathlib import Path\nout = Path(sys.argv[1])\n" + writes_lines + "\n"
+    )
+    req = types.SimpleNamespace(
+        out_dir=tmp_path,
+        capability="cad.solid",
+        inputs={"script": str(script), "name": "escuadra"},
+    )
+    with (
+        mock.patch.object(occlab, "import_step", return_value=ESCUEADRA_SHAPE),
+        mock.patch.object(occlab, "measure", return_value=ESCUEADRA_MEASURED),
+        mock.patch.object(
+            occlab, "export_stl", side_effect=lambda shape, path: Path(path).write_bytes(b"x")
+        ),
+        mock.patch.object(
+            occlab, "export_svg", side_effect=lambda shape, path: Path(path).write_bytes(b"x")
+        ),
+    ):
+        return runner._run_solid(req, dict(req.inputs))["assets"]
+
+
+def test_solid_keeps_the_glb_the_script_wrote(tmp_path: Path) -> None:
+    """A script that writes step/stl/svg/glb yields four assets, the glb last."""
+    assets = _run_solid(tmp_path, ("step", "stl", "svg", "glb"))
+    assert [asset["file"] for asset in assets] == [
+        "escuadra.step",
+        "escuadra.stl",
+        "escuadra.svg",
+        "escuadra.glb",
+    ]
+    assert assets[3]["mime"] == "model/gltf-binary"
+
+
+def test_solid_without_glb_keeps_three_assets(tmp_path: Path) -> None:
+    """A script that writes only the STEP yields today's three assets."""
+    assets = _run_solid(tmp_path, ("step",))
+    assert [asset["file"] for asset in assets] == ["escuadra.step", "escuadra.stl", "escuadra.svg"]
+
+
+def test_verify_glb_accepts_the_magic(tmp_path: Path) -> None:
+    """A .glb starting with the glTF magic passes verification."""
+    path = tmp_path / "escuadra.glb"
+    path.write_bytes(b"glTF" + b"\0" * 20)
+    verdict = runner._verify_glb(path)
+    assert verdict["passed"] is True
+
+
+def test_verify_glb_fails_without_the_magic(tmp_path: Path) -> None:
+    """A .glb without the magic fails verification and names the file."""
+    path = tmp_path / "part.glb"
+    path.write_bytes(b"solid nope")
+    verdict = runner._verify_glb(path)
+    assert verdict["passed"] is False
+    assert verdict["file"] == "part.glb"
+
+
+def test_verify_asset_routes_the_glb(tmp_path: Path) -> None:
+    """verify dispatches .glb, so the glb a run declared is checked like the rest."""
+    path = tmp_path / "escuadra.glb"
+    path.write_bytes(b"glTF" + b"\0" * 20)
+    assert runner._verify_asset({}, path)["passed"] is True
+
+
+def test_verify_glb_fails_a_missing_file(tmp_path: Path) -> None:
+    """A .glb that is not there fails and names the file instead of raising."""
+    verdict = runner._verify_glb(tmp_path / "missing.glb")
+    assert verdict["passed"] is False
+    assert verdict["file"] == "missing.glb"
+
+
 def test_hole_key_ignores_the_axis_sign() -> None:
     """The two faces of one hole share a key whichever way the axis points."""
     down = {"center_mm": [45, 20, 2.5], "diameter_mm": 6.5, "axis": [0, 0, -1]}

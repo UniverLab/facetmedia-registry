@@ -2,7 +2,8 @@
 
 3D parts and 2D plans from scripts you write yourself: `facet run cad.solid
 <script.py>` runs a CadQuery script unchanged inside the package environment
-and gives back `<name>.step`, `<name>.stl` and `<name>.svg`; `facet run
+and gives back `<name>.step`, `<name>.stl` and `<name>.svg` (plus the
+optional `<name>.glb` the script writes); `facet run
 cad.drawing <script.py>` runs an ezdxf script and gives back `<name>.dxf`,
 `<name>.svg` and `<name>.png`. The part is checked by its volume and bounding
 box against what the piece expects; the plan is checked by a clean DXF audit
@@ -22,11 +23,12 @@ the caller's code, chosen by the caller. facet does not sandbox it further.
 The fields below are what `facet describe cad.solid --json` and `facet
 describe cad.drawing --json` report for this manifest.
 
-`cad.solid` — 3D part from a CadQuery script: STEP, STL and a line view:
+`cad.solid` — 3D part from a CadQuery script: STEP, STL, a line view and
+the optional `<name>.glb`:
 
 | Field | Type | Required | Default | Notes |
 |-------|------|----------|---------|-------|
-| `script` | path | yes | — | CadQuery script; must write `<name>.step`, may write `.stl` and `.svg` |
+| `script` | path | yes | — | CadQuery script; must write `<name>.step`, may write `.stl`, `.svg` and `<name>.glb` |
 | `name` | string | yes | — | matches `[a-z0-9][a-z0-9-]*`; the asset base name |
 | `expect-volume-mm3` | number | no | — | expected volume; verify fails outside `volume-rel-tol` |
 | `volume-rel-tol` | number | no | `0.001` | relative tolerance on the volume, 0 to 0.1 |
@@ -54,9 +56,9 @@ The lab's existing convention, which both example scripts already follow:
   own directory as the working directory. It writes its files to that stem
   plus an extension: `sys.argv[1]` is the stem, and `Path(sys.argv[1]
   ).with_suffix(".step")` is the file.
-- For `cad.solid` it must write `<name>.step` and may write `<name>.stl` and
-  `<name>.svg`. For `cad.drawing` it must write `<name>.dxf` and may write
-  `<name>.svg` and `<name>.png`.
+- For `cad.solid` it must write `<name>.step` and may write `<name>.stl`,
+  `<name>.svg` and the optional `<name>.glb`. For `cad.drawing` it must
+  write `<name>.dxf` and may write `<name>.svg` and `<name>.png`.
 - Whatever the script leaves out, the runner completes: a missing STL is
   exported from the STEP (`tolerance=0.05`, `angularTolerance=0.2`), a
   missing SVG is projected (`projectionDir (1.2, -1, 0.8)`, hidden lines
@@ -72,15 +74,17 @@ does not sandbox it further.
 
 ## Assets
 
-One `cad.solid` run writes three assets, each with the same record data
-(`kind = "cad"`, `inputs = [script]`, so the script's hash enters the
-record; `seed = null`):
+One `cad.solid` run writes three assets, four when the script writes a
+`<name>.glb`, each with the same record data (`kind = "cad"`,
+`inputs = [script]`, so the script's hash enters the record; `seed = null`):
 
 - `<name>.step` (`model/step`) — the part. Its properties are `volume_mm3`,
   `bbox_mm` (`[x, y, z]` in mm), `faces` and `solids`.
 - `<name>.stl` (`model/stl`) — the print mesh, written by the script or by
   the runner at the lab's tolerances.
 - `<name>.svg` (`image/svg+xml`) — the line view.
+- `<name>.glb` (`model/gltf-binary`) — the piece for blender, kept only
+  when the script writes it.
 
 One `cad.drawing` run writes `<name>.dxf` (`image/vnd.dxf`), `<name>.svg`
 and `<name>.png` (`image/png`), sharing the DXF's properties: `entities`,
@@ -103,6 +107,7 @@ actually ran, pinned by the manifest and the lock.
   `bbox_diff_mm`.
 - **STL and SVG**: non-empty and parseable — the STL meshes to at least one
   triangle, the SVG parses as XML.
+- **glb**: non-empty, glTF magic — the file starts with the `glTF` binary magic.
 - **DXF**: `ezdxf.readfile`, then `audit()` with 0 errors and 0 fixes, and
   every `expect-layers` layer present. The metrics carry `entities`,
   `layers`, `errors`, `fixes` and `missing_layers`.

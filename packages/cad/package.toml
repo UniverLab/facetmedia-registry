@@ -53,19 +53,19 @@ subject = "matplotlib"
 spdx = "PSF-2.0"
 
 [capabilities.solid]
-summary = "3D part from a CadQuery script: STEP, STL and a line view"
+summary = "3D part from a CadQuery script: STEP, STL, a line view and an optional glb"
 kind = "cad"
 
 [capabilities.solid.inputs.script]
 type = "path"
 required = true
-description = "CadQuery script, run unchanged as <env python> -I <script> <out_dir>/<name>; must write <name>.step and may write <name>.stl and <name>.svg."
+description = "CadQuery script, run unchanged as <env python> -I <script> <out_dir>/<name>; must write <name>.step and may write <name>.stl and <name>.svg, may write <name>.glb for blender."
 
 [capabilities.solid.inputs.name]
 type = "string"
 required = true
 pattern = "^[a-z0-9][a-z0-9-]*$"
-description = "Asset base name: writes <name>.step, <name>.stl and <name>.svg."
+description = "Asset base name: writes <name>.step, <name>.stl and <name>.svg, <name>.glb when written."
 
 [capabilities.solid.inputs.expect-volume-mm3]
 type = "number"
