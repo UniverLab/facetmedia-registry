@@ -14,6 +14,9 @@ name = "cad"
 name = "comfy"
 
 [[packages]]
+name = "comfy-xl"
+
+[[packages]]
 name = "ffmpeg"
 
 [[packages]]
@@ -66,3 +69,4 @@ name = "whisper-subs"
 
 [[packages]]
 name = "recetas"
+
