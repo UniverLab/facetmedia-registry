@@ -229,7 +229,9 @@ plantas = [
 
 ## The exposure rule
 
-The scene is lit by a sun plus a sky texture washing from the same direction.
+The scene is lit by a sun plus a sky texture washing from the same direction —
+unless `cielo` dresses it, when the fetched HDRI is the light and there is no
+`sol` lamp (see "Dressing the scene").
 That pair over-exposes easily, so the view transform is **`AgX - Medium High
 Contrast`** with **exposure -0.6**, which keeps the sun and the sky wash from
 washing the colours out. Brighten a dark photo by moving the sun or lowering
@@ -254,9 +256,13 @@ What `facet describe blender.foto --json` reports for this manifest:
 | `personas` | array | no | `[]` | one item per person: `{ nombre, x, y, giro = 0 }` (metres, degrees about Z) |
 | `autos-blend` | path | no | — | the prebuilt car-collection `.blend`, relative to the piece file |
 | `autos` | array | no | `[]` | one item per car: `{ nombre, x, y, giro = 0 }` (metres, degrees about Z) |
+| `cielo` | array | no | `[]` — the procedural sky and `sol` lamp stay | one item: `{ id, giro = 200, fuerza = 1.0 }` — the fetched Poly Haven HDRI, which then replaces the lamp |
+| `texturas` | array | no | `[]` | one item per dressed prefix: `{ prefijo, id, lado = 2.0, matiz = 0.5, saturacion = 1.0, valor = 1.0 }` |
+| `plantas` | array | no | `[]` | one item per plant: `{ id, x, y, giro = 0 }` (metres, degrees about Z) |
 
-`blender.recorrido` takes the same `personas-blend`, `personas`, `autos-blend`
-and `autos` fields; the rest of its row set is in "Camera tours".
+`blender.recorrido` takes the same `personas-blend`, `personas`, `autos-blend`,
+`autos`, `cielo`, `texturas` and `plantas` fields; the rest of its row set is
+in "Camera tours".
 
 ## Product photos
 
