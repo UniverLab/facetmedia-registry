@@ -2,11 +2,11 @@
 
 Workshop drawings from your own 3D parts: `facet run freecad.plano
 <piece>.toml` runs a FreeCAD script headless on the part and gives back
-`<guion>.pdf` plus one PNG per page. It belongs to the **`cad`** facet and
+`<guion>.pdf` plus its SVG sheets. It belongs to the **`cad`** facet and
 writes the **`document`** kind, so a person opens the PDF and an agent reads
 the pages from the preview file. The script draws SVG sheets; the runner
-turns them into the PDF and the PNGs with FreeCAD's own Qt, so nothing is
-ever installed on the host.
+turns them into the PDF with FreeCAD's own Qt and returns the sheets as
+assets, so nothing is ever installed on the host.
 
 This is the lab's rule to wrap the best tool and never reimplement it: the
 package drives the **FreeCAD you already have**, for what CadQuery does not
@@ -56,12 +56,12 @@ lab's output-prefix convention: the script must write its sheets as
 `<name>-01.svg`, `<name>-02.svg`, … beside it — consecutive two-digit numbers
 from 01, each sheet carrying `width` and `height` in millimetres on its
 `<svg>` tag (see `examples/plano-escuadra.py`). The runner then renders the
-sheets with FreeCAD's bundled Qt (`QSvgRenderer` into `preview/page-NN.png`
-at 150 dpi, `QPdfWriter` into `<name>.pdf` at 300 dpi) and writes
-`<name>.pdf.preview.json` in the core document shape `{preview, kind,
-summary, page_count, pages}` — no new schema or viewer. The sheets stay in
-the output directory next to the PDF as editable sources; they are outputs
-of the guion, so the asset's `inputs` list only the guion and the part.
+sheets with FreeCAD's bundled Qt (`QSvgRenderer` into `QPdfWriter` at
+300 dpi) and returns `<name>.pdf` plus one image asset per sheet, so the
+sheets stay beside the PDF as editable sources. `facet preview <name>.pdf`
+renders the page PNGs from those sheets into `preview/page-NN.png` at
+150 dpi and writes `<name>.pdf.preview.json` in the core document shape
+`{preview, kind, summary, page_count, pages}` — no new schema or viewer.
 
 ## A piece
 

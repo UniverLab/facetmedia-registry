@@ -33,7 +33,7 @@ subject = "FreeCAD (the host application this package drives)"
 spdx = "GPL-2.0-or-later"
 
 [capabilities.plano]
-summary = "Workshop drawing of a 3D part via scripted FreeCAD TechDraw: a paginated PDF plus one PNG per page"
+summary = "Workshop drawing of a 3D part via scripted FreeCAD TechDraw: a paginated PDF plus its SVG sheets"
 kind = "document"
 
 [capabilities.plano.inputs.guion]

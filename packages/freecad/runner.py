@@ -6,10 +6,11 @@ facet drives a ``host-app`` package through the host binary: it launches
 verbs use what FreeCAD ships. ``run`` executes the piece's ``guion`` with
 ``sys.argv`` set to ``[guion, <out_dir>/<name>, pieza]`` (the lab's output
 prefix convention), requires the ``<name>-NN.svg`` sheets it writes, renders
-them with FreeCAD's bundled PySide6 (``QSvgRenderer`` into
-``preview/page-NN.png``, ``QPdfWriter`` into ``<name>.pdf``) and writes
-``<asset>.preview.json`` in the core document shape. ``verify`` counts the
-pages, ``preview`` reuses the PNGs run wrote, and ``doctor`` reports the
+them into ``<name>.pdf`` with FreeCAD's bundled PySide6 (``QSvgRenderer``
+into ``QPdfWriter``) and returns the PDF plus one image asset per sheet, in
+page order. ``verify`` checks the PDF's page count and each sheet's
+millimetre size, ``preview`` renders the page PNGs from the sheets beside
+the PDF (or describes an SVG sheet itself), and ``doctor`` reports the
 host application, TechDraw and Qt.
 
 Started with plain Python — ``python runner.py run ...``, as the tests and a
@@ -53,7 +54,7 @@ PATH_NAMES = ("freecadcmd", "freecadcmd.exe", "freecad", "freecad.exe")
 #: The wrapper that turns freecadcmd's swallowed failure into exit 1.
 WRAPPER = "freecad_run.py"
 PASS_FLAG = "--pass"
-#: The verbs that need the host binary; verify, preview and doctor answer without it.
+#: The verbs that always need the host binary; preview launches it only beside a PDF.
 NEEDS_HOST = ("run",)
 #: The only failure worth a second launch: WSL interop failing the first accept.
 INTEROP_MARKER = "UtilAcceptVsock"
@@ -105,7 +106,7 @@ def _dispatch(verb: str, request: dict[str, Any], input_path: Path, result_path:
             _launch_host(verb, input_path, result_path)
             return 0
         result = _doctor(request)
-    elif freecad is None and verb in NEEDS_HOST:
+    elif freecad is None and _needs_launch(verb, request):
         _launch_host(verb, input_path, result_path)
         return 0
     else:
@@ -166,23 +167,33 @@ def _run(request: dict[str, Any]) -> dict[str, Any]:
     _execute(_host_path(guion, windows), prefix, _host_path(pieza, windows))
     pdf = Path(f"{prefix}.pdf")
     sheets = _collect_sheets(prefix, name)
-    pages = _render_sheets(sheets, pdf, Path(out_dir) / PREVIEW_DIR)
-    _write_preview(pdf, pages, Path(out_dir))
-    return {
-        "tool": _tool(),
-        "assets": [
-            {
-                "file": pdf.name,
-                "name": name,
-                "kind": "document",
-                "mime": "application/pdf",
-                "properties": {"page_count": len(pages)},
-                "params": params,
-                "seed": None,
-                "inputs": [guion, pieza],
-            }
-        ],
-    }
+    _write_pdf(sheets, pdf)
+    assets = [
+        {
+            "file": pdf.name,
+            "name": name,
+            "kind": "document",
+            "mime": "application/pdf",
+            "properties": {"page_count": len(sheets)},
+            "params": params,
+            "seed": None,
+            "inputs": [guion, pieza],
+        }
+    ]
+    assets.extend(
+        _sheet_asset(sheet, number, params, guion, pieza)
+        for number, sheet in enumerate(sheets, start=1)
+    )
+    return {"tool": _tool(), "assets": assets}
+
+
+def _needs_launch(verb: str, request: dict[str, Any]) -> bool:
+    """Whether the launcher must drive the host: run always, preview beside a PDF."""
+    if verb in NEEDS_HOST:
+        return True
+    if verb != "preview":
+        return False
+    return any(str(item).lower().endswith(".pdf") for item in request.get("assets") or [])
 
 
 def _required(params: dict[str, Any], key: str) -> str:
@@ -225,6 +236,22 @@ def _tool() -> dict[str, str]:
     """The manifest's tool identity, so records name the real tool."""
     manifest = tomllib.loads((Path(__file__).parent / "package.toml").read_text(encoding="utf-8"))
     return {"name": str(manifest["tool_name"]), "version": str(manifest["version"])}
+
+
+def _sheet_asset(
+    sheet: Sheet, number: int, params: dict[str, Any], guion: str, pieza: str
+) -> dict[str, Any]:
+    """One sheet as a run asset: an image in page order with its mm size."""
+    return {
+        "file": sheet.path.name,
+        "name": sheet.path.stem,
+        "kind": "image",
+        "mime": "image/svg+xml",
+        "properties": {"page": number, "width_mm": sheet.width_mm, "height_mm": sheet.height_mm},
+        "params": params,
+        "seed": None,
+        "inputs": [guion, pieza],
+    }
 
 
 # --- the sheets: the guion's SVGs, rendered with FreeCAD's own Qt.
@@ -284,8 +311,8 @@ def _read_sheet(path: Path) -> Sheet:
     return Sheet(path, float(sizes["width"]), float(sizes["height"]))
 
 
-def _render_sheets(sheets: list[Sheet], pdf: Path, folder: Path) -> list[str]:
-    """Render each sheet to ``preview/page-NN.png`` and all of them to one PDF."""
+def _qt_modules() -> tuple[Any, Any, Any]:
+    """FreeCAD's bundled Qt, with an offscreen application ready to render."""
     from PySide6 import QtCore, QtGui, QtSvg  # noqa: PLC0415
 
     windows = _on_windows()
@@ -295,24 +322,54 @@ def _render_sheets(sheets: list[Sheet], pdf: Path, folder: Path) -> list[str]:
     if app is None:
         app = QtGui.QGuiApplication(["facet"])
         _QT_APP.append(app)
-    if folder.exists():
-        shutil.rmtree(folder)
-    folder.mkdir(parents=True)
+    return QtCore, QtGui, QtSvg
+
+
+def _sheet_renderers(sheets: list[Sheet], qt_core: Any, qt_svg: Any) -> list[Any]:
+    """One valid renderer per sheet; a sheet Qt rejects stops the verb."""
     renderers: list[Any] = []
     for sheet in sheets:
-        renderer = QtSvg.QSvgRenderer(QtCore.QByteArray(sheet.path.read_bytes()))
+        renderer = qt_svg.QSvgRenderer(qt_core.QByteArray(sheet.path.read_bytes()))
         if not renderer.isValid():
             raise RuntimeError(f"{sheet.path}: Qt cannot read this SVG")
         renderers.append(renderer)
+    return renderers
+
+
+def _write_pdf(sheets: list[Sheet], pdf: Path) -> None:
+    """Render every sheet into one PDF, one millimetre page per sheet."""
+    qt_core, qt_gui, qt_svg = _qt_modules()
+    renderers = _sheet_renderers(sheets, qt_core, qt_svg)
+    writer = qt_gui.QPdfWriter(_host_path(str(pdf), _on_windows()))
+    writer.setResolution(PDF_DPI)
+    writer.setPageMargins(qt_core.QMarginsF(0, 0, 0, 0), qt_gui.QPageLayout.Millimeter)
+    writer.setPageSize(_page_size(qt_core, qt_gui, sheets[0]))
+    painter = qt_gui.QPainter(writer)
+    for position, (sheet, renderer) in enumerate(zip(sheets, renderers, strict=True)):
+        if position:
+            writer.setPageSize(_page_size(qt_core, qt_gui, sheet))
+            writer.newPage()
+        renderer.render(painter)
+    painter.end()
+
+
+def _render_pngs(sheets: list[Sheet], folder: Path) -> list[str]:
+    """Render each sheet to ``page-NN.png`` under the folder; return their paths."""
+    qt_core, qt_gui, qt_svg = _qt_modules()
+    renderers = _sheet_renderers(sheets, qt_core, qt_svg)
+    windows = _on_windows()
+    if folder.exists():
+        shutil.rmtree(folder)
+    folder.mkdir(parents=True)
     names: list[str] = []
     for index, (sheet, renderer) in enumerate(zip(sheets, renderers, strict=True), start=1):
-        image = QtGui.QImage(
+        image = qt_gui.QImage(
             round(sheet.width_mm * PNG_DPI / 25.4),
             round(sheet.height_mm * PNG_DPI / 25.4),
-            QtGui.QImage.Format_ARGB32,
+            qt_gui.QImage.Format_ARGB32,
         )
         image.fill(0xFFFFFFFF)
-        painter = QtGui.QPainter(image)
+        painter = qt_gui.QPainter(image)
         renderer.render(painter)
         painter.end()
         name = f"page-{index:02d}.png"
@@ -320,18 +377,7 @@ def _render_sheets(sheets: list[Sheet], pdf: Path, folder: Path) -> list[str]:
         if not image.save(target):
             raise RuntimeError(f"Qt could not write {target}")
         names.append(name)
-    writer = QtGui.QPdfWriter(_host_path(str(pdf), windows))
-    writer.setResolution(PDF_DPI)
-    writer.setPageMargins(QtCore.QMarginsF(0, 0, 0, 0), QtGui.QPageLayout.Millimeter)
-    writer.setPageSize(_page_size(QtCore, QtGui, sheets[0]))
-    painter = QtGui.QPainter(writer)
-    for position, (sheet, renderer) in enumerate(zip(sheets, renderers, strict=True)):
-        if position:
-            writer.setPageSize(_page_size(QtCore, QtGui, sheet))
-            writer.newPage()
-        renderer.render(painter)
-    painter.end()
-    return [f"{PREVIEW_DIR}/{name}" for name in names]
+    return [f"{folder.name}/{name}" for name in names]
 
 
 def _page_size(qt_core: Any, qt_gui: Any, sheet: Sheet) -> Any:
@@ -339,12 +385,6 @@ def _page_size(qt_core: Any, qt_gui: Any, sheet: Sheet) -> Any:
     return qt_gui.QPageSize(
         qt_core.QSizeF(sheet.width_mm, sheet.height_mm), qt_gui.QPageSize.Millimeter
     )
-
-
-def _page_number(path: Path) -> int:
-    """The number in ``page-NN.png``; a name without digits sorts first."""
-    digits = path.stem.removeprefix("page-")
-    return int(digits) if digits.isdigit() else 0
 
 
 def _write_preview(pdf: Path, pages: list[str], out_dir: Path) -> str:
@@ -366,33 +406,89 @@ def _write_preview(pdf: Path, pages: list[str], out_dir: Path) -> str:
 
 
 def _preview(request: dict[str, Any]) -> dict[str, Any]:
-    """Rewrite each placed PDF's preview from the PNGs ``run`` wrote."""
+    """Preview each placed asset: a PDF renders its sheets, an SVG describes itself."""
     out_dir = Path(_host_path(str(request["out_dir"]), _on_windows()))
     entries: list[dict[str, Any]] = []
     for item in request.get("assets") or []:
-        pdf = Path(_host_path(str(item), _on_windows()))
-        folder = pdf.parent / PREVIEW_DIR
-        found = sorted(folder.glob("page-*.png"), key=_page_number) if folder.is_dir() else []
-        if not found:
-            raise RuntimeError(f"{pdf.name}: page PNGs are written by run; run the piece again")
-        pages = [f"{PREVIEW_DIR}/{path.name}" for path in found]
-        name = _write_preview(pdf, pages, out_dir)
-        entries.append({"file": pdf.name, "preview": name, "images": []})
+        asset = Path(_host_path(str(item), _on_windows()))
+        if asset.suffix.lower() == ".pdf":
+            prefix = _pdf_sheets(asset)
+            sheets = _collect_sheets(prefix, asset.stem)
+            pages = _render_pngs(sheets, out_dir / PREVIEW_DIR)
+            name = _write_preview(asset, pages, out_dir)
+        else:
+            name = _preview_sheet(request, asset, out_dir)
+        entries.append({"file": asset.name, "preview": name, "images": []})
     return {"assets": entries}
 
 
-def _verify(request: dict[str, Any]) -> dict[str, Any]:
-    """One verdict per PDF: it must have at least one page."""
-    return {
-        "assets": [
-            _verdict(Path(_host_path(str(item), _on_windows())))
-            for item in request.get("assets") or []
-        ]
+def _pdf_sheets(asset: Path) -> str:
+    """The sheet prefix beside a placed PDF; a run that left none must run again."""
+    stem = asset.stem
+    if not (asset.parent / f"{stem}-01.svg").is_file():
+        missing = f"{asset.name}: its sheets {stem}-NN.svg are missing; run the piece again"
+        raise RuntimeError(missing)
+    return str(asset.parent / stem)
+
+
+def _preview_sheet(request: dict[str, Any], asset: Path, out_dir: Path) -> str:
+    """Write the image preview of one placed sheet; a browser shows the SVG itself."""
+    sheet = _read_sheet(asset)
+    page = _sheet_page(asset)
+    width = round(sheet.width_mm * PNG_DPI / 25.4)
+    height = round(sheet.height_mm * PNG_DPI / 25.4)
+    data = {
+        "preview": 1,
+        "kind": "image",
+        "summary": f"{asset.name} · page {page:02d} · {sheet.width_mm:g}×{sheet.height_mm:g} mm",
+        "name": asset.stem,
+        "prompt": _sheet_prompt(request, asset.name),
+        "seed": 0,
+        "width": width,
+        "height": height,
     }
+    name = f"{asset.name}.preview.json"
+    (out_dir / name).write_text(
+        json.dumps(data, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return name
+
+
+def _sheet_page(asset: Path) -> int:
+    """The page number in a ``<name>-NN.svg`` sheet file; sheets without one are first."""
+    match = SHEET_NUMBER_RE.search(asset.name)
+    return int(match.group(1)) if match else 1
+
+
+def _sheet_prompt(request: dict[str, Any], filename: str) -> str:
+    """The guion and part that drew the sheet, or the sheet itself when unknown."""
+    inputs = request.get("inputs") or {}
+    guion = inputs.get("guion")
+    pieza = inputs.get("pieza")
+    if isinstance(guion, str) and guion.strip() and isinstance(pieza, str) and pieza.strip():
+        return f"{_basename(guion)} · {_basename(pieza)}"
+    return f"freecad sheet {filename}"
+
+
+def _basename(value: str) -> str:
+    """The file name of a POSIX or Windows path."""
+    return value.replace("\\", "/").split("/")[-1]
+
+
+def _verify(request: dict[str, Any]) -> dict[str, Any]:
+    """One verdict per asset: a PDF counts pages, a sheet carries mm sizes."""
+    verdicts: list[dict[str, Any]] = []
+    for item in request.get("assets") or []:
+        asset = Path(_host_path(str(item), _on_windows()))
+        if asset.suffix.lower() == ".pdf":
+            verdicts.append(_verdict(asset))
+        else:
+            verdicts.append(_svg_verdict(asset))
+    return {"assets": verdicts}
 
 
 def _verdict(pdf: Path) -> dict[str, Any]:
-    """A PDF's page count, from its rendered pages or its own ``/Count``."""
+    """A PDF's page count, from its own ``/Count``."""
     count = _page_count(pdf)
     return {
         "file": pdf.name,
@@ -403,12 +499,29 @@ def _verdict(pdf: Path) -> dict[str, Any]:
     }
 
 
+def _svg_verdict(svg: Path) -> dict[str, Any]:
+    """A sheet passes when its ``<svg>`` tag carries width and height in mm."""
+    try:
+        sheet = _read_sheet(svg)
+    except RuntimeError as exc:
+        return {
+            "file": svg.name,
+            "passed": False,
+            "metrics": {"error": str(exc)},
+            "thresholds": {},
+            "verifier": "svg-sheet",
+        }
+    return {
+        "file": svg.name,
+        "passed": True,
+        "metrics": {"width_mm": sheet.width_mm, "height_mm": sheet.height_mm},
+        "thresholds": {},
+        "verifier": "svg-sheet",
+    }
+
+
 def _page_count(pdf: Path) -> int:
-    """The rendered pages beside the asset, else the PDF's ``/Type /Pages`` count."""
-    folder = pdf.parent / PREVIEW_DIR
-    rendered = len(list(folder.glob("page-*.png"))) if folder.is_dir() else 0
-    if rendered:
-        return rendered
+    """The PDF's own ``/Type /Pages`` count."""
     try:
         raw = pdf.read_bytes()
     except OSError:

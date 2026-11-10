@@ -5,8 +5,8 @@ binary does: it answers ``--version`` and executes the package wrapper, which
 in turn executes ``runner.py`` with a stub ``FreeCAD`` module and a stub
 ``PySide6`` package on its path, so the entry takes its in-FreeCAD branch.
 Stub ``wslpath`` records the argument conversion, and the fake Qt writes the
-page PNGs plus a minimal PDF carrying ``/Type /Pages /Count N``, proving the
-sheet contract, the exact preview shape and the missing-host doctor without
+PDF carrying ``/Type /Pages /Count N`` plus the preview PNGs, proving the
+sheet contract, the exact preview shapes and the missing-host doctor without
 FreeCAD or Qt.
 """
 
@@ -15,6 +15,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -23,9 +24,11 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "freecad"
 RUNNER = PACKAGE / "runner.py"
+IMAGE_SCHEMA: dict[str, Any] = json.loads(
+    (ROOT / "schemas" / "preview" / "image.schema.json").read_text(encoding="utf-8")
+)
 PDF_NAME = "dibujo"
 PREVIEW_KEYS = {"preview", "kind", "summary", "page_count", "pages"}
-PAGE_NAMES_ONE = ["preview/page-01.png"]
 PAGE_NAMES_TWO = ["preview/page-01.png", "preview/page-02.png"]
 PAGE_COUNT_TWO = 2
 PAGE_COUNT_THREE = 3
@@ -403,8 +406,10 @@ def _run(tmp_path: Path, out: Path, piece: Path, env: dict[str, str], guion: str
     return _call(tmp_path, "run", _request("run", out, piece, inputs=inputs), env)
 
 
-def test_run_converts_the_arguments_and_writes_the_preview(tmp_path: Path) -> None:
-    """The lab's conversion, the guion's argv and the core paged preview shape."""
+def test_run_converts_the_arguments_and_returns_the_pdf_plus_its_sheet(
+    tmp_path: Path,
+) -> None:
+    """The lab's conversion, the guion's argv and the PDF-then-sheets assets."""
     bin_dir, freecad = _stubs(tmp_path)
     piece, script, part = _piece(tmp_path)
     out = _out(tmp_path)
@@ -414,18 +419,33 @@ def test_run_converts_the_arguments_and_writes_the_preview(tmp_path: Path) -> No
 
     assert done.returncode == 0, done.stdout + done.stderr
     assert result is not None
-    asset = result["assets"][0]
-    assert (asset["file"], asset["name"], asset["kind"], asset["mime"]) == (
-        f"{PDF_NAME}.pdf",
-        PDF_NAME,
-        "document",
-        "application/pdf",
-    )
-    assert asset["properties"] == {"page_count": 1}
-    sheet = out / f"{PDF_NAME}-01.svg"
-    assert sheet.is_file()
-    assert asset["inputs"] == [str(script), str(part)]
+    params = {"guion": str(script), "pieza": str(part)}
+    assert result["assets"] == [
+        {
+            "file": f"{PDF_NAME}.pdf",
+            "name": PDF_NAME,
+            "kind": "document",
+            "mime": "application/pdf",
+            "properties": {"page_count": 1},
+            "params": params,
+            "seed": None,
+            "inputs": [str(script), str(part)],
+        },
+        {
+            "file": f"{PDF_NAME}-01.svg",
+            "name": f"{PDF_NAME}-01",
+            "kind": "image",
+            "mime": "image/svg+xml",
+            "properties": {"page": 1, "width_mm": 420.0, "height_mm": 297.0},
+            "params": params,
+            "seed": None,
+            "inputs": [str(script), str(part)],
+        },
+    ]
     assert (out / f"{PDF_NAME}.pdf").is_file()
+    assert (out / f"{PDF_NAME}-01.svg").is_file()
+    assert not (out / "preview").exists()
+    assert list(out.glob("*.preview.json")) == []
 
     converted = (tmp_path / "wslpath.log").read_text(encoding="utf-8").splitlines()
     assert any(line.endswith(f"{PDF_NAME}.py") for line in converted)
@@ -437,17 +457,11 @@ def test_run_converts_the_arguments_and_writes_the_preview(tmp_path: Path) -> No
     assert argv[1] == str(out / PDF_NAME)
     assert argv[2] == str(part)
 
-    data = json.loads((out / f"{PDF_NAME}.pdf.preview.json").read_text(encoding="utf-8"))
-    assert set(data) == PREVIEW_KEYS
-    assert data["preview"] == 1
-    assert data["kind"] == "document"
-    assert data["page_count"] == 1
-    assert data["pages"] == PAGE_NAMES_ONE
-    assert all((out / name).is_file() for name in data["pages"])
 
-
-def test_run_renders_two_sheets_into_two_pages(tmp_path: Path) -> None:
-    """Two consecutive sheets become a two-page PDF and two PNGs."""
+def test_run_renders_two_sheets_into_a_two_page_pdf_and_two_sheet_assets(
+    tmp_path: Path,
+) -> None:
+    """Two consecutive sheets become a two-page PDF plus one asset per sheet."""
     bin_dir, freecad = _stubs(tmp_path)
     piece, script, part = _piece(tmp_path)
     out = _out(tmp_path)
@@ -457,21 +471,26 @@ def test_run_renders_two_sheets_into_two_pages(tmp_path: Path) -> None:
 
     assert done.returncode == 0, done.stdout + done.stderr
     assert result is not None
-    asset = result["assets"][0]
-    assert asset["properties"] == {"page_count": 2}
-    assert asset["inputs"] == [str(script), str(part)]
+    assets = result["assets"]
+    assert len(assets) == PAGE_COUNT_TWO + 1
+    assert assets[0]["properties"] == {"page_count": 2}
+    assert assets[0]["inputs"] == [str(script), str(part)]
+    assert [(asset["file"], asset["kind"], asset["mime"]) for asset in assets[1:]] == [
+        (f"{PDF_NAME}-01.svg", "image", "image/svg+xml"),
+        (f"{PDF_NAME}-02.svg", "image", "image/svg+xml"),
+    ]
+    assert [asset["properties"] for asset in assets[1:]] == [
+        {"page": 1, "width_mm": 420.0, "height_mm": 297.0},
+        {"page": 2, "width_mm": 297.0, "height_mm": 210.0},
+    ]
     assert (out / f"{PDF_NAME}-01.svg").is_file()
     assert (out / f"{PDF_NAME}-02.svg").is_file()
     raw = (out / f"{PDF_NAME}.pdf").read_bytes()
     assert b"/Type /Pages" in raw and f"/Count {PAGE_COUNT_TWO}".encode() in raw
     assert b"/MediaBox [0 0 420 297]" in raw
     assert b"/MediaBox [0 0 297 210]" in raw
-    assert (out / "preview" / "page-01.png").read_bytes().endswith(b"2480x1754")
-    assert (out / "preview" / "page-02.png").read_bytes().endswith(b"1754x1240")
-    data = json.loads((out / f"{PDF_NAME}.pdf.preview.json").read_text(encoding="utf-8"))
-    assert data["page_count"] == PAGE_COUNT_TWO
-    assert data["pages"] == PAGE_NAMES_TWO
-    assert all((out / name).is_file() for name in data["pages"])
+    assert not (out / "preview").exists()
+    assert list(out.glob("*.preview.json")) == []
 
 
 def test_run_without_any_sheet_names_the_missing_first_sheet(tmp_path: Path) -> None:
@@ -545,51 +564,64 @@ def test_run_surfaces_a_guion_failure_instead_of_a_swallowed_zero(tmp_path: Path
     assert "freecadcmd exited" in done.stdout + done.stderr
 
 
-def test_verify_counts_the_rendered_pages(tmp_path: Path) -> None:
+def test_verify_passes_the_pdf_and_its_sheets(tmp_path: Path) -> None:
+    """The PDF counts its own pages; each sheet carries its millimetre size."""
     bin_dir, freecad = _stubs(tmp_path)
     piece, _script, _part = _piece(tmp_path)
     out = _out(tmp_path)
     env = _environment(tmp_path, bin_dir, freecad)
     _done, _result = _run(tmp_path, out, piece, env, GUION_TWO_SHEETS)
 
-    request = _request("verify", out, piece, assets=[str(out / f"{PDF_NAME}.pdf")])
+    assets = [str(out / f"{PDF_NAME}.pdf"), str(out / f"{PDF_NAME}-01.svg")]
+    request = _request("verify", out, piece, assets=assets)
     done, result = _call(tmp_path, "verify", request, env)
 
     assert done.returncode == 0, done.stdout + done.stderr
-    assert result["assets"][0] == {
-        "file": f"{PDF_NAME}.pdf",
-        "passed": True,
-        "metrics": {"page_count": 2},
-        "thresholds": {"page_count_min": 1},
-        "verifier": "pdf-pages",
-    }
+    assert result["assets"] == [
+        {
+            "file": f"{PDF_NAME}.pdf",
+            "passed": True,
+            "metrics": {"page_count": 2},
+            "thresholds": {"page_count_min": 1},
+            "verifier": "pdf-pages",
+        },
+        {
+            "file": f"{PDF_NAME}-01.svg",
+            "passed": True,
+            "metrics": {"width_mm": 420.0, "height_mm": 297.0},
+            "thresholds": {},
+            "verifier": "svg-sheet",
+        },
+    ]
 
 
-def test_verify_counts_the_pdf_pages_when_the_pngs_are_gone(tmp_path: Path) -> None:
-    """Without rendered PNGs the count comes from the PDF's own /Count."""
+def test_verify_fails_a_sheet_without_its_mm_size(tmp_path: Path) -> None:
+    """A sheet the reader refuses fails with the error in its metrics."""
     bin_dir, freecad = _stubs(tmp_path)
     piece, _script, _part = _piece(tmp_path)
     out = _out(tmp_path)
     env = _environment(tmp_path, bin_dir, freecad)
-    _done, _result = _run(tmp_path, out, piece, env, GUION_TWO_SHEETS)
-    for page in (out / "preview").glob("page-*.png"):
-        page.unlink()
+    sheet = out / f"{PDF_NAME}-01.svg"
+    sheet.write_text('<svg xmlns="http://www.w3.org/2000/svg"><rect /></svg>', encoding="utf-8")
 
-    request = _request("verify", out, piece, assets=[str(out / f"{PDF_NAME}.pdf")])
+    request = _request("verify", out, piece, assets=[str(sheet)])
     done, result = _call(tmp_path, "verify", request, env)
 
     assert done.returncode == 0, done.stdout + done.stderr
-    assert result["assets"][0]["metrics"] == {"page_count": 2}
-    assert result["assets"][0]["verifier"] == "pdf-pages"
+    assert result["assets"][0]["file"] == f"{PDF_NAME}-01.svg"
+    assert result["assets"][0]["passed"] is False
+    assert "the sheet needs width and height in mm" in result["assets"][0]["metrics"]["error"]
+    assert result["assets"][0]["thresholds"] == {}
+    assert result["assets"][0]["verifier"] == "svg-sheet"
 
 
-def test_preview_rewrites_the_shape_from_the_pngs_run_wrote(tmp_path: Path) -> None:
+def test_preview_renders_the_pages_from_the_sibling_sheets(tmp_path: Path) -> None:
+    """The placed PDF's sheets render into preview/page-NN.png with the stub Qt."""
     bin_dir, freecad = _stubs(tmp_path)
     piece, _script, _part = _piece(tmp_path)
     out = _out(tmp_path)
     env = _environment(tmp_path, bin_dir, freecad)
     _done, _result = _run(tmp_path, out, piece, env, GUION_TWO_SHEETS)
-    (out / f"{PDF_NAME}.pdf.preview.json").unlink()
 
     request = _request("preview", out, piece, assets=[str(out / f"{PDF_NAME}.pdf")])
     done, result = _call(tmp_path, "preview", request, env)
@@ -602,12 +634,17 @@ def test_preview_rewrites_the_shape_from_the_pngs_run_wrote(tmp_path: Path) -> N
     }
     data = json.loads((out / f"{PDF_NAME}.pdf.preview.json").read_text(encoding="utf-8"))
     assert set(data) == PREVIEW_KEYS
+    assert data["preview"] == 1
+    assert data["kind"] == "document"
+    assert data["page_count"] == PAGE_COUNT_TWO
     assert data["pages"] == PAGE_NAMES_TWO
     assert all((out / name).is_file() for name in data["pages"])
+    assert (out / "preview" / "page-01.png").read_bytes().endswith(b"2480x1754")
+    assert (out / "preview" / "page-02.png").read_bytes().endswith(b"1754x1240")
 
 
-def test_preview_without_pngs_fails_telling_the_user_to_run_again(tmp_path: Path) -> None:
-    """No page PNGs beside the PDF means the piece was never run: say so."""
+def test_preview_without_sheets_fails_telling_the_user_to_run_again(tmp_path: Path) -> None:
+    """No sheets beside the PDF means the piece was never run: say so."""
     bin_dir, freecad = _stubs(tmp_path)
     piece, _script, _part = _piece(tmp_path)
     out = _out(tmp_path)
@@ -620,7 +657,75 @@ def test_preview_without_pngs_fails_telling_the_user_to_run_again(tmp_path: Path
 
     assert done.returncode != 0
     assert result is None
-    assert f"{PDF_NAME}.pdf: page PNGs are written by run" in done.stdout + done.stderr
+    missing = f"{PDF_NAME}.pdf: its sheets {PDF_NAME}-NN.svg are missing; run the piece again"
+    assert missing in done.stdout + done.stderr
+
+
+def _assert_image_schema(data: dict[str, Any]) -> None:
+    """Exactly the image schema's keys, with its consts, patterns and minimums."""
+    assert set(data) == set(IMAGE_SCHEMA["required"])
+    for key, rules in IMAGE_SCHEMA["properties"].items():
+        value = data[key]
+        if "const" in rules:
+            assert value == rules["const"], key
+        if rules.get("type") == "string":
+            assert isinstance(value, str) and value, key
+            if "pattern" in rules:
+                assert re.fullmatch(rules["pattern"], value), (key, value)
+        if rules.get("type") == "integer":
+            assert isinstance(value, int) and value >= rules.get("minimum", 0), key
+        if "maxLength" in rules:
+            assert len(value) <= rules["maxLength"], key
+
+
+def test_preview_writes_the_image_schema_for_a_sheet(tmp_path: Path) -> None:
+    """A placed sheet previews as itself: exactly the image kind's fields."""
+    bin_dir, freecad = _stubs(tmp_path)
+    piece, _script, _part = _piece(tmp_path)
+    out = _out(tmp_path)
+    env = _environment(tmp_path, bin_dir, freecad)
+    _done, _result = _run(tmp_path, out, piece, env, GUION_ONE_SHEET)
+    sheet = out / f"{PDF_NAME}-01.svg"
+
+    inputs = {"guion": f"{PDF_NAME}.py", "pieza": "pieza.step"}
+    request = _request("preview", out, piece, inputs=inputs, assets=[str(sheet)])
+    done, result = _call(tmp_path, "preview", request, env)
+
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert result["assets"][0] == {
+        "file": f"{PDF_NAME}-01.svg",
+        "preview": f"{PDF_NAME}-01.svg.preview.json",
+        "images": [],
+    }
+    data = json.loads((out / f"{PDF_NAME}-01.svg.preview.json").read_text(encoding="utf-8"))
+    _assert_image_schema(data)
+    assert data["summary"] == f"{PDF_NAME}-01.svg · page 01 · 420×297 mm"
+    assert data["name"] == f"{PDF_NAME}-01"
+    assert data["prompt"] == f"{PDF_NAME}.py · pieza.step"
+    assert data["seed"] == 0
+    assert (data["width"], data["height"]) == (2480, 1754)
+
+
+def test_preview_names_the_second_sheet_and_falls_back_without_params(
+    tmp_path: Path,
+) -> None:
+    """Page NN follows the sheet file; unknown inputs name the sheet itself."""
+    bin_dir, freecad = _stubs(tmp_path)
+    piece, _script, _part = _piece(tmp_path)
+    out = _out(tmp_path)
+    env = _environment(tmp_path, bin_dir, freecad)
+    _done, _result = _run(tmp_path, out, piece, env, GUION_TWO_SHEETS)
+    sheet = out / f"{PDF_NAME}-02.svg"
+
+    request = _request("preview", out, piece, assets=[str(sheet)])
+    done, result = _call(tmp_path, "preview", request, env)
+
+    assert done.returncode == 0, done.stdout + done.stderr
+    data = json.loads((out / f"{PDF_NAME}-02.svg.preview.json").read_text(encoding="utf-8"))
+    _assert_image_schema(data)
+    assert data["summary"] == f"{PDF_NAME}-02.svg · page 02 · 297×210 mm"
+    assert data["prompt"] == f"freecad sheet {PDF_NAME}-02.svg"
+    assert (data["width"], data["height"]) == (1754, 1240)
 
 
 def test_doctor_reports_the_exact_missing_host_key_and_fix(tmp_path: Path) -> None:
