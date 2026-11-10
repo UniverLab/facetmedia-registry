@@ -30,6 +30,7 @@ function personajeSetup(workDir, inputs, base) {
   const templateFile = path.join(workDir, "index.html");
   if (!fs.existsSync(templateFile)) throw new Error("composicion: index.html not found");
   const template = fs.readFileSync(templateFile, "utf8");
+  requireNoParentTraversal(template);
   requireRestRule(template, svg);
   const audioStart = audioStartOf(inputs);
   const updated = inject(template, cues, audioStart);
@@ -150,12 +151,25 @@ function audioStartOf(inputs) {
   return value;
 }
 
-// --- the voice: copied beside the composition, where the audio tag points.
+// --- the voice: copied into the composition root, referenced by its plain name.
+
+function requireNoParentTraversal(template) {
+  const mediaRe =
+    /<(?:audio|video)\b[^>]*?\ssrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
+  for (const match of template.matchAll(mediaRe)) {
+    const src = match[1] ?? match[2] ?? match[3];
+    if (src.startsWith("../")) {
+      throw new Error(
+        `index.html: ${src} climbs above the composition root; reference the copied file by its name`,
+      );
+    }
+  }
+}
 
 function copyVoice(inputs, base, workDir) {
   const file = resolveInput(requiredInput(inputs, "voz"), base);
   if (!fs.existsSync(file)) throw new Error(`voz: ${file} not found`);
-  fs.copyFileSync(file, path.join(path.dirname(workDir), path.basename(file)));
+  fs.copyFileSync(file, path.join(workDir, path.basename(file)));
 }
 
 function requiredInput(inputs, name) {

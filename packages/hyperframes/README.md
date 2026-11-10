@@ -226,7 +226,7 @@ phonetic mouth sequences timed to the voice. It runs the same
 - **`personaje-svg`** (path, required): the character SVG, resolved relative to
   the piece, with one `.boca` shape per Rhubarb letter and ids `boca-X`…`boca-H`.
 - **`voz`** (path, required): the voice audio, resolved relative to the piece and
-  copied beside the composition.
+  copied into the composition root.
 - **`bocas`** (path, required): `bocas.json`, resolved relative to the piece.
 - **`audio-inicio`** (`0.5`): the shift applied to every mouth cue, matching the
   `<audio>` element's `data-start`.
@@ -341,10 +341,10 @@ run every voice file through ffmpeg `normalize` with `target-lufs` `-16.0` and
 `<!-- AUDIOS -->` marker and a positive `data-duration` on the
 `data-composition-id` tag, and its CSS must style `.sub`: the cues are
 opacity-toggled divs burned into the frames, never a sidecar copy.
-`narradoSetup` copies each `voz` clip and `musica` beside the composition,
+`narradoSetup` copies each `voz` clip and `musica` into the composition root,
 replaces the markers with
-`<audio id="voz-N" src="../<name>" data-start="<inicio>" data-duration="<duration-inicio>" data-track-index="<N>" data-volume="1">` /
-`<audio id="musica" src="../<name>" data-start="0" data-duration="<duration>" data-track-index="<voices+1>" data-volume="<volumen-musica>">`
+`<audio id="voz-N" src="<name>" data-start="<inicio>" data-duration="<duration-inicio>" data-track-index="<N>" data-volume="1">` /
+`<audio id="musica" src="<name>" data-start="0" data-duration="<duration>" data-track-index="<voices+1>" data-volume="<volumen-musica>">`
 and `<div class="sub" id="sN">` lines, parses whisper's
 `HH:MM:SS,mmm --> HH:MM:SS,mmm` cues (comma or dot milliseconds, text joined
 by spaces) into `{ start, end, text }` rounded to 3 decimals, requires every

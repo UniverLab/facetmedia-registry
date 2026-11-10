@@ -861,7 +861,7 @@ PERSONAJE_TEMPLATE = """<!doctype html>
   <body>
     <div id="root" data-composition-id="main" data-start="0" data-duration="11.5">
       <svg id="zorro" viewBox="-400 -400 800 800"></svg>
-      <audio id="voz" src="../voz.wav" data-start="0.5" data-duration="10.32"></audio>
+      <audio id="voz" src="voz.wav" data-start="0.5" data-duration="10.32"></audio>
     </div>
     <script>
       const AUDIO_START = 0.5;
@@ -954,6 +954,31 @@ def test_personaje_rejects_a_missing_mouth_shape_before_the_cli_runs(tmp_path: P
     assert _calls(tmp_path) == []
 
 
+def test_personaje_refuses_parent_traversal_src_before_check(tmp_path: Path) -> None:
+    """A ../ audio src never reaches check: HyperFrames rejects parent traversal."""
+    packages = _fixture(tmp_path)
+    piece, _comp = _personaje_comp(tmp_path)
+    for name in ("index.tmpl", "index.html"):
+        template = piece / "comp" / name
+        template.write_text(
+            template.read_text(encoding="utf-8").replace('src="voz.wav"', 'src="../voz.wav"'),
+            encoding="utf-8",
+        )
+    out = tmp_path / "out"
+    out.mkdir()
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _personaje_request(out, piece),
+        _environment(tmp_path, _dirs(packages)),
+    )
+    assert done.returncode == 1
+    assert result is None
+    assert "../voz.wav" in done.stderr
+    assert "climbs above the composition root" in done.stderr
+    assert _calls(tmp_path) == []
+
+
 def test_personaje_injects_the_cues_and_the_audio_start(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
     piece, _comp = _personaje_comp(tmp_path)
@@ -974,7 +999,7 @@ def test_personaje_injects_the_cues_and_the_audio_start(tmp_path: Path) -> None:
     assert injected is not None
     assert json.loads(injected.group(1)) == PROOF_CUES
     assert "const AUDIO_START = 0.75;" in written
-    assert (out / "voz.wav").read_bytes() == VOZ_BYTES
+    assert (out / "composition" / "voz.wav").read_bytes() == VOZ_BYTES
 
 
 def test_the_runner_has_no_check_verb(tmp_path: Path) -> None:
@@ -1114,15 +1139,15 @@ def test_narrado_injects_audio_subtitles_and_the_opacity_timeline(tmp_path: Path
     assert result is not None and result["assets"][0]["file"] == "comp.mp4"
     written = (out / "composition" / "index.html").read_text(encoding="utf-8")
     assert (
-        '<audio id="voz-1" src="../voz-a.wav" data-start="0" '
+        '<audio id="voz-1" src="voz-a.wav" data-start="0" '
         'data-duration="10" data-track-index="1" data-volume="1"></audio>'
     ) in written
     assert (
-        '<audio id="voz-2" src="../voz-b.wav" data-start="0" '
+        '<audio id="voz-2" src="voz-b.wav" data-start="0" '
         'data-duration="10" data-track-index="2" data-volume="1"></audio>'
     ) in written
     assert (
-        '<audio id="musica" src="../musica.wav" data-start="0" '
+        '<audio id="musica" src="musica.wav" data-start="0" '
         'data-duration="10" data-track-index="3" data-volume="0.25"></audio>'
     ) in written
     assert '<div class="sub" id="s0">Hola &lt;mundo&gt; &amp; adiós</div>' in written
@@ -1138,7 +1163,7 @@ def test_narrado_injects_audio_subtitles_and_the_opacity_timeline(tmp_path: Path
     assert "<!-- SUBS -->" not in written
     assert "<!-- AUDIOS -->" not in written
     for name in ("voz-a.wav", "voz-b.wav", "musica.wav"):
-        assert (out / name).read_bytes() == VOZ_BYTES
+        assert (out / "composition" / name).read_bytes() == VOZ_BYTES
     assert not (out / "subtitulos.srt").exists()
     assert not (out / "composition" / "subtitulos.srt").exists()
 

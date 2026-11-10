@@ -7,7 +7,7 @@
 // The piece author produces the inputs offline: voicestudio voice files (one
 // engine per file), an ffmpeg-mixed instrumental bed and a whisper .srt. This
 // module runs in the copied workDir before HyperFrames' check: it copies the
-// audio beside the composition, parses the .srt into subtitle cues, requires
+// audio into the composition root, parses the .srt into subtitle cues, requires
 // the cues to fit data-duration, and injects the audio elements, the burned-in
 // subtitle divs and the opacity timeline into index.html.
 //
@@ -36,10 +36,7 @@ function narradoSetup(workDir, inputs, base) {
   const volumen = musicVolumeOf(inputs);
   requireVoicesInside(voices, duration);
   const updated = injectNarration(template, cues, { voices, music, duration, volumen });
-  copyBeside(
-    [...voices.map((voice) => voice.file), music],
-    path.dirname(workDir),
-  );
+  copyBeside([...voices.map((voice) => voice.file), music], workDir);
   fs.writeFileSync(templateFile, updated);
 }
 
@@ -220,13 +217,13 @@ function subtitleLine(cue, index) {
 function audioLines(audio) {
   const voiceLines = audio.voices.map(
     (voice, index) =>
-      `<audio id="voz-${index + 1}" src="../${escapeAttr(path.basename(voice.file))}" ` +
+      `<audio id="voz-${index + 1}" src="${escapeAttr(path.basename(voice.file))}" ` +
       `data-start="${secondsText(voice.inicio)}" ` +
       `data-duration="${secondsText(audio.duration - voice.inicio)}" ` +
       `data-track-index="${index + 1}" data-volume="1"></audio>`,
   );
   const musicLine =
-    `<audio id="musica" src="../${escapeAttr(path.basename(audio.music))}" ` +
+    `<audio id="musica" src="${escapeAttr(path.basename(audio.music))}" ` +
     `data-start="0" data-duration="${secondsText(audio.duration)}" ` +
     `data-track-index="${audio.voices.length + 1}" ` +
     `data-volume="${secondsText(audio.volumen)}"></audio>`;
@@ -273,7 +270,7 @@ function escapeAttr(text) {
   return escapeHtml(text).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-// --- the audio: copied beside the composition, where ../<name> points.
+// --- the audio: copied into the composition root, referenced by its plain name.
 
 function copyBeside(files, targetDir) {
   const seen = new Map();

@@ -485,7 +485,7 @@ description = "Audio clips entering the composition as <audio>, one { clip } ite
 [capabilities.render.inputs.audio.items.clip]
 type = "path"
 required = true
-description = "Voice, music or effect clip to place beside the composition, resolved relative to the piece file."
+description = "Voice, music or effect clip, resolved relative to the piece file and copied into the composition directory by its file name."
 
 [capabilities.render.inputs.prompt]
 type = "string"
@@ -523,7 +523,7 @@ description = "Audio clips entering the composition as <audio>, one { clip } ite
 [capabilities.loop.inputs.audio.items.clip]
 type = "path"
 required = true
-description = "Voice, music or effect clip to place beside the composition, resolved relative to the piece file."
+description = "Voice, music or effect clip, resolved relative to the piece file and copied into the composition directory by its file name."
 
 [capabilities.loop.inputs.prompt]
 type = "string"
@@ -699,7 +699,7 @@ description = "Character SVG with one .boca shape per Rhubarb letter, ids boca-X
 [capabilities.personaje.inputs.voz]
 type = "path"
 required = true
-description = "Voice audio resolved relative to the piece, copied beside the composition."
+description = "Voice audio resolved relative to the piece, copied into the composition root and referenced by its plain name."
 
 [capabilities.personaje.inputs.bocas]
 type = "path"
@@ -743,12 +743,12 @@ description = "Composition directory with hyperframes.json, index.tmpl plus asse
 type = "array"
 required = true
 min_items = 1
-description = "Voice files from voicestudio, one { clip } item each; voicestudio keeps one engine per file, so narrator and clone voices arrive as separate clips. Every clip must resolve relative to the piece; the runner copies them beside the composition and never probes audio provenance."
+description = "Voice files from voicestudio, one { clip } item each; voicestudio keeps one engine per file, so narrator and clone voices arrive as separate clips. Every clip must resolve relative to the piece; the runner copies them into the composition root and never probes audio provenance."
 
 [capabilities.narrado.inputs.voz.items.clip]
 type = "path"
 required = true
-description = "Voice clip copied beside the composition and injected as <audio id=\"voz-N\" src=\"../<name>\">."
+description = "Voice clip copied into the composition root and injected as <audio id=\"voz-N\" src=\"<name>\">."
 
 [capabilities.narrado.inputs.voz.items.inicio]
 type = "number"
@@ -759,7 +759,7 @@ description = "Seconds on the composition timeline where this clip starts."
 [capabilities.narrado.inputs.musica]
 type = "path"
 required = true
-description = "Instrumental music bed already mixed offline with the ffmpeg package, resolved relative to the piece and copied beside the composition as <audio id=\"musica\">."
+description = "Instrumental music bed already mixed offline with the ffmpeg package, resolved relative to the piece and copied into the composition root as <audio id=\"musica\">."
 
 [capabilities.narrado.inputs.subtitulos]
 type = "path"

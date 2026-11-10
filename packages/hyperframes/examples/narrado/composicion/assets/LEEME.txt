@@ -1,3 +1,3 @@
 The voice clips, the music bed and the .srt are the piece's own inputs; the
-runner copies the audio beside the composition and injects the markers. No
+runner copies the audio into the composition root and injects the markers. No
 other media ships with this sample.
