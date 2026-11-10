@@ -4,7 +4,9 @@ Workshop drawings from your own 3D parts: `facet run freecad.plano
 <piece>.toml` runs a FreeCAD script headless on the part and gives back
 `<guion>.pdf` plus one PNG per page. It belongs to the **`cad`** facet and
 writes the **`document`** kind, so a person opens the PDF and an agent reads
-the pages from the preview file.
+the pages from the preview file. The script draws SVG sheets; the runner
+turns them into the PDF and the PNGs with FreeCAD's own Qt, so nothing is
+ever installed on the host.
 
 This is the lab's rule to wrap the best tool and never reimplement it: the
 package drives the **FreeCAD you already have**, for what CadQuery does not
@@ -50,14 +52,16 @@ failure (`UtilAcceptVsock`). A real script failure surfaces as
 `runner_failed` with the tail of the output.
 
 `freecad.plano` runs the guion as `<guion> <out_dir>/<name> <pieza>`, the
-lab's output-prefix convention: the script must write `<name>.pdf` beside it.
-The runner then rasterizes the pages with poppler's `pdftoppm` into
-`preview/page-NN.png` and writes `<name>.pdf.preview.json` in the core
-document shape `{preview, kind, summary, page_count, pages}` — no new schema
-or viewer. The verbs run inside the host application, so a Windows FreeCAD
-cannot see WSL's poppler-utils: there the tools are called back through
-`wsl.exe` with the paths translated (`\\wsl.localhost\…` and `C:\…` both
-round-trip).
+lab's output-prefix convention: the script must write its sheets as
+`<name>-01.svg`, `<name>-02.svg`, … beside it — consecutive two-digit numbers
+from 01, each sheet carrying `width` and `height` in millimetres on its
+`<svg>` tag (see `examples/plano-escuadra.py`). The runner then renders the
+sheets with FreeCAD's bundled Qt (`QSvgRenderer` into `preview/page-NN.png`
+at 150 dpi, `QPdfWriter` into `<name>.pdf` at 300 dpi) and writes
+`<name>.pdf.preview.json` in the core document shape `{preview, kind,
+summary, page_count, pages}` — no new schema or viewer. The sheets stay in
+the output directory next to the PDF as editable sources and are listed in
+the asset's `inputs` after the guion and the part.
 
 ## A piece
 
@@ -67,9 +71,11 @@ guion = "plano-escuadra.py"
 pieza = "escuadra.step"
 ```
 
-`guion` is a FreeCAD script that opens `pieza`, builds the TechDraw page and
-writes the PDF; `pieza` is the STEP or FreeCAD document it opens. Both are
-resolved relative to the piece.
+`guion` is a FreeCAD script that opens `pieza`, builds the TechDraw views
+with `TechDraw.projectToSVG` and writes one SVG sheet per page;
+`examples/plano-escuadra.py` draws the `escuadra.step` bracket on one A3
+landscape sheet and is the model to copy. `pieza` is the STEP or FreeCAD
+document it opens. Both are resolved relative to the piece.
 
 ## When to use it
 

@@ -43,9 +43,15 @@ guion's `if __name__ == "__main__":` block is true here.
 The guion's argv is `<guion> <out_dir>/<name> <pieza>`: the script itself, the
 output prefix, and the part file. `<name>` is the sanitized stem of the guion,
 so `plano-escuadra.py` names the output `plano-escuadra`. The script writes
-`<name>.pdf` at that prefix; a script that writes nothing fails with
-`guion wrote no <name>.pdf`. Paths arrive runner-side and are resolved there:
-the guion and the part are resolved relative to the piece before launch.
+one SVG sheet per page at that prefix — `<name>-01.svg`, `<name>-02.svg`, …
+with consecutive two-digit numbers from 01, each sheet carrying `width` and
+`height` in millimetres on its `<svg>` tag — and the runner renders them into
+`<name>.pdf` and `preview/page-NN.png` with FreeCAD's bundled Qt. A script
+that writes no first sheet fails with `guion wrote no <name>-01.svg`; a gap
+fails with `sheet <name>-NN.svg is missing`; a sheet without millimetre sizes
+fails with `<file>: the sheet needs width and height in mm`. Paths arrive
+runner-side and are resolved there: the guion and the part are resolved
+relative to the piece before launch.
 
 ## Host lookup and paths
 

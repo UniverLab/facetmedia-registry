@@ -5,8 +5,9 @@ description: Draw workshop plans from a 3D part with scripted FreeCAD TechDraw, 
 # freecad
 
 `freecad.plano` runs the piece's FreeCAD script headless in `freecadcmd` on the
-`pieza` part and turns the PDF it writes into a paginated document: a person
-opens the PDF, an agent reads the PNG pages from the preview file.
+`pieza` part and turns the SVG sheets it writes into a paginated document with
+FreeCAD's own Qt: a person opens the PDF, an agent reads the PNG pages from
+the preview file.
 
 ## When to use
 
@@ -26,9 +27,13 @@ pieza = "escuadra.step"
 ```
 
 `guion` is a FreeCAD Python script run as `<guion> <out_dir>/<name> <pieza>`,
-where `<name>` is the guion's stem; it must write `<name>.pdf`. `pieza` is the
-part file the script opens, both resolved relative to the piece. `run` writes
-`<name>.pdf` and `preview/page-NN.png` in the output directory.
+where `<name>` is the guion's stem; it must write `<name>-01.svg`,
+`<name>-02.svg`, … — consecutive two-digit numbers from 01, each sheet with
+`width` and `height` in millimetres on its `<svg>` tag. `pieza` is the part
+file the script opens, both resolved relative to the piece. `run` renders the
+sheets into `<name>.pdf` and `preview/page-NN.png` in the output directory
+with FreeCAD's bundled Qt. Copy `examples/plano-escuadra.py`, which draws the
+`escuadra.step` bracket on one A3 landscape sheet.
 
 ## Judging the result
 
@@ -45,4 +50,4 @@ view, a dimension off the geometry or an empty sheet is caught by eye.
   traceback and a non-zero exit, so a failed drawing never looks like a pass;
   the invocation, sys.argv and the lookup order are in references/wrapper.md.
 - The script receives an output prefix without extension, not a file name:
-  write `<prefix>.pdf` yourself.
+  write `<prefix>-01.svg`, `<prefix>-02.svg`, … yourself, one per page.

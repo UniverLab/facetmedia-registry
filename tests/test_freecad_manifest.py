@@ -104,6 +104,8 @@ def test_the_package_is_never_installed_but_only_located() -> None:
     assert requirements["gpu"] is False
     assert requirements["exclusive"] is False
     assert requirements["platforms"] == ["linux"]
+    assert "host_libs" not in requirements
+    assert "host_hint" not in requirements
     assert "models" not in MANIFEST
     assert not (PACKAGE / "pyproject.toml").exists()
     assert (PACKAGE / "freecad_run.py").is_file()
@@ -130,7 +132,7 @@ def test_the_inputs_are_the_script_and_the_part_as_required_paths() -> None:
         assert INPUTS[name]["type"] == "path", name
         assert INPUTS[name]["required"] is True, name
         assert "relative to the piece" in INPUTS[name]["description"], name
-    assert ".pdf" in INPUTS["guion"]["description"]
+    assert "-01.svg" in INPUTS["guion"]["description"]
     assert "STEP" in INPUTS["pieza"]["description"]
 
 

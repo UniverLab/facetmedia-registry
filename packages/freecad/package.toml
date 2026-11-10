@@ -27,8 +27,6 @@ ram_gb = 4
 disk_gb = 0.1
 exclusive = false
 platforms = ["linux"]
-host_libs = ["poppler-utils"]
-host_hint = "sudo apt install poppler-utils"
 
 [[licenses]]
 subject = "FreeCAD (the host application this package drives)"
@@ -41,7 +39,7 @@ kind = "document"
 [capabilities.plano.inputs.guion]
 type = "path"
 required = true
-description = "FreeCAD script, run inside freecadcmd as <guion> <out_dir>/<name> <pieza>; it must write <name>.pdf, resolved relative to the piece."
+description = "FreeCAD script, run inside freecadcmd as <guion> <out_dir>/<name> <pieza>; it must write <name>-01.svg, <name>-02.svg, ... sheets, two digits from 01 with width and height in mm, resolved relative to the piece."
 
 [capabilities.plano.inputs.pieza]
 type = "path"

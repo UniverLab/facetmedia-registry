@@ -5,11 +5,12 @@ facet drives a ``host-app`` package through the host binary: it launches
 --result <result>``, so this entry runs inside FreeCAD's Python and its four
 verbs use what FreeCAD ships. ``run`` executes the piece's ``guion`` with
 ``sys.argv`` set to ``[guion, <out_dir>/<name>, pieza]`` (the lab's output
-prefix convention), requires the ``<name>.pdf`` it writes, rasterizes the
-pages with poppler's ``pdftoppm`` into ``preview/page-NN.png`` and writes
+prefix convention), requires the ``<name>-NN.svg`` sheets it writes, renders
+them with FreeCAD's bundled PySide6 (``QSvgRenderer`` into
+``preview/page-NN.png``, ``QPdfWriter`` into ``<name>.pdf``) and writes
 ``<asset>.preview.json`` in the core document shape. ``verify`` counts the
-pages, ``preview`` re-rasterizes a placed PDF, and ``doctor`` reports the
-host application and TechDraw.
+pages, ``preview`` reuses the PNGs run wrote, and ``doctor`` reports the
+host application, TechDraw and Qt.
 
 Started with plain Python — ``python runner.py run ...``, as the tests and a
 manual paste-back do — the same entry is the launcher the lab's
@@ -34,7 +35,7 @@ import sys
 import tomllib
 import traceback
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 #: The host application's manifest values, repeated where the runner needs them.
 APP = "freecad"
@@ -62,12 +63,19 @@ WSLPATH_TIMEOUT_S = 10.0
 PROBE_TIMEOUT_S = 30.0
 #: Preview PNGs land here, under the run's output dir.
 PREVIEW_DIR = "preview"
-POPPLER_MISSING = (
-    "pdftoppm is required to rasterize the drawing's pages (sudo apt install poppler-utils)"
-)
-PDFINFO_MISSING = "pdfinfo is required to count the drawing's pages"
+#: The preview PNGs' resolution: 150 dpi of each sheet's millimetre size.
+PNG_DPI = 150
+#: The PDF's resolution, which only fixes its coordinate system.
+PDF_DPI = 300
 VERSION_RE = re.compile(r"\d+\.\d+(?:\.\d+)?")
-PAGES_RE = re.compile(r"^Pages:\s*(\d+)", re.MULTILINE)
+#: The ``/Count N`` of the ``/Type /Pages`` object, read from the PDF bytes.
+PAGES_RE = re.compile(rb"/Type\s*/Pages.*?/Count\s+(\d+)", re.DOTALL)
+#: The ``-NN`` suffix of a ``<name>-NN.svg`` sheet file.
+SHEET_NUMBER_RE = re.compile(r"-(\d+)\.svg\Z")
+#: The sheet's ``<svg>`` tag, carrying ``width`` and ``height`` in millimetres.
+SHEET_TAG_RE = re.compile(r"<svg\b[^>]*>", re.IGNORECASE | re.DOTALL)
+#: One ``width="420mm"`` or ``height="297mm"`` attribute of the sheet's tag.
+SHEET_SIZE_RE = re.compile(r"(width|height)\s*=\s*[\"'](\d+(?:\.\d+)?)mm[\"']")
 UNSAFE_NAME = re.compile(r"[^a-z0-9-]+")
 #: ``C:\`` or ``C:/``: a path the Windows build already understands.
 DRIVE_RE = re.compile(r"[A-Za-z]:[\\/]")
@@ -75,10 +83,6 @@ DRIVE_RE = re.compile(r"[A-Za-z]:[\\/]")
 MOUNT_PARTS = 3
 #: ``("", "", "server", "share")``: a UNC path's own leading components.
 UNC_PARTS = 4
-#: ``("wsl.localhost", "<distro>")``: the share prefix a WSL UNC path carries.
-WSL_UNC_SKIP = 2
-#: ``("C:", ...)``: a drive letter's own length.
-DRIVE_LETTER = 2
 #: The UNC mount point of WSL's filesystem, discovered from the request's path.
 _UNC_ROOT: list[str] = [""]
 
@@ -158,11 +162,11 @@ def _run(request: dict[str, Any]) -> dict[str, Any]:
     windows = _on_windows()
     out_dir = _host_path(str(request["out_dir"]), windows)
     prefix = posixpath.join(out_dir, name)
+    _clear_sheets(prefix)
     _execute(_host_path(guion, windows), prefix, _host_path(pieza, windows))
     pdf = Path(f"{prefix}.pdf")
-    if not pdf.is_file():
-        raise RuntimeError(f"guion wrote no {name}.pdf")
-    pages = _rasterize(pdf, Path(out_dir))
+    sheets = _collect_sheets(prefix, name)
+    pages = _render_sheets(sheets, pdf, Path(out_dir) / PREVIEW_DIR)
     _write_preview(pdf, pages, Path(out_dir))
     return {
         "tool": _tool(),
@@ -175,7 +179,7 @@ def _run(request: dict[str, Any]) -> dict[str, Any]:
                 "properties": {"page_count": len(pages)},
                 "params": params,
                 "seed": None,
-                "inputs": [guion, pieza],
+                "inputs": [guion, pieza, *(str(sheet.path) for sheet in sheets)],
             }
         ],
     }
@@ -223,87 +227,124 @@ def _tool() -> dict[str, str]:
     return {"name": str(manifest["tool_name"]), "version": str(manifest["version"])}
 
 
-# --- the pages: pdftoppm's PNGs, normalized like the deck runner's.
+# --- the sheets: the guion's SVGs, rendered with FreeCAD's own Qt.
 
 
-def _rasterize(pdf: Path, out_dir: Path) -> list[str]:
-    """Rasterize the PDF into ``preview/page-NN.png`` and return their names."""
-    folder = out_dir / PREVIEW_DIR
+#: The Qt application the sheet renderer needs; held for the process's life.
+_QT_APP: list[Any] = []
+
+
+class Sheet(NamedTuple):
+    """One guion sheet: its file and its size in millimetres."""
+
+    path: Path
+    width_mm: float
+    height_mm: float
+
+
+def _clear_sheets(prefix: str) -> None:
+    """Drop the sheets an earlier run left, so this run's pages are its own."""
+    parent = Path(prefix).parent
+    if not parent.is_dir():
+        return
+    for stale in parent.glob(f"{Path(prefix).name}-*.svg"):
+        if SHEET_NUMBER_RE.search(stale.name):
+            stale.unlink(missing_ok=True)
+
+
+def _collect_sheets(prefix: str, name: str) -> list[Sheet]:
+    """The guion's ``<prefix>-NN.svg`` sheets, consecutive from 01."""
+    first = Path(f"{prefix}-01.svg")
+    if not first.is_file():
+        raise RuntimeError(f"guion wrote no {name}-01.svg")
+    sheets: list[Sheet] = []
+    number = 1
+    while True:
+        path = Path(f"{prefix}-{number:02d}.svg")
+        if not path.is_file():
+            break
+        sheets.append(_read_sheet(path))
+        number += 1
+    parent = Path(prefix).parent
+    if parent.is_dir():
+        stem = Path(prefix).name
+        for candidate in parent.glob(f"{stem}-*.svg"):
+            match = SHEET_NUMBER_RE.search(candidate.name)
+            if match and candidate.is_file() and int(match.group(1)) >= number:
+                raise RuntimeError(f"sheet {stem}-{number:02d}.svg is missing")
+    return sheets
+
+
+def _read_sheet(path: Path) -> Sheet:
+    """One sheet with its millimetre size from the ``<svg>`` tag."""
+    tag = SHEET_TAG_RE.search(path.read_text(encoding="utf-8"))
+    sizes = dict(SHEET_SIZE_RE.findall(tag.group(0))) if tag else {}
+    if "width" not in sizes or "height" not in sizes:
+        raise RuntimeError(f"{path}: the sheet needs width and height in mm")
+    return Sheet(path, float(sizes["width"]), float(sizes["height"]))
+
+
+def _render_sheets(sheets: list[Sheet], pdf: Path, folder: Path) -> list[str]:
+    """Render each sheet to ``preview/page-NN.png`` and all of them to one PDF."""
+    from PySide6 import QtCore, QtGui, QtSvg  # noqa: PLC0415
+
+    windows = _on_windows()
+    if not windows and "QT_QPA_PLATFORM" not in os.environ and not os.environ.get("DISPLAY"):
+        os.environ["QT_QPA_PLATFORM"] = "offscreen"
+    app = QtGui.QGuiApplication.instance()
+    if app is None:
+        app = QtGui.QGuiApplication(["facet"])
+        _QT_APP.append(app)
     if folder.exists():
         shutil.rmtree(folder)
     folder.mkdir(parents=True)
-    done = subprocess.run(
-        _poppler_command("pdftoppm", ["-png", str(pdf), str(folder / "page")]),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if done.returncode != 0:
-        raise RuntimeError(f"pdftoppm exited {done.returncode}: {_tail(done.stdout + done.stderr)}")
-    names = _normalize(folder)
-    if not names:
-        raise RuntimeError(f"pdftoppm wrote no page PNGs for {pdf.name}")
+    renderers: list[Any] = []
+    for sheet in sheets:
+        renderer = QtSvg.QSvgRenderer(QtCore.QByteArray(sheet.path.read_bytes()))
+        if not renderer.isValid():
+            raise RuntimeError(f"{sheet.path}: Qt cannot read this SVG")
+        renderers.append(renderer)
+    names: list[str] = []
+    for index, (sheet, renderer) in enumerate(zip(sheets, renderers, strict=True), start=1):
+        image = QtGui.QImage(
+            round(sheet.width_mm * PNG_DPI / 25.4),
+            round(sheet.height_mm * PNG_DPI / 25.4),
+            QtGui.QImage.Format_ARGB32,
+        )
+        image.fill(0xFFFFFFFF)
+        painter = QtGui.QPainter(image)
+        renderer.render(painter)
+        painter.end()
+        name = f"page-{index:02d}.png"
+        target = _host_path(str(folder / name), windows)
+        if not image.save(target):
+            raise RuntimeError(f"Qt could not write {target}")
+        names.append(name)
+    writer = QtGui.QPdfWriter(_host_path(str(pdf), windows))
+    writer.setResolution(PDF_DPI)
+    writer.setPageMargins(QtCore.QMarginsF(0, 0, 0, 0), QtGui.QPageLayout.Millimeter)
+    writer.setPageSize(_page_size(QtCore, QtGui, sheets[0]))
+    painter = QtGui.QPainter(writer)
+    for position, (sheet, renderer) in enumerate(zip(sheets, renderers, strict=True)):
+        if position:
+            writer.setPageSize(_page_size(QtCore, QtGui, sheet))
+            writer.newPage()
+        renderer.render(painter)
+    painter.end()
     return [f"{PREVIEW_DIR}/{name}" for name in names]
 
 
-def _poppler_command(tool: str, args: list[str]) -> list[str]:
-    """``tool args``: native on ``PATH``, else ``wsl -e`` from a Windows host.
-
-    The verbs run inside the host application, and a Windows FreeCAD cannot
-    see WSL's poppler-utils, so the tools are called back through WSL interop
-    with the arguments translated to WSL paths.
-    """
-    exe = shutil.which(tool)
-    if exe is not None:
-        return [exe, *args]
-    if _on_windows():
-        wsl = shutil.which("wsl.exe") or shutil.which("wsl")
-        if wsl is not None:
-            return [wsl, "-e", tool, *[_wsl_arg(arg) for arg in args]]
-    missing = POPPLER_MISSING if tool == "pdftoppm" else PDFINFO_MISSING
-    raise RuntimeError(missing)
+def _page_size(qt_core: Any, qt_gui: Any, sheet: Sheet) -> Any:
+    """A sheet's millimetre size as the QPageSize of its PDF page."""
+    return qt_gui.QPageSize(
+        qt_core.QSizeF(sheet.width_mm, sheet.height_mm), qt_gui.QPageSize.Millimeter
+    )
 
 
-def _wsl_arg(arg: str) -> str:
-    """A path argument in WSL form; a flag passes through unchanged."""
-    if "/" not in arg and "\\" not in arg and not DRIVE_RE.match(arg):
-        return arg
-    return _wsl_path(arg)
-
-
-def _wsl_path(value: str) -> str:
-    """The WSL path of a Windows one: a WSL UNC share or a drive letter."""
-    if value.startswith("/"):
-        return value
-    parts = [part for part in value.replace("\\", "/").split("/") if part]
-    if not parts:
-        return value
-    if parts[0] in ("wsl.localhost", "wsl$"):
-        return "/" + "/".join(parts[WSL_UNC_SKIP:])
-    head = parts[0]
-    if len(head) == DRIVE_LETTER and head[1] == ":" and head[0].isalpha():
-        rest = "/".join(parts[1:])
-        return f"/mnt/{head[0].lower()}/{rest}" if rest else f"/mnt/{head[0].lower()}"
-    return value
-
-
-def _normalize(folder: Path) -> list[str]:
-    """Rename pdftoppm's ``page-1.png`` to ``page-01.png`` and sort numerically."""
-    found: list[tuple[int, Path]] = []
-    for path in folder.glob("page-*.png"):
-        number = path.stem.removeprefix("page-")
-        if number.isdigit():
-            found.append((int(number), path))
-    if not found:
-        return []
-    width = max(2, *(len(str(number)) for number, _ in found))
-    names: list[str] = []
-    for number, path in sorted(found):
-        name = f"page-{number:0{width}d}.png"
-        if path.name != name:
-            path.rename(folder / name)
-        names.append(name)
-    return names
+def _page_number(path: Path) -> int:
+    """The number in ``page-NN.png``; a name without digits sorts first."""
+    digits = path.stem.removeprefix("page-")
+    return int(digits) if digits.isdigit() else 0
 
 
 def _write_preview(pdf: Path, pages: list[str], out_dir: Path) -> str:
@@ -325,12 +366,16 @@ def _write_preview(pdf: Path, pages: list[str], out_dir: Path) -> str:
 
 
 def _preview(request: dict[str, Any]) -> dict[str, Any]:
-    """Rasterize each placed PDF and write its preview file."""
+    """Rewrite each placed PDF's preview from the PNGs ``run`` wrote."""
     out_dir = Path(_host_path(str(request["out_dir"]), _on_windows()))
     entries: list[dict[str, Any]] = []
     for item in request.get("assets") or []:
         pdf = Path(_host_path(str(item), _on_windows()))
-        pages = _rasterize(pdf, out_dir)
+        folder = pdf.parent / PREVIEW_DIR
+        found = sorted(folder.glob("page-*.png"), key=_page_number) if folder.is_dir() else []
+        if not found:
+            raise RuntimeError(f"{pdf.name}: page PNGs are written by run; run the piece again")
+        pages = [f"{PREVIEW_DIR}/{path.name}" for path in found]
         name = _write_preview(pdf, pages, out_dir)
         entries.append({"file": pdf.name, "preview": name, "images": []})
     return {"assets": entries}
@@ -347,28 +392,30 @@ def _verify(request: dict[str, Any]) -> dict[str, Any]:
 
 
 def _verdict(pdf: Path) -> dict[str, Any]:
-    """A PDF's page count, from its rendered pages or its own ``pdfinfo``."""
+    """A PDF's page count, from its rendered pages or its own ``/Count``."""
     count = _page_count(pdf)
     return {
         "file": pdf.name,
         "passed": count > 0,
         "metrics": {"page_count": count},
         "thresholds": {"page_count_min": 1},
-        "verifier": "pdfinfo",
+        "verifier": "pdf-pages",
     }
 
 
 def _page_count(pdf: Path) -> int:
-    """The rendered pages beside the asset, else ``pdfinfo``'s ``Pages:`` line."""
+    """The rendered pages beside the asset, else the PDF's ``/Type /Pages`` count."""
     folder = pdf.parent / PREVIEW_DIR
     rendered = len(list(folder.glob("page-*.png"))) if folder.is_dir() else 0
     if rendered:
         return rendered
-    command = _poppler_command("pdfinfo", [str(pdf)])
-    done = subprocess.run(command, capture_output=True, text=True, check=False)
-    match = PAGES_RE.search(done.stdout)
-    if done.returncode != 0 or match is None:
-        raise RuntimeError(f"pdfinfo could not count the pages of {pdf.name}")
+    try:
+        raw = pdf.read_bytes()
+    except OSError:
+        raise RuntimeError(f"cannot count the pages of {pdf.name}") from None
+    match = PAGES_RE.search(raw)
+    if match is None:
+        raise RuntimeError(f"cannot count the pages of {pdf.name}")
     return int(match.group(1))
 
 
@@ -376,11 +423,12 @@ def _page_count(pdf: Path) -> int:
 
 
 def _doctor(request: dict[str, Any]) -> dict[str, Any]:
-    """The host application, at least 1.1.4; TechDraw on a full probe."""
+    """The host application, at least 1.1.4; TechDraw and Qt on a full probe."""
     check = _host_check()
     checks = [check]
     if request.get("depth") == "full" and check["ok"] and _freecad() is not None:
         checks.append(_techdraw_check())
+        checks.append(_qt_check())
     return {"checks": checks}
 
 
@@ -407,9 +455,19 @@ def _techdraw_check() -> dict[str, Any]:
     return _check(True, "TechDraw imports")
 
 
-def _check(ok: bool, detail: str) -> dict[str, Any]:
+def _qt_check() -> dict[str, Any]:
+    """FreeCAD's bundled Qt, which renders the sheets into the PDF and PNGs."""
+    try:
+        __import__("PySide6.QtSvg")
+        from PySide6.QtGui import QPdfWriter  # noqa: F401, PLC0415
+    except ImportError as exc:
+        return _check(False, f"Qt does not import: {exc}", name="qt")
+    return _check(True, "QtSvg and QPdfWriter import", name="qt")
+
+
+def _check(ok: bool, detail: str, name: str = APP) -> dict[str, Any]:
     """One doctor check; a failure carries the fix facet prints."""
-    return {"name": APP, "ok": ok, "detail": detail, "fix": "" if ok else FIX}
+    return {"name": name, "ok": ok, "detail": detail, "fix": "" if ok else FIX}
 
 
 def _host_binary() -> str:

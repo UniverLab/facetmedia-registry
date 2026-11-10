@@ -1,0 +1,3 @@
+[inputs]
+guion = "plano-escuadra.py"
+pieza = "escuadra.step"
