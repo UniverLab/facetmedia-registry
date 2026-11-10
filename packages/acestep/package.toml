@@ -15,7 +15,7 @@ python = "3.12"
 [engine.server]
 repo = "https://github.com/ace-step/ACE-Step-1.5.git"
 rev = "ca1e85fe9430179831e6bc6be790c332190a3866"
-requirements = "requirements.txt"
+requirements = "uv.lock"
 launch = ["python", "-m", "uvicorn", "acestep.api_server:app", "--host", "127.0.0.1", "--port", "{{port}}", "--workers", "1"]
 health_url = "http://127.0.0.1:{{port}}/health"
 timeout_s = 600

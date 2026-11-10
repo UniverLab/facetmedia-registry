@@ -54,7 +54,7 @@ def test_the_server_is_the_pinned_acestep_api_launched_on_the_free_port() -> Non
     server = engine["server"]
     assert server["repo"] == "https://github.com/ace-step/ACE-Step-1.5.git"
     assert REV_RE.fullmatch(server["rev"])
-    assert server["requirements"] == "requirements.txt"
+    assert server["requirements"] == "uv.lock"
     # The launcher the clone's own run_api_server.sh documents.
     assert server["launch"][:3] == ["python", "-m", "uvicorn"]
     assert "acestep.api_server:app" in server["launch"]

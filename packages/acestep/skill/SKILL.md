@@ -69,6 +69,9 @@ bed with `ducking = true`, `duck-db = -12.0` and `target-lufs = -16.0`, as in
 
 - One heavy job at a time: the package needs the GPU exclusively, 16 GB of
   RAM and 24 GB of disk.
+- The first `facet pull acestep` builds the server from ACE-Step's own
+  uv.lock: torch and its CUDA wheels, several GB over several minutes.
+  It does not build flash-attn.
 - The checkpoints come from the server on first start; a missing checkout
   or checkpoint names `facet pull acestep` as its fix.
 - A caption without the no-drums guidance comes back with a bass and kick
