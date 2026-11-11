@@ -1,8 +1,8 @@
-"""The recetas package runner: ordered plans for complete pieces.
+"""The recipes package runner: ordered plans for complete pieces.
 
 Four verbs on the runner SDK (``facet_runner_sdk``, copied into the
 environment at pull): ``run`` reads the in-package ``recipes.json`` and
-writes ``<receta>.plan.json`` beside the piece, one ordered step per
+writes ``<recipe>.plan.json`` beside the piece, one ordered step per
 capability to run with its handoff files and its verification; ``verify``
 re-parses a plan and judges step count, order and completeness; ``preview``
 writes the generic viewer's fields; ``doctor`` checks the package files and
@@ -26,8 +26,8 @@ from facet_runner_sdk import Request, Runner
 
 runner = Runner()
 
-#: The manifest's ``receta`` enum, repeated so run never drifts from it.
-RECIPES = ("video-explicativo", "render-arq", "material-voz", "demo-herramienta")
+#: The manifest's ``recipe`` enum, repeated so run never drifts from it.
+RECIPES = ("explainer-video", "architecture-render", "voice-material", "tool-demo")
 #: The manifest's verify threshold, repeated for the same reason.
 STEPS_MIN = 1
 #: The files the package must carry after a pull.
@@ -55,11 +55,11 @@ def _tool() -> dict[str, str]:
     return {"name": str(manifest["tool_name"]), "version": str(manifest["version"])}
 
 
-def _receta(params: dict[str, Any]) -> str:
+def _recipe(params: dict[str, Any]) -> str:
     """The planned recipe, refused when the manifest's enum does not name it."""
-    name = str(params.get("receta", ""))
-    if name not in _recipes().get("recetas", {}):
-        raise ValueError(f"receta desconocida {name!r}: usa {', '.join(RECIPES)}")
+    name = str(params.get("recipe", ""))
+    if name not in _recipes().get("recipes", {}):
+        raise ValueError(f"unknown recipe {name!r}: use {', '.join(RECIPES)}")
     return name
 
 
@@ -78,8 +78,8 @@ def _steps(recipe: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _plan(name: str) -> dict[str, Any]:
     """A recipe as an ordered plan: the recipe, its summary and its steps."""
-    recipe = _recipes()["recetas"][name]
-    return {"receta": name, "summary": str(recipe["summary"]), "steps": _steps(recipe)}
+    recipe = _recipes()["recipes"][name]
+    return {"recipe": name, "summary": str(recipe["summary"]), "steps": _steps(recipe)}
 
 
 def _packages(steps: list[dict[str, Any]]) -> int:
@@ -98,11 +98,11 @@ def _asset(name: str, plan: dict[str, Any], path: Path) -> dict[str, Any]:
         "kind": "text",
         "mime": "application/json",
         "properties": {
-            "receta": name,
+            "recipe": name,
             "steps": len(plan["steps"]),
             "packages": _packages(plan["steps"]),
         },
-        "params": {"receta": name},
+        "params": {"recipe": name},
         "seed": None,
         "inputs": [],
     }
@@ -111,7 +111,7 @@ def _asset(name: str, plan: dict[str, Any], path: Path) -> dict[str, Any]:
 @runner.verb("run")
 def run(req: Request) -> dict[str, Any]:
     """Write the recipe's ordered plan beside the piece."""
-    name = _receta(dict(req.inputs))
+    name = _recipe(dict(req.inputs))
     plan = _plan(name)
     path = req.out_dir / f"{name}.plan.json"
     path.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -141,7 +141,7 @@ def _verdict(file: str, passed: bool, metrics: dict[str, Any]) -> dict[str, Any]
         "passed": passed,
         "metrics": metrics,
         "thresholds": {"steps_min": STEPS_MIN},
-        "verifier": "recetas",
+        "verifier": "recipes",
     }
 
 
@@ -165,11 +165,11 @@ def _preview_data(plan: dict[str, Any]) -> dict[str, Any]:
     """The generic preview: the recipe, its step count and its packages."""
     metrics = _plan_metrics(plan)
     fields = {
-        "receta": str(plan.get("receta", "")),
+        "recipe": str(plan.get("recipe", "")),
         "steps": metrics["steps"],
         "packages": metrics["packages"],
     }
-    summary = f"{fields['receta']} \u00b7 {fields['steps']} steps"
+    summary = f"{fields['recipe']} \u00b7 {fields['steps']} steps"
     return {"preview": 1, "kind": "text", "summary": summary, "fields": fields}
 
 
@@ -198,19 +198,19 @@ def _doctor_files() -> dict[str, Any]:
     package = _package_dir()
     missing = [name for name in PACKAGE_FILES if not (package / name).is_file()]
     if missing:
-        return _check("files", False, f"missing: {', '.join(missing)}", "facet pull recetas")
+        return _check("files", False, f"missing: {', '.join(missing)}", "facet pull recipes")
     return _check("files", True, ", ".join(PACKAGE_FILES))
 
 
 def _doctor_recipes() -> dict[str, Any]:
     """The recipes data parses and names every recipe the manifest's enum does."""
     try:
-        recipes = _recipes().get("recetas", {})
+        recipes = _recipes().get("recipes", {})
     except (OSError, ValueError) as exc:
-        return _check("recipes", False, str(exc), "facet pull recetas")
+        return _check("recipes", False, str(exc), "facet pull recipes")
     missing = [name for name in RECIPES if name not in recipes]
     if missing:
-        return _check("recipes", False, f"missing: {', '.join(missing)}", "facet pull recetas")
+        return _check("recipes", False, f"missing: {', '.join(missing)}", "facet pull recipes")
     return _check("recipes", True, f"{len(RECIPES)} recipes")
 
 
@@ -219,7 +219,7 @@ def _doctor_answers() -> dict[str, Any]:
     try:
         counts = {name: len(_plan(name)["steps"]) for name in RECIPES}
     except (OSError, ValueError, KeyError) as exc:
-        return _check("answers", False, str(exc), "facet pull recetas")
+        return _check("answers", False, str(exc), "facet pull recipes")
     detail = ", ".join(f"{name}: {count}" for name, count in counts.items())
     return _check("answers", True, detail)
 
@@ -234,7 +234,7 @@ def _doctor_plan(req: Request) -> dict[str, Any]:
         if not (metrics["ordered"] and metrics["complete"]):
             raise ValueError(f"the plan is not well formed: {metrics!r}")
     except (OSError, ValueError, KeyError) as exc:
-        return _check("plan", False, str(exc), "facet pull recetas")
+        return _check("plan", False, str(exc), "facet pull recipes")
     finally:
         path.unlink(missing_ok=True)
     return _check("plan", True, f"{RECIPES[0]} plan beside the piece")

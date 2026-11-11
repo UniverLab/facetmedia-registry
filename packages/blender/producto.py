@@ -4,7 +4,7 @@
 piece: the part is imported in millimetres, scaled to metres, dressed in one
 metallic Principled material and shot at 1200x1200 under two area lights
 against a dark backdrop. The recipe is the lab's approved
-``projects/prueba-render-arq/producto.py``.
+``architecture-render / producto.py``.
 
 Small pieces burn out under studio lights, so the lights are derived from the
 part's measured bounding box instead of being fixed: a 6 cm piece gets two

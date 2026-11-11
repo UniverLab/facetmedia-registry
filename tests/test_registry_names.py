@@ -34,7 +34,7 @@ CAPABILITIES = {
     "whisper-subs": ("subtitles",),
     "comfy": ("still", "edit", "clip"),
     "comfy-xl": ("still", "edit", "clip"),
-    "recetas": ("plan",),
+    "recipes": ("plan",),
 }
 
 #: The Spanish names each manifest must no longer carry, anywhere.
@@ -65,7 +65,7 @@ OLD_IDENTIFIERS = {
     "whisper-subs": ("subtitulos", "origen", "formato"),
     "comfy": ("rapido",),
     "comfy-xl": ("rapido",),
-    "recetas": (),
+    "recipes": (),
 }
 
 NEW_INPUTS = {

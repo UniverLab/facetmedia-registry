@@ -1,6 +1,6 @@
 {
-  "recetas": {
-    "video-explicativo": {
+  "recipes": {
+    "explainer-video": {
       "summary": "Narrated explainer video: a voice track and a music bed, normalized and mixed, transcribed for subtitles, and assembled by HyperFrames.",
       "steps": [
         {
@@ -40,7 +40,7 @@
         }
       ]
     },
-    "render-arq": {
+    "architecture-render": {
       "summary": "Architectural render with people: a CAD solid, Poly Haven assets, a daylight photo with people and cars, and a one-page deck.",
       "steps": [
         {
@@ -60,12 +60,12 @@
         },
         {
           "capability": "deck.page",
-          "handoff": "render-arq.pdf + page-01.png (source render-arq.html)",
+          "handoff": "architecture-render.pdf + page-01.png (source architecture-render.html)",
           "verify": "One PDF page and its page-01 PNG."
         }
       ]
     },
-    "material-voz": {
+    "voice-material": {
       "summary": "Voiced material with music: narration from text, a music bed, and a slide deck.",
       "steps": [
         {
@@ -80,12 +80,12 @@
         },
         {
           "capability": "deck.slides",
-          "handoff": "material-voz.pdf + page-01.png (source material-voz.html)",
+          "handoff": "voice-material.pdf + page-01.png (source voice-material.html)",
           "verify": "The page count and the page-01 PNG."
         }
       ]
     },
-    "demo-herramienta": {
+    "tool-demo": {
       "summary": "Tool demo: a recorded terminal demo and a slide deck around it.",
       "steps": [
         {
@@ -95,7 +95,7 @@
         },
         {
           "capability": "deck.slides",
-          "handoff": "demo-herramienta.pdf + page-01.png (source demo-herramienta.html)",
+          "handoff": "tool-demo.pdf + page-01.png (source tool-demo.html)",
           "verify": "The page count and the page-01 PNG."
         }
       ]

@@ -23,7 +23,7 @@ from test_blender_personas import (
     _trail,
 )
 
-#: The lab's car pair from projects/prueba-render-arq/escena.py:45 plus a
+#: The lab's car pair from architecture-render / escena.py:45 plus a
 #: turned compacto; positions are metres in the scene's own axes.
 CARS = [
     {"name": "sedan", "x": -2.7, "y": 0.8},

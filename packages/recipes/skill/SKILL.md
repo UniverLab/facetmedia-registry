@@ -1,13 +1,13 @@
 ---
-name: recetas
+name: recipes
 description: Complete-piece recipes that chain existing packages into ordered plans — narrated explainer video, architectural render with people, voiced material with music, and tool demo.
 ---
-# recetas
+# recipes
 
-`recetas.plan` turns a complete piece into an ordered plan: one step per
+`recipes.plan` turns a complete piece into an ordered plan: one step per
 capability to run, with its handoff files and its verification. It chains
 packages that already exist in this registry and writes
-`<receta>.plan.json` beside the piece — run each step with `facet run
+`<recipe>.plan.json` beside the piece — run each step with `facet run
 <capability> <piece.toml>` in the order the plan gives, carrying each
 step's files into the next. The plan is data, not a model: the package is
 stdlib only and never runs a tool itself.
@@ -28,16 +28,16 @@ stdlib only and never runs a tool itself.
 
 ```toml
 [inputs]
-receta = "video-explicativo"
+recipe = "explainer-video"
 ```
 
-The input is `receta`, one of the four names below. The runner reads the
-in-package `recipes.json` and writes `<receta>.plan.json` beside the piece
+The input is `recipe`, one of the four names below. The runner reads the
+in-package `recipes.json` and writes `<recipe>.plan.json` beside the piece
 (`--out` overrides the directory). Each step is `{ step, capability,
 handoff, verify }`: the capability id to run, the files it hands over and
 how to judge them.
 
-### video-explicativo — the narrated explainer video
+### explainer-video — the narrated explainer video
 
 1. `voicestudio.speak` → `voz.wav`. Verify: transcribe the voice and
    measure the word error rate (`wer_max` 0.05). Kokoro is the documented
@@ -61,7 +61,7 @@ how to judge them.
    is not an input of this step.
    Verify: check the MP4 with an ffprobe probe.
 
-### render-arq — the architectural render with people
+### architecture-render — the architectural render with people
 
 1. `cad.solid` → `estudio.step` + `estudio.stl` + `estudio.svg` +
    `estudio.glb`, from a CadQuery `estudio.py`. Verify: volume and bounding
@@ -72,23 +72,23 @@ how to judge them.
    `people-blend` + `people` and `cars-blend` + `cars`. The people and
    cars are `blender.photo` INPUTS, never capabilities of their own. Verify:
    look at the PNG — pixel size and the people in frame.
-4. `deck.page` → `render-arq.pdf` + `page-01.png`, from
-   `render-arq.html`. Verify: one PDF page and its page-01 PNG.
+4. `deck.page` → `architecture-render.pdf` + `page-01.png`, from
+   `architecture-render.html`. Verify: one PDF page and its page-01 PNG.
 
-### material-voz — voiced material with music
+### voice-material — voiced material with music
 
 1. `kokoro.speak` → `voz.wav`. Verify: transcribe the voice and measure the
    word error rate.
 2. `acestep.bed` → `cama.wav`. Verify: probe duration and peak.
-3. `deck.slides` → `material-voz.pdf` + `page-01.png`, from
-   `material-voz.html`. Verify: the page count and the page-01 PNG.
+3. `deck.slides` → `voice-material.pdf` + `page-01.png`, from
+   `voice-material.html`. Verify: the page count and the page-01 PNG.
 
-### demo-herramienta — the tool demo
+### tool-demo — the tool demo
 
 1. `demostage.demo` → `demo.gif` + `demo.svg`, from the `demo.toml` score.
    Verify: the gif probe and the svg size.
-2. `deck.slides` → `demo-herramienta.pdf` + `page-01.png`, from
-   `demo-herramienta.html`. Verify: the page count and the page-01 PNG.
+2. `deck.slides` → `tool-demo.pdf` + `page-01.png`, from
+   `tool-demo.html`. Verify: the page count and the page-01 PNG.
 
 ## Judging the result
 
@@ -102,9 +102,9 @@ Each step's own `verify` is the real judgement: transcribe the voice, look
 at the PNG, check the MP4. Run the capability's `verify` after its `run`;
 a passing plan says the recipe is well formed, not that the piece is good.
 
-`facet preview <receta>.plan.json` writes
-`<receta>.plan.json.preview.json` (generic viewer) with a summary naming the
-recipe and its step count and the fields `receta`, `steps` and `packages`.
+`facet preview <recipe>.plan.json` writes
+`<recipe>.plan.json.preview.json` (generic viewer) with a summary naming the
+recipe and its step count and the fields `recipe`, `steps` and `packages`.
 
 ## Pitfalls
 

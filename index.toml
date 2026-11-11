@@ -68,5 +68,5 @@ name = "pillow"
 name = "whisper-subs"
 
 [[packages]]
-name = "recetas"
+name = "recipes"
 

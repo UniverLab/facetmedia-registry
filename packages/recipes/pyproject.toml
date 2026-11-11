@@ -1,5 +1,5 @@
 [project]
-name = "facet-recetas"
+name = "facet-recipes"
 version = "0.1.0"
 description = "Complete-piece recipes that chain existing packages into ordered plans."
 readme = "README.md"

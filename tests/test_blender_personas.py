@@ -25,7 +25,7 @@ PACKAGE = ROOT / "packages" / "blender"
 RUNNER = PACKAGE / "runner.py"
 #: The scene plane's drop under the model's lowest point, in metres.
 FLOOR_DROP = 0.001
-#: The lab's reference triple, from projects/prueba-render-arq/escena.py:45.
+#: The lab's reference triple, from architecture-render / escena.py:45.
 PEOPLE = [
     {"name": "luis", "x": 3.0, "y": 2.6, "rotation": 90},
     {"name": "ana", "x": 4.5, "y": 3.85, "rotation": 180},

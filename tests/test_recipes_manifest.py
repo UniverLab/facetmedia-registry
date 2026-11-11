@@ -1,4 +1,4 @@
-"""The recetas manifest, its index entry and the input contract.
+"""The recipes manifest, its index entry and the input contract.
 
 The registry suite runs without the core, so the input contract is asserted
 as data: ``facet run`` validates pieces against these fields before the
@@ -13,16 +13,16 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PACKAGE = ROOT / "packages" / "recetas"
+PACKAGE = ROOT / "packages" / "recipes"
 MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
 INDEX = tomllib.loads((ROOT / "index.toml").read_text(encoding="utf-8"))
 CAPABILITY = MANIFEST["capabilities"]["plan"]
 INPUTS = CAPABILITY["inputs"]
-RECIPES = ["video-explicativo", "render-arq", "material-voz", "demo-herramienta"]
+RECIPES = ["explainer-video", "architecture-render", "voice-material", "tool-demo"]
 
 
 def test_the_package_is_a_light_stdlib_text_python_env() -> None:
-    assert MANIFEST["name"] == "recetas"
+    assert MANIFEST["name"] == "recipes"
     assert MANIFEST["facet"] == "text"
     assert MANIFEST["engine"]["type"] == "python-env"
     assert MANIFEST["engine"]["python"] == "3.12"
@@ -50,8 +50,8 @@ def test_the_capability_is_text_with_the_generic_viewer() -> None:
     assert MANIFEST["capabilities"].keys() == {"plan"}
 
 
-def test_receta_is_the_required_closed_enum() -> None:
-    field = INPUTS["receta"]
+def test_recipe_is_the_required_closed_enum() -> None:
+    field = INPUTS["recipe"]
     assert field["type"] == "enum"
     assert field["values"] == RECIPES
     assert field["required"] is True
@@ -64,13 +64,13 @@ def test_the_verify_threshold_counts_at_least_one_step() -> None:
 
 def test_the_index_carries_the_package_as_the_tail_append() -> None:
     names = [entry["name"] for entry in INDEX["packages"]]
-    assert "recetas" in names
-    assert names.index("recetas") == len(names) - 1
-    assert names.index("whisper-subs") == names.index("recetas") - 1
+    assert "recipes" in names
+    assert names.index("recipes") == len(names) - 1
+    assert names.index("whisper-subs") == names.index("recipes") - 1
 
 
-def test_the_root_readme_lists_recetas_under_the_text_facet() -> None:
+def test_the_root_readme_lists_recipes_under_the_text_facet() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert "| text | recetas |" in readme
+    assert "| text | recipes |" in readme
     assert "| text | ascii |" in readme
     assert "| text | texforge |" in readme

@@ -3,7 +3,7 @@
 ``blender.tour`` moves through the scene ``escena.py`` builds — the same
 glTF import, millimetre scale, per-prefix materials, sun plus sky wash and
 floor the daylight photo uses — and writes ``<model>-tour.mp4``. The
-recipe is the lab's ``projects/prueba-render-arq/escena.py`` tour block.
+recipe is the lab's ``architecture-render / escena.py`` tour block.
 
 **Eevee, never Cycles.** A tour is 240 frames at 1280x720 and 24 fps: Cycles
 takes about 45 minutes for that, Eevee about 100 s, at a level of quality that
