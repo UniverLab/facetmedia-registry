@@ -633,7 +633,11 @@ function run(request) {
     narradoSetup(workDir, inputs, pieceBase(request));
   }
   runCli(["check"], workDir);
-  runCli(renderArgs(inputs, path.join(outDir, `${name}${extension}`), loop), workDir);
+  const outPath = path.join(outDir, `${name}${extension}`);
+  runCli(renderArgs(inputs, outPath, loop), workDir);
+  if (AUDIO_REQUIRED.has(request.capability)) {
+    normalizeLoudness(outPath, targetLufsOf(request));
+  }
   const entry = readManifest(firstPackageDir());
   return {
     tool: { name: "hyperframes", version: String(entry.version) },
@@ -705,18 +709,154 @@ function audioOk(request, metrics) {
   return metrics.audio_streams > 0;
 }
 
+function targetLufsOf(request) {
+  const raw = inputsOf(request)["target-lufs"];
+  if (raw === undefined || raw === null) return -14;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : -14;
+}
+
+function loudnormMeasured(file, target) {
+  const shim = process.env.FACET_TEST_LOUDNESS_JSON;
+  if (shim) return JSON.parse(shim);
+  const ffmpeg = which("ffmpeg");
+  if (!ffmpeg) throw new Error(FFMPEG_MISSING);
+  const done = spawnSync(
+    ffmpeg,
+    [
+      "-nostdin",
+      "-hide_banner",
+      "-i",
+      file,
+      "-af",
+      `loudnorm=I=${target}:TP=-1:LRA=11:print_format=json`,
+      "-f",
+      "null",
+      "-",
+    ],
+    { encoding: "utf8" },
+  );
+  if (done.error) throw new Error(`cannot run ffmpeg: ${done.error.message}`);
+  if (done.status !== 0) {
+    const output = `${done.stdout || ""}${done.stderr || ""}`.trim();
+    throw new Error(`ffmpeg loudnorm exited ${done.status}: ${output}`.slice(-2000));
+  }
+  return parseLoudnormJson(`${done.stdout || ""}${done.stderr || ""}`);
+}
+
+function parseLoudnormJson(text) {
+  const end = text.lastIndexOf("}");
+  const start = end === -1 ? -1 : text.lastIndexOf("{", end);
+  if (end === -1 || start === -1) throw new Error("loudnorm printed no JSON block");
+  const measured = {};
+  for (const line of text.slice(start + 1, end).split("\n")) {
+    const match = line.match(/"([^"]+)"\s*:\s*"*(-?[0-9.]+)/);
+    if (match) measured[match[1]] = Number(match[2]);
+  }
+  return measured;
+}
+
+function measureLoudness(file, target) {
+  const measured = loudnormMeasured(file, target);
+  const result = {
+    integrated_lufs: Number(measured.input_i),
+    true_peak_dbtp: Number(measured.input_tp),
+  };
+  if (!Number.isFinite(result.integrated_lufs) || !Number.isFinite(result.true_peak_dbtp)) {
+    throw new Error("loudnorm printed no usable integrated loudness");
+  }
+  return result;
+}
+
+function normalizeLoudness(file, target) {
+  const measured = loudnormMeasured(file, target);
+  for (const key of ["input_i", "input_tp", "input_lra", "input_thresh", "target_offset"]) {
+    if (!Number.isFinite(Number(measured[key]))) {
+      throw new Error("loudnorm printed no usable integrated loudness");
+    }
+  }
+  const ffmpeg = which("ffmpeg");
+  if (!ffmpeg) throw new Error(FFMPEG_MISSING);
+  const filter = [
+    `loudnorm=I=${target}:TP=-1:LRA=11`,
+    `measured_I=${measured.input_i}`,
+    `measured_TP=${measured.input_tp}`,
+    `measured_LRA=${measured.input_lra}`,
+    `measured_thresh=${measured.input_thresh}`,
+    `offset=${measured.target_offset}`,
+    "linear=true",
+  ].join(":");
+  const tmp = `${file}.loudnorm.tmp.mp4`;
+  const done = spawnSync(
+    ffmpeg,
+    [
+      "-nostdin",
+      "-hide_banner",
+      "-y",
+      "-i",
+      file,
+      "-af",
+      filter,
+      "-c:v",
+      "copy",
+      "-c:a",
+      "aac",
+      "-ar",
+      "48000",
+      tmp,
+    ],
+    { encoding: "utf8" },
+  );
+  if (done.error) throw new Error(`cannot run ffmpeg: ${done.error.message}`);
+  if (done.status !== 0) {
+    try {
+      fs.rmSync(tmp, { force: true });
+    } catch (ignored) {
+      void ignored;
+    }
+    const output = `${done.stdout || ""}${done.stderr || ""}`.trim();
+    throw new Error(`ffmpeg loudnorm exited ${done.status}: ${output}`.slice(-2000));
+  }
+  fs.renameSync(tmp, file);
+}
+
+function loudnessVerdict(asset, request, metrics) {
+  if (!AUDIO_REQUIRED.has(request && request.capability)) return null;
+  if (!(metrics.audio_streams > 0)) return null;
+  const target = targetLufsOf(request);
+  const measured = measureLoudness(asset, target);
+  const passed =
+    Math.abs(measured.integrated_lufs - target) <= 1.0 && measured.true_peak_dbtp <= -0.5;
+  return {
+    passed,
+    metrics: {
+      integrated_lufs: measured.integrated_lufs,
+      true_peak_dbtp: measured.true_peak_dbtp,
+    },
+    thresholds: { loudness_lu: 1.0, true_peak_dbtp: -0.5, target_lufs: target },
+  };
+}
+
 function verdictOf(asset, request) {
   const file = path.basename(String(asset));
   try {
     const metrics = probe(asset);
+    const loudness = loudnessVerdict(asset, request, metrics);
     const passed =
       metrics.width > 0 &&
       metrics.height > 0 &&
       metrics.frames > 0 &&
       metrics.fps > 0 &&
       audioOk(request, metrics) &&
+      (!loudness || loudness.passed) &&
       formatOk(asset, request, metrics);
-    return { file, passed, metrics, thresholds: {}, verifier: "ffprobe" };
+    return {
+      file,
+      passed,
+      metrics: loudness ? { ...metrics, ...loudness.metrics } : metrics,
+      thresholds: loudness ? loudness.thresholds : {},
+      verifier: "ffprobe",
+    };
   } catch (error) {
     return {
       file,

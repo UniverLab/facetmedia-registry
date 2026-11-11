@@ -92,6 +92,10 @@ SKILL_TOKENS = (
 )
 DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
+#: The loudness target narrado and personaje normalise to, in LUFS, and its range.
+TARGET_LUFS_DEFAULT = -14.0
+TARGET_LUFS_MIN = -24
+TARGET_LUFS_MAX = -9
 
 
 def _skill_body() -> str:
@@ -425,6 +429,7 @@ def test_narrado_capability_assembles_voice_music_and_subtitles() -> None:
         "musica",
         "subtitulos",
         "volumen-musica",
+        "target-lufs",
         "prompt",
         "seed",
         "fps",
@@ -442,6 +447,11 @@ def test_narrado_capability_assembles_voice_music_and_subtitles() -> None:
     volumen = inputs["volumen-musica"]
     assert volumen["type"] == "number"
     assert (volumen["default"], volumen["min"], volumen["max"]) == (0.25, 0, 1)
+    target = inputs["target-lufs"]
+    assert target["type"] == "number"
+    assert target["default"] == TARGET_LUFS_DEFAULT
+    assert (target["min"], target["max"]) == (TARGET_LUFS_MIN, TARGET_LUFS_MAX)
+    assert "required" not in target
     for name in ("musica", "subtitulos"):
         assert inputs[name]["type"] == "path"
         assert inputs[name]["required"] is True
@@ -449,6 +459,14 @@ def test_narrado_capability_assembles_voice_music_and_subtitles() -> None:
     assert inputs["prompt"]["required"] is True
     assert (inputs["seed"]["default"], inputs["seed"]["min"]) == (0, 0)
     assert "required" not in inputs["fps"]
+
+
+def test_personaje_capability_declares_the_loudness_target() -> None:
+    target = MANIFEST["capabilities"]["personaje"]["inputs"]["target-lufs"]
+    assert target["type"] == "number"
+    assert target["default"] == TARGET_LUFS_DEFAULT
+    assert (target["min"], target["max"]) == (TARGET_LUFS_MIN, TARGET_LUFS_MAX)
+    assert "required" not in target
 
 
 def test_the_readme_documents_the_contract_and_the_traps() -> None:

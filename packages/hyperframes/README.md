@@ -225,6 +225,9 @@ phonetic mouth sequences timed to the voice. It runs the same
 - **`bocas`** (path, required): `bocas.json`, resolved relative to the piece.
 - **`audio-inicio`** (`0.5`): the shift applied to every mouth cue, matching the
   `<audio>` element's `data-start`.
+- **`target-lufs`** (`-14`): the integrated loudness the finished video is
+  normalised to, -24 to -9; `verify` passes within ±1 LU with true peak at or
+  below -0.5 dBTP.
 
 `prompt`, `seed` and `fps` behave as in `hyperframes.render`. The inputs are
 flat, like `giro`'s: the registry schema has no nested tables, so blinks and the
@@ -317,7 +320,9 @@ path as `hyperframes.render`. Its inputs are `composicion`, `voz` (one
 `{ clip, inicio }` table per voice file, at least one; `inicio` is the seconds
 on the composition timeline where that clip starts, default 0), `musica`,
 `subtitulos` (the `.srt`), `volumen-musica` (the bed's `data-volume` under the
-voices, default 0.25 at about −12 dB, 0 to 1), plus `prompt`, `seed` and `fps`.
+voices, default 0.25 at about −12 dB, 0 to 1), `target-lufs` (the integrated
+loudness the finished video is normalised to, number, default -14, -24 to -9),
+plus `prompt`, `seed` and `fps`.
 
 The sources are the real packages: voices are voicestudio files — one engine
 per file, so narrator and clone voices arrive as separate `voz` clips and the
@@ -325,12 +330,18 @@ runner never probes audio provenance; `musica` is the instrumental bed already
 mixed offline with the ffmpeg package; `subtitulos` is the `.srt` that whisper
 `transcribe` writes beside `<name>.txt` and `<name>.json`.
 
-Loudness is an offline author duty: the runner has no loudness probe and no
-warning field, and any assembly violation fails the run. The fixed recipe is to
-run every voice file through ffmpeg `normalize` with `target-lufs` `-16.0` and
-`true-peak-db` `-1.5`, then ffmpeg `mix` the voice layers (`role` `voice`,
-`gain-db` `0.0`) over the bed (`role` `bed`) with `ducking` `true`, `duck-db`
-`-12.0` and `target-lufs` `-16.0`.
+The runner brings `narrado` and `personaje` videos to `target-lufs`
+(default -14 LUFS, the streaming-platform level, louder than the -16 clips by
+design): after the render it applies two-pass EBU R128 `loudnorm` at true peak
+-1.0 dBTP, copying the video stream and re-encoding the audio as AAC, and the
+asset is the normalised file. `verify` measures integrated loudness and true
+peak, records both in `metrics`, and passes only within ±1 LU of `target-lufs`
+with true peak at or below -0.5 dBTP (`thresholds` names both limits). Prepare
+the inputs offline with the fixed recipe: run every voice file through ffmpeg
+`normalize` with `target-lufs` `-16.0` and `true-peak-db` `-1.5`, then ffmpeg
+`mix` the voice layers (`role` `voice`, `gain-db` `0.0`) over the bed (`role`
+`bed`) with `ducking` `true`, `duck-db` `-12.0` and `target-lufs` `-16.0`. Any
+assembly violation fails the run.
 
 `index.html` must carry exactly one `<!-- SUBS -->` marker, exactly one
 `<!-- AUDIOS -->` marker and a positive `data-duration` on the
@@ -361,7 +372,11 @@ a whisper `.srt` parsed at run time; no end-to-end `.srt` lab proof exists yet.
 `verify` probes every asset with the host `ffprobe`: a video stream with a
 positive width, height, frame count and frame rate passes, and the metrics are
 the probe's. A `hyperframes.narrado` or `hyperframes.personaje` asset with no
-audio stream fails, since the mix needs its voices. For `hyperframes.loop` assets the verdict adds two format checks
+audio stream fails, since the mix needs its voices; those two also need the
+host `ffmpeg`, because `verify` measures integrated loudness and true peak with
+a `loudnorm` pass, adds `integrated_lufs` and `true_peak_dbtp` to the metrics,
+and passes only within ±1 LU of `target-lufs` with true peak at or below
+-0.5 dBTP. For `hyperframes.loop` assets the verdict adds two format checks
 the probe cannot express: a `gif` must carry the `NETSCAPE2.0` looping block
 (ffprobe reports no loop count, so the runner inspects the bytes), and a
 `mov-alpha` MOV must have an alpha channel (`pix_fmt` matching `argb`, `rgba`,

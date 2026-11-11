@@ -203,10 +203,14 @@ the runner validates every mouth shape and the rest rule before `check`. See
 
 ### hyperframes.narrado
 
-Loudness is an offline author duty: ffmpeg `normalize` with
-`target-lufs=-16.0` and `true-peak-db=-1.5`, then ffmpeg `mix` the voice layers
-over the bed with `ducking=true`, `duck-db=-12.0` and `target-lufs=-16.0`. The
-markers are required exactly once and every cue must fit `data-duration`.
+Prepare the clips offline: ffmpeg `normalize` with `target-lufs=-16.0` and
+`true-peak-db=-1.5`, then ffmpeg `mix` the voice layers over the bed with
+`ducking=true`, `duck-db=-12.0` and `target-lufs=-16.0`. The runner brings the
+finished `narrado` and `personaje` videos to `target-lufs` (default -14 LUFS,
+the streaming-platform level, louder than the -16 clips by design) with
+two-pass EBU R128 `loudnorm` at true peak -1.0 dBTP, and `verify` checks the
+result within ±1 LU with true peak at or below -0.5 dBTP. The markers are
+required exactly once and every cue must fit `data-duration`.
 `verify` fails a `narrado` or `personaje` MP4 with no audio stream. See
 `references/limits.md`.
 
@@ -214,7 +218,10 @@ markers are required exactly once and every cue must fit `data-duration`.
 
 `verify` probes the MP4 with `ffprobe`: a video stream with positive width,
 height, frame count and frame rate passes, and a `narrado` or `personaje`
-asset additionally needs an audio stream. `preview` writes the video kind's
+asset additionally needs an audio stream. For those two it also measures
+integrated loudness and true peak with the host `ffmpeg`, adds both to the
+metrics, and passes only within ±1 LU of `target-lufs` with true peak at or
+below -0.5 dBTP. `preview` writes the video kind's
 ten fields, with the summary `{name} · {width}x{height} · {length}f @ {fps}fps ·
 seed {seed}`. Read the check output too: it is the gate that rejected broken
 timelines before the render. A person then watches the clip.

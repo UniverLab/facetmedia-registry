@@ -93,11 +93,15 @@ vendored tree, the pinned Chromium and the host `ffmpeg`/`ffprobe`. `fps` passes
   `data-composition-id` tag. A missing or duplicated marker, a bad `.srt` or a
   cue past `data-duration` is `runner_failed`, exit 1; `check` and `render` do
   not run.
-- **Loudness is an offline author duty.** The runner has no loudness probe and
-  no warning field. Run every voice file through ffmpeg `normalize` with
-  `target-lufs=-16.0` and `true-peak-db=-1.5`, then ffmpeg `mix` the voice
-  layers (`role=voice`, `gain-db=0.0`) over the bed (`role=bed`) with
-  `ducking=true`, `duck-db=-12.0` and `target-lufs=-16.0`.
+- **Final loudness is the runner's job.** The runner brings `narrado` and
+  `personaje` videos to `target-lufs` (default -14 LUFS, the
+  streaming-platform level) with two-pass EBU R128 `loudnorm` at true peak
+  -1.0 dBTP, copying the video stream and re-encoding the audio as AAC, and
+  `verify` checks integrated loudness within ±1 LU with true peak at or below
+  -0.5 dBTP. Prepare the inputs offline: run every voice file through ffmpeg
+  `normalize` with `target-lufs=-16.0` and `true-peak-db=-1.5`, then ffmpeg
+  `mix` the voice layers (`role=voice`, `gain-db=0.0`) over the bed
+  (`role=bed`) with `ducking=true`, `duck-db=-12.0` and `target-lufs=-16.0`.
 - **Sources are the real packages**: voices are voicestudio files (one engine
   per file, so narrator and clone voices arrive as separate `voz` clips), the
   bed is already mixed offline with the ffmpeg package, and the `.srt` comes

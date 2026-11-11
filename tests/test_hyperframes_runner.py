@@ -32,6 +32,11 @@ LOOP_GIF = ROOT / "tests" / "fixtures" / "loop.gif"
 NOLOOP_GIF = ROOT / "tests" / "fixtures" / "noloop.gif"
 NODE = shutil.which("node")
 FFPROBE = shutil.which("ffprobe")
+FFMPEG = shutil.which("ffmpeg")
+#: The runner's default loudness target (LUFS) and verify ceiling (dBTP).
+DEFAULT_TARGET_LUFS = -14.0
+TRUE_PEAK_CEILING = -0.5
+LOUDNESS_TOLERANCE_LU = 1.0
 BROWSER = shutil.which("sh") or "/bin/sh"
 FFMPEG_MISSING = "ffmpeg and ffprobe are required to encode video (sudo apt-get install -y ffmpeg)"
 FIELDS = {
@@ -982,16 +987,19 @@ def test_personaje_refuses_parent_traversal_src_before_check(tmp_path: Path) -> 
     assert _calls(tmp_path) == []
 
 
+@pytest.mark.skipif(FFMPEG is None, reason="ffmpeg is not available")
 def test_personaje_injects_the_cues_and_the_audio_start(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
     piece, _comp = _personaje_comp(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
+    env = _environment(tmp_path, _dirs(packages))
+    env["HF_STUB_MP4"] = str(_audio_mp4(tmp_path))
     done, result = _invoke(
         tmp_path,
         "run",
         _personaje_request(out, piece),
-        _environment(tmp_path, _dirs(packages)),
+        env,
     )
     assert done.returncode == 0, done.stderr
     assert [call["args"][0] for call in _calls(tmp_path)] == ["check", "render"]
@@ -1075,6 +1083,43 @@ def _narrado_comp(root: Path) -> tuple[Path, Path]:
     return piece, comp
 
 
+def _audio_mp4(root: Path, name: str = "audio.mp4") -> Path:
+    """An MP4 with the clip's video and a full-scale sine bed, for loudness tests."""
+    assert FFMPEG is not None
+    out = root / name
+    done = subprocess.run(
+        [
+            str(FFMPEG),
+            "-nostdin",
+            "-hide_banner",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=2",
+            "-i",
+            str(CLIP),
+            "-map",
+            "1:v",
+            "-map",
+            "0:a",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-ar",
+            "48000",
+            "-shortest",
+            str(out),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert done.returncode == 0, done.stderr
+    return out
+
+
 def _narrado_request(out: Path, piece: Path, **inputs: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
         "composicion": "comp",
@@ -1126,16 +1171,19 @@ def test_narrado_rejects_a_cue_past_the_duration_before_the_cli_runs(tmp_path: P
     assert _calls(tmp_path) == []
 
 
+@pytest.mark.skipif(FFMPEG is None, reason="ffmpeg is not available")
 def test_narrado_injects_audio_subtitles_and_the_opacity_timeline(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
     piece, _comp = _narrado_comp(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
+    env = _environment(tmp_path, _dirs(packages))
+    env["HF_STUB_MP4"] = str(_audio_mp4(tmp_path))
     done, result = _invoke(
         tmp_path,
         "run",
         _narrado_request(out, piece),
-        _environment(tmp_path, _dirs(packages)),
+        env,
     )
     assert done.returncode == 0, done.stderr
     assert [call["args"][0] for call in _calls(tmp_path)] == ["check", "render"]
@@ -1195,6 +1243,7 @@ def test_narrado_refuses_an_inicio_past_the_duration_before_the_cli_runs(
     assert _calls(tmp_path) == []
 
 
+@pytest.mark.skipif(FFMPEG is None, reason="ffmpeg is not available")
 def test_narrado_music_volume_reaches_the_bed_data_volume(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
     piece, _comp = _narrado_comp(tmp_path)
@@ -1202,7 +1251,9 @@ def test_narrado_music_volume_reaches_the_bed_data_volume(tmp_path: Path) -> Non
     out.mkdir()
     request = _narrado_request(out, piece)
     request["inputs"]["volumen-musica"] = 0.4
-    done, result = _invoke(tmp_path, "run", request, _environment(tmp_path, _dirs(packages)))
+    env = _environment(tmp_path, _dirs(packages))
+    env["HF_STUB_MP4"] = str(_audio_mp4(tmp_path))
+    done, result = _invoke(tmp_path, "run", request, env)
     assert done.returncode == 0, done.stderr
     written = (out / "composition" / "index.html").read_text(encoding="utf-8")
     assert 'data-volume="0.4"' in written
@@ -1249,3 +1300,179 @@ def test_verify_fails_a_narrado_video_without_an_audio_stream(
     done, result = _invoke(tmp_path, "verify", plain, _environment(tmp_path, _dirs(packages)))
     assert done.returncode == 0, done.stderr
     assert result["assets"][0]["passed"] is True
+
+
+def _verify_loudness(
+    root: Path, asset: Path, capability: str, measured: dict[str, float], **inputs: Any
+) -> dict[str, Any]:
+    packages = _fixture(root)
+    out = root / "out"
+    request = _request(
+        "verify",
+        out,
+        root,
+        capability=capability,
+        composicion="comp",
+        prompt="a brief",
+        **inputs,
+    )
+    request["assets"] = [str(asset)]
+    env = _environment(root, _dirs(packages))
+    env["FACET_TEST_LOUDNESS_JSON"] = json.dumps(measured)
+    done, result = _invoke(root, "verify", request, env)
+    assert done.returncode == 0, done.stderr
+    assert result is not None
+    return result["assets"][0]
+
+
+@pytest.mark.skipif(
+    FFPROBE is None or FFMPEG is None, reason="ffprobe and ffmpeg are not available"
+)
+def test_verify_passes_a_narrado_video_at_the_default_loudness_target(
+    tmp_path: Path,
+) -> None:
+    out = tmp_path / "out"
+    out.mkdir()
+    asset = _audio_mp4(out)
+    integrated, peak = -13.6, -1.2
+    verdict = _verify_loudness(
+        tmp_path, asset, "hyperframes.narrado", {"input_i": integrated, "input_tp": peak}
+    )
+    assert verdict["passed"] is True
+    assert verdict["metrics"]["integrated_lufs"] == integrated
+    assert verdict["metrics"]["true_peak_dbtp"] == peak
+    assert verdict["thresholds"] == {
+        "loudness_lu": LOUDNESS_TOLERANCE_LU,
+        "true_peak_dbtp": TRUE_PEAK_CEILING,
+        "target_lufs": DEFAULT_TARGET_LUFS,
+    }
+
+
+@pytest.mark.skipif(
+    FFPROBE is None or FFMPEG is None, reason="ffprobe and ffmpeg are not available"
+)
+def test_verify_fails_a_narrado_video_beyond_one_lu(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    out.mkdir()
+    asset = _audio_mp4(out)
+    integrated = -12.5
+    verdict = _verify_loudness(
+        tmp_path, asset, "hyperframes.narrado", {"input_i": integrated, "input_tp": -1.2}
+    )
+    assert verdict["passed"] is False
+    assert verdict["metrics"]["integrated_lufs"] == integrated
+    assert verdict["thresholds"]["target_lufs"] == DEFAULT_TARGET_LUFS
+
+
+@pytest.mark.skipif(
+    FFPROBE is None or FFMPEG is None, reason="ffprobe and ffmpeg are not available"
+)
+def test_verify_fails_a_personaje_video_over_the_true_peak_ceiling(
+    tmp_path: Path,
+) -> None:
+    out = tmp_path / "out"
+    out.mkdir()
+    asset = _audio_mp4(out)
+    peak = -0.4
+    verdict = _verify_loudness(
+        tmp_path,
+        asset,
+        "hyperframes.personaje",
+        {"input_i": DEFAULT_TARGET_LUFS, "input_tp": peak},
+    )
+    assert verdict["passed"] is False
+    assert verdict["metrics"]["true_peak_dbtp"] == peak
+
+
+@pytest.mark.skipif(
+    FFPROBE is None or FFMPEG is None, reason="ffprobe and ffmpeg are not available"
+)
+def test_verify_accepts_the_loudness_tolerance_boundaries(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    out.mkdir()
+    asset = _audio_mp4(out)
+    verdict = _verify_loudness(
+        tmp_path, asset, "hyperframes.narrado", {"input_i": -15.0, "input_tp": -0.5}
+    )
+    assert verdict["passed"] is True
+
+
+@pytest.mark.skipif(
+    FFPROBE is None or FFMPEG is None, reason="ffprobe and ffmpeg are not available"
+)
+def test_verify_measures_against_the_record_loudness_target(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    out.mkdir()
+    asset = _audio_mp4(out)
+    target = -16.0
+    verdict = _verify_loudness(
+        tmp_path,
+        asset,
+        "hyperframes.narrado",
+        {"input_i": target, "input_tp": -1.5},
+        **{"target-lufs": target},
+    )
+    assert verdict["passed"] is True
+    assert verdict["thresholds"]["target_lufs"] == target
+
+
+@pytest.mark.skipif(
+    FFPROBE is None or FFMPEG is None, reason="ffprobe and ffmpeg are not available"
+)
+def test_verify_measures_real_loudness_without_a_shim(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    asset = _audio_mp4(out)
+    request = _request(
+        "verify",
+        out,
+        tmp_path,
+        capability="hyperframes.narrado",
+        composicion="comp",
+        prompt="a brief",
+    )
+    request["assets"] = [str(asset)]
+    done, result = _invoke(tmp_path, "verify", request, _environment(tmp_path, _dirs(packages)))
+    assert done.returncode == 0, done.stderr
+    assert result is not None
+    verdict = result["assets"][0]
+    integrated = verdict["metrics"]["integrated_lufs"]
+    peak = verdict["metrics"]["true_peak_dbtp"]
+    assert isinstance(integrated, float) and isinstance(peak, float)
+    assert verdict["thresholds"]["target_lufs"] == DEFAULT_TARGET_LUFS
+
+
+@pytest.mark.skipif(
+    FFPROBE is None or FFMPEG is None, reason="ffprobe and ffmpeg are not available"
+)
+def test_narrado_run_normalises_the_render_to_the_loudness_target(
+    tmp_path: Path,
+) -> None:
+    packages = _fixture(tmp_path)
+    piece, _comp = _narrado_comp(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, _dirs(packages))
+    env["HF_STUB_MP4"] = str(_audio_mp4(tmp_path))
+    done, result = _invoke(tmp_path, "run", _narrado_request(out, piece), env)
+    assert done.returncode == 0, done.stderr
+    assert result is not None
+    asset = out / "comp.mp4"
+    assert asset.is_file()
+    verify = _request(
+        "verify",
+        out,
+        piece,
+        capability="hyperframes.narrado",
+        composicion="comp",
+        prompt="a brief",
+    )
+    verify["assets"] = [str(asset)]
+    done, result = _invoke(tmp_path, "verify", verify, _environment(tmp_path, _dirs(packages)))
+    assert done.returncode == 0, done.stderr
+    assert result is not None
+    verdict = result["assets"][0]
+    assert verdict["passed"] is True
+    assert abs(verdict["metrics"]["integrated_lufs"] - DEFAULT_TARGET_LUFS) <= 1.0
+    assert verdict["metrics"]["true_peak_dbtp"] <= TRUE_PEAK_CEILING
