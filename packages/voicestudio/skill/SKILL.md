@@ -26,8 +26,8 @@ profile from the person's own samples; its recipe lives in the package README.
 
 ## Engines
 
-The lab compared three engines on 2026-10-13 with the same reference and the
-same texts (`/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-voz/comparacion/`):
+Three engines were compared on 2026-10-13 with the same reference and the
+same texts:
 
 | `model` | Words wrong | First second (ref ~244 Hz) | Rest | Per clip | VRAM | Licence |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -89,11 +89,8 @@ every clip becomes `<name>.wav`. Each clip carries its own `seed` — it is
 required, because the verification loop restarts a failed clip with `seed + 1`.
 
 The `model` value is the manifest model id, and the core gates the piece on
-it: only `omnivoice` pieces require the licence. The lab's original tool
-runs the same pattern: `python3 tools/voz.py <pieza>.toml`, with
-`projects/prueba-voz/narradora/voz.toml` as the reference piece
-(`voice = "narradora"`, `model = "omnivoice"`, two clips). This package is
-that invocation ported to a facet capability.
+it: only `omnivoice` pieces require the licence. The reference piece uses
+`voice = "narradora"`, `model = "omnivoice"` and two clips.
 
 ## Cloning a voice
 
@@ -104,20 +101,18 @@ their consent.
 - The reference is 7-30 s of **neutral speech**. A reference that starts
   with a question or an exclamation contaminates the clone with a sharp
   attack and can skip the first sentence.
-- To record it, the script is
-  `/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-voz/guion-grabacion.md`.
+- To record it, read a script of neutral, declarative sentences (the
+  original `guion-grabacion.md` is not shipped with this package).
 - If a WAV arrives in stereo with one channel digitally silent, keep the
   live one (`ffmpeg -af "pan=mono|c0=c1"`); the profile runner repairs this
   case and prints the repair.
 - The recipe for making the profile from local samples lives in the package
   README (`voicestudio.profile`).
 
-Approved lab pieces to follow, by absolute path:
-`/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-voz/narradora/voz.toml`
-(the narrator) and
-`/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-voz/mi-voz/clon/cosyvoice/voz.toml`
-(the person's clone on `cosyvoice`). No sample bytes and no profile id enter
-this package.
+Approved pieces to follow, by shape: a narrator piece
+(`voice = "narradora"`, `model = "omnivoice"`) and a clone piece
+(`voice = <profile id>`, `model = "cosyvoice"`). No sample bytes and no
+profile id enter this package.
 
 ## The `omnivoice` licence
 

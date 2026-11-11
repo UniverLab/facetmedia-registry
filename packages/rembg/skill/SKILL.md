@@ -44,8 +44,8 @@ lamina = "lamina.png"
 `lamina` is the plate, resolved the same way relative to the piece file.
 `run` writes `<lamina-stem>-papel.png` (RGB) only.
 
-This is a port of the lab's `tools/papel_limpio.py`; `lamina_web.py` stays
-out — it is a univerlab.org pipeline, not a Grafics piece.
+This is a port of the paper-cleaning tool; `lamina_web.py` stays
+out — it is a univerlab.org pipeline, not part of this package.
 
 ## Judging the result
 
@@ -56,7 +56,7 @@ seed 0 — the cutout is deterministic given the weights, so the seed only
 labels the record. A person judges the edges on the damero asset: a halo,
 a eaten edge or a leftover background patch is caught by eye.
 
-The lab's `entrada.png` (1344×768) cut out in 1.48 s on CPU with rembg
+A 1344×768 test photo (`entrada.png`, not shipped) cut out in 1.48 s on CPU with rembg
 2.0.67's U2NetP and left 66.59 % of pixels transparent; the damero view
 kept the figure, the book and the lamp. The package ships that lab run:
 `examples/remover.py` (the script), `examples/medicion.json` (its record),

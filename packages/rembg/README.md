@@ -44,7 +44,7 @@ RGB is kept untouched. `verify` therefore expects an RGB PNG for `papel`
 Use it for plates photographed on parchment that go to the web, where a
 convincingly flat background matters more than a transparent one. This is a
 port of the lab's `tools/papel_limpio.py`; `lamina_web.py` stays out — it is
-a univerlab.org pipeline, not a Grafics piece.
+a univerlab.org pipeline, not part of this package.
 
 ## Verification and preview
 
@@ -69,9 +69,9 @@ Every failing check names `facet pull rembg` as its fix.
 
 ## Lab measurements
 
-Ported from the lab's `projects/prueba-fondos/remover.py`
+Measured with `examples/remover.py`
 (`new_session("u2netp", providers=["CPUExecutionProvider"])`): on the
-lab's `entrada.png` (1344×768) rembg 2.0.67's U2NetP cutout took 1.48 s on
+a 1344×768 test photo (`entrada.png`, not shipped) rembg 2.0.67's U2NetP cutout took 1.48 s on
 CPU, 66.59 % of pixels transparent, and the damero view kept the figure,
 the book and the lamp — the three subjects the photo was shot for. The
 package pins rembg 2.0.86, the newest release the dependency audit

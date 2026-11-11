@@ -37,9 +37,8 @@ rhubarb -r phonetic -f json --dialogFile <texto> <voz.wav> -o bocas.json
 `-r phonetic` is not optional. Rhubarb's default recognizer is English-only
 (pocketSphinx), so a **Spanish** dialog without that flag gets English mouth
 shapes that do not match the voice; the runner refuses such an argv and facet
-reports `runner_failed`. The approved reference is the lab's
-`prueba-personaje` project: a fox SVG, a 10.32 s Spanish clip, 65 cues in its
-`bocas.json`.
+reports `runner_failed`. The approved reference is a fox SVG, a 10.32 s
+Spanish clip, 65 cues in its `bocas.json`.
 
 ### The mouth map
 

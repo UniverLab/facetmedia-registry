@@ -96,9 +96,8 @@ its rest shape:
 | `H` | tongue |
 
 `bocas.json` carries `metadata.duration` and `mouthCues`, each cue a
-`{start, end, value}` span in seconds. The approved lab pattern is
-`/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-personaje/bocas.json`
-— 65 cues over 10.32 s from a Spanish voice clip, using `X A B C E F G H`.
+`{start, end, value}` span in seconds. The approved pattern is a `bocas.json`
+with 65 cues over 10.32 s from a Spanish voice clip, using `X A B C E F G H`.
 
 ## Judging the result
 
@@ -123,9 +122,8 @@ as `10.3 s · 65 mouth cues · 8 mouths (XABCEFGH)` and the same fields plus
 
 ## Example
 
-The approved lab project is
-`/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-personaje`:
-a fox SVG with eight mouths and a 10.32 s Spanish voice clip. Its `build.mjs`
+The approved example is a fox SVG with eight mouths and a 10.32 s Spanish
+voice clip. Its `build.mjs`
 runs exactly the command above and inlines the resulting `mouthCues` into the
 HyperFrames composition; the character assembly itself is the `hyperframes`
 package's job, out of scope here.

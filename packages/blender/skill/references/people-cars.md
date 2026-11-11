@@ -1,16 +1,8 @@
 # People and cars
 
-The lab's sources are
-`/home/jheisonmblivecom/Academic/Deriverables/Grafics/AGENTS.md` lines 216-250
-(the personas and autos entries), lines 282-287 (the asset inventory) and
-`/home/jheisonmblivecom/Academic/Deriverables/Grafics/docs/herramientas.md`
-lines 84-93 (the people-and-cars verdicts).
-`/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-render-arq/escena.py`
-places them, and `personas.py` and `autos.py` build the two blends.
-
-Neither Poly Haven nor this package makes a person or a car. The lab builds
-each blend once, and `blender.foto` and `blender.recorrido` load it as a path
-input and place its collections.
+Neither Poly Haven nor this package makes a person or a car. Each blend is
+built once, outside this package, and `blender.foto` and `blender.recorrido`
+load it as a path input and place its collections.
 
 ## The people blend: `personas-blend`
 
@@ -29,9 +21,9 @@ Contract:
 - The package does not scale people with the model: they are placed in metres
   in the scene's own axes.
 
-The lab's pose fix: the package ships no poses and the skeleton comes in an A
-pose. `personas.py` lowers the arms by rotating `upperarm01.L` by -40° and
-`upperarm01.R` by +40° in Z. With the sign reversed they rise. The catalog
+Pose fix: the package ships no poses and the skeleton comes in an A pose. The
+build lowers the arms by rotating `upperarm01.L` by -40° and `upperarm01.R`
+by +40° in Z. With the sign reversed they rise. The catalog
 used is 14 outfits, 6 pairs of shoes, 10 hairstyles and 23 skins, in three
 ages; they read a little generic up close, which is fine for an aerial view.
 

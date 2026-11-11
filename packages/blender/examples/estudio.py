@@ -6,9 +6,8 @@
 
 Each piece is one Assembly element, and its name is the material prefix
 ``render.py`` matches: muros, piso, vidrio-*, cama, almohada, mesa, sillas.
-A port of the lab's ``projects/prueba-render-arq/estudio.py``; it models in
-mm, so the glTF carries millimeters and the blender runner scales it to
-metres (x0.001).
+It models in mm, so the glTF carries millimeters and the blender runner
+scales it to metres (x0.001).
 
 Usage: ``uv run packages/blender/examples/estudio.py`` writes ``estudio.glb``
 beside this file.

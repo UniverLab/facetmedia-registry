@@ -53,8 +53,8 @@ What the lab kept and what it rejected:
 
 ## Pieces
 
-The lab's study, exported by `packages/cad/examples/plano-estudio.py` or the
-Grafics `estudio.py` (`examples/estudio.toml`):
+The study, exported by `packages/cad/examples/plano-estudio.py` or
+`examples/estudio.py` (`examples/estudio.toml`):
 
 ```toml
 [inputs]

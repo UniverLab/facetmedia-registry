@@ -136,8 +136,8 @@ runner asks the backend for its profiles and refuses an id that is not
 installed here. Profiles are created by the `voicestudio.profile` capability
 from the person's local samples and are never vendored: see
 [Making a profile](#making-a-profile-voicestudioprofile). The approved
-pattern lives at
-`projects/prueba-voz/mi-voz/clon/cosyvoice/voz.toml`.
+pattern is the clone piece above (`voice = <profile id>`,
+`model = "cosyvoice"`).
 
 Two voices are two pieces: the narrator in one file (`narradora` on
 `omnivoice`) and the person in another (`voice = <profile id>` on
@@ -170,8 +170,8 @@ language = "es"
 facet run voicestudio.profile mi-voz.toml
 ```
 
-The reference is 7–30 s of neutral speech, recorded from
-`projects/prueba-voz/guion-grabacion.md`. A questioning or exclamatory start
+The reference is 7–30 s of neutral speech, read from a recording script.
+A questioning or exclamatory start
 contaminates the clone with a sharp attack and skips the first sentences, so
 the runner refuses a take outside that window instead of posting it. It also
 repairs the laptop stereo case: when one channel is digitally silent and the
@@ -242,9 +242,9 @@ Each clip lands beside the piece file as `<name>.wav`, previewed by facet's
 the speech check with its word alignment) is what an agent reads, and the
 viewer draws the inline player with the waveform and the momentary loudness
 for the person. The backend renders as it likes, so `loudness.target_lufs`
-is `null`: nothing in this package normalises the clip. The lab-approved
-reference narration lives outside the package, at
-`projects/prueba-voz/narradora/a-narracion-aprobada.wav`.
+is `null`: nothing in this package normalises the clip. The approved
+reference narration is the `narradora` voice, verified word for word against
+its text.
 
 ## Doctor
 

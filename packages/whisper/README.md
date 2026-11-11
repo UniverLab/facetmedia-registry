@@ -119,7 +119,7 @@ is a core concern for later.
 
 ## Example
 
-`examples/laboratorio.flac` is Grafics' 9.64 s `kokoro.wav` converted to
+`examples/laboratorio.flac` is a 9.64 s Spanish voice clip converted to
 16 kHz mono FLAC (159 KB), and `examples/laboratorio.toml` transcribes it in
 Spanish with the reference text:
 
@@ -143,7 +143,7 @@ and lock provenance, the params digest, the facet version and the licence
 section):
 
 ```json
-{"bytes": 168, "id": "sha256:f94aa24df5eeeec4938b07a0546fbd0904a711a9d8da3e6e6ad33b261ca95acc", "kind": "text", "mime": "text/plain", "name": "laboratorio", "path": "laboratorio.txt", "properties": {"duration_s": 9.641, "language": "es", "language_probability": 1.0, "segments": 3, "words": 28}, "provenance": {"capability": "whisper.transcribe", "inputs": [{"id": "sha256:7512a5213f524ac57e269a5dbaf8e72c00ba5caeaef95ff2194afe5d3e8ced16"}], "models": [{"bytes": 486212372, "hf_repo": "Systran/faster-whisper-small", "id": "faster-whisper-small-transcribe", "revision": "536b0662742c02347bc0e980a01041f333bce120"}], "package": {"lock_sha256": "ba9716018f0a3aac1c7ca3d3294f73a64352cfa9c75ffca33551c59041acb9bc", "name": "whisper", "version": "0.1.1"}, "params": {"audio": "../../home/jheisonmblivecom/Projects/UniverLab/facetmedia-registry/packages/whisper/examples/laboratorio.flac", "expect-text": "En este laboratorio probamos una voz en español generada localmente. Queremos medir si se entiende bien, cuánto tarda y cómo suena frente a las voces que ya usamos.", "language": "es", "name": "laboratorio"}, "seed": null, "tool": {"name": "faster-whisper", "version": "1.2.1"}}, "record": 1, "verification": {"metrics": {"avg_logprob": -0.1722, "language": "es", "language_probability": 1.0, "no_speech_share": 0.0, "wer": 0.0, "words": 28, "words_per_minute": 174}, "status": "passed", "thresholds": {"max_no_speech_share": 0.2, "min_avg_logprob": -1.0, "wer_max": 0.1}, "verifier": "faster-whisper-small@536b0662"}}
+{"bytes": 168, "id": "sha256:f94aa24df5eeeec4938b07a0546fbd0904a711a9d8da3e6e6ad33b261ca95acc", "kind": "text", "mime": "text/plain", "name": "laboratorio", "path": "laboratorio.txt", "properties": {"duration_s": 9.641, "language": "es", "language_probability": 1.0, "segments": 3, "words": 28}, "provenance": {"capability": "whisper.transcribe", "inputs": [{"id": "sha256:7512a5213f524ac57e269a5dbaf8e72c00ba5caeaef95ff2194afe5d3e8ced16"}], "models": [{"bytes": 486212372, "hf_repo": "Systran/faster-whisper-small", "id": "faster-whisper-small-transcribe", "revision": "536b0662742c02347bc0e980a01041f333bce120"}], "package": {"lock_sha256": "ba9716018f0a3aac1c7ca3d3294f73a64352cfa9c75ffca33551c59041acb9bc", "name": "whisper", "version": "0.1.1"}, "params": {"audio": "laboratorio.flac", "expect-text": "En este laboratorio probamos una voz en español generada localmente. Queremos medir si se entiende bien, cuánto tarda y cómo suena frente a las voces que ya usamos.", "language": "es", "name": "laboratorio"}, "seed": null, "tool": {"name": "faster-whisper", "version": "1.2.1"}}, "record": 1, "verification": {"metrics": {"avg_logprob": -0.1722, "language": "es", "language_probability": 1.0, "no_speech_share": 0.0, "wer": 0.0, "words": 28, "words_per_minute": 174}, "status": "passed", "thresholds": {"max_no_speech_share": 0.2, "min_avg_logprob": -1.0, "wer_max": 0.1}, "verifier": "faster-whisper-small@536b0662"}}
 ```
 
 The transcript is the reference text word for word (WER 0), split into three

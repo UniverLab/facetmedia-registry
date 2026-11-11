@@ -1,6 +1,5 @@
-# The lab's study on the approved camera tour: 10 s, 24 fps, 240 frames at
-# 1280x720 in Eevee, the start and end triples of
-# projects/prueba-render-arq/escena.py. estudio.glb ships beside this piece.
+# The study on the approved camera tour: 10 s, 24 fps, 240 frames at 1280x720
+# in Eevee. estudio.glb ships beside this piece.
 [inputs]
 model = "estudio.glb"
 azimut = [{ inicio = -75, fin = -15 }]

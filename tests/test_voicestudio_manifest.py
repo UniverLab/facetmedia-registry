@@ -304,9 +304,12 @@ def test_the_skill_teaches_both_engines_and_the_licence() -> None:
     assert "facet license accept omnivoice" in SKILL
 
 
-def test_the_skill_names_the_lab_invocation_it_ports() -> None:
-    assert "python3 tools/voz.py <pieza>.toml" in SKILL
-    assert "projects/prueba-voz/narradora/voz.toml" in SKILL
+def test_the_skill_names_the_reference_piece_it_ports() -> None:
+    """The reference piece is described by its shape, never by a lab path."""
+    assert 'voice = "narradora"' in SKILL
+    assert 'model = "omnivoice"' in SKILL
+    assert "projects/prueba-voz/" not in SKILL
+    assert "/home/jheisonmblivecom" not in SKILL
 
 
 def test_the_skill_names_the_startup_traps() -> None:
@@ -342,19 +345,16 @@ def test_the_skill_asks_permission_first() -> None:
     assert "7-30 s" in section
     assert "guion-grabacion.md" in section
     assert "pan=mono|c0=c1" in section
-    assert "mi-voz/clon/cosyvoice/voz.toml" in section
+    assert "cosyvoice" in section
+    assert "projects/prueba-voz/" not in section
 
 
-def test_the_skill_cites_the_lab_pieces() -> None:
-    """Approved lab pieces are cited by absolute path, never copied."""
-    lab = "/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-voz/"
-    for name in (
-        "narradora/voz.toml",
-        "mi-voz/clon/cosyvoice/voz.toml",
-        "guion-grabacion.md",
-        "comparacion/",
-    ):
-        assert lab + name in SKILL
+def test_the_skill_cites_no_lab_paths() -> None:
+    """Approved pieces are described by shape; no lab path remains."""
+    assert "/home/jheisonmblivecom" not in SKILL
+    assert "projects/prueba-voz/" not in SKILL
+    assert "guion-grabacion.md" in SKILL
+    assert 'voice = "narradora"' in SKILL
 
 
 def test_the_skill_teaches_the_managed_backend() -> None:
@@ -423,7 +423,8 @@ def test_the_readme_documents_the_clone_verdict_and_the_two_voice_rule() -> None
     """The README carries the engine verdict, the rule and the approved pattern."""
     assert "cosyvoice" in READ
     assert "15 s" in READ
-    assert "projects/prueba-voz/mi-voz/clon/cosyvoice/voz.toml" in READ
+    assert 'model = "cosyvoice"' in READ
+    assert "projects/prueba-voz/" not in READ
     assert "one engine per piece" in READ.lower()
     assert "never uploads" in READ
 

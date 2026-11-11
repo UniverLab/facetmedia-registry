@@ -75,9 +75,8 @@ vendored tree, the pinned Chromium and the host `ffmpeg`/`ffprobe`. `fps` passes
 
 - **Drawn SVG characters only.** Human avatars generated from a photo were
   rejected for falling into the uncanny valley.
-- **Rhubarb is offline and external.** The binary lives at
-  `~/Projects/open-source/rhubarb/Rhubarb-Lip-Sync-1.14.0-Linux/rhubarb`;
-  there is no registry package for it. The command is
+- **Rhubarb comes from the registry's own rhubarb package.** Pull it with
+  `facet pull rhubarb` (`packages/rhubarb`). The command is
   `rhubarb -r phonetic -f json --dialogFile <texto.txt> <voz.wav> -o bocas.json`.
   The phonetic recognizer is required because the default one is English-only;
   Spanish needs `-r phonetic`.

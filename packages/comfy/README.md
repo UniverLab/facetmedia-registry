@@ -12,8 +12,8 @@ video viewer. A GPU is required: one model at a time, about 8 s per
 per edit, and about 7 minutes per two-second clip on wan22-i2v, about half
 that on its `wan22-i2v-rapido` draft variant.
 
-ComfyUI is the lab's own tool (`~/Projects/open-source/ComfyUI`, 0.39.2) and
-facet treats it as an `[engine.server]`: `facet pull comfy` clones the pinned
+ComfyUI 0.39.2 runs as a facet-pinned checkout under an `[engine.server]`:
+`facet pull comfy` clones the pinned
 revision `3c1b7a17fdf239d35ce98cc777756f572d089795` into the facet home,
 builds its venv from its `requirements.txt`, and downloads the ten models
 next to it. For the duration of a verb facet starts
@@ -84,10 +84,10 @@ image = [
 ]
 ```
 
-That pair is the lab's approved piece
-(`projects/prueba-imagen/img2img.toml`): `iteracion-grabado.png` came from
-`ilustracion-editorial.png` in 22.7 s at 1344 × 768, keeping the character
-and framing while turning the picture into a blue and cream print.
+That pair is the approved piece (`examples/img2img.toml`):
+`iteracion-grabado.png` came from `ilustracion-editorial.png` in 22.7 s at
+1344 × 768, keeping the character and framing while turning the picture into
+a blue and cream print.
 
 ## Clips
 
@@ -138,8 +138,7 @@ Each entry's first frame is uploaded on its own: the runner posts it to
 with the name the server answers, so one piece can animate several different
 stills. The log prints one `<file> uploaded as <name>` line per entry.
 
-The lab approved three clips
-(`projects/prueba-video-ia/clips.toml`), two seconds each at 1280 × 704,
+Three approved clips (`examples/clips.toml`), two seconds each at 1280 × 704,
 about seven minutes per clip on a fully used GPU: `bosque-niebla.mp4` (fog
 drifting between pine trees), `taza-vapor.mp4` (steam rising from a ceramic
 cup, static camera) and `calle-acuarela.mp4` (a slow pan along a watercolor
@@ -155,8 +154,8 @@ halfway through it drifts from the input image — the light and the
 composition change — so it is for trying a movement, never a final render or
 a piece of an assembly. The runner names every draft output
 `<name>-borrador.mp4` and its record carries `properties.draft = true`, so
-no draft passes for a final. The lab's approved sample is
-`projects/prueba-video-ia/bosque-niebla-rapido.mp4`.
+no draft passes for a final. The approved draft sample is
+`examples/bosque-niebla-rapido.mp4`.
 
 ## The no-data rule
 

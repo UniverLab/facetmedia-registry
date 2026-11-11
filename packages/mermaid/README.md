@@ -88,11 +88,8 @@ SVG this package writes, using its stable `my-svg-*` ids).
 
 ## Approved references
 
-The lab's approved outputs live outside the registry:
-
 - `ciclo.mmd` → `ciclo.svg` + `ciclo.png`, and the hand-drawn
-  `ciclo-mano.png`, under
-  `/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-diagramas/`.
+  `ciclo-mano.png`, under `examples/`.
 - `arquitectura.mmd` → `arquitectura.svg` + `arquitectura.png`, same folder.
 
 ## Environment

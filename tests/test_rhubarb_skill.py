@@ -37,7 +37,6 @@ MOUTH_MAP = {
     "H": "tongue",
 }
 COMMAND = "rhubarb -r phonetic -f json --dialogFile <texto> <voz.wav> -o bocas.json"
-LAB_PROJECT = "prueba-personaje"
 
 
 def _front_matter() -> tuple[dict[str, str], str]:
@@ -89,10 +88,13 @@ def test_the_skill_carries_the_command_the_flag_and_the_spanish_note() -> None:
     assert "runner_failed" in body
 
 
-def test_the_skill_points_at_the_lab_project() -> None:
+def test_the_skill_points_at_the_reference_character() -> None:
+    """The approved reference is described by its contents, not a lab path."""
     _meta, body = _front_matter()
-    assert LAB_PROJECT in body
+    assert "fox" in body
     assert "bocas.json" in body
+    assert "prueba-personaje" not in SKILL
+    assert "/home/jheisonmblivecom" not in SKILL
 
 
 def test_the_skill_ships_no_references_directory() -> None:
@@ -154,4 +156,6 @@ def test_the_readme_documents_the_pin_the_command_and_the_rejections() -> None:
     assert "engine.binary" in README
     assert "Ditto" in README
     assert "uncanny valley" in README
-    assert LAB_PROJECT in README
+    assert "fox" in README
+    assert "prueba-personaje" not in README
+    assert "/home/jheisonmblivecom" not in README

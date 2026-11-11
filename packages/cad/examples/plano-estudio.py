@@ -4,7 +4,7 @@
 # ///
 """Plano 2D de un estudio de 6 × 4,5 m con ezdxf: muros, puerta con barrido, ventanas, mobiliario y cotas.
 Exporta DXF (unidades: metros), SVG y PNG de vista previa, y audita el DXF.
-Uso: uv run projects/prueba-cad/plano-estudio.py [salida-sin-extensión]
+Uso: uv run plano-estudio.py [salida-sin-extensión]
 Es la misma prueba de campo que se le hizo a cadspec el 2026-10-09."""
 import math
 import sys

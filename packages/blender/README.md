@@ -6,9 +6,8 @@ Daylight architectural photos of your own CAD: `facet run blender.foto
 GPU. It belongs to the **`image`** facet and writes the **`image`** kind, so the
 photo shows through the image viewer.
 
-This is the lab's rule to wrap the best tool and never reimplement it: the
-package wraps **headless Blender** (Cycles, GPU) and drives the render recipe
-the lab already approved in `projects/prueba-render-arq/estudio.py`.
+This package wraps **headless Blender** (Cycles, GPU) and drives its render
+recipe: wrap the best tool, never reimplement it.
 
 ## The host contract
 
@@ -108,12 +107,11 @@ than letting Blender's default grey stand in.
 scene, which is what gives the model its scale: a door, a bed or a table only
 reads as its real size next to a person.
 
-The people are **built once, outside this package**. The lab's
-`projects/prueba-render-arq/personas.py` writes `personas.blend` with MPFB
-2.0.18, the MakeHuman CC0 asset pack and traits 0-1: one collection per person,
-arms lowered 40 degrees, the skeleton root at the collection's base. This
-package never generates people, never needs the MPFB add-on and never
-downloads an asset pack: loading a linked collection needs no add-on.
+The people are **built once, outside this package**: a `personas.blend` made
+with MPFB 2.0.18, the MakeHuman CC0 asset pack and traits 0-1 — one collection
+per person, arms lowered 40 degrees, the skeleton root at the collection's
+base. This package never generates people, never needs the MPFB add-on and
+never downloads an asset pack: loading a linked collection needs no add-on.
 
 ```toml
 [inputs]
@@ -133,7 +131,7 @@ personas = [
 - `personas` is one item per person: `nombre` is the collection's name in the
   blend, `x` and `y` are metres in the scene's own axes, and `giro` is a turn
   about Z in degrees from the **-y facing** the collections have by default.
-  The triple above is the lab's reference (`escena.py:45`), never a default:
+  The triple above is the reference example, never a default:
   without `personas` nobody stands in the scene.
 - Each collection is loaded with `bpy.data.libraries.load`, linked into the
   scene, and its **single parentless root** is stood at `(x, y, floor_z)`.
@@ -154,12 +152,11 @@ The same two capabilities can **park cars** in the scene, which is what gives
 the model its urban scale: a study reads as a street scene only next to
 vehicles.
 
-The cars are **built once, outside this package**. The lab's
-`projects/prueba-render-arq/autos.py` writes `autos.blend` from the Quaternius
-Cars Pack (CC0): one collection per car, hung from an anchor `EMPTY` at the
-car's base centre, every car facing **-y**. This package never generates cars,
-never checks for a pack and never downloads one: loading a linked collection
-needs no add-on.
+The cars are **built once, outside this package**: an `autos.blend` made from
+the Quaternius Cars Pack (CC0) — one collection per car, hung from an anchor
+`EMPTY` at the car's base centre, every car facing **-y**. This package never
+generates cars, never checks for a pack and never downloads one: loading a
+linked collection needs no add-on.
 
 ```toml
 [inputs]
@@ -179,9 +176,9 @@ autos = [
 - `autos` is one item per car: `nombre` is the collection's name in the blend,
   `x` and `y` are metres in the scene's own axes, and `giro` is a turn about Z
   in degrees from the **-y facing** the collections have by default. The
-  placements above mirror the lab's pair (`escena.py:45`: sedan and camioneta
-  on the car-entry pavement by the left wall) plus a turned compacto; they are
-  the reference example, never a default: without `autos` no car parks.
+  placements above — sedan and camioneta on the car-entry pavement by the left
+  wall, plus a turned compacto — are the reference example, never a default:
+  without `autos` no car parks.
 - Each collection is loaded with `bpy.data.libraries.load` after the materials
   are dressed — the pack's own paint and glass materials carry no piece prefix
   — linked into the scene, and its **single parentless root** (the anchor
@@ -278,8 +275,7 @@ in "Camera tours".
 catalogue does: the **STL** that `cad.solid` writes beside the piece is
 imported, scaled from millimetres to metres, dressed in a metal and shot on
 Cycles at **1200x1200** under two studio area lights against a dark backdrop.
-The approved reference is the lab's `projects/prueba-render-arq/escuadra-producto.png`
-(brushed aluminium, about 10 s).
+The approved reference is a brushed-aluminium product photo (about 10 s).
 
 ```toml
 [inputs]
@@ -334,8 +330,8 @@ piece gives a required `name` — the receipt is `<name>.assets.json` — and li
 Poly Haven asset ids — skies, textures and models, all CC0 — with an optional
 pinned `res` (`1k`, `2k`, `4k`; the lab defaults are 2k for skies and textures,
 1k for models). The runner fetches the list **once** into the
-shared models dir, `<home>/models/blender/polyhaven/<id>/`, with the lab's
-exact mechanism (`polyhaven.py`, ported from the Grafics lab): the type comes
+shared models dir, `<home>/models/blender/polyhaven/<id>/`, with the exact
+mechanism in `polyhaven.py`: the type comes
 from `info/<id>`, the file records from `files/<id>`, files already present
 with the right size are skipped and every download is md5-checked, and the
 names are fixed — `sky.hdr`, `diff.jpg`/`nor_gl.jpg`/`rough.jpg` (the first

@@ -1,9 +1,7 @@
 # The tour recipe
 
-The lab's source is `/home/jheisonmblivecom/Academic/Deriverables/Grafics/AGENTS.md`
-lines 216-250 (Render CAD: still with Cycles, tour with Eevee), and
-`/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-render-arq/escena.py`
-(the `recorrido` block). `packages/blender/recorrido.py` ports both.
+`packages/blender/recorrido.py` renders the tour recipe: a still is Cycles, a
+tour is Eevee.
 
 ## Why Eevee and not Cycles
 

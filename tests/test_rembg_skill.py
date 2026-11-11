@@ -60,9 +60,10 @@ def test_the_body_names_the_capability_and_the_damero() -> None:
 
 
 def test_the_skill_ports_the_lamina_web_exclusion() -> None:
-    """The clean-paper rule keeps lamina_web out, as the lab README does."""
+    """The clean-paper rule keeps lamina_web out, as the README does."""
     assert "lamina_web" in _body()
-    assert "papel_limpio" in _body()
+    assert "paper-cleaning" in _body()
+    assert "tools/papel_limpio.py" not in _body()
 
 
 def test_the_skill_ports_the_lab_measurements_and_the_licences() -> None:

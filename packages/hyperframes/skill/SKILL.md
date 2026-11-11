@@ -226,14 +226,13 @@ ten fields, with the summary `{name} · {width}x{height} · {length}f @ {fps}fps
 seed {seed}`. Read the check output too: it is the gate that rejected broken
 timelines before the render. A person then watches the clip.
 
-The approved lab proofs stay in the lab, referenced by absolute path:
+The approved examples ship in `examples/`:
 
-- `render` and `loop`: `/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/modelos-de-lenguaje/video/`.
-- `diagrama`: `/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-diagramas/video/`
-  and `/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-diagramas/video-arquitectura/`.
-- `giro`: `/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-render-arq/giro/`.
-- `personaje`: `/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-personaje/`.
-- `narrado`: `/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/demo-hackaton/video/`.
+- `render` and `loop`: `basic/composicion` (`render.toml`, `loop.toml`).
+- `diagrama`: `diagrama/` (`diagrama.toml`).
+- `giro`: `giro/` (`giro.toml`).
+- `personaje`: `personaje/` (`personaje.toml`).
+- `narrado`: `narrado/` (`narrado.toml`).
 
 ## Pitfalls
 

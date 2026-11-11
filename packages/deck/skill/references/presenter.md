@@ -1,9 +1,8 @@
 # Presenter file shapes
 
 `deck.presenter` writes two files beside the deck: `<base>.present.html` and
-`<base>.notes.md`. The lab's source is
-`/home/jheisonmblivecom/Academic/Deriverables/Grafics/tools/presentar.mjs`; the
-speaker view itself is `packages/deck/presenter/runner.css` and `runner.js`.
+`<base>.notes.md`. The speaker view itself is
+`packages/deck/presenter/runner.css` and `runner.js`.
 
 ## `<base>.notes.md`
 

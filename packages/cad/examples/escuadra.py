@@ -6,7 +6,7 @@
 Exporta STEP (CAD), STL (impresión 3D) y una vista SVG de líneas. Corre nativo en Linux.
 Verificada: volumen 20.806 mm³ (cálculo a mano 20.805) y centros de agujero en (45, 20, 2,5) y (2,5, 20, 35);
 la misma pieza en FreeCAD está en escuadra-freecad.py.
-Uso: uv run projects/prueba-cad/escuadra.py [salida-sin-extensión]"""
+Uso: uv run escuadra.py [salida-sin-extensión]"""
 import sys
 from pathlib import Path
 

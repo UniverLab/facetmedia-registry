@@ -1,8 +1,6 @@
 # Render invocation shapes
 
-The lab's renderer is `tools/render.mjs`; `packages/deck/runner.js` ports its
-two modes. The lab's source is
-`/home/jheisonmblivecom/Academic/Deriverables/Grafics/tools/render.mjs`.
+`packages/deck/runner.js` renders in two modes.
 
 ```bash
 node tools/render.mjs <file>.html               # one tall page, content height

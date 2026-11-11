@@ -2,7 +2,7 @@
   "engine": "rembg 2.0.67 / U2NetP",
   "provider": "CPUExecutionProvider",
   "model_license": "Apache-2.0 (U-2-Net); rembg code MIT",
-  "input": "/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-fondos/entrada.png",
+  "input": "entrada.png",
   "size": [
     1344,
     768

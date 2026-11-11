@@ -5,7 +5,7 @@ approved body, `arquitectura.mmd`, verbatim:
 
 ```mermaid
 architecture-beta
-  group lab(cloud)[Grafics Lab en WSL]
+  group lab(cloud)[Laboratorio local en WSL]
   group gpu(server)[GPU local] in lab
 
   service agente(logos:claude-icon)[Agente] in lab

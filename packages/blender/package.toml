@@ -81,7 +81,7 @@ description = "Exposure in stops under the AgX - Medium High Contrast view trans
 
 [capabilities.foto.inputs.personas-blend]
 type = "path"
-description = "Prebuilt MPFB collection .blend (one collection per person, the skeleton root at its base), resolved relative to the piece file; the lab builds it once with projects/prueba-render-arq/personas.py. Never generated here."
+description = "Prebuilt MPFB collection .blend (one collection per person, the skeleton root at its base), resolved relative to the piece file. Never generated here."
 
 [capabilities.foto.inputs.personas]
 type = "array"
@@ -110,7 +110,7 @@ description = "Turn about Z in degrees from the -y facing the collection has by 
 
 [capabilities.foto.inputs.autos-blend]
 type = "path"
-description = "Prebuilt car-collection .blend (one collection per car hung from an anchor EMPTY at its base centre, facing -y), resolved relative to the piece file; the lab builds it once with projects/prueba-render-arq/autos.py. Never generated here."
+description = "Prebuilt car-collection .blend (one collection per car hung from an anchor EMPTY at its base centre, facing -y), resolved relative to the piece file. Never generated here."
 
 [capabilities.foto.inputs.autos]
 type = "array"
@@ -367,7 +367,7 @@ description = "Sampling seed; Eevee's render is deterministic, so it only labels
 
 [capabilities.recorrido.inputs.personas-blend]
 type = "path"
-description = "Prebuilt MPFB collection .blend (one collection per person, the skeleton root at its base), resolved relative to the piece file; the lab builds it once with projects/prueba-render-arq/personas.py. Never generated here."
+description = "Prebuilt MPFB collection .blend (one collection per person, the skeleton root at its base), resolved relative to the piece file. Never generated here."
 
 [capabilities.recorrido.inputs.personas]
 type = "array"
@@ -396,7 +396,7 @@ description = "Turn about Z in degrees from the -y facing the collection has by 
 
 [capabilities.recorrido.inputs.autos-blend]
 type = "path"
-description = "Prebuilt car-collection .blend (one collection per car hung from an anchor EMPTY at its base centre, facing -y), resolved relative to the piece file; the lab builds it once with projects/prueba-render-arq/autos.py. Never generated here."
+description = "Prebuilt car-collection .blend (one collection per car hung from an anchor EMPTY at its base centre, facing -y), resolved relative to the piece file. Never generated here."
 
 [capabilities.recorrido.inputs.autos]
 type = "array"

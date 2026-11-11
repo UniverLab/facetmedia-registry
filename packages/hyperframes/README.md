@@ -138,12 +138,13 @@ Selectors are the classic silent failure, so these id shapes are verbatim:
 
 ### Approved examples
 
-Both proofs live in the Grafics lab and pass `check`:
+Both shapes pass `check`:
 
-- `projects/prueba-diagramas/video/` draws `ciclo.svg`, a flowchart with nodes,
-  edges, edge labels and the `my-svg-gpu` singleton.
-- `projects/prueba-diagramas/video-arquitectura/` draws `arquitectura.svg`, an
-  architecture diagram with groups, services and `polygon.arrow` arrowheads.
+- `examples/diagrama/` draws a flowchart SVG with nodes, edges, edge labels
+  and the `my-svg-gpu` singleton.
+- the same path draws an architecture SVG with groups, services and
+  `polygon.arrow` arrowheads (see
+  `packages/mermaid/examples/arquitectura.svg`).
 
 ## 3D turns
 
@@ -204,8 +205,7 @@ are enough; Cycles stays for photoreal staging with bounced light.
 
 ### Approved example
 
-The lab proof is
-`/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-render-arq/giro/`
+The approved example is `examples/giro/`
 (`renderAt`/`hf-seek`/`waitUntil`/`DATA.orbita` shape, GLB embed); its CDN
 script/importmap lines are the pre-vendor source the shipped composition
 vendors locally.
@@ -291,8 +291,9 @@ rhubarb -r phonetic -f json --dialogFile <texto> <voz> -o bocas.json
 ```
 
 The phonetic recognizer is required because the default one is English-only;
-Spanish needs `-r phonetic`. The CLI is quick, about a second. It lives at
-`~/Projects/open-source/rhubarb`; there is no registry package for it.
+Spanish needs `-r phonetic`. The CLI is quick, about a second. It comes from
+the registry's own rhubarb package: `facet pull rhubarb`
+(`packages/rhubarb`).
 
 ### Drawn characters only
 
@@ -302,10 +303,9 @@ removed. The drawn path is the approved one.
 
 ### Approved example
 
-The lab proof is
-`/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/prueba-personaje/`:
-a fox speaking with the person's voice, an 11.5 s composition whose 10.32 s of
-voice starts at `data-start="0.5"`. Its `index.tmpl` carries the rest rule, the
+The approved example is `examples/personaje/`: a fox speaking with the
+person's voice, an 11.5 s composition whose 10.32 s of voice starts at
+`data-start="0.5"`. Its `index.tmpl` carries the rest rule, the
 nine `boca-X`…`boca-H` shapes and the cue timeline; its `build.mjs` copies
 `index.tmpl` to `index.html` keeping `/* BOCAS */[]` empty, and the runner's
 `personajeSetup` injects the cues from the `bocas` input into the copied
@@ -361,11 +361,9 @@ a `volumen-musica` outside 0..1 throws a plain `Error`, exit 1, which facet
 reports as `runner_failed`; `check` and `render` never run.
 
 The offline `build.mjs` produces the vendored `assets/` and `vendor/` tree;
-the runner never executes it. The lab proof for the SUBS burn-in shape is
-`/home/jheisonmblivecom/Academic/Deriverables/Grafics/projects/demo-hackaton/video/`:
-its `renders/demo.mp4` carries video+audio and its `index.html` burns
-hardcoded SUBS opacity cues. This capability generalizes that proven shape to
-a whisper `.srt` parsed at run time; no end-to-end `.srt` lab proof exists yet.
+the runner never executes it. The SUBS burn-in shape is proven in
+`examples/narrado/`: voice clips, an instrumental bed and a whisper `.srt`
+burned in as opacity cues at run time.
 
 ## Verifying
 

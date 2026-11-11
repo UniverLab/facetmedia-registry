@@ -261,7 +261,8 @@ def test_people_are_piece_data_on_both_scene_capabilities() -> None:
         blend = inputs["personas-blend"]
         assert blend["type"] == "path", capability
         assert "required" not in blend, capability
-        assert "personas.py" in blend["description"], capability
+        assert "Never generated here" in blend["description"], capability
+        assert "projects/" not in blend["description"], capability
         people = inputs["personas"]
         assert people["type"] == "array", capability
         assert people["default"] == [], capability
@@ -285,7 +286,8 @@ def test_cars_are_piece_data_on_both_scene_capabilities() -> None:
         blend = inputs["autos-blend"]
         assert blend["type"] == "path", capability
         assert "required" not in blend, capability
-        assert "autos.py" in blend["description"], capability
+        assert "Never generated here" in blend["description"], capability
+        assert "projects/" not in blend["description"], capability
         cars = inputs["autos"]
         assert cars["type"] == "array", capability
         assert cars["default"] == [], capability
