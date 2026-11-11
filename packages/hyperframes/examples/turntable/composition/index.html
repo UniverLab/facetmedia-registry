@@ -34,7 +34,7 @@
 
       const GLB = /* GLB */"";
       const DATA = {
-        /* GIRO */
+        /* TURNTABLE */
         colores: { muros: 0xecebe6, piso: 0x8a5c3a, vidrio: 0xbfdcef },
       };
 
@@ -59,10 +59,10 @@
 
       // Pure function of time: HyperFrames seeks every frame.
       function renderAt(t) {
-        const o = DATA.orbita;
-        const angulo = o.desde + (t / DATA.duracion) * o.vuelta * Math.PI * 2;
-        const [cx, cy, cz] = DATA.centro;
-        camera.position.set(cx + o.radio * Math.cos(angulo), o.altura, cz + o.radio * Math.sin(angulo));
+        const o = DATA.orbit;
+        const angulo = o.start + (t / DATA.duration) * o.fraction * Math.PI * 2;
+        const [cx, cy, cz] = DATA.center;
+        camera.position.set(cx + o.radius * Math.cos(angulo), o.height, cz + o.radius * Math.sin(angulo));
         camera.lookAt(cx, cy, cz);
         renderer.render(scene, camera);
       }

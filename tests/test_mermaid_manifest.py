@@ -126,14 +126,14 @@ def test_the_requirements_fit_the_reference_machine() -> None:
 
 
 def test_the_capability_is_the_image_kind_with_the_mmd_input() -> None:
-    capability = MANIFEST["capabilities"]["diagrama"]
+    capability = MANIFEST["capabilities"]["diagram"]
     assert capability["kind"] == "image"
     assert capability["preview"] == {"viewer": "image"}
     inputs = capability["inputs"]
-    assert set(inputs) == {"diagrama"}
-    assert inputs["diagrama"]["type"] == "path"
-    assert inputs["diagrama"]["required"] is True
-    assert ".mmd" in inputs["diagrama"]["description"]
+    assert set(inputs) == {"diagram"}
+    assert inputs["diagram"]["type"] == "path"
+    assert inputs["diagram"]["required"] is True
+    assert ".mmd" in inputs["diagram"]["description"]
 
 
 def test_the_index_carries_the_package() -> None:

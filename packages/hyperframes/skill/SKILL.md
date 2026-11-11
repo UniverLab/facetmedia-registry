@@ -6,14 +6,14 @@ description: Render checked HTML+GSAP compositions to MP4 with the pinned HyperF
 
 `hyperframes.render` turns an authored HTML+GSAP composition into an MP4.
 `hyperframes.loop` renders the same composition to a looping GIF or an
-alpha-channel MOV. `hyperframes.diagrama` inserts a Mermaid SVG (`diagrama-svg`)
-into a checked composition and draws it from an `animacion` list of
+alpha-channel MOV. `hyperframes.diagram` inserts a Mermaid SVG (`diagram-svg`)
+into a checked composition and draws it from an `animation` list of
 `{ selector, at, kind, dur }` steps; every selector is validated against the
-SVG's ids before anything renders. `hyperframes.giro` embeds a `.glb` model and
-turns it on a camera orbit from eight flat scalar inputs. `hyperframes.personaje`
+SVG's ids before anything renders. `hyperframes.turntable` embeds a `.glb` model and
+turns it on a camera orbit from eight flat scalar inputs. `hyperframes.character`
 speaks a hand-drawn SVG character with Rhubarb mouth cues timed to the voice.
-`hyperframes.narrado` assembles a narrated piece from `composicion`, `voz`
-voice clips, the `musica` bed and the whisper `subtitulos` `.srt`. The
+`hyperframes.narrated` assembles a narrated piece from `composition`, `voice`
+voice clips, the `music` bed and the whisper `subtitles` `.srt`. The
 package wraps the pinned CLI: it runs
 `check` first, then renders at most two workers, and never reimplements either
 step.
@@ -39,13 +39,13 @@ live in `references/composition.md`, `references/timeline.md`,
 
 ```toml
 [inputs]
-composicion = "video"
+composition = "video"
 prompt = "A calm product teaser with a slow push in"
 seed = 0
 audio = [{ clip = "assets/voz.wav" }]
 ```
 
-`composicion` names the directory holding `hyperframes.json`, `index.tmpl`,
+`composition` names the directory holding `hyperframes.json`, `index.tmpl`,
 `index.html`, `build.mjs` and `assets/`. The template is never named `.html`.
 The runner injects the recipe values into the copied `index.html`, the file
 HyperFrames renders. Each audio clip
@@ -55,8 +55,8 @@ composition layout and the offline/runner split are in
 `references/composition.md`.
 
 Every capability ships a runnable sample under `examples/`: `render.toml` and
-`loop.toml` share `basic/composicion`, and the other four use
-`<capability>/composicion` with their inputs beside the piece file.
+`loop.toml` share `basic/composition`, and the other four use
+`<capability>/composition` with their inputs beside the piece file.
 
 ## Timeline rules
 
@@ -76,35 +76,35 @@ See `references/timeline.md`.
 The same source and the same paused timeline as `render`; `format` only chooses
 the export (`gif` or `mov-alpha`). See `references/timeline.md`.
 
-### hyperframes.diagrama
+### hyperframes.diagram
 
-`animacion` is an ordered list of `{ selector, at, kind, dur }` steps, `kind`
+`animation` is an ordered list of `{ selector, at, kind, dur }` steps, `kind`
 one of `show`, `draw` or `fade`, `dur` defaulting to `0.4`. The runner validates
 the selectors and injects a paused timeline that draws edges with
 `strokeDashoffset`. See `references/timeline.md`.
 
-### hyperframes.giro
+### hyperframes.turntable
 
 The scene is a pure `renderAt(t)` called from `hf-seek`; `event.detail.waitUntil`
 makes HyperFrames wait for the model. The runner base64-embeds the model at
-`/* GLB */""` and writes the eight scalars at `/* GIRO */`, inside
+`/* GLB */""` and writes the eight scalars at `/* TURNTABLE */`, inside
 `const DATA = {`. See `references/timeline.md`.
 
-### hyperframes.personaje
+### hyperframes.character
 
-The template carries the `/* BOCAS */[]` marker and one
+The template carries the `/* MOUTHS */[]` marker and one
 `const AUDIO_START = <number>;`. The timeline is one `tl.set` per mouth change,
-shifted by `audio-inicio`, which must match the voice `<audio data-start>`. See
+shifted by `audio-start`, which must match the voice `<audio data-start>`. See
 `references/timeline.md`.
 
-### hyperframes.narrado
+### hyperframes.narrated
 
 `index.html` carries one `<!-- SUBS -->` marker, one `<!-- AUDIOS -->` marker
 and a positive `data-duration`. The runner parses the `.srt` into
-`{ start, end, text }` cues and burns them in as `.sub` divs. Each `voz` item
-is `{ clip, inicio }`: `inicio` (default 0) is the seconds on the composition
+`{ start, end, text }` cues and burns them in as `.sub` divs. Each `voice` item
+is `{ clip, start }`: `start` (default 0) is the seconds on the composition
 timeline where that clip starts and must sit inside `data-duration`;
-`volumen-musica` (default 0.25, about −12 dB) is the bed's `data-volume` under
+`music-volume` (default 0.25, about −12 dB) is the bed's `data-volume` under
 the voices. See `references/timeline.md`.
 
 `check` rejects (`sweep_static`) a composition whose timeline stops changing
@@ -131,34 +131,34 @@ ids and timed with `data-start`, `data-duration` and `data-track-index`. See
 Identical ids to `render`; a loop adds no map, only a different output file. See
 `references/id-maps.md`.
 
-### hyperframes.diagrama
+### hyperframes.diagram
 
 Flow nodes are `my-svg-flowchart-<id>-<n>` selected with
 `[id^="my-svg-flowchart-<id>-"]`; flow and architecture edges are
-`my-svg-L_<origen>_<destino>_0`; edge labels are
-`.edgeLabels [data-id="L_<origen>_<destino>_0"]`; services and groups are
+`my-svg-L_<from>_<to>_0`; edge labels are
+`.edgeLabels [data-id="L_<from>_<to>_0"]`; services and groups are
 `#my-svg-service-<id>` and `#my-svg-group-<id>`, with `#my-svg-gpu` for the
 singleton; the arrowhead is the `polygon.arrow` at `path.nextElementSibling`.
 Helpers `node`, `edge`, `label` and `byId` are in `references/id-maps.md`.
 
-### hyperframes.giro
+### hyperframes.turntable
 
-The two markers are `/* GLB */""` and `/* GIRO */`; the importmap pins `three`
+The two markers are `/* GLB */""` and `/* TURNTABLE */`; the importmap pins `three`
 and `three/addons/` to `./vendor/` paths, and the timeline is keyed by
 `data-composition-id`. See `references/id-maps.md`.
 
-### hyperframes.personaje
+### hyperframes.character
 
-The character SVG carries one `.boca` shape per Rhubarb letter, ids `boca-X` …
-`boca-H` (X rest, A closed, B teeth, C open, D wide open, E round, F pursed, G
-teeth on lip, H tongue). The rest rule `.boca { opacity: 0; } #boca-X { opacity: 1; }`
-keeps `#boca-X` visible at frame 0. See `references/id-maps.md`.
+The character SVG carries one `.mouth` shape per Rhubarb letter, ids `mouth-X` …
+`mouth-H` (X rest, A closed, B teeth, C open, D wide open, E round, F pursed, G
+teeth on lip, H tongue). The rest rule `.mouth { opacity: 0; } #mouth-X { opacity: 1; }`
+keeps `#mouth-X` visible at frame 0. See `references/id-maps.md`.
 
-### hyperframes.narrado
+### hyperframes.narrated
 
 The markers are `<!-- SUBS -->` and `<!-- AUDIOS -->`; cues are
 `{ start, end, text }`; subtitles are `.sub` divs `#s0`, `#s1`, … and audio
-elements are `#voz-1`, `#voz-2`, … and `#musica`. See `references/id-maps.md`.
+elements are `#voice-1`, `#voice-2`, … and `#music`. See `references/id-maps.md`.
 
 ## Render limits
 
@@ -180,14 +180,14 @@ Every `render` limit, plus `verify` fails a `gif` without the `NETSCAPE2.0`
 looping block and a `mov-alpha` without an alpha `pix_fmt`. See
 `references/limits.md`.
 
-### hyperframes.diagrama
+### hyperframes.diagram
 
 Every selector is validated before `check`; an unknown id is `runner_failed`,
 exit 1, and nothing renders. `build.mjs` owns the `&gt;` fix inside `<style>`,
 the SVG uses the Ubuntu font at `fontSize` 22px, and GSAP is vendored. See
 `references/limits.md`.
 
-### hyperframes.giro
+### hyperframes.turntable
 
 The scene must carry `renderAt`, `hf-seek` and `event.detail.waitUntil`, and
 must not use `requestAnimationFrame` or `performance.now()`. The vendored tree
@@ -196,30 +196,30 @@ is `vendor/gsap.min.js`, `vendor/three.module.js` and
 it and the runner never executes it. WebGL is software-only. See
 `references/limits.md`.
 
-### hyperframes.personaje
+### hyperframes.character
 
 Only drawn SVG characters. Rhubarb runs offline
-(`rhubarb -r phonetic -f json --dialogFile <texto.txt> <voz.wav> -o bocas.json`);
+(`rhubarb -r phonetic -f json --dialogFile <dialogue.txt> <voice.wav> -o mouths.json`);
 the runner validates every mouth shape and the rest rule before `check`. See
 `references/limits.md`.
 
-### hyperframes.narrado
+### hyperframes.narrated
 
 Prepare the clips offline: ffmpeg `normalize` with `target-lufs=-16.0` and
 `true-peak-db=-1.5`, then ffmpeg `mix` the voice layers over the bed with
 `ducking=true`, `duck-db=-12.0` and `target-lufs=-16.0`. The runner brings the
-finished `narrado` and `personaje` videos to `target-lufs` (default -14 LUFS,
+finished `narrated` and `character` videos to `target-lufs` (default -14 LUFS,
 the streaming-platform level, louder than the -16 clips by design) with
 two-pass EBU R128 `loudnorm` at true peak -1.0 dBTP, and `verify` checks the
 result within ±1 LU with true peak at or below -0.5 dBTP. The markers are
 required exactly once and every cue must fit `data-duration`.
-`verify` fails a `narrado` or `personaje` MP4 with no audio stream. See
+`verify` fails a `narrated` or `character` MP4 with no audio stream. See
 `references/limits.md`.
 
 ## Judging the result
 
 `verify` probes the MP4 with `ffprobe`: a video stream with positive width,
-height, frame count and frame rate passes, and a `narrado` or `personaje`
+height, frame count and frame rate passes, and a `narrated` or `character`
 asset additionally needs an audio stream. For those two it also measures
 integrated loudness and true peak with the pinned `ffmpeg`, adds both to the
 metrics, and passes only within ±1 LU of `target-lufs` with true peak at or
@@ -230,11 +230,11 @@ timelines before the render. A person then watches the clip.
 
 The approved examples ship in `examples/`:
 
-- `render` and `loop`: `basic/composicion` (`render.toml`, `loop.toml`).
-- `diagrama`: `diagrama/` (`diagrama.toml`).
-- `giro`: `giro/` (`giro.toml`).
-- `personaje`: `personaje/` (`personaje.toml`).
-- `narrado`: `narrado/` (`narrado.toml`).
+- `render` and `loop`: `basic/composition` (`render.toml`, `loop.toml`).
+- `diagram`: `diagram/` (`diagram.toml`).
+- `turntable`: `turntable/` (`turntable.toml`).
+- `character`: `character/` (`character.toml`).
+- `narrated`: `narrated/` (`narrated.toml`).
 
 ## Pitfalls
 

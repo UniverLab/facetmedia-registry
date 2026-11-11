@@ -1,2 +1,2 @@
 The voice is copied into the composition root by the runner; the character SVG and
-bocas.json are the piece's own inputs. No other media ships with this sample.
+mouths.json are the piece's own inputs. No other media ships with this sample.

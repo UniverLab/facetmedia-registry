@@ -33,23 +33,23 @@ composition applies when `fps` is omitted.
 `format` input only chooses the export (`gif` or `mov-alpha`). Do not rewrite
 the timeline for a loop: a GIF and a MOV with alpha are the same frames.
 
-## hyperframes.diagrama
+## hyperframes.diagram
 
-`animacion` is an ordered list of `{ selector, at, kind, dur }` steps. `kind` is
+`animation` is an ordered list of `{ selector, at, kind, dur }` steps. `kind` is
 `show`, `draw` or `fade`, and `dur` defaults to `0.4`. The runner validates
 every selector against the ids the SVG carries, then injects this paused
 timeline into `index.html` before `check`:
 
 ```js
 const tl = gsap.timeline({ paused: true });
-pasos.forEach(function (paso) {
-  var targets = document.querySelectorAll(paso.selector);
-  if (paso.kind === 'show') {
-    tl.from(targets, { opacity: 0, scale: 0.85, transformOrigin: '50% 50%', duration: paso.dur, ease: 'back.out(2)' }, paso.at);
-  } else if (paso.kind === 'fade') {
-    tl.from(targets, { opacity: 0, duration: paso.dur, ease: 'power1.out' }, paso.at);
+steps.forEach(function (step) {
+  var targets = document.querySelectorAll(step.selector);
+  if (step.kind === 'show') {
+    tl.from(targets, { opacity: 0, scale: 0.85, transformOrigin: '50% 50%', duration: step.dur, ease: 'back.out(2)' }, step.at);
+  } else if (step.kind === 'fade') {
+    tl.from(targets, { opacity: 0, duration: step.dur, ease: 'power1.out' }, step.at);
   } else {
-    drawEach(targets, paso);
+    drawEach(targets, step);
   }
 });
 window.__timelines['main'] = tl;
@@ -62,7 +62,7 @@ the `polygon.arrow` right after it fades in with the path. Selectors are built
 by string concatenation, never a `${}` template: the HyperFrames bundler rejects
 template literals in selectors.
 
-## hyperframes.giro
+## hyperframes.turntable
 
 The scene is a pure function of time. `renderAt(t)` is called from the
 `hf-seek` event, and `event.detail.waitUntil(promise)` makes HyperFrames wait
@@ -70,10 +70,10 @@ for the model to load:
 
 ```js
 function renderAt(t) {
-  const o = DATA.orbita;
-  const angulo = o.desde + (t / DATA.duracion) * o.vuelta * Math.PI * 2;
-  const [cx, cy, cz] = DATA.centro;
-  camera.position.set(cx + o.radio * Math.cos(angulo), o.altura, cz + o.radio * Math.sin(angulo));
+  const o = DATA.orbit;
+  const angulo = o.start + (t / DATA.duration) * o.fraction * Math.PI * 2;
+  const [cx, cy, cz] = DATA.center;
+  camera.position.set(cx + o.radius * Math.cos(angulo), o.height, cz + o.radius * Math.sin(angulo));
   camera.lookAt(cx, cy, cz);
   renderer.render(scene, camera);
 }
@@ -83,30 +83,30 @@ window.addEventListener('hf-seek', (event) => {
 ```
 
 `requestAnimationFrame` and `performance.now()` are rejected by `check` and by
-the runner. The runner base64-embeds `modelo-glb` at `/* GLB */""` and writes
-the eight scalars at `/* GIRO */`, inside `const DATA = {`. Text stays in HTML
+the runner. The runner base64-embeds `model-glb` at `/* GLB */""` and writes
+the eight scalars at `/* TURNTABLE */`, inside `const DATA = {`. Text stays in HTML
 over the canvas.
 
-## hyperframes.personaje
+## hyperframes.character
 
 The template carries `const AUDIO_START = <number>;` exactly once and the
-`/* BOCAS */[]` marker exactly once. The runner replaces the marker with the
-`bocas.json` cues and writes `audio-inicio` into `AUDIO_START`. The timeline is
+`/* MOUTHS */[]` marker exactly once. The runner replaces the marker with the
+`mouths.json` cues and writes `audio-start` into `AUDIO_START`. The timeline is
 one `tl.set` per mouth change, shifted by the same amount as the voice
 `<audio data-start>`:
 
 ```js
 CUES.forEach(function (cue) {
-  tl.set('.boca', { opacity: 0 }, AUDIO_START + cue.start)
-    .set('#boca-' + cue.value, { opacity: 1 }, AUDIO_START + cue.start);
+  tl.set('.mouth', { opacity: 0 }, AUDIO_START + cue.start)
+    .set('#mouth-' + cue.value, { opacity: 1 }, AUDIO_START + cue.start);
 });
 ```
 
 A `tl.set` at instant 0 never shows, so the CSS carries the rest state:
-`.boca { opacity: 0; } #boca-X { opacity: 1; }`. Blinks and a gentle head sway
+`.mouth { opacity: 0; } #mouth-X { opacity: 1; }`. Blinks and a gentle head sway
 stay at fixed times in the template; they are not piece inputs.
 
-## hyperframes.narrado
+## hyperframes.narrated
 
 `index.html` carries exactly one `<!-- SUBS -->` marker, exactly one
 `<!-- AUDIOS -->` marker and a positive `data-duration` on the
@@ -124,8 +124,8 @@ cues.forEach(function (cue, index) {
 Subtitles are burned into the frames as `.sub` divs, never a sidecar copy. The
 `.srt` times are absolute on the composition, so the cues are not shifted.
 Every voice is injected as
-`<audio id="voz-N" data-start="<inicio>" data-duration="<duration-inicio>" data-track-index="<N>" data-volume="1">`,
-starting at its `voz` item's `inicio` (default 0, refused at or past
+`<audio id="voice-N" data-start="<start>" data-duration="<duration-start>" data-track-index="<N>" data-volume="1">`,
+starting at its `voice` item's `start` (default 0, refused at or past
 `data-duration`); the bed is
-`<audio id="musica" data-start="0" data-duration="<duration>" data-track-index="<voices+1>" data-volume="<volumen-musica>">`
-with `volumen-musica` defaulting to 0.25 (about −12 dB, 0 to 1).
+`<audio id="music" data-start="0" data-duration="<duration>" data-track-index="<voices+1>" data-volume="<music-volume>">`
+with `music-volume` defaulting to 0.25 (about −12 dB, 0 to 1).

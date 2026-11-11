@@ -8,7 +8,7 @@ description: Validated SRT and VTT subtitles from a whisper JSON sidecar — seg
 file: `<origen-stem>.srt` or `<origen-stem>.vtt`, validated before any byte
 is written. It does not transcribe and holds no model — the hearing stays
 with `whisper.transcribe`; this package only turns its timed segments into
-the file hyperframes.narrado burns into a narrated video.
+the file hyperframes.narrated burns into a narrated video.
 
 ## When to use
 
@@ -21,7 +21,7 @@ the file hyperframes.narrado burns into a narrated video.
 - Not for hearing anything: no model is involved, and a sidecar with bad
   timing is rejected, not repaired.
 - Not for narration itself: after this, hand the `.srt` to
-  `hyperframes.narrado`, which reads whisper-written SRT as subtitulos input.
+  `hyperframes.narrated`, which reads whisper-written SRT as subtitles input.
 
 ## Pieces
 
@@ -66,5 +66,5 @@ verdict means the times were already monotonic at conversion.
   failure means the sidecar was hand-edited or truncated.
 - The core's field names never carry an underscore; the input is `origen`,
   the format `formato`, the same voice-facet precedents as whisper.
-- `hyperframes.narrado` declares its subtitulos as SubRip: give it the `.srt`,
+- `hyperframes.narrated` declares its subtitles as SubRip: give it the `.srt`,
   not the `.vtt`.

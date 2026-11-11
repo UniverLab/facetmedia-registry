@@ -384,19 +384,19 @@ function validateHeader(file) {
   const header = frontMatter(text);
   if (!header) {
     throw new Error(
-      `diagrama: ${path.basename(file)} has no YAML header; the style (theme, fontFamily, fontSize) lives between the --- markers`,
+      `diagram: ${path.basename(file)} has no YAML header; the style (theme, fontFamily, fontSize) lives between the --- markers`,
     );
   }
   const theme = headerValue(header, "theme");
   if (!theme) {
     throw new Error(
-      `diagrama: ${path.basename(file)} header trap: theme is required under config`,
+      `diagram: ${path.basename(file)} header trap: theme is required under config`,
     );
   }
   const fontFamily = headerValue(header, "fontFamily");
   if (isFontFamilyList(header) || /^"?Ubuntu Sans"?$/.test(fontFamily)) {
     throw new Error(
-      `diagrama: ${path.basename(file)} header trap: fontFamily must name one installed family; ` +
+      `diagram: ${path.basename(file)} header trap: fontFamily must name one installed family; ` +
         "a list or \"Ubuntu Sans\" renders serif",
     );
   }
@@ -428,11 +428,11 @@ function resolveInput(value, base) {
 
 function diagramFile(request) {
   const inputs = inputsOf(request);
-  if (!inputs.diagrama) throw new Error("diagrama is required");
-  const file = resolveInput(inputs.diagrama, pieceBase(request));
-  if (!fs.existsSync(file)) throw new Error(`diagrama: ${file} not found`);
+  if (!inputs.diagram) throw new Error("diagram is required");
+  const file = resolveInput(inputs.diagram, pieceBase(request));
+  if (!fs.existsSync(file)) throw new Error(`diagram: ${file} not found`);
   if (path.extname(file).toLowerCase() !== ".mmd") {
-    throw new Error(`diagrama: ${file} is not a .mmd file`);
+    throw new Error(`diagram: ${file} is not a .mmd file`);
   }
   validateHeader(file);
   return file;
@@ -443,7 +443,7 @@ function slug(text) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  return value || "diagrama";
+  return value || "diagram";
 }
 
 // --- the verbs.
@@ -593,7 +593,7 @@ function previewOf(asset, request, inputs) {
 }
 
 function previewPrompt(request, name) {
-  const file = resolveInput(inputsOf(request).diagrama || "", pieceBase(request));
+  const file = resolveInput(inputsOf(request).diagram || "", pieceBase(request));
   try {
     const type = diagramType(fs.readFileSync(file, "utf8"));
     return `${type} diagram · ${name}`.slice(0, MAX_SUMMARY);

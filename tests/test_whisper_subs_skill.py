@@ -5,7 +5,7 @@ what a person reads: the front matter and the four headings the core requires
 in order, the capability id ``whisper-subs.subtitulos`` with the srt/vtt
 tokens, the extraction-first workflow through the packages that exist in this
 registry (ffmpeg.convert and whisper.transcribe), the handoff to
-``hyperframes.narrado`` — which reads whisper SRT — and that no references
+``hyperframes.narrated`` — which reads whisper SRT — and that no references
 directory ships.
 """
 
@@ -55,14 +55,14 @@ def test_the_body_names_the_capability_and_both_formats() -> None:
 
 def test_the_body_cites_only_packages_that_exist() -> None:
     body = _body()
-    for capability in ("whisper.transcribe", "ffmpeg.convert", "hyperframes.narrado"):
+    for capability in ("whisper.transcribe", "ffmpeg.convert", "hyperframes.narrated"):
         assert capability in body, capability
 
 
 def test_the_body_carries_the_extraction_first_workflow() -> None:
     body = _body()
     assert "extraction first" in body
-    assert "subtitulos" in body
+    assert "subtitles" in body
 
 
 def test_no_references_dir_ships() -> None:

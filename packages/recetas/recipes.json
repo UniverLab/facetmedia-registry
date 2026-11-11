@@ -34,8 +34,8 @@
           "verify": "At least one cue, monotonic and non-overlapping."
         },
         {
-          "capability": "hyperframes.narrado",
-          "handoff": "narrado.mp4 (composicion narrado/, voz voz-normalizada.wav, musica cama.wav, subtitulos guion.srt)",
+          "capability": "hyperframes.narrated",
+          "handoff": "narrated.mp4 (composition narrated/, voice voz-normalizada.wav, music cama.wav, subtitles guion.srt)",
           "verify": "Check the MP4 with an ffprobe probe."
         }
       ]

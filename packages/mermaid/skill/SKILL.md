@@ -4,7 +4,7 @@ description: Render a .mmd Mermaid diagram to SVG and PNG with the pinned mermai
 ---
 # Mermaid
 
-`mermaid.diagrama` turns a `.mmd` file into an SVG and a 2x PNG through the
+`mermaid.diagram` turns a `.mmd` file into an SVG and a 2x PNG through the
 pinned `@mermaid-js/mermaid-cli`. The style — theme, colors, font, look —
 lives in the file's YAML header, and the header traps are validated before
 the CLI runs: a missing `theme` or a `fontFamily` that is a list or
@@ -28,10 +28,10 @@ the CLI runs: a missing `theme` or a `fontFamily` that is a list or
 
 ```toml
 [inputs]
-diagrama = "ciclo.mmd"
+diagram = "ciclo.mmd"
 ```
 
-`diagrama` names the `.mmd` file resolved relative to the piece. Its YAML
+`diagram` names the `.mmd` file resolved relative to the piece. Its YAML
 header carries `config.theme`, `config.themeVariables` (`primaryColor`,
 `lineColor`, `fontFamily`, `fontSize`) and optionally `look: handDrawn` for
 the Excalidraw-style drawing. `run` writes `<name>.svg` and `<name>.png`
@@ -51,10 +51,10 @@ PNG beside it.
 
 **Animating the SVG in HyperFrames.** Mermaid's SVG carries stable ids:
 flowchart boxes `my-svg-flowchart-<id>-<n>`, arrows
-`my-svg-L_<origen>_<destino>_0`, arrow labels
-`[data-id="L_<origen>_<destino>_0"]` and groups `my-svg-<id>`. In
+`my-svg-L_<from>_<to>_0`, arrow labels
+`[data-id="L_<from>_<to>_0"]` and groups `my-svg-<id>`. In
 `architecture-beta` the ids are `my-svg-group-<id>`, `my-svg-service-<id>`
-and `my-svg-L_<origen>_<destino>_0`, and each arrowhead is the
+and `my-svg-L_<from>_<to>_0`, and each arrowhead is the
 `polygon.arrow` that follows its `path`. Animate arrows by driving
 `strokeDashoffset`. Build the selectors by concatenating text: the
 HyperFrames packager rejects `${}` templates. Declare the font as

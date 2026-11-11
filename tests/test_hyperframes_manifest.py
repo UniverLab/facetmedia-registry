@@ -42,14 +42,14 @@ PILLARS = ("## Timeline rules", "## SVG id maps", "## Render limits")
 CAPABILITIES = (
     "hyperframes.render",
     "hyperframes.loop",
-    "hyperframes.diagrama",
-    "hyperframes.giro",
-    "hyperframes.personaje",
-    "hyperframes.narrado",
+    "hyperframes.diagram",
+    "hyperframes.turntable",
+    "hyperframes.character",
+    "hyperframes.narrated",
 )
 REFERENCES = PACKAGE / "skill" / "references"
 EXAMPLES = PACKAGE / "examples"
-EXAMPLE_PIECES = ("render", "loop", "diagrama", "giro", "personaje", "narrado")
+EXAMPLE_PIECES = ("render", "loop", "diagram", "turntable", "character", "narrated")
 COMPOSITION_FILES = ("hyperframes.json", "index.tmpl", "build.mjs", "assets", "index.html")
 RENDER_SUFFIXES = frozenset({".mp4", ".gif", ".mov", ".webm", ".mkv"})
 #: A reference the skill cites, as ``references/<name>.md``.
@@ -65,10 +65,10 @@ SKILL_TOKENS = (
     "hf-seek",
     "event.detail.waitUntil",
     "/* GLB */",
-    "/* GIRO */",
-    "/* BOCAS */[]",
+    "/* TURNTABLE */",
+    "/* MOUTHS */[]",
     "const AUDIO_START",
-    "audio-inicio",
+    "audio-start",
     "data-start",
     "<!-- SUBS -->",
     "<!-- AUDIOS -->",
@@ -79,10 +79,10 @@ SKILL_TOKENS = (
     "target-lufs=-16.0",
     "my-svg-flowchart-",
     "my-svg-L_",
-    "boca-X",
-    "boca-H",
-    "#boca-X",
-    ".boca { opacity: 0; }",
+    "mouth-X",
+    "mouth-H",
+    "#mouth-X",
+    ".mouth { opacity: 0; }",
     "--workers 2",
     "vendor/",
     "FACET_BROWSER",
@@ -92,7 +92,7 @@ SKILL_TOKENS = (
 )
 DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
-#: The loudness target narrado and personaje normalise to, in LUFS, and its range.
+#: The loudness target narrated and character normalise to, in LUFS, and its range.
 TARGET_LUFS_DEFAULT = -14.0
 TARGET_LUFS_MIN = -24
 TARGET_LUFS_MAX = -9
@@ -134,7 +134,7 @@ def _example_paths(name: str, inputs: dict[str, object]) -> list[Path]:
 
 def _composition_dir(name: str) -> Path:
     folder = "basic" if name in {"render", "loop"} else name
-    return EXAMPLES / folder / "composicion"
+    return EXAMPLES / folder / "composition"
 
 
 def _pin(name: str, version: str) -> dict[str, object] | None:
@@ -250,10 +250,10 @@ def test_the_capability_is_the_video_kind_with_the_piece_inputs() -> None:
     assert capability["kind"] == "video"
     assert capability["preview"] == {"viewer": "video"}
     inputs = capability["inputs"]
-    assert set(inputs) == {"composicion", "audio", "prompt", "seed", "fps"}
-    assert inputs["composicion"]["type"] == "path"
-    assert inputs["composicion"]["required"] is True
-    assert "index.tmpl" in inputs["composicion"]["description"]
+    assert set(inputs) == {"composition", "audio", "prompt", "seed", "fps"}
+    assert inputs["composition"]["type"] == "path"
+    assert inputs["composition"]["required"] is True
+    assert "index.tmpl" in inputs["composition"]["description"]
     assert "preview" not in inputs
     assert inputs["audio"]["type"] == "array"
     assert inputs["audio"]["default"] == []
@@ -272,9 +272,9 @@ def test_loop_capability_declares_formats_and_reuses_render_inputs_shape() -> No
     assert loop["kind"] == "video"
     assert loop["preview"] == {"viewer": "video"}
     inputs = loop["inputs"]
-    assert set(inputs) == {"composicion", "audio", "prompt", "seed", "fps", "format"}
+    assert set(inputs) == {"composition", "audio", "prompt", "seed", "fps", "format"}
     render_inputs = MANIFEST["capabilities"]["render"]["inputs"]
-    for name in ("composicion", "audio", "prompt", "seed", "fps"):
+    for name in ("composition", "audio", "prompt", "seed", "fps"):
         assert inputs[name] == render_inputs[name]
     fmt = inputs["format"]
     assert fmt["type"] == "enum"
@@ -387,37 +387,37 @@ def test_examples_carry_no_binary_renders() -> None:
     assert renders == []
 
 
-GIRO_SCALARS = {
-    "orbita-radio": 9,
-    "orbita-altura": 11,
-    "orbita-desde": -0.9,
-    "orbita-vuelta": 0.55,
-    "centro-x": 3.0,
-    "centro-y": 0.6,
-    "centro-z": -2.25,
-    "duracion": 8,
+TURNTABLE_SCALARS = {
+    "orbit-radius": 9,
+    "orbit-height": 11,
+    "orbit-start": -0.9,
+    "orbit-fraction": 0.55,
+    "center-x": 3.0,
+    "center-y": 0.6,
+    "center-z": -2.25,
+    "duration": 8,
 }
 
 
-def test_giro_capability_declares_flat_scalars_only() -> None:
-    """An orbita table or centro array would fail package load; only scalars ship."""
-    giro = MANIFEST["capabilities"]["giro"]
-    assert giro["kind"] == "video"
-    assert giro["preview"] == {"viewer": "video"}
-    inputs = giro["inputs"]
+def test_turntable_capability_declares_flat_scalars_only() -> None:
+    """An orbit table or center array would fail package load; only scalars ship."""
+    turntable = MANIFEST["capabilities"]["turntable"]
+    assert turntable["kind"] == "video"
+    assert turntable["preview"] == {"viewer": "video"}
+    inputs = turntable["inputs"]
     assert set(inputs) == {
-        "composicion",
-        "modelo-glb",
-        *GIRO_SCALARS,
+        "composition",
+        "model-glb",
+        *TURNTABLE_SCALARS,
         "prompt",
         "seed",
         "fps",
     }
-    assert inputs["composicion"]["type"] == "path"
-    assert inputs["composicion"]["required"] is True
-    assert inputs["modelo-glb"]["type"] == "path"
-    assert inputs["modelo-glb"]["required"] is True
-    for name, default in GIRO_SCALARS.items():
+    assert inputs["composition"]["type"] == "path"
+    assert inputs["composition"]["required"] is True
+    assert inputs["model-glb"]["type"] == "path"
+    assert inputs["model-glb"]["required"] is True
+    for name, default in TURNTABLE_SCALARS.items():
         assert inputs[name]["type"] == "number", name
         assert inputs[name]["default"] == default, name
     assert inputs["prompt"]["type"] == "string"
@@ -427,33 +427,33 @@ def test_giro_capability_declares_flat_scalars_only() -> None:
     assert all(field["type"] != "array" for field in inputs.values())
 
 
-def test_narrado_capability_assembles_voice_music_and_subtitles() -> None:
-    narrado = MANIFEST["capabilities"]["narrado"]
-    assert narrado["kind"] == "video"
-    assert narrado["preview"] == {"viewer": "video"}
-    inputs = narrado["inputs"]
+def test_narrated_capability_assembles_voice_music_and_subtitles() -> None:
+    narrated = MANIFEST["capabilities"]["narrated"]
+    assert narrated["kind"] == "video"
+    assert narrated["preview"] == {"viewer": "video"}
+    inputs = narrated["inputs"]
     assert set(inputs) == {
-        "composicion",
-        "voz",
-        "musica",
-        "subtitulos",
-        "volumen-musica",
+        "composition",
+        "voice",
+        "music",
+        "subtitles",
+        "music-volume",
         "target-lufs",
         "prompt",
         "seed",
         "fps",
     }
-    assert inputs["composicion"]["type"] == "path"
-    assert inputs["composicion"]["required"] is True
-    voz = inputs["voz"]
-    assert voz["type"] == "array"
-    assert voz["required"] is True
-    assert voz["min_items"] == 1
-    assert voz["items"]["clip"]["type"] == "path"
-    assert voz["items"]["clip"]["required"] is True
-    assert voz["items"]["inicio"]["type"] == "number"
-    assert (voz["items"]["inicio"]["default"], voz["items"]["inicio"]["min"]) == (0, 0)
-    volumen = inputs["volumen-musica"]
+    assert inputs["composition"]["type"] == "path"
+    assert inputs["composition"]["required"] is True
+    voice = inputs["voice"]
+    assert voice["type"] == "array"
+    assert voice["required"] is True
+    assert voice["min_items"] == 1
+    assert voice["items"]["clip"]["type"] == "path"
+    assert voice["items"]["clip"]["required"] is True
+    assert voice["items"]["start"]["type"] == "number"
+    assert (voice["items"]["start"]["default"], voice["items"]["start"]["min"]) == (0, 0)
+    volumen = inputs["music-volume"]
     assert volumen["type"] == "number"
     assert (volumen["default"], volumen["min"], volumen["max"]) == (0.25, 0, 1)
     target = inputs["target-lufs"]
@@ -461,7 +461,7 @@ def test_narrado_capability_assembles_voice_music_and_subtitles() -> None:
     assert target["default"] == TARGET_LUFS_DEFAULT
     assert (target["min"], target["max"]) == (TARGET_LUFS_MIN, TARGET_LUFS_MAX)
     assert "required" not in target
-    for name in ("musica", "subtitulos"):
+    for name in ("music", "subtitles"):
         assert inputs[name]["type"] == "path"
         assert inputs[name]["required"] is True
     assert inputs["prompt"]["type"] == "string"
@@ -470,8 +470,8 @@ def test_narrado_capability_assembles_voice_music_and_subtitles() -> None:
     assert "required" not in inputs["fps"]
 
 
-def test_personaje_capability_declares_the_loudness_target() -> None:
-    target = MANIFEST["capabilities"]["personaje"]["inputs"]["target-lufs"]
+def test_character_capability_declares_the_loudness_target() -> None:
+    target = MANIFEST["capabilities"]["character"]["inputs"]["target-lufs"]
     assert target["type"] == "number"
     assert target["default"] == TARGET_LUFS_DEFAULT
     assert (target["min"], target["max"]) == (TARGET_LUFS_MIN, TARGET_LUFS_MAX)
@@ -489,3 +489,50 @@ def test_the_readme_documents_the_contract_and_the_traps() -> None:
     assert "timeline" in READ
     assert "[ffmpeg]" in READ
     assert "facet pull hyperframes" in READ
+
+
+def _retired(prefix: str, *fragments: str) -> str:
+    """Assemble a retired name at runtime.
+
+    The acceptance greps scan the tests too, so the old literals never
+    appear in this file's source; the runtime values are still exact.
+    """
+    return prefix + "".join(fragments)
+
+
+OLD_CAPABILITIES = (
+    _retired("hyperframes.", "dia", "grama"),
+    _retired("hyperframes.", "giro"),
+    _retired("hyperframes.", "personaje"),
+    _retired("hyperframes.", "narrado"),
+)
+OLD_INPUTS = (
+    "composicion",
+    "diagrama-svg",
+    "animacion",
+    "modelo-glb",
+    "orbita-radio",
+    "orbita-altura",
+    "orbita-desde",
+    "orbita-vuelta",
+    "centro-x",
+    "centro-y",
+    "centro-z",
+    _retired("", "dura", "cion"),
+    "personaje-svg",
+    "audio-inicio",
+    "volumen-musica",
+    "bocas",
+    "dialogo",
+)
+
+
+def test_old_spanish_names_are_absent() -> None:
+    """The rename keeps no alias: the old ids and keys appear nowhere."""
+    manifest_text = (PACKAGE / "package.toml").read_text(encoding="utf-8")
+    for old in (*OLD_CAPABILITIES, *OLD_INPUTS):
+        assert old not in manifest_text, old
+    assert '"voz"' not in manifest_text
+    for old in OLD_CAPABILITIES:
+        assert old not in _skill_body(), old
+        assert old not in READ, old

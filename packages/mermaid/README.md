@@ -1,7 +1,7 @@
 # mermaid
 
 Render a `.mmd` Mermaid diagram to SVG and PNG with the pinned
-`@mermaid-js/mermaid-cli` (12.0.0) and the pinned Chromium that `facet pull` installs. `mermaid.diagrama`
+`@mermaid-js/mermaid-cli` (12.0.0) and the pinned Chromium that `facet pull` installs. `mermaid.diagram`
 is the package's only capability: it wraps `mmdc`, never reimplements it, and
 Mermaid is the lab's only diagram tool — what it cannot draw is authored by
 hand in HTML/CSS/SVG and animated in HyperFrames.
@@ -83,7 +83,7 @@ the runner.
 
 D2, Excalidraw and Python `diagrams` were compared and rejected; Mermaid is
 the lab's only diagram tool. What Mermaid cannot express is drawn by hand in
-HTML/CSS/SVG and animated in HyperFrames (`hyperframes.diagrama` consumes the
+HTML/CSS/SVG and animated in HyperFrames (`hyperframes.diagram` consumes the
 SVG this package writes, using its stable `my-svg-*` ids).
 
 ## Approved references
@@ -102,7 +102,7 @@ SVG this package writes, using its stable `my-svg-*` ids).
 
 ## The verbs
 
-- `run` resolves `diagrama` relative to the piece, validates the header,
+- `run` resolves `diagram` relative to the piece, validates the header,
   renders `<name>.svg` and `<name>.png` (PNG at `-s 2`) into `out_dir`, and
   reports both as image assets.
 - `verify` checks each asset: an SVG must carry an `<svg>` element, a PNG a

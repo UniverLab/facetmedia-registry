@@ -3,7 +3,7 @@
 Four verbs on the runner SDK (``facet_runner_sdk``, copied into the
 environment at pull): ``run`` extracts the pinned Rhubarb Lip Sync 1.14.0 zip
 once, runs its ELF with the phonetic recognizer and JSON output, and reads the
-``bocas.json`` it writes back as one ``text`` asset; ``verify`` judges that
+``mouths.json`` it writes back as one ``text`` asset; ``verify`` judges that
 file's mouth cues; ``preview`` writes the generic mouth-timeline preview;
 ``doctor`` checks the zip and the extracted binary at ``quick`` depth.
 
@@ -37,7 +37,7 @@ MODEL_ID = "rhubarb-lip-sync-1.14.0-linux"
 TOOL = {"name": "rhubarb-lip-sync", "version": "1.14.0"}
 VERIFIER = "rhubarb-lip-sync-1.14.0"
 #: The one asset a run writes, and the mouth alphabet Rhubarb emits.
-OUT_NAME = "bocas.json"
+OUT_NAME = "mouths.json"
 MOUTH_VALUES = "XABCDEFGH"
 #: The recognizer and output flags every run carries. ``phonetic`` is the
 #: Spanish-capable recognizer; the default is English-only.
@@ -119,15 +119,15 @@ def _unpack(archive: Path, root: Path, digest: str) -> None:
     (root / MARKER_NAME).write_text(digest + "\n", encoding="utf-8")
 
 
-def command(elf: Path, voz: Path, dialogo: Path, out: Path) -> list[str]:
+def command(elf: Path, voice: Path, dialogue: Path, out: Path) -> list[str]:
     """The argv Rhubarb takes: options, then the dialog, the voice and ``-o``."""
     return [
         str(elf),
         *RECOGNIZER_ARGS,
         *FORMAT_ARGS,
         "--dialogFile",
-        str(dialogo),
-        str(voz),
+        str(dialogue),
+        str(voice),
         "-o",
         str(out),
     ]
@@ -166,7 +166,7 @@ def _execute(argv: Sequence[str], cwd: Path) -> None:
         raise RuntimeError(f"rhubarb exited {done.returncode}: {' / '.join(tail)}")
 
 
-def _read_bocas(path: Path) -> dict[str, Any]:
+def _read_mouths(path: Path) -> dict[str, Any]:
     """Parse Rhubarb's JSON: the duration and the X..H mouth cues."""
     try:
         loaded = json.loads(path.read_text(encoding="utf-8"))
@@ -219,31 +219,31 @@ def _properties(data: Mapping[str, Any]) -> dict[str, Any]:
 @runner.verb("run")
 def run(req: Request) -> dict[str, Any]:
     params = dict(req.inputs)
-    voz = Path(str(params["voz"]))
-    dialogo = Path(str(params["dialogo"]))
+    voice = Path(str(params["voice"]))
+    dialogue = Path(str(params["dialogue"]))
     out_dir = Path(os.path.abspath(req.out_dir))
     out = out_dir / OUT_NAME
     elf = _elf(req.model_path(MODEL_ID))
-    argv = command(elf, voz, dialogo, out)
+    argv = command(elf, voice, dialogue, out)
     check_phonetic(argv)
     _execute(argv, out_dir)
-    data = _read_bocas(out)
-    return {"tool": dict(TOOL), "assets": [_asset(params, voz, dialogo, data)]}
+    data = _read_mouths(out)
+    return {"tool": dict(TOOL), "assets": [_asset(params, voice, dialogue, data)]}
 
 
 def _asset(
-    params: Mapping[str, Any], voz: Path, dialogo: Path, data: Mapping[str, Any]
+    params: Mapping[str, Any], voice: Path, dialogue: Path, data: Mapping[str, Any]
 ) -> dict[str, Any]:
-    """The one ``text`` asset: bocas.json with its mouth-timeline properties."""
+    """The one ``text`` asset: mouths.json with its mouth-timeline properties."""
     return {
         "file": OUT_NAME,
-        "name": "bocas",
+        "name": "mouths",
         "kind": "text",
         "mime": "application/json",
         "properties": _properties(data),
-        "params": {"voz": str(voz), "dialogo": str(dialogo)},
+        "params": {"voice": str(voice), "dialogue": str(dialogue)},
         "seed": None,
-        "inputs": [str(voz), str(dialogo)],
+        "inputs": [str(voice), str(dialogue)],
     }
 
 
@@ -253,9 +253,9 @@ def verify(req: Request) -> dict[str, Any]:
 
 
 def _verdict(path: Path) -> dict[str, Any]:
-    """Judge one bocas.json: it parses, its mouths are X..H, and it is ordered."""
+    """Judge one mouths.json: it parses, its mouths are X..H, and it is ordered."""
     try:
-        data = _read_bocas(path)
+        data = _read_mouths(path)
     except ValueError as exc:
         return _entry(path.name, False, {"error": str(exc)})
     cues = data["cues"]
@@ -280,7 +280,7 @@ def preview(req: Request) -> dict[str, Any]:
     entries = []
     for path in req.assets:
         if path.suffix.lower() != ".json":
-            raise ValueError(f"{path.name}: preview bocas.json, not this file")
+            raise ValueError(f"{path.name}: preview mouths.json, not this file")
         name = f"{path.name}.preview.json"
         data = _preview(path)
         body = json.dumps(data, ensure_ascii=False, sort_keys=True) + "\n"
@@ -291,7 +291,7 @@ def preview(req: Request) -> dict[str, Any]:
 
 def _preview(path: Path) -> dict[str, Any]:
     """The generic preview: the mouth timeline as text, never the cue list."""
-    data = _read_bocas(path)
+    data = _read_mouths(path)
     cues = data["cues"]
     mouths = _mouths(cues)
     fields = {

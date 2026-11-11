@@ -1,0 +1,9 @@
+[inputs]
+composition = "character/composition"
+character-svg = "character/zorro.svg"
+voice = "character/voz.wav"
+mouths = "character/mouths.json"
+audio-start = 0.5
+prompt = "A drawn fox speaks a short greeting"
+seed = 0
+fps = 24

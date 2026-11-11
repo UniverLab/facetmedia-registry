@@ -1,9 +1,9 @@
 # rhubarb — mouth cues for a drawn character
 
-`facet run rhubarb.bocas` reads a voice clip and the text it says, runs
+`facet run rhubarb.mouths` reads a voice clip and the text it says, runs
 [Rhubarb Lip Sync](https://github.com/DanielSWolf/rhubarb-lip-sync) 1.14.0
-(**MIT**) on it, and writes `bocas.json`: the `mouthCues` timeline an avatar
-animation plays frame by frame. One capability, `rhubarb.bocas`, in the
+(**MIT**) on it, and writes `mouths.json`: the `mouthCues` timeline an avatar
+animation plays frame by frame. One capability, `rhubarb.mouths`, in the
 **`video`** facet, writing the **`text`** kind. The Rhubarb license is **MIT**
 with commercial use allowed and no acceptance step.
 
@@ -50,7 +50,7 @@ extracts it, and shells out to the ELF. The manifest declares no
 Every run is the same argv, in this order:
 
 ```bash
-rhubarb -r phonetic -f json --dialogFile <texto> <voz.wav> -o bocas.json
+rhubarb -r phonetic -f json --dialogFile <dialogue> <voice.wav> -o mouths.json
 ```
 
 - `-r phonetic` selects the phonetic recognizer. **This flag is mandatory.**
@@ -60,9 +60,9 @@ rhubarb -r phonetic -f json --dialogFile <texto> <voz.wav> -o bocas.json
   throws a plain `Error` and exits 1, which facet reports as `runner_failed`
   naming the trap.
 - `-f json` is the JSON output the animation reads.
-- `--dialogFile <texto>` is the piece's `dialogo`: what the voice says, which
+- `--dialogFile <dialogue>` is the piece's `dialogue`: what the voice says, which
   the recognizer aligns the audio against.
-- `<voz.wav>` comes before `-o`, which is where Rhubarb writes the cues.
+- `<voice.wav>` comes before `-o`, which is where Rhubarb writes the cues.
 
 `invalid_input` is facet-side — a bad piece or a schema failure — and cannot
 come out of the runner.
@@ -71,12 +71,12 @@ come out of the runner.
 
 ```toml
 [inputs]
-voz = "personaje/voz.wav"
-dialogo = "personaje/dialogo.txt"
+voice = "character/voz.wav"
+dialogue = "character/dialogue.txt"
 ```
 
-Both are paths resolved relative to the piece file. `voz` is the WAV the
-mouths follow; `dialogo` is the plain text of what it says.
+Both are paths resolved relative to the piece file. `voice` is the WAV the
+mouths follow; `dialogue` is the plain text of what it says.
 
 ## The mouths
 
@@ -95,18 +95,18 @@ its rest shape:
 | `G` | teeth on lip |
 | `H` | tongue |
 
-`bocas.json` carries `metadata.duration` and `mouthCues`, each cue a
-`{start, end, value}` span in seconds. The approved pattern is a `bocas.json`
+`mouths.json` carries `metadata.duration` and `mouthCues`, each cue a
+`{start, end, value}` span in seconds. The approved pattern is a `mouths.json`
 with 65 cues over 10.32 s from a Spanish voice clip, using `X A B C E F G H`.
 
 ## Judging the result
 
-`verify` reads `bocas.json` and passes when it parses to at least one cue, its
+`verify` reads `mouths.json` and passes when it parses to at least one cue, its
 mouths are all in `XABCDEFGH`, and its cues are in time order. The metrics are
 `duration_s`, `cues`, `mouths` (how many distinct letters) and `ordered`,
 under `verifier = "rhubarb-lip-sync-1.14.0"`.
 
-`facet preview bocas.json` writes `bocas.json.preview.json` for the `generic`
+`facet preview mouths.json` writes `mouths.json.preview.json` for the `generic`
 viewer — the same viewer whisper uses for its kind `text` — with a summary such
 as `10.3 s · 65 mouth cues · 8 mouths (XABCEFGH)` and the same fields plus
 `recognizer = "phonetic"` and `mouths_used`.
@@ -132,8 +132,8 @@ A piece for that clip is only its two paths:
 
 ```toml
 [inputs]
-voz = "assets/voz.wav"
-dialogo = "dialogo.txt"
+voice = "assets/voz.wav"
+dialogue = "dialogue.txt"
 ```
 
 Rhubarb takes about a second for a 10 s clip, and `facet doctor rhubarb`

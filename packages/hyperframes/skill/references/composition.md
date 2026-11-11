@@ -1,12 +1,12 @@
 # The composition
 
-A `composicion` directory is what every hyperframes capability renders. It is
+A `composition` directory is what every hyperframes capability renders. It is
 resolved relative to the piece file and shipped self-contained.
 
 ## What the directory holds
 
 ```text
-<composicion>/
+<composition>/
 ├── hyperframes.json   the CLI's own manifest
 ├── index.tmpl         the entry template, never named .html
 ├── build.mjs          writes index.html from index.tmpl

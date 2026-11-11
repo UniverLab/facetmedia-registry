@@ -161,7 +161,7 @@ def _request(verb: str, out: Path, piece: Path, **inputs: Any) -> dict[str, Any]
     return {
         "protocol": 1,
         "verb": verb,
-        "capability": "mermaid.diagrama",
+        "capability": "mermaid.diagram",
         "inputs": inputs,
         "out_dir": str(out),
         "piece_dir": str(piece),
@@ -216,7 +216,7 @@ def test_run_renders_svg_and_png_through_the_stub_cli(tmp_path: Path) -> None:
     done, result = _invoke(
         tmp_path,
         "run",
-        _request("run", out, piece, diagrama="ciclo.mmd"),
+        _request("run", out, piece, diagram="ciclo.mmd"),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode == 0, done.stderr
@@ -255,7 +255,7 @@ def test_run_links_dependencies_peers_and_skips_foreign_optionals(tmp_path: Path
     done, _result = _invoke(
         tmp_path,
         "run",
-        _request("run", out, piece, diagrama="ciclo.mmd"),
+        _request("run", out, piece, diagram="ciclo.mmd"),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode == 0, done.stderr
@@ -300,7 +300,7 @@ def test_a_header_trap_fails_before_the_cli_runs(tmp_path: Path, text: str, trap
     done, result = _invoke(
         tmp_path,
         "run",
-        _request("run", out, piece, diagrama="ciclo.mmd"),
+        _request("run", out, piece, diagram="ciclo.mmd"),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode != 0
@@ -319,7 +319,7 @@ def test_run_without_chrome_fails_and_never_calls_the_cli(tmp_path: Path) -> Non
     done, result = _invoke(
         tmp_path,
         "run",
-        _request("run", out, piece, diagrama="ciclo.mmd"),
+        _request("run", out, piece, diagram="ciclo.mmd"),
         _environment(tmp_path, _dirs(packages), browser=False),
     )
     assert done.returncode != 0
@@ -370,7 +370,7 @@ def test_verify_accepts_svg_and_png_and_rejects_a_bad_file(tmp_path: Path) -> No
     png.write_bytes(_png_bytes())
     bad = out / "notes.txt"
     bad.write_text("not an image\n", encoding="utf-8")
-    request = _request("verify", out, piece, diagrama="ciclo.mmd")
+    request = _request("verify", out, piece, diagram="ciclo.mmd")
     request["assets"] = [str(svg), str(png), str(bad)]
     done, result = _invoke(tmp_path, "verify", request, _environment(tmp_path, _dirs(packages)))
     assert done.returncode == 0, done.stderr
@@ -390,7 +390,7 @@ def test_preview_writes_the_image_fields(tmp_path: Path) -> None:
     png.write_bytes(_png_bytes())
     svg = out / "ciclo.svg"
     svg.write_text(SVG_TAG, encoding="utf-8")
-    request = _request("preview", out, piece, diagrama="ciclo.mmd")
+    request = _request("preview", out, piece, diagram="ciclo.mmd")
     request["assets"] = [str(png), str(svg)]
     done, result = _invoke(tmp_path, "preview", request, _environment(tmp_path, _dirs(packages)))
     assert done.returncode == 0, done.stderr

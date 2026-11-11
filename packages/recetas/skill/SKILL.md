@@ -55,9 +55,9 @@ how to judge them.
    `voz-normalizada.wav`. Verify: confidence and no-speech share.
 6. `whisper-subs.subtitulos` → `guion.srt`, from `origen` `guion.json`.
    Verify: at least one cue, monotonic and non-overlapping.
-7. `hyperframes.narrado` → `narrado.mp4`, with composition `narrado/`,
+7. `hyperframes.narrated` → `narrated.mp4`, with composition `narrated/`,
    voice `voz-normalizada.wav`, music `cama.wav` and subtitles `guion.srt`.
-   Step 7 places the voices over `cama.wav` at `volumen-musica`; `mezcla.wav`
+   Step 7 places the voices over `cama.wav` at `music-volume`; `mezcla.wav`
    is not an input of this step.
    Verify: check the MP4 with an ffprobe probe.
 
@@ -117,5 +117,5 @@ recipe and its step count and the fields `receta`, `steps` and `packages`.
   step.
 - People and cars are `blender.photo` inputs (`people`, `cars`), not
   capabilities; there is no `blender.people` or `blender.cars` to run.
-- `hyperframes.narrado` reads SubRip: hand it `guion.srt`, not the
+- `hyperframes.narrated` reads SubRip: hand it `guion.srt`, not the
   whisper `.json` or `.vtt`.

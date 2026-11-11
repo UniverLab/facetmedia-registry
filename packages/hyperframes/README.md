@@ -43,7 +43,7 @@ fails the verb loudly.
 
 ## The composition
 
-`composicion` is a directory resolved relative to the piece, holding:
+`composition` is a directory resolved relative to the piece, holding:
 
 - `hyperframes.json`, the CLI's own manifest;
 - `index.tmpl`, the author source — **never named `.html`**, which HyperFrames
@@ -89,15 +89,15 @@ same `check` first, same `--workers 2` cap, same vendored-assets rule — with a
 
 ## Diagrams
 
-`hyperframes.diagrama` renders a checked composition with a Mermaid SVG inserted
+`hyperframes.diagram` renders a checked composition with a Mermaid SVG inserted
 into it and a GSAP timeline that draws the diagram. It runs the same
 `check`-then-`render` path as `hyperframes.render`, with these inputs on top:
-`diagrama-svg` (the SVG produced by `tools/mermaid.sh`, for example `ciclo.svg`
-or `arquitectura.svg`) and `animacion`, an array of `{ selector, at, kind, dur }`
+`diagram-svg` (the SVG produced by `tools/mermaid.sh`, for example `ciclo.svg`
+or `arquitectura.svg`) and `animation`, an array of `{ selector, at, kind, dur }`
 steps where `kind` is `show`, `draw` or `fade` and `dur` defaults to `0.4`.
 
 The runner copies the SVG beside the composition (so a `build.mjs` in the
-composition reaches it as `../<file>.svg`), validates every `animacion[].selector`
+composition reaches it as `../<file>.svg`), validates every `animation[].selector`
 against the ids and data-ids the SVG actually carries, and only then injects a
 paused timeline into `index.html` before `check`. An unknown id throws a plain
 `Error`, exit 1, which facet reports as `runner_failed`; nothing renders.
@@ -108,10 +108,10 @@ Selectors are the classic silent failure, so these id shapes are verbatim:
 
 - **Flow nodes**: `my-svg-flowchart-<id>-<n>`; select them by prefix with
   `[id^="my-svg-flowchart-<id>-"]` (helper `node(id)`).
-- **Flow and architecture edges**: `my-svg-L_<origen>_<destino>_0`; select by
-  exact id `#my-svg-L_<origen>_<destino>_0` (helpers `edge(from, to)` and
+- **Flow and architecture edges**: `my-svg-L_<from>_<to>_0`; select by
+  exact id `#my-svg-L_<from>_<to>_0` (helpers `edge(from, to)` and
   `byId`).
-- **Edge labels**: `.edgeLabels [data-id="L_<origen>_<destino>_0"]` (helper
+- **Edge labels**: `.edgeLabels [data-id="L_<from>_<to>_0"]` (helper
   `label(from, to)`).
 - **Architecture services and groups**: `#my-svg-service-<id>`,
   `#my-svg-group-<id>`, `#my-svg-group-lab`, `#my-svg-group-gpu`;
@@ -129,7 +129,7 @@ Selectors are the classic silent failure, so these id shapes are verbatim:
 - **`build.mjs` owns the `>` fix.** Mermaid writes `>` as `&gt;` inside the
   SVG's `<style>`; browsers decode it, the HyperFrames CSS parser does not.
   `build.mjs` replaces `&gt;` with `>` inside `<style>` and inserts the SVG into
-  `index.html` at `<!-- DIAGRAMA -->`. The runner never rewrites the SVG.
+  `index.html` at `<!-- DIAGRAM -->`. The runner never rewrites the SVG.
 - **Use the font Mermaid measured with**: `@font-face { src: local('Ubuntu') }`.
   Another build of the font overflows the boxes by about 2px and `check` fails.
 - **`fontSize` is 22px at 1080p** in the SVG style; Mermaid's default is too
@@ -141,7 +141,7 @@ Selectors are the classic silent failure, so these id shapes are verbatim:
 
 Both shapes pass `check`:
 
-- `examples/diagrama/` draws a flowchart SVG with nodes, edges, edge labels
+- `examples/diagram/` draws a flowchart SVG with nodes, edges, edge labels
   and the `my-svg-gpu` singleton.
 - the same path draws an architecture SVG with groups, services and
   `polygon.arrow` arrowheads (see
@@ -149,23 +149,23 @@ Both shapes pass `check`:
 
 ## 3D turns
 
-`hyperframes.giro` renders a checked Three.js scene that turns an embedded CAD
+`hyperframes.turntable` renders a checked Three.js scene that turns an embedded CAD
 model on a camera orbit: a camera-friendly clip in seconds instead of a Cycles
 frame run. It runs the same `check`-then-`render` path as `hyperframes.render`,
 with these inputs on top:
 
-- **`modelo-glb`** (path, required): the model, resolved relative to the piece
+- **`model-glb`** (path, required): the model, resolved relative to the piece
   file and embedded as base64 into the composition's GLB placeholder before
   `check`, so the render fetches nothing.
-- **`orbita-radio`** (`9`), **`orbita-altura`** (`11`), **`orbita-desde`**
-  (`-0.9`, radians), **`orbita-vuelta`** (`0.55`, fraction of a full turn over
+- **`orbit-radius`** (`9`), **`orbit-height`** (`11`), **`orbit-start`**
+  (`-0.9`, radians), **`orbit-fraction`** (`0.55`, fraction of a full turn over
   the clip): the camera orbit.
-- **`centro-x`** (`3.0`), **`centro-y`** (`0.6`), **`centro-z`** (`-2.25`): the
-  point the camera looks at; glTF is Y-up, so `centro-z` is the negated
+- **`center-x`** (`3.0`), **`center-y`** (`0.6`), **`center-z`** (`-2.25`): the
+  point the camera looks at; glTF is Y-up, so `center-z` is the negated
   floor-plane Y.
-- **`duracion`** (`8`, seconds): the span `renderAt(t)` maps over.
+- **`duration`** (`8`, seconds): the span `renderAt(t)` maps over.
 
-They are **flat scalars, not an `orbita` table or a `centro` array**: the
+They are **flat scalars, not an `orbit` table or a `center` array**: the
 registry input schema allows only `string`, `integer`, `number`, `boolean`,
 `enum`, `path` and `array`, and array items must be tables (`schema.py`
 `_check_array` rejects non-dict items). A table or number array would fail
@@ -190,86 +190,86 @@ vendor/three/addons/loaders/GLTFLoader.js (Three.js 0.170.0)
 
 The importmap pins `three` and `three/addons/` to `./vendor/` paths and the
 runner rejects any other value. The remote-URL scan (`refuseRemoteUrls`, and the
-same check inside `giroSetup`) **skips the top-level `vendor/` subtree**: the
+same check inside `turntableSetup`) **skips the top-level `vendor/` subtree**: the
 vendored third-party files carry license and documentation URLs in comments that
 are never fetched, so scanning them would reject the package's own vendor files
 before `check`. The composition's own files remain fully scanned.
 
 The **offline `build.mjs`** in the piece produces this vendored tree and sets up
-the composition; the runner never executes it. The runner-side **`giroSetup`**
+the composition; the runner never executes it. The runner-side **`turntableSetup`**
 reads and writes the copied `index.html` and does only the runtime injection:
-it base64-embeds `modelo-glb` into the `/* GLB */""` placeholder and writes
-the eight scalars into the `DATA` literal at `/* GIRO */`.
+it base64-embeds `model-glb` into the `/* GLB */""` placeholder and writes
+the eight scalars into the `DATA` literal at `/* TURNTABLE */`.
 
 Use it for camera-friendly video where a simple lit scene and crisp HTML text
 are enough; Cycles stays for photoreal staging with bounced light.
 
 ### Approved example
 
-The approved example is `examples/giro/`
-(`renderAt`/`hf-seek`/`waitUntil`/`DATA.orbita` shape, GLB embed); its CDN
+The approved example is `examples/turntable/`
+(`renderAt`/`hf-seek`/`waitUntil`/`DATA.orbit` shape, GLB embed); its CDN
 script/importmap lines are the pre-vendor source the shipped composition
 vendors locally.
 
 ## Characters
 
-`hyperframes.personaje` makes a **hand-drawn** SVG character speak with
+`hyperframes.character` makes a **hand-drawn** SVG character speak with
 phonetic mouth sequences timed to the voice. It runs the same
 `check`-then-`render` path as `hyperframes.render`, with these inputs on top:
 
-- **`composicion`** (path, required): the composition directory, resolved
+- **`composition`** (path, required): the composition directory, resolved
   relative to the piece.
-- **`personaje-svg`** (path, required): the character SVG, resolved relative to
-  the piece, with one `.boca` shape per Rhubarb letter and ids `boca-X`…`boca-H`.
-- **`voz`** (path, required): the voice audio, resolved relative to the piece and
+- **`character-svg`** (path, required): the character SVG, resolved relative to
+  the piece, with one `.mouth` shape per Rhubarb letter and ids `mouth-X`…`mouth-H`.
+- **`voice`** (path, required): the voice audio, resolved relative to the piece and
   copied into the composition root.
-- **`bocas`** (path, required): `bocas.json`, resolved relative to the piece.
-- **`audio-inicio`** (`0.5`): the shift applied to every mouth cue, matching the
+- **`mouths`** (path, required): `mouths.json`, resolved relative to the piece.
+- **`audio-start`** (`0.5`): the shift applied to every mouth cue, matching the
   `<audio>` element's `data-start`.
 - **`target-lufs`** (`-14`): the integrated loudness the finished video is
   normalised to, -24 to -9; `verify` passes within ±1 LU with true peak at or
   below -0.5 dBTP.
 
 `prompt`, `seed` and `fps` behave as in `hyperframes.render`. The inputs are
-flat, like `giro`'s: the registry schema has no nested tables, so blinks and the
+flat, like `turntable`'s: the registry schema has no nested tables, so blinks and the
 head sway stay fixed times in the template (`[1.6, 4.3, 7.1, 9.8]`) and are not
 inputs.
 
 ### Mouth map
 
-One shape per Rhubarb letter, in the character SVG under `#boca`:
+One shape per Rhubarb letter, in the character SVG under `#mouth`:
 
 | id | letter | mouth |
 | --- | --- | --- |
-| `boca-X` | X | rest |
-| `boca-A` | A | closed (m, b, p) |
-| `boca-B` | B | teeth (most consonants) |
-| `boca-C` | C | open (e) |
-| `boca-D` | D | wide open (a) |
-| `boca-E` | E | round (o) |
-| `boca-F` | F | pursed (u) |
-| `boca-G` | G | teeth on lip (f, v) |
-| `boca-H` | H | tongue (l) |
+| `mouth-X` | X | rest |
+| `mouth-A` | A | closed (m, b, p) |
+| `mouth-B` | B | teeth (most consonants) |
+| `mouth-C` | C | open (e) |
+| `mouth-D` | D | wide open (a) |
+| `mouth-E` | E | round (o) |
+| `mouth-F` | F | pursed (u) |
+| `mouth-G` | G | teeth on lip (f, v) |
+| `mouth-H` | H | tongue (l) |
 
 The CSS carries the rest state, because a `tl.set` at instant 0 never shows:
 
 ```css
-.boca { opacity: 0; } #boca-X { opacity: 1; }
+.mouth { opacity: 0; } #mouth-X { opacity: 1; }
 ```
 
 The runner requires that rule in `index.html` or in the SVG's own `<style>`; a
-missing shape for a letter in `bocas.json` or a missing rest rule throws a plain
+missing shape for a letter in `mouths.json` or a missing rest rule throws a plain
 `Error`, exit 1, which facet reports as `runner_failed`. `check` and `render`
 never run in that case.
 
 ### Offline half and runner half
 
 - **Offline, the piece author's `build.mjs`** inlines the character into the
-  composition and keeps the `/* BOCAS */[]` placeholder empty. The mouth cues
-  come only from the runner's `bocas` input. The runner never executes `build.mjs`.
-- **Runner-side, `personajeSetup`** runs in the copied composition before
+  composition and keeps the `/* MOUTHS */[]` placeholder empty. The mouth cues
+  come only from the runner's `mouths` input. The runner never executes `build.mjs`.
+- **Runner-side, `characterSetup`** runs in the copied composition before
   `check`: it validates the mouth shapes and the rest rule, writes the cues into
-  `/* BOCAS */[]`, and writes `audio-inicio` into
+  `/* MOUTHS */[]`, and writes `audio-start` into
   `const AUDIO_START = <number>;`.
 
 The timeline is one `tl.set` per mouth change, shifted by the audio start, so
@@ -277,18 +277,18 @@ the lips follow the voice:
 
 ```js
 CUES.forEach(function (cue) {
-  tl.set('.boca', { opacity: 0 }, AUDIO_START + cue.start)
-    .set('#boca-' + cue.value, { opacity: 1 }, AUDIO_START + cue.start);
+  tl.set('.mouth', { opacity: 0 }, AUDIO_START + cue.start)
+    .set('#mouth-' + cue.value, { opacity: 1 }, AUDIO_START + cue.start);
 });
 ```
 
 ### The cue file
 
-`bocas` comes from the upstream Rhubarb CLI, run offline, not from a registry
+`mouths` comes from the upstream Rhubarb CLI, run offline, not from a registry
 package:
 
 ```
-rhubarb -r phonetic -f json --dialogFile <texto> <voz> -o bocas.json
+rhubarb -r phonetic -f json --dialogFile <dialogue> <voice> -o mouths.json
 ```
 
 The phonetic recognizer is required because the default one is English-only;
@@ -304,34 +304,34 @@ removed. The drawn path is the approved one.
 
 ### Approved example
 
-The approved example is `examples/personaje/`: a fox speaking with the
+The approved example is `examples/character/`: a fox speaking with the
 person's voice, an 11.5 s composition whose 10.32 s of voice starts at
 `data-start="0.5"`. Its `index.tmpl` carries the rest rule, the
-nine `boca-X`…`boca-H` shapes and the cue timeline; its `build.mjs` copies
-`index.tmpl` to `index.html` keeping `/* BOCAS */[]` empty, and the runner's
-`personajeSetup` injects the cues from the `bocas` input into the copied
+nine `mouth-X`…`mouth-H` shapes and the cue timeline; its `build.mjs` copies
+`index.tmpl` to `index.html` keeping `/* MOUTHS */[]` empty, and the runner's
+`characterSetup` injects the cues from the `mouths` input into the copied
 `index.html`.
 
 ## Narration
 
-`hyperframes.narrado` completes a narrated piece on one checked timeline: voice
+`hyperframes.narrated` completes a narrated piece on one checked timeline: voice
 files, an instrumental bed and whisper subtitles are assembled by
-`narradoSetup` in the copied composition before the same `check`-then-`render`
-path as `hyperframes.render`. Its inputs are `composicion`, `voz` (one
-`{ clip, inicio }` table per voice file, at least one; `inicio` is the seconds
-on the composition timeline where that clip starts, default 0), `musica`,
-`subtitulos` (the `.srt`), `volumen-musica` (the bed's `data-volume` under the
+`narratedSetup` in the copied composition before the same `check`-then-`render`
+path as `hyperframes.render`. Its inputs are `composition`, `voice` (one
+`{ clip, start }` table per voice file, at least one; `start` is the seconds
+on the composition timeline where that clip starts, default 0), `music`,
+`subtitles` (the `.srt`), `music-volume` (the bed's `data-volume` under the
 voices, default 0.25 at about −12 dB, 0 to 1), `target-lufs` (the integrated
 loudness the finished video is normalised to, number, default -14, -24 to -9),
 plus `prompt`, `seed` and `fps`.
 
 The sources are the real packages: voices are voicestudio files — one engine
-per file, so narrator and clone voices arrive as separate `voz` clips and the
-runner never probes audio provenance; `musica` is the instrumental bed already
-mixed offline with the ffmpeg package; `subtitulos` is the `.srt` that whisper
+per file, so narrator and clone voices arrive as separate `voice` clips and the
+runner never probes audio provenance; `music` is the instrumental bed already
+mixed offline with the ffmpeg package; `subtitles` is the `.srt` that whisper
 `transcribe` writes beside `<name>.txt` and `<name>.json`.
 
-The runner brings `narrado` and `personaje` videos to `target-lufs`
+The runner brings `narrated` and `character` videos to `target-lufs`
 (default -14 LUFS, the streaming-platform level, louder than the -16 clips by
 design): after the render it applies two-pass EBU R128 `loudnorm` at true peak
 -1.0 dBTP, copying the video stream and re-encoding the audio as AAC, and the
@@ -348,29 +348,29 @@ assembly violation fails the run.
 `<!-- AUDIOS -->` marker and a positive `data-duration` on the
 `data-composition-id` tag, and its CSS must style `.sub`: the cues are
 opacity-toggled divs burned into the frames, never a sidecar copy.
-`narradoSetup` copies each `voz` clip and `musica` into the composition root,
+`narratedSetup` copies each `voice` clip and `music` into the composition root,
 replaces the markers with
-`<audio id="voz-N" src="<name>" data-start="<inicio>" data-duration="<duration-inicio>" data-track-index="<N>" data-volume="1">` /
-`<audio id="musica" src="<name>" data-start="0" data-duration="<duration>" data-track-index="<voices+1>" data-volume="<volumen-musica>">`
+`<audio id="voice-N" src="<name>" data-start="<start>" data-duration="<duration-start>" data-track-index="<N>" data-volume="1">` /
+`<audio id="music" src="<name>" data-start="0" data-duration="<duration>" data-track-index="<voices+1>" data-volume="<music-volume>">`
 and `<div class="sub" id="sN">` lines, parses whisper's
 `HH:MM:SS,mmm --> HH:MM:SS,mmm` cues (comma or dot milliseconds, text joined
 by spaces) into `{ start, end, text }` rounded to 3 decimals, requires every
 cue end to fit `data-duration`, and appends the opacity timeline that joins
 `window.__timelines[...]`. A missing file, a bad `.srt`, a missing or
-duplicated marker, an overlong cue, an `inicio` at or past `data-duration`, or
-a `volumen-musica` outside 0..1 throws a plain `Error`, exit 1, which facet
+duplicated marker, an overlong cue, a `start` at or past `data-duration`, or
+a `music-volume` outside 0..1 throws a plain `Error`, exit 1, which facet
 reports as `runner_failed`; `check` and `render` never run.
 
 The offline `build.mjs` produces the vendored `assets/` and `vendor/` tree;
 the runner never executes it. The SUBS burn-in shape is proven in
-`examples/narrado/`: voice clips, an instrumental bed and a whisper `.srt`
+`examples/narrated/`: voice clips, an instrumental bed and a whisper `.srt`
 burned in as opacity cues at run time.
 
 ## Verifying
 
 `verify` probes every asset with the pinned `ffprobe`: a video stream with a
 positive width, height, frame count and frame rate passes, and the metrics are
-the probe's. A `hyperframes.narrado` or `hyperframes.personaje` asset with no
+the probe's. A `hyperframes.narrated` or `hyperframes.character` asset with no
 audio stream fails, since the mix needs its voices; those two also need the
 pinned `ffmpeg`, because `verify` measures integrated loudness and true peak with
 a `loudnorm` pass, adds `integrated_lufs` and `true_peak_dbtp` to the metrics,

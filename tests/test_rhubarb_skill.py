@@ -36,7 +36,7 @@ MOUTH_MAP = {
     "G": "teeth on lip",
     "H": "tongue",
 }
-COMMAND = "rhubarb -r phonetic -f json --dialogFile <texto> <voz.wav> -o bocas.json"
+COMMAND = "rhubarb -r phonetic -f json --dialogFile <dialogue> <voice.wav> -o mouths.json"
 
 
 def _front_matter() -> tuple[dict[str, str], str]:
@@ -64,8 +64,8 @@ def test_the_four_headings_appear_in_order() -> None:
 
 def test_the_skill_names_the_capability_and_its_inputs() -> None:
     _meta, body = _front_matter()
-    assert "rhubarb.bocas" in body
-    for name in MANIFEST["capabilities"]["bocas"]["inputs"]:
+    assert "rhubarb.mouths" in body
+    for name in MANIFEST["capabilities"]["mouths"]["inputs"]:
         assert name in body, name
 
 
@@ -92,7 +92,7 @@ def test_the_skill_points_at_the_reference_character() -> None:
     """The approved reference is described by its contents, not a lab path."""
     _meta, body = _front_matter()
     assert "fox" in body
-    assert "bocas.json" in body
+    assert "mouths.json" in body
     assert "prueba-personaje" not in SKILL
     assert "/home/jheisonmblivecom" not in SKILL
 
@@ -112,15 +112,15 @@ def test_the_manifest_is_a_python_env_client_not_a_binary_package() -> None:
 
 
 def test_the_capability_is_text_with_the_generic_viewer() -> None:
-    capability = MANIFEST["capabilities"]["bocas"]
+    capability = MANIFEST["capabilities"]["mouths"]
     assert capability["kind"] == "text"
     assert capability["preview"] == {"viewer": "generic"}
     inputs = capability["inputs"]
-    assert set(inputs) == {"voz", "dialogo"}
-    for name in ("voz", "dialogo"):
+    assert set(inputs) == {"voice", "dialogue"}
+    for name in ("voice", "dialogue"):
         assert inputs[name]["type"] == "path"
         assert inputs[name]["required"] is True
-    assert "--dialogFile" in inputs["dialogo"]["description"]
+    assert "--dialogFile" in inputs["dialogue"]["description"]
 
 
 def test_the_licence_covers_the_tool_and_the_zip() -> None:

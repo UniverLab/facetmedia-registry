@@ -15,9 +15,9 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
-const { giroSetup } = require("./giro.js");
-const { narradoSetup } = require("./narrado.js");
-const { personajeSetup } = require("./personaje.js");
+const { turntableSetup } = require("./giro.js");
+const { narratedSetup } = require("./narrado.js");
+const { characterSetup } = require("./personaje.js");
 
 const BROWSER_VAR = "FACET_BROWSER";
 const FFMPEG_VAR = "FACET_FFMPEG";
@@ -397,14 +397,14 @@ function isDirectory(target) {
 
 function compositionDir(request) {
   const inputs = inputsOf(request);
-  if (!inputs.composicion) throw new Error("composicion is required");
-  const dir = resolveInput(inputs.composicion, pieceBase(request));
-  if (!isDirectory(dir)) throw new Error(`composicion: ${dir} is not a directory`);
+  if (!inputs.composition) throw new Error("composition is required");
+  const dir = resolveInput(inputs.composition, pieceBase(request));
+  if (!isDirectory(dir)) throw new Error(`composition: ${dir} is not a directory`);
   if (!fs.existsSync(path.join(dir, "hyperframes.json"))) {
-    throw new Error(`composicion: ${dir} has no hyperframes.json`);
+    throw new Error(`composition: ${dir} has no hyperframes.json`);
   }
   if (!fs.existsSync(path.join(dir, "index.html"))) {
-    throw new Error(`composicion: ${dir} has no index.html; run the composition's build.mjs first`);
+    throw new Error(`composition: ${dir} has no index.html; run the composition's build.mjs first`);
   }
   return dir;
 }
@@ -418,7 +418,7 @@ function slug(text) {
 }
 
 function compositionName(inputs) {
-  const raw = inputs && inputs.composicion ? String(inputs.composicion).replace(/[\\/]+$/, "") : "";
+  const raw = inputs && inputs.composition ? String(inputs.composition).replace(/[\\/]+$/, "") : "";
   if (!raw) return "video";
   return slug(path.basename(raw));
 }
@@ -439,26 +439,26 @@ function copyClips(inputs, base, target) {
 
 // --- the diagram: stable Mermaid ids, a validated GSAP timeline.
 
-const DIAGRAMA_KINDS = new Set(["show", "draw", "fade"]);
+const DIAGRAM_KINDS = new Set(["show", "draw", "fade"]);
 const DEFAULT_DUR = 0.4;
 const SVG_NAMESPACE = /^https?:\/\/www\.w3\.org\//;
 
-function diagramaSetup(workDir, inputs, base) {
-  if (!inputs["diagrama-svg"]) throw new Error("diagrama-svg is required");
-  const svgFile = resolveInput(inputs["diagrama-svg"], base);
-  if (!fs.existsSync(svgFile)) throw new Error(`diagrama-svg: ${svgFile} not found`);
+function diagramSetup(workDir, inputs, base) {
+  if (!inputs["diagram-svg"]) throw new Error("diagram-svg is required");
+  const svgFile = resolveInput(inputs["diagram-svg"], base);
+  if (!fs.existsSync(svgFile)) throw new Error(`diagram-svg: ${svgFile} not found`);
   const svg = fs.readFileSync(svgFile, "utf8");
   const stray = svgUrls(svg);
   if (stray) {
     throw new Error(
-      `diagrama-svg: remote URL ${stray} is not allowed; vendor the asset into the diagram`,
+      `diagram-svg: remote URL ${stray} is not allowed; vendor the asset into the diagram`,
     );
   }
   const { ids, dataIds } = svgIdentifiers(svg);
-  const source = Array.isArray(inputs.animacion) ? inputs.animacion : [];
-  const pasos = source.map((paso, index) => pasoOf(paso, index, ids, dataIds));
+  const source = Array.isArray(inputs.animation) ? inputs.animation : [];
+  const steps = source.map((step, index) => stepOf(step, index, ids, dataIds));
   fs.copyFileSync(svgFile, path.join(path.dirname(workDir), path.basename(svgFile)));
-  injectTimeline(path.join(workDir, "index.html"), pasos);
+  injectTimeline(path.join(workDir, "index.html"), steps);
 }
 
 function svgUrls(svg) {
@@ -476,30 +476,30 @@ function svgIdentifiers(svg) {
   return { ids, dataIds };
 }
 
-function pasoOf(paso, index, ids, dataIds) {
-  if (!paso || typeof paso !== "object") throw new Error(`animacion[${index}] is not a table`);
-  const selector = String(paso.selector || "");
+function stepOf(step, index, ids, dataIds) {
+  if (!step || typeof step !== "object") throw new Error(`animation[${index}] is not a table`);
+  const selector = String(step.selector || "");
   validateSelector(selector, ids, dataIds);
-  if (!DIAGRAMA_KINDS.has(paso.kind)) {
-    const got = paso.kind === undefined ? "nothing" : String(paso.kind);
-    throw new Error(`animacion[${index}]: kind must be show, draw or fade, got ${got}`);
+  if (!DIAGRAM_KINDS.has(step.kind)) {
+    const got = step.kind === undefined ? "nothing" : String(step.kind);
+    throw new Error(`animation[${index}]: kind must be show, draw or fade, got ${got}`);
   }
-  const at = Number(paso.at);
-  if (!Number.isFinite(at)) throw new Error(`animacion[${index}]: at must be a number`);
-  const dur = paso.dur === undefined || paso.dur === null ? DEFAULT_DUR : Number(paso.dur);
+  const at = Number(step.at);
+  if (!Number.isFinite(at)) throw new Error(`animation[${index}]: at must be a number`);
+  const dur = step.dur === undefined || step.dur === null ? DEFAULT_DUR : Number(step.dur);
   if (!Number.isFinite(dur) || dur <= 0) {
-    throw new Error(`animacion[${index}]: dur must be a positive number`);
+    throw new Error(`animation[${index}]: dur must be a positive number`);
   }
-  return { selector, at, kind: paso.kind, dur };
+  return { selector, at, kind: step.kind, dur };
 }
 
 function validateSelector(selector, ids, dataIds) {
-  if (!selector) throw new Error("animacion: a paso has no selector");
+  if (!selector) throw new Error("animation: a step has no selector");
   const refs = selectorRefs(selector);
-  if (!refs.length) throw new Error(`animacion: selector ${selector} names no id`);
+  if (!refs.length) throw new Error(`animation: selector ${selector} names no id`);
   for (const ref of refs) {
     if (!refPresent(ref, ids, dataIds)) {
-      throw new Error(`animacion: selector ${selector} names an unknown id`);
+      throw new Error(`animation: selector ${selector} names an unknown id`);
     }
   }
 }
@@ -520,14 +520,14 @@ function refPresent(ref, ids, dataIds) {
   return dataIds.has(ref.dataId);
 }
 
-function timelineScript(pasos) {
-  const body = TIMELINE_TEMPLATE.replace("__PASOS__", JSON.stringify(pasos));
+function timelineScript(steps) {
+  const body = TIMELINE_TEMPLATE.replace("__STEPS__", JSON.stringify(steps));
   return ["<script>", body, "</script>"].join("\n");
 }
 
-function injectTimeline(templateFile, pasos) {
+function injectTimeline(templateFile, steps) {
   const template = fs.readFileSync(templateFile, "utf8");
-  const script = timelineScript(pasos);
+  const script = timelineScript(steps);
   const updated = template.includes("</body>")
     ? template.replace("</body>", [script, "</body>"].join("\n"))
     : [template, script].join("\n");
@@ -538,30 +538,30 @@ function injectTimeline(templateFile, pasos) {
 // rejects template literals in selectors, so this script carries none.
 const TIMELINE_TEMPLATE = [
   "(function () {",
-  "  var pasos = __PASOS__;",
+  "  var steps = __STEPS__;",
   "  var tl = gsap.timeline({ paused: true });",
-  "  function drawEach(targets, paso) {",
+  "  function drawEach(targets, step) {",
   "    Array.prototype.forEach.call(targets, function (target) {",
   '      var path = target.tagName.toLowerCase() === "path" ? target : target.querySelector("path");',
   '      if (!path || typeof path.getTotalLength !== "function") return;',
   "      var length = path.getTotalLength();",
   "      tl.fromTo(path, { strokeDasharray: length, strokeDashoffset: length },",
-  '        { strokeDashoffset: 0, duration: paso.dur, ease: "power1.inOut" }, paso.at);',
+  '        { strokeDashoffset: 0, duration: step.dur, ease: "power1.inOut" }, step.at);',
   "      var head = path.nextElementSibling;",
   '      if (head && head.classList && head.classList.contains("arrow")) {',
-  '        tl.from(head, { opacity: 0, duration: paso.dur * 0.5 }, paso.at + paso.dur * 0.8);',
+  '        tl.from(head, { opacity: 0, duration: step.dur * 0.5 }, step.at + step.dur * 0.8);',
   "      }",
   "    });",
   "  }",
-  "  pasos.forEach(function (paso) {",
-  "    var targets = document.querySelectorAll(paso.selector);",
+  "  steps.forEach(function (step) {",
+  "    var targets = document.querySelectorAll(step.selector);",
   "    if (!targets.length) return;",
-  '    if (paso.kind === "show") {',
-  '      tl.from(targets, { opacity: 0, scale: 0.85, transformOrigin: "50% 50%", duration: paso.dur, ease: "back.out(2)" }, paso.at);',
-  '    } else if (paso.kind === "fade") {',
-  '      tl.from(targets, { opacity: 0, duration: paso.dur, ease: "power1.out" }, paso.at);',
+  '    if (step.kind === "show") {',
+  '      tl.from(targets, { opacity: 0, scale: 0.85, transformOrigin: "50% 50%", duration: step.dur, ease: "back.out(2)" }, step.at);',
+  '    } else if (step.kind === "fade") {',
+  '      tl.from(targets, { opacity: 0, duration: step.dur, ease: "power1.out" }, step.at);',
   "    } else {",
-  "      drawEach(targets, paso);",
+  "      drawEach(targets, step);",
   "    }",
   "  });",
   '  var root = document.querySelector("[data-composition-id]");',
@@ -636,17 +636,17 @@ function run(request) {
   fs.rmSync(workDir, { recursive: true, force: true });
   fs.cpSync(source, workDir, { recursive: true });
   copyClips(inputs, pieceBase(request), workDir);
-  if (request.capability === "hyperframes.diagrama") {
-    diagramaSetup(workDir, inputs, pieceBase(request));
+  if (request.capability === "hyperframes.diagram") {
+    diagramSetup(workDir, inputs, pieceBase(request));
   }
-  if (request.capability === "hyperframes.giro") {
-    giroSetup(workDir, inputs, pieceBase(request));
+  if (request.capability === "hyperframes.turntable") {
+    turntableSetup(workDir, inputs, pieceBase(request));
   }
-  if (request.capability === "hyperframes.personaje") {
-    personajeSetup(workDir, inputs, pieceBase(request));
+  if (request.capability === "hyperframes.character") {
+    characterSetup(workDir, inputs, pieceBase(request));
   }
-  if (request.capability === "hyperframes.narrado") {
-    narradoSetup(workDir, inputs, pieceBase(request));
+  if (request.capability === "hyperframes.narrated") {
+    narratedSetup(workDir, inputs, pieceBase(request));
   }
   runCli(["check"], workDir);
   const outPath = path.join(outDir, `${name}${extension}`);
@@ -718,7 +718,7 @@ function verify(request) {
   return { assets: (request.assets || []).map((asset) => verdictOf(asset, request)) };
 }
 
-const AUDIO_REQUIRED = new Set(["hyperframes.narrado", "hyperframes.personaje"]);
+const AUDIO_REQUIRED = new Set(["hyperframes.narrated", "hyperframes.character"]);
 
 function audioOk(request, metrics) {
   if (!AUDIO_REQUIRED.has(request && request.capability)) return true;

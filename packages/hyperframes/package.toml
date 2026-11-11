@@ -487,7 +487,7 @@ spdx = "GPL-3.0-or-later"
 summary = "Render a checked HTML+GSAP composition to an MP4 with the pinned HyperFrames CLI"
 kind = "video"
 
-[capabilities.render.inputs.composicion]
+[capabilities.render.inputs.composition]
 type = "path"
 required = true
 description = "Composition directory with hyperframes.json and index.tmpl (never named .html, which HyperFrames reads as a second composition) plus build.mjs and assets/, resolved relative to the piece; self-contained, vendoring every asset instead of loading a remote URL."
@@ -525,7 +525,7 @@ viewer = "video"
 summary = "Render a checked HTML+GSAP composition to a looping GIF or a MOV with alpha, from the same source as the MP4"
 kind = "video"
 
-[capabilities.loop.inputs.composicion]
+[capabilities.loop.inputs.composition]
 type = "path"
 required = true
 description = "Composition directory with hyperframes.json and index.tmpl (never named .html, which HyperFrames reads as a second composition) plus build.mjs and assets/, resolved relative to the piece; self-contained, vendoring every asset instead of loading a remote URL."
@@ -565,258 +565,258 @@ description = "gif renders a looping animation for feeds and embeds; mov-alpha r
 [capabilities.loop.preview]
 viewer = "video"
 
-[capabilities.diagrama]
+[capabilities.diagram]
 summary = "Render a Mermaid SVG inside a checked HTML+GSAP composition, drawn by a validated GSAP timeline"
 kind = "video"
 
-[capabilities.diagrama.inputs.composicion]
+[capabilities.diagram.inputs.composition]
 type = "path"
 required = true
 description = "Composition directory with hyperframes.json and index.tmpl (never named .html, which HyperFrames reads as a second composition) plus build.mjs and assets/, resolved relative to the piece; self-contained, vendoring every asset instead of loading a remote URL."
 
-[capabilities.diagrama.inputs.prompt]
+[capabilities.diagram.inputs.prompt]
 type = "string"
 required = true
 description = "The brief the composition was authored from; recorded and carried into the video preview."
 
-[capabilities.diagrama.inputs.seed]
+[capabilities.diagram.inputs.seed]
 type = "integer"
 default = 0
 min = 0
 description = "Recorded seed; the seek-based timeline renders deterministically, so it labels the record."
 
-[capabilities.diagrama.inputs.fps]
+[capabilities.diagram.inputs.fps]
 type = "integer"
 min = 1
 description = "Frame rate passed as --fps; the composition's own data-fps applies when omitted."
 
-[capabilities.diagrama.inputs.diagrama-svg]
+[capabilities.diagram.inputs.diagram-svg]
 type = "path"
 required = true
 description = "Mermaid SVG file as produced by tools/mermaid.sh (for example ciclo.svg or arquitectura.svg), resolved relative to the piece; copied beside the composition so build.mjs can insert it into index.tmpl."
 
-[capabilities.diagrama.inputs.animacion]
+[capabilities.diagram.inputs.animation]
 type = "array"
 default = []
-description = "Ordered timeline steps drawing the diagram; each paso names a selector from the diagram's stable Mermaid ids, the second it starts at, and what it does."
+description = "Ordered timeline steps drawing the diagram; each step names a selector from the diagram's stable Mermaid ids, the second it starts at, and what it does."
 
-[capabilities.diagrama.inputs.animacion.items.selector]
+[capabilities.diagram.inputs.animation.items.selector]
 type = "string"
 required = true
 description = "CSS selector into the Mermaid SVG; validated against the ids and data-ids the SVG actually carries before any render."
 
-[capabilities.diagrama.inputs.animacion.items.at]
+[capabilities.diagram.inputs.animation.items.at]
 type = "number"
 required = true
 description = "Second on the composition timeline at which the step starts."
 
-[capabilities.diagrama.inputs.animacion.items.kind]
+[capabilities.diagram.inputs.animation.items.kind]
 type = "enum"
 values = ["show", "draw", "fade"]
 required = true
 description = "show pops a node in, draw traces an edge with strokeDashoffset, fade dissolves a group or label."
 
-[capabilities.diagrama.inputs.animacion.items.dur]
+[capabilities.diagram.inputs.animation.items.dur]
 type = "number"
 default = 0.4
 description = "Step duration in seconds."
 
-[capabilities.diagrama.preview]
+[capabilities.diagram.preview]
 viewer = "video"
 
-[capabilities.giro]
+[capabilities.turntable]
 summary = "Render a checked Three.js composition that turns an embedded CAD model on a camera orbit, without Cycles frame runs"
 kind = "video"
 
-[capabilities.giro.inputs.composicion]
+[capabilities.turntable.inputs.composition]
 type = "path"
 required = true
 description = "Composition directory with hyperframes.json and index.tmpl plus assets/ and vendor/ (pinned gsap.min.js, three.module.js and three/addons/GLTFLoader.js), resolved relative to the piece; the author's offline build.mjs produces the vendored tree and the runner never executes it."
 
-[capabilities.giro.inputs.modelo-glb]
+[capabilities.turntable.inputs.model-glb]
 type = "path"
 required = true
 description = "CAD model as a .glb file, resolved relative to the piece file; base64-embedded into the composition's GLB placeholder before check so nothing is fetched at render time."
 
-[capabilities.giro.inputs.orbita-radio]
+[capabilities.turntable.inputs.orbit-radius]
 type = "number"
 default = 9
 description = "Camera orbit radius around the model, in scene units."
 
-[capabilities.giro.inputs.orbita-altura]
+[capabilities.turntable.inputs.orbit-height]
 type = "number"
 default = 11
 description = "Camera height above the scene floor, in scene units."
 
-[capabilities.giro.inputs.orbita-desde]
+[capabilities.turntable.inputs.orbit-start]
 type = "number"
 default = -0.9
 description = "Starting angle of the orbit, in radians."
 
-[capabilities.giro.inputs.orbita-vuelta]
+[capabilities.turntable.inputs.orbit-fraction]
 type = "number"
 default = 0.55
-description = "Fraction of a full turn the camera completes over duracion."
+description = "Fraction of a full turn the camera completes over duration."
 
-[capabilities.giro.inputs.centro-x]
+[capabilities.turntable.inputs.center-x]
 type = "number"
 default = 3.0
 description = "X of the model centre the camera looks at."
 
-[capabilities.giro.inputs.centro-y]
+[capabilities.turntable.inputs.center-y]
 type = "number"
 default = 0.6
 description = "Y (height) of the model centre the camera looks at."
 
-[capabilities.giro.inputs.centro-z]
+[capabilities.turntable.inputs.center-z]
 type = "number"
 default = -2.25
 description = "Z of the model centre the camera looks at; glTF is Y-up, so this is the negated floor-plane Y."
 
-[capabilities.giro.inputs.duracion]
+[capabilities.turntable.inputs.duration]
 type = "number"
 default = 8
 description = "Composition length in seconds; renderAt(t) maps the orbit over this span."
 
-[capabilities.giro.inputs.prompt]
+[capabilities.turntable.inputs.prompt]
 type = "string"
 required = true
 description = "The brief the composition was authored from; recorded and carried into the video preview."
 
-[capabilities.giro.inputs.seed]
+[capabilities.turntable.inputs.seed]
 type = "integer"
 default = 0
 min = 0
 description = "Recorded seed; the seek-based render is deterministic, so it labels the record."
 
-[capabilities.giro.inputs.fps]
+[capabilities.turntable.inputs.fps]
 type = "integer"
 min = 1
 description = "Frame rate passed as --fps; the composition's own data-fps applies when omitted."
 
-[capabilities.giro.preview]
+[capabilities.turntable.preview]
 viewer = "video"
 
-[capabilities.personaje]
+[capabilities.character]
 summary = "Speak a drawn SVG character with Rhubarb mouth cues timed to the voice"
 kind = "video"
 
-[capabilities.personaje.inputs.composicion]
+[capabilities.character.inputs.composition]
 type = "path"
 required = true
 description = "Composition directory with hyperframes.json and index.tmpl plus assets/ and vendor/, resolved relative to the piece; the piece author's offline build.mjs produces this tree and the runner never executes it."
 
-[capabilities.personaje.inputs.personaje-svg]
+[capabilities.character.inputs.character-svg]
 type = "path"
 required = true
-description = "Character SVG with one .boca shape per Rhubarb letter, ids boca-X..H, resolved relative to the piece; the CSS rest rule keeps #boca-X visible at frame 0."
+description = "Character SVG with one .mouth shape per Rhubarb letter, ids mouth-X..H, resolved relative to the piece; the CSS rest rule keeps #mouth-X visible at frame 0."
 
-[capabilities.personaje.inputs.voz]
+[capabilities.character.inputs.voice]
 type = "path"
 required = true
 description = "Voice audio resolved relative to the piece, copied into the composition root and referenced by its plain name."
 
-[capabilities.personaje.inputs.bocas]
+[capabilities.character.inputs.mouths]
 type = "path"
 required = true
-description = "bocas.json produced offline with the upstream Rhubarb CLI (rhubarb -r phonetic -f json --dialogFile <text> <voice> -o bocas.json), resolved relative to the piece."
+description = "mouths.json produced offline with the upstream Rhubarb CLI (rhubarb -r phonetic -f json --dialogFile <text> <voice> -o mouths.json), resolved relative to the piece."
 
-[capabilities.personaje.inputs.audio-inicio]
+[capabilities.character.inputs.audio-start]
 type = "number"
 default = 0.5
 description = "Shift applied to every mouth cue, matching the audio element's data-start."
 
-[capabilities.personaje.inputs.target-lufs]
+[capabilities.character.inputs.target-lufs]
 type = "number"
 default = -14.0
 min = -24
 max = -9
 description = "Integrated loudness the runner brings the finished video to with two-pass EBU R128 loudnorm at true peak -1.0 dBTP; verify checks the result within ±1 LU with true peak at or below -0.5 dBTP."
 
-[capabilities.personaje.inputs.prompt]
+[capabilities.character.inputs.prompt]
 type = "string"
 required = true
 description = "The brief the composition was authored from; recorded and carried into the video preview."
 
-[capabilities.personaje.inputs.seed]
+[capabilities.character.inputs.seed]
 type = "integer"
 default = 0
 min = 0
 description = "Recorded seed; the seek-based timeline renders deterministically, so it labels the record."
 
-[capabilities.personaje.inputs.fps]
+[capabilities.character.inputs.fps]
 type = "integer"
 min = 1
 description = "Frame rate passed as --fps; the composition's own data-fps applies when omitted."
 
-[capabilities.personaje.preview]
+[capabilities.character.preview]
 viewer = "video"
 
-[capabilities.narrado]
+[capabilities.narrated]
 summary = "Assemble a narrated piece: voice clips, a music bed and whisper subtitles on one checked HyperFrames timeline"
 kind = "video"
 
-[capabilities.narrado.inputs.composicion]
+[capabilities.narrated.inputs.composition]
 type = "path"
 required = true
 description = "Composition directory with hyperframes.json, index.tmpl plus assets/ and vendor/, resolved relative to the piece; the author's offline build.mjs produces the vendored tree and the runner never executes it. index.tmpl carries one <!-- SUBS --> marker, one <!-- AUDIOS --> marker and a positive data-duration on the data-composition-id tag. The author's offline build.mjs writes those markers into index.html, and the runner injects into the copied index.html, the file HyperFrames renders."
 
-[capabilities.narrado.inputs.voz]
+[capabilities.narrated.inputs.voice]
 type = "array"
 required = true
 min_items = 1
 description = "Voice files from voicestudio, one { clip } item each; voicestudio keeps one engine per file, so narrator and clone voices arrive as separate clips. Every clip must resolve relative to the piece; the runner copies them into the composition root and never probes audio provenance."
 
-[capabilities.narrado.inputs.voz.items.clip]
+[capabilities.narrated.inputs.voice.items.clip]
 type = "path"
 required = true
-description = "Voice clip copied into the composition root and injected as <audio id=\"voz-N\" src=\"<name>\">."
+description = "Voice clip copied into the composition root and injected as <audio id=\"voice-N\" src=\"<name>\">."
 
-[capabilities.narrado.inputs.voz.items.inicio]
+[capabilities.narrated.inputs.voice.items.start]
 type = "number"
 default = 0
 min = 0
 description = "Seconds on the composition timeline where this clip starts."
 
-[capabilities.narrado.inputs.musica]
+[capabilities.narrated.inputs.music]
 type = "path"
 required = true
-description = "Instrumental music bed already mixed offline with the ffmpeg package, resolved relative to the piece and copied into the composition root as <audio id=\"musica\">."
+description = "Instrumental music bed already mixed offline with the ffmpeg package, resolved relative to the piece and copied into the composition root as <audio id=\"music\">."
 
-[capabilities.narrado.inputs.subtitulos]
+[capabilities.narrated.inputs.subtitles]
 type = "path"
 required = true
 description = "SubRip .srt written offline by whisper transcribe, resolved relative to the piece; parsed into burned-in subtitle cues that must end inside the composition duration."
 
-[capabilities.narrado.inputs.volumen-musica]
+[capabilities.narrated.inputs.music-volume]
 type = "number"
 default = 0.25
 min = 0
 max = 1
 description = "The bed's `data-volume` under the voices, where 0.25 is about −12 dB."
 
-[capabilities.narrado.inputs.target-lufs]
+[capabilities.narrated.inputs.target-lufs]
 type = "number"
 default = -14.0
 min = -24
 max = -9
 description = "Integrated loudness the runner brings the finished video to with two-pass EBU R128 loudnorm at true peak -1.0 dBTP; verify checks the result within ±1 LU with true peak at or below -0.5 dBTP."
 
-[capabilities.narrado.inputs.prompt]
+[capabilities.narrated.inputs.prompt]
 type = "string"
 required = true
 description = "The brief the composition was authored from; recorded and carried into the video preview."
 
-[capabilities.narrado.inputs.seed]
+[capabilities.narrated.inputs.seed]
 type = "integer"
 default = 0
 min = 0
 description = "Recorded seed; the seek-based timeline renders deterministically, so it labels the record."
 
-[capabilities.narrado.inputs.fps]
+[capabilities.narrated.inputs.fps]
 type = "integer"
 min = 1
 description = "Frame rate passed as --fps; the composition's own data-fps applies when omitted."
 
-[capabilities.narrado.preview]
+[capabilities.narrated.preview]
 viewer = "video"

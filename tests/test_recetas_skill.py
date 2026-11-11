@@ -30,7 +30,7 @@ CHAINS = {
         "ffmpeg.mix",
         "whisper.transcribe",
         "whisper-subs.subtitulos",
-        "hyperframes.narrado",
+        "hyperframes.narrated",
     ],
     "render-arq": ["cad.solid", "blender.assets", "blender.photo", "deck.pagina"],
     "material-voz": ["kokoro.speak", "acestep.bed", "deck.slides"],

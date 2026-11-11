@@ -31,7 +31,7 @@ CHAINS = {
         "ffmpeg.mix",
         "whisper.transcribe",
         "whisper-subs.subtitulos",
-        "hyperframes.narrado",
+        "hyperframes.narrated",
     ],
     "render-arq": ["cad.solid", "blender.assets", "blender.photo", "deck.pagina"],
     "material-voz": ["kokoro.speak", "acestep.bed", "deck.slides"],
@@ -203,7 +203,8 @@ def test_the_video_recipe_carries_the_decided_handoffs(tmp_path: Path) -> None:
     assert "ducking true" in handoffs[3] and "duck-db -12.0" in handoffs[3]
     assert "duck-db -12.0" in handoffs[3] and "target-lufs -16.0" in handoffs[3]
     assert "guion.srt" in handoffs[5] and "guion.json" in handoffs[5]
-    assert "narrado.mp4" in handoffs[6]
+    assert "narrated.mp4" in handoffs[6]
+    assert "composition narrated/" in handoffs[6]
 
 
 def test_run_refuses_a_recipe_outside_the_enum(tmp_path: Path) -> None:

@@ -36,19 +36,19 @@ spdx = "MIT"
 commercial_use = true
 requires_acceptance = false
 
-[capabilities.bocas]
+[capabilities.mouths]
 summary = "Mouth cues X..H for a drawn character, timed to a voice clip, from the voice and the text it says"
 kind = "text"
 
-[capabilities.bocas.inputs.voz]
+[capabilities.mouths.inputs.voice]
 type = "path"
 required = true
 description = "Voice WAV the mouth follows, resolved relative to the piece."
 
-[capabilities.bocas.inputs.dialogo]
+[capabilities.mouths.inputs.dialogue]
 type = "path"
 required = true
 description = "Plain text file of what the voice says, passed to rhubarb as --dialogFile, resolved relative to the piece."
 
-[capabilities.bocas.preview]
+[capabilities.mouths.preview]
 viewer = "generic"

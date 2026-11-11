@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
-// The giro recipe: a Three.js scene that turns a CAD model on a camera orbit.
+// The turntable recipe: a Three.js scene that turns a CAD model on a camera orbit.
 //
 // The piece author builds the vendored tree offline with its own build.mjs;
 // this module runs in the copied workDir, embeds the model and the eight orbit
@@ -33,41 +33,41 @@ const URL_RE = /https?:\/\/[^\s"'`<>()\\]+/g;
 const METADATA_KEYS = ["$schema", "registry"];
 const VENDOR_DIR = "vendor";
 const GLB_MARKER = '/* GLB */""';
-const GIRO_MARKER = "/* GIRO */";
+const TURNTABLE_MARKER = "/* TURNTABLE */";
 const DATA_OPENER = "const DATA = {";
 const VENDOR_PREFIX = "./vendor/";
 const DEFAULTS = {
-  "orbita-radio": 9,
-  "orbita-altura": 11,
-  "orbita-desde": -0.9,
-  "orbita-vuelta": 0.55,
-  "centro-x": 3.0,
-  "centro-y": 0.6,
-  "centro-z": -2.25,
-  duracion: 8,
+  "orbit-radius": 9,
+  "orbit-height": 11,
+  "orbit-start": -0.9,
+  "orbit-fraction": 0.55,
+  "center-x": 3.0,
+  "center-y": 0.6,
+  "center-z": -2.25,
+  duration: 8,
 };
 
-function giroSetup(workDir, inputs, base) {
+function turntableSetup(workDir, inputs, base) {
   const encoded = modelBase64(inputs, base);
   const templateFile = path.join(workDir, "index.html");
-  if (!fs.existsSync(templateFile)) throw new Error("composicion: index.html not found");
+  if (!fs.existsSync(templateFile)) throw new Error("composition: index.html not found");
   const template = fs.readFileSync(templateFile, "utf8");
   validateRecipe(template);
   refuseRemoteUrls(workDir);
   const updated = template
     .replace(GLB_MARKER, JSON.stringify(encoded))
-    .replace(GIRO_MARKER, giroData(inputs));
+    .replace(TURNTABLE_MARKER, turntableData(inputs));
   fs.writeFileSync(templateFile, updated);
 }
 
 // --- the model: a required .glb, embedded as base64 so no fetch happens.
 
 function modelBase64(inputs, base) {
-  if (!inputs["modelo-glb"]) throw new Error("modelo-glb is required");
-  const file = resolveInput(inputs["modelo-glb"], base);
-  if (!fs.existsSync(file)) throw new Error(`modelo-glb: ${file} not found`);
+  if (!inputs["model-glb"]) throw new Error("model-glb is required");
+  const file = resolveInput(inputs["model-glb"], base);
+  if (!fs.existsSync(file)) throw new Error(`model-glb: ${file} not found`);
   if (path.extname(file).toLowerCase() !== ".glb") {
-    throw new Error(`modelo-glb: ${file} is not a .glb`);
+    throw new Error(`model-glb: ${file} is not a .glb`);
   }
   return fs.readFileSync(file).toString("base64");
 }
@@ -93,7 +93,7 @@ function validateRecipe(template) {
     "event.detail.waitUntil is required so HyperFrames waits for the model to load",
   );
   requireOnce(template, GLB_MARKER);
-  requireGiroMarker(template);
+  requireTurntableMarker(template);
   validateImportmap(template);
 }
 
@@ -110,14 +110,14 @@ function requireOnce(template, marker) {
   if (count !== 1) throw new Error(`${marker} must appear exactly once, found ${count}`);
 }
 
-function requireGiroMarker(template) {
-  requireOnce(template, GIRO_MARKER);
+function requireTurntableMarker(template) {
+  requireOnce(template, TURNTABLE_MARKER);
   const opener = template.indexOf(DATA_OPENER);
   if (opener === -1) throw new Error(`${DATA_OPENER} is required for the orbit scalars`);
   const closer = template.indexOf("};", opener);
-  const marker = template.indexOf(GIRO_MARKER);
+  const marker = template.indexOf(TURNTABLE_MARKER);
   if (closer === -1 || marker < opener || marker > closer) {
-    throw new Error(`${GIRO_MARKER} must sit inside ${DATA_OPENER}`);
+    throw new Error(`${TURNTABLE_MARKER} must sit inside ${DATA_OPENER}`);
   }
 }
 
@@ -148,22 +148,22 @@ function occurrences(text, needle) {
 
 // --- the eight flat scalars, injected into the DATA literal.
 
-function giroData(inputs) {
+function turntableData(inputs) {
   const values = {};
   for (const [name, fallback] of Object.entries(DEFAULTS)) {
     values[name] = scalarOf(inputs, name, fallback);
   }
-  const orbita = {
-    radio: values["orbita-radio"],
-    altura: values["orbita-altura"],
-    desde: values["orbita-desde"],
-    vuelta: values["orbita-vuelta"],
+  const orbit = {
+    radius: values["orbit-radius"],
+    height: values["orbit-height"],
+    start: values["orbit-start"],
+    fraction: values["orbit-fraction"],
   };
-  const centro = [values["centro-x"], values["centro-y"], values["centro-z"]];
+  const center = [values["center-x"], values["center-y"], values["center-z"]];
   return (
-    `"orbita":${JSON.stringify(orbita)},` +
-    `"centro":${JSON.stringify(centro)},` +
-    `"duracion":${JSON.stringify(values.duracion)},`
+    `"orbit":${JSON.stringify(orbit)},` +
+    `"center":${JSON.stringify(center)},` +
+    `"duration":${JSON.stringify(values.duration)},`
   );
 }
 
@@ -226,4 +226,4 @@ function resolveInput(value, base) {
   return path.isAbsolute(text) ? text : path.resolve(base, text);
 }
 
-module.exports = { giroSetup };
+module.exports = { turntableSetup };

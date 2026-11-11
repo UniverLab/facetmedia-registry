@@ -3,7 +3,7 @@
 The test stands in for the package environment: it runs ``runner.py`` as a
 subprocess against a stub ``facet_runner_sdk`` and a stub Rhubarb zip holding
 an executable ``rhubarb`` script. The stub records its argv (so the phonetic
-flag is proven, not assumed), writes the ``bocas.json`` Rhubarb writes, and can
+flag is proven, not assumed), writes the ``mouths.json`` Rhubarb writes, and can
 be told to fail, or to be a binary this machine cannot start. No test touches
 the real 87 MB zip.
 """
@@ -29,8 +29,8 @@ TOP_DIR = "Rhubarb-Lip-Sync-1.14.0-Linux"
 ELF_NAME = "rhubarb"
 MARKER_NAME = "zip.sha256"
 EXTRACT_ENV = "RHUBARB_HOME"
-VOZ = "personaje/voz.wav"
-DIALOGO = "personaje/dialogo.txt"
+VOICE = "character/voz.wav"
+DIALOGUE = "character/dialogue.txt"
 DIALOG_TEXT = "Hola, soy un zorro de dibujo."
 PULL_FIX = "facet pull rhubarb"
 CUES = [
@@ -212,14 +212,14 @@ def _declared_model(tmp_path: Path, elf_text: str | None = None) -> Path:
 
 
 def _piece(tmp_path: Path) -> Path:
-    """A piece dir whose ``personaje/`` holds the voice and the dialog."""
+    """A piece dir whose ``character/`` holds the voice and the dialog."""
     piece_dir = tmp_path / "piece"
-    personaje = piece_dir / "personaje"
-    personaje.mkdir(parents=True)
-    (personaje / "voz.wav").write_bytes(b"RIFF0000WAVE")
-    (personaje / "dialogo.txt").write_text(DIALOG_TEXT + "\n", encoding="utf-8")
+    character = piece_dir / "character"
+    character.mkdir(parents=True)
+    (character / "voz.wav").write_bytes(b"RIFF0000WAVE")
+    (character / "dialogue.txt").write_text(DIALOG_TEXT + "\n", encoding="utf-8")
     (piece_dir / "zorro.toml").write_text(
-        f'[inputs]\nvoz = "{VOZ}"\ndialogo = "{DIALOGO}"\n', encoding="utf-8"
+        f'[inputs]\nvoice = "{VOICE}"\ndialogue = "{DIALOGUE}"\n', encoding="utf-8"
     )
     return piece_dir
 
@@ -249,7 +249,7 @@ def _request(
     return {
         "protocol": 1,
         "verb": verb,
-        "capability": "rhubarb.bocas",
+        "capability": "rhubarb.mouths",
         "depth": depth,
         "inputs": dict(inputs),
         "out_dir": str(out),
@@ -304,7 +304,7 @@ def _call(
 
 
 def _inputs() -> dict[str, object]:
-    return {"voz": VOZ, "dialogo": DIALOGO}
+    return {"voice": VOICE, "dialogue": DIALOGUE}
 
 
 def _read_lines(path: Path) -> list[dict[str, Any]]:
@@ -341,11 +341,11 @@ def test_run_passes_the_phonetic_recognizer_and_json_output(tmp_path: Path) -> N
     assert "-r" in argv and argv[argv.index("-r") + 1] == "phonetic"
     assert "-f" in argv and argv[argv.index("-f") + 1] == "json"
     assert "--dialogFile" in argv
-    assert argv[argv.index("--dialogFile") + 1].endswith(DIALOGO)
-    assert argv[argv.index("-o") + 1].endswith("bocas.json")
+    assert argv[argv.index("--dialogFile") + 1].endswith(DIALOGUE)
+    assert argv[argv.index("-o") + 1].endswith("mouths.json")
     # Rhubarb's argv puts the WAV before -o; the ZIP keeps res/ beside the ELF,
     # but the run's cwd is the writable out dir, not the ELF's own directory.
-    voice = next(index for index, token in enumerate(argv) if token.endswith(VOZ))
+    voice = next(index for index, token in enumerate(argv) if token.endswith(VOICE))
     assert voice < argv.index("-o")
     assert entries[0]["elf_res"] is True
     assert entries[0]["cwd_res"] is False
@@ -356,8 +356,8 @@ def test_the_run_uses_the_out_dir_as_cwd(tmp_path: Path) -> None:
     """The closure fix: the ELF runs from the writable out dir, not its own."""
     _result, _printed, entries, out, _env = _run_cycle(tmp_path)
     assert entries[0]["cwd"] == str(out)
-    assert (out / "bocas.json").is_file()
-    cues = json.loads((out / "bocas.json").read_text(encoding="utf-8"))["mouthCues"]
+    assert (out / "mouths.json").is_file()
+    cues = json.loads((out / "mouths.json").read_text(encoding="utf-8"))["mouthCues"]
     assert cues
     assert all(cue["value"] in "XABCDEFGH" for cue in cues)
 
@@ -368,9 +368,18 @@ def test_the_relative_output_defect_is_reproduced(tmp_path: Path) -> None:
     elf = Path(env[EXTRACT_ENV]) / "_rhubarb-lip-sync-1.14.0-linux" / TOP_DIR / ELF_NAME
     job = tmp_path / ".facet-tmp-1"
     job.mkdir()
-    nested = job / ".facet-tmp-1" / "bocas.json"
+    nested = job / ".facet-tmp-1" / "mouths.json"
     failed = subprocess.run(
-        [sys.executable, str(elf), "-r", "phonetic", "-f", "json", "-o", ".facet-tmp-1/bocas.json"],
+        [
+            sys.executable,
+            str(elf),
+            "-r",
+            "phonetic",
+            "-f",
+            "json",
+            "-o",
+            ".facet-tmp-1/mouths.json",
+        ],
         cwd=job,
         capture_output=True,
         text=True,
@@ -381,7 +390,7 @@ def test_the_relative_output_defect_is_reproduced(tmp_path: Path) -> None:
     assert "basic_ios::clear" in failed.stderr
     assert not nested.exists()
 
-    absolute = job / "bocas.json"
+    absolute = job / "mouths.json"
     passed = subprocess.run(
         [sys.executable, str(elf), "-r", "phonetic", "-f", "json", "-o", str(absolute)],
         cwd=elf.parent,
@@ -394,7 +403,7 @@ def test_the_relative_output_defect_is_reproduced(tmp_path: Path) -> None:
     assert json.loads(absolute.read_text(encoding="utf-8"))["mouthCues"]
 
 
-def test_a_relative_out_dir_lands_bocas_json_with_its_cues(tmp_path: Path) -> None:
+def test_a_relative_out_dir_lands_mouths_json_with_its_cues(tmp_path: Path) -> None:
     """facet passes a relative out dir; the runner absolutizes cwd, ``-o`` and the read."""
     stub_dir = _stubs(tmp_path)
     archive = _model(tmp_path)
@@ -406,7 +415,7 @@ def test_a_relative_out_dir_lands_bocas_json_with_its_cues(tmp_path: Path) -> No
     request = _request("run", Path(out_name), _piece(tmp_path), _inputs(), {MODEL_ID: archive})
     result, _printed = _call("run", request, tmp_path, env, tag="-relative", cwd=tmp_path)
 
-    target = out / "bocas.json"
+    target = out / "mouths.json"
     assert target.is_file()
     cues = json.loads(target.read_text(encoding="utf-8"))["mouthCues"]
     assert cues
@@ -434,7 +443,7 @@ def _runner_module(tmp_path: Path) -> Any:
 def test_a_run_without_the_phonetic_flag_is_refused(tmp_path: Path) -> None:
     """A Spanish run that lost ``-r phonetic`` exits 1 naming the English trap."""
     module = _runner_module(tmp_path)
-    argv = ["rhubarb", "-f", "json", "voz.wav", "-o", "bocas.json"]
+    argv = ["rhubarb", "-f", "json", "voz.wav", "-o", "mouths.json"]
     try:
         module.check_phonetic(argv)
     except RuntimeError as exc:
@@ -449,7 +458,7 @@ def test_the_command_builder_always_carries_both_flags(tmp_path: Path) -> None:
     """The argv the runner builds is the one the guard accepts."""
     module = _runner_module(tmp_path)
     argv = module.command(
-        Path("/x/rhubarb"), Path("voz.wav"), Path("dialogo.txt"), Path("bocas.json")
+        Path("/x/rhubarb"), Path("voz.wav"), Path("dialogue.txt"), Path("mouths.json")
     )
     assert argv[1:5] == ["-r", "phonetic", "-f", "json"]
     module.check_phonetic(argv)
@@ -458,15 +467,15 @@ def test_the_command_builder_always_carries_both_flags(tmp_path: Path) -> None:
 def test_the_run_writes_one_text_asset_with_the_mouth_properties(tmp_path: Path) -> None:
     result, _printed, _entries, out, _env = _run_cycle(tmp_path)
     asset = result["assets"][0]
-    assert asset["file"] == "bocas.json"
-    assert asset["name"] == "bocas"
+    assert asset["file"] == "mouths.json"
+    assert asset["name"] == "mouths"
     assert (asset["kind"], asset["mime"]) == ("text", "application/json")
     assert asset["properties"] == {"duration_s": DURATION, "cues": len(CUES), "mouths": 5}
-    assert asset["params"] == {"voz": VOZ, "dialogo": DIALOGO}
+    assert asset["params"] == {"voice": VOICE, "dialogue": DIALOGUE}
     assert asset["seed"] is None
-    assert asset["inputs"] == [VOZ, DIALOGO]
+    assert asset["inputs"] == [VOICE, DIALOGUE]
     assert result["tool"] == {"name": "rhubarb-lip-sync", "version": "1.14.0"}
-    assert (out / "bocas.json").is_file()
+    assert (out / "mouths.json").is_file()
 
 
 def test_the_zip_is_extracted_once_beside_its_marker(tmp_path: Path) -> None:
@@ -533,7 +542,7 @@ def _verify(tmp_path: Path, body: str, tag: str) -> tuple[subprocess.CompletedPr
     env = _environment(stub_dir, tmp_path / "extract")
     out = tmp_path / f"verify-{tag}"
     out.mkdir()
-    target = out / "bocas.json"
+    target = out / "mouths.json"
     target.write_text(body, encoding="utf-8")
     return _invoke(
         "verify",
@@ -593,13 +602,13 @@ def test_preview_writes_the_generic_mouth_timeline(tmp_path: Path) -> None:
     preview, _ = _call(
         "preview",
         _request(
-            "preview", out, out, _inputs(), {MODEL_ID: out / "bocas.json"}, (out / "bocas.json",)
+            "preview", out, out, _inputs(), {MODEL_ID: out / "mouths.json"}, (out / "mouths.json",)
         ),
         tmp_path,
         env,
     )
-    assert preview["assets"][0]["file"] == "bocas.json"
-    data = json.loads((out / "bocas.json.preview.json").read_text(encoding="utf-8"))
+    assert preview["assets"][0]["file"] == "mouths.json"
+    data = json.loads((out / "mouths.json.preview.json").read_text(encoding="utf-8"))
     assert set(data) == {"preview", "kind", "summary", "fields"}
     assert data["preview"] == 1
     assert data["kind"] == "text"

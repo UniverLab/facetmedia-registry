@@ -40,9 +40,9 @@ vendored tree, the pinned Chromium and the pinned `ffmpeg`/`ffprobe`. `fps` pass
 - **`mov-alpha`** must have an alpha channel (`pix_fmt` matching `argb`,
   `rgba`, `yuva`, …); an opaque MOV fails.
 
-## hyperframes.diagrama
+## hyperframes.diagram
 
-- **Selectors validate before `check`.** Every `animacion[].selector` is
+- **Selectors validate before `check`.** Every `animation[].selector` is
   checked against the ids and data-ids the SVG actually carries. An unknown id
   throws a plain `Error`, exit 1, which facet reports as `runner_failed`;
   nothing renders.
@@ -50,14 +50,14 @@ vendored tree, the pinned Chromium and the pinned `ffmpeg`/`ffprobe`. `fps` pass
 - **`build.mjs` owns the `>` fix.** Mermaid writes `>` as `&gt;` inside the
   SVG's `<style>`; browsers decode it, the HyperFrames CSS parser does not.
   `build.mjs` replaces `&gt;` with `>` inside `<style>` and inserts the SVG into
-  `index.html` at `<!-- DIAGRAMA -->`. The runner never rewrites the SVG.
+  `index.html` at `<!-- DIAGRAM -->`. The runner never rewrites the SVG.
 - **Use the font Mermaid measured with**: `@font-face { src: local('Ubuntu') }`.
   Another build of the font overflows the boxes by about 2px and `check` fails.
 - **`fontSize` is 22px at 1080p** in the SVG style; Mermaid's default is too
   small for video.
 - **GSAP is vendored**, never loaded from a CDN.
 
-## hyperframes.giro
+## hyperframes.turntable
 
 - **The scene is a pure function of time.** The runner requires `renderAt`,
   `hf-seek` and `event.detail.waitUntil`, and rejects `requestAnimationFrame`
@@ -67,35 +67,35 @@ vendored tree, the pinned Chromium and the pinned `ffmpeg`/`ffprobe`. `fps` pass
   (Three.js 0.170.0). The importmap must pin `three` and `three/addons/` to
   `./vendor/` paths.
 - **The offline `build.mjs` produces the vendored tree**; the runner never
-  executes it. Runner-side `giroSetup` only base64-embeds `modelo-glb` into
+  executes it. Runner-side `turntableSetup` only base64-embeds `model-glb` into
   `/* GLB */""` and writes the eight scalars into `const DATA = {` at
-  `/* GIRO */`.
+  `/* TURNTABLE */`.
 - **WebGL runs through software (SwiftShader)**, so heavy scenes render slowly.
   Keep the scene light and the text in HTML over the canvas.
 
-## hyperframes.personaje
+## hyperframes.character
 
 - **Drawn SVG characters only.** Human avatars generated from a photo were
   rejected for falling into the uncanny valley.
 - **Rhubarb comes from the registry's own rhubarb package.** Pull it with
   `facet pull rhubarb` (`packages/rhubarb`). The command is
-  `rhubarb -r phonetic -f json --dialogFile <texto.txt> <voz.wav> -o bocas.json`.
+  `rhubarb -r phonetic -f json --dialogFile <dialogue.txt> <voice.wav> -o mouths.json`.
   The phonetic recognizer is required because the default one is English-only;
   Spanish needs `-r phonetic`.
-- **The runner validates before `check`**: every letter in `bocas.json` has its
-  `#boca-<letter>` shape, and the rest rule `.boca { opacity: 0; } #boca-X { opacity: 1; }`
+- **The runner validates before `check`**: every letter in `mouths.json` has its
+  `#mouth-<letter>` shape, and the rest rule `.mouth { opacity: 0; } #mouth-X { opacity: 1; }`
   exists in `index.html` or the SVG. A failure throws a plain `Error`, exit 1,
   which facet reports as `runner_failed`.
 
-## hyperframes.narrado
+## hyperframes.narrated
 
 - **Markers are required exactly once**: one `<!-- SUBS -->`, one
   `<!-- AUDIOS -->`, and a positive `data-duration` on the
   `data-composition-id` tag. A missing or duplicated marker, a bad `.srt` or a
   cue past `data-duration` is `runner_failed`, exit 1; `check` and `render` do
   not run.
-- **Final loudness is the runner's job.** The runner brings `narrado` and
-  `personaje` videos to `target-lufs` (default -14 LUFS, the
+- **Final loudness is the runner's job.** The runner brings `narrated` and
+  `character` videos to `target-lufs` (default -14 LUFS, the
   streaming-platform level) with two-pass EBU R128 `loudnorm` at true peak
   -1.0 dBTP, copying the video stream and re-encoding the audio as AAC, and
   `verify` checks integrated loudness within ±1 LU with true peak at or below
@@ -104,7 +104,7 @@ vendored tree, the pinned Chromium and the pinned `ffmpeg`/`ffprobe`. `fps` pass
   `mix` the voice layers (`role=voice`, `gain-db=0.0`) over the bed
   (`role=bed`) with `ducking=true`, `duck-db=-12.0` and `target-lufs=-16.0`.
 - **Sources are the real packages**: voices are voicestudio files (one engine
-  per file, so narrator and clone voices arrive as separate `voz` clips), the
+  per file, so narrator and clone voices arrive as separate `voice` clips), the
   bed is already mixed offline with the ffmpeg package, and the `.srt` comes
   from whisper `transcribe`. The runner never probes audio provenance.
 - **The offline `build.mjs` produces the vendored `assets/` and `vendor/`

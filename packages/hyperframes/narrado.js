@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
-// The narrado recipe: voice clips, a music bed and whisper subtitles on one
+// The narrated recipe: voice clips, a music bed and whisper subtitles on one
 // timeline.
 //
 // The piece author produces the inputs offline: voicestudio voice files (one
@@ -23,13 +23,13 @@ const TIMING_RE =
   /^(\d+):(\d{2}):(\d{2})[,.](\d{1,3})\s*-->\s*(\d+):(\d{2}):(\d{2})[,.](\d{1,3})/;
 const TAG_RE = /<([A-Za-z][\w:-]*)\b[^>]*>/g;
 
-function narradoSetup(workDir, inputs, base) {
+function narratedSetup(workDir, inputs, base) {
   const voices = voiceClips(inputs, base);
-  const music = requiredFile(inputs, "musica", base);
-  const subtitles = requiredFile(inputs, "subtitulos", base);
+  const music = requiredFile(inputs, "music", base);
+  const subtitles = requiredFile(inputs, "subtitles", base);
   const cues = readSrt(subtitles);
   const templateFile = path.join(workDir, "index.html");
-  if (!fs.existsSync(templateFile)) throw new Error("composicion: index.html not found");
+  if (!fs.existsSync(templateFile)) throw new Error("composition: index.html not found");
   const template = fs.readFileSync(templateFile, "utf8");
   const duration = compositionDuration(template);
   requireCuesFit(cues, duration);
@@ -43,42 +43,42 @@ function narradoSetup(workDir, inputs, base) {
 // --- the inputs: voice clips, the bed and the whisper .srt, resolved on disk.
 
 function voiceClips(inputs, base) {
-  const raw = inputs.voz;
-  if (!Array.isArray(raw) || raw.length === 0) throw new Error("voz is required");
+  const raw = inputs.voice;
+  if (!Array.isArray(raw) || raw.length === 0) throw new Error("voice is required");
   return raw.map((item, index) => {
     if (!item || typeof item !== "object" || !item.clip) {
-      throw new Error(`voz[${index}] has no clip`);
+      throw new Error(`voice[${index}] has no clip`);
     }
     const file = resolveInput(item.clip, base);
-    if (!fs.existsSync(file)) throw new Error(`voz[${index}]: ${file} not found`);
-    return { file, inicio: inicioOf(item, index) };
+    if (!fs.existsSync(file)) throw new Error(`voice[${index}]: ${file} not found`);
+    return { file, start: startOf(item, index) };
   });
 }
 
-function inicioOf(item, index) {
-  const raw = item.inicio === undefined || item.inicio === null ? 0 : item.inicio;
+function startOf(item, index) {
+  const raw = item.start === undefined || item.start === null ? 0 : item.start;
   const value = Number(raw);
   if (!Number.isFinite(value)) {
-    throw new Error(`voz[${index}]: inicio must be a finite number, got ${raw}`);
+    throw new Error(`voice[${index}]: start must be a finite number, got ${raw}`);
   }
   return value;
 }
 
 function musicVolumeOf(inputs) {
-  const raw = inputs["volumen-musica"];
+  const raw = inputs["music-volume"];
   if (raw === undefined || raw === null) return DEFAULT_MUSIC_VOLUME;
   const value = Number(raw);
   if (!Number.isFinite(value) || value < 0 || value > 1) {
-    throw new Error(`volumen-musica must be a number between 0 and 1, got ${raw}`);
+    throw new Error(`music-volume must be a number between 0 and 1, got ${raw}`);
   }
   return value;
 }
 
 function requireVoicesInside(voices, duration) {
   voices.forEach((voice, index) => {
-    if (!(voice.inicio < duration)) {
+    if (!(voice.start < duration)) {
       throw new Error(
-        `voz[${index}]: inicio ${secondsText(voice.inicio)} is not inside ` +
+        `voice[${index}]: start ${secondsText(voice.start)} is not inside ` +
           `the composition duration ${secondsText(duration)}`,
       );
     }
@@ -109,7 +109,7 @@ function readSrt(file) {
     .split(/\n[ \t]*\n/)
     .map((block) => block.trim())
     .filter(Boolean);
-  if (blocks.length === 0) throw new Error(`subtitulos: ${file} has no cues`);
+  if (blocks.length === 0) throw new Error(`subtitles: ${file} has no cues`);
   return blocks.map((block, index) => srtCue(block, index + 1, file));
 }
 
@@ -120,14 +120,14 @@ function srtCue(block, number, file) {
     .filter(Boolean);
   const timingIndex = lines.findIndex((line) => TIMING_RE.test(line));
   if (timingIndex === -1) {
-    throw new Error(`subtitulos: cue ${number} in ${file} has no timing line`);
+    throw new Error(`subtitles: cue ${number} in ${file} has no timing line`);
   }
   const match = TIMING_RE.exec(lines[timingIndex]);
   const start = timestamp(match, 1, number);
   const end = timestamp(match, 5, number);
-  if (end < start) throw new Error(`subtitulos: cue ${number} ends before it starts`);
+  if (end < start) throw new Error(`subtitles: cue ${number} ends before it starts`);
   const text = lines.slice(timingIndex + 1).join(" ");
-  if (!text) throw new Error(`subtitulos: cue ${number} in ${file} has no text`);
+  if (!text) throw new Error(`subtitles: cue ${number} in ${file} has no text`);
   return { start, end, text };
 }
 
@@ -137,7 +137,7 @@ function timestamp(match, offset, cue) {
   const seconds = Number(match[offset + 2]);
   const millis = Number(match[offset + 3].padEnd(3, "0"));
   if (minutes > 59 || seconds > 59) {
-    throw new Error(`subtitulos: cue ${cue} has a bad time ${match[0]}`);
+    throw new Error(`subtitles: cue ${cue} has a bad time ${match[0]}`);
   }
   return round3(hours * 3600 + minutes * 60 + seconds + millis / 1000);
 }
@@ -175,7 +175,7 @@ function requireCuesFit(cues, duration) {
   cues.forEach((cue, index) => {
     if (cue.end > duration) {
       throw new Error(
-        `subtitulos: cue ${index + 1} ends at ${secondsText(cue.end)}s, ` +
+        `subtitles: cue ${index + 1} ends at ${secondsText(cue.end)}s, ` +
           `past the composition duration ${secondsText(duration)}s`,
       );
     }
@@ -217,13 +217,13 @@ function subtitleLine(cue, index) {
 function audioLines(audio) {
   const voiceLines = audio.voices.map(
     (voice, index) =>
-      `<audio id="voz-${index + 1}" src="${escapeAttr(path.basename(voice.file))}" ` +
-      `data-start="${secondsText(voice.inicio)}" ` +
-      `data-duration="${secondsText(audio.duration - voice.inicio)}" ` +
+      `<audio id="voice-${index + 1}" src="${escapeAttr(path.basename(voice.file))}" ` +
+      `data-start="${secondsText(voice.start)}" ` +
+      `data-duration="${secondsText(audio.duration - voice.start)}" ` +
       `data-track-index="${index + 1}" data-volume="1"></audio>`,
   );
   const musicLine =
-    `<audio id="musica" src="${escapeAttr(path.basename(audio.music))}" ` +
+    `<audio id="music" src="${escapeAttr(path.basename(audio.music))}" ` +
     `data-start="0" data-duration="${secondsText(audio.duration)}" ` +
     `data-track-index="${audio.voices.length + 1}" ` +
     `data-volume="${secondsText(audio.volumen)}"></audio>`;
@@ -277,11 +277,11 @@ function copyBeside(files, targetDir) {
   for (const file of files) {
     const base = path.basename(file);
     if (seen.has(base) && seen.get(base) !== file) {
-      throw new Error(`narrado: ${base} is used by more than one input`);
+      throw new Error(`narrated: ${base} is used by more than one input`);
     }
     seen.set(base, file);
     fs.copyFileSync(file, path.join(targetDir, base));
   }
 }
 
-module.exports = { narradoSetup };
+module.exports = { narratedSetup };

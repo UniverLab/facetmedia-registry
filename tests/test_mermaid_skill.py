@@ -62,7 +62,7 @@ def test_the_four_headings_appear_in_order() -> None:
 
 
 def test_the_body_names_the_capability() -> None:
-    assert "mermaid.diagrama" in _body()
+    assert "mermaid.diagram" in _body()
 
 
 def test_the_skill_teaches_the_header_traps() -> None:

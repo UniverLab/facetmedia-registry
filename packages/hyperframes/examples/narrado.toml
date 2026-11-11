@@ -1,8 +1,0 @@
-[inputs]
-composicion = "narrado/composicion"
-voz = [{ clip = "narrado/voz-a.wav" }, { clip = "narrado/voz-b.wav", inicio = 2.0 }]
-musica = "narrado/musica.wav"
-subtitulos = "narrado/subtitulos.srt"
-prompt = "A two-line narrated piece with burned-in subtitles"
-seed = 0
-fps = 24

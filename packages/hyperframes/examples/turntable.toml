@@ -1,0 +1,7 @@
+[inputs]
+composition = "turntable/composition"
+model-glb = "turntable/estudio.glb"
+prompt = "Turn the study model on a slow camera orbit"
+seed = 0
+fps = 24
+duration = 8

@@ -1,7 +1,0 @@
-[inputs]
-composicion = "giro/composicion"
-modelo-glb = "giro/estudio.glb"
-prompt = "Turn the study model on a slow camera orbit"
-seed = 0
-fps = 24
-duracion = 8

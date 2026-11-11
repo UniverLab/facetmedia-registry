@@ -1194,14 +1194,14 @@ platforms = ["linux"]
 subject = "mermaid-cli"
 spdx = "MIT"
 
-[capabilities.diagrama]
+[capabilities.diagram]
 summary = "Render a .mmd Mermaid diagram to SVG and PNG with the pinned mermaid-cli and the pinned Chromium that `facet pull` installs"
 kind = "image"
 
-[capabilities.diagrama.inputs.diagrama]
+[capabilities.diagram.inputs.diagram]
 type = "path"
 required = true
 description = "Mermaid diagram file (.mmd) with its YAML header (theme, themeVariables, fontFamily, fontSize), resolved relative to the piece; flowchart, architecture-beta and the other Mermaid types."
 
-[capabilities.diagrama.preview]
+[capabilities.diagram.preview]
 viewer = "image"

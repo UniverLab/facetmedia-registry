@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 "use strict";
 
-// The personaje recipe: a hand-drawn SVG character speaks with Rhubarb mouths.
+// The character recipe: a hand-drawn SVG character speaks with Rhubarb mouths.
 //
-// The piece author runs the upstream Rhubarb CLI offline to produce bocas.json
+// The piece author runs the upstream Rhubarb CLI offline to produce mouths.json
 // and its own build.mjs inlines the character into the composition. This module
 // runs in the copied workDir before HyperFrames' check: it validates that every
-// letter Rhubarb chose has its .boca-<letter> shape and that the CSS keeps the
+// letter Rhubarb chose has its .mouth-<letter> shape and that the CSS keeps the
 // rest mouth visible at frame 0, then injects the cues and the audio start.
 //
 // It imports only node builtins so it runs before any dependency is linked.
@@ -14,21 +14,21 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const BOCAS_MARKER = "/* BOCAS */[]";
+const MOUTHS_MARKER = "/* MOUTHS */[]";
 const AUDIO_START_DECLARATION = /\bconst\s+AUDIO_START\s*=\s*[^;]+;/;
 const DEFAULT_AUDIO_START = 0.5;
-const BOCA_ID_RE = /\bid=["'](boca-[A-Z])["']/g;
+const MOUTH_ID_RE = /\bid=["'](mouth-[A-Z])["']/g;
 const REST_RULES = [
-  { selector: ".boca", opacity: "0" },
-  { selector: "#boca-X", opacity: "1" },
+  { selector: ".mouth", opacity: "0" },
+  { selector: "#mouth-X", opacity: "1" },
 ];
 
-function personajeSetup(workDir, inputs, base) {
+function characterSetup(workDir, inputs, base) {
   const cues = mouthCues(inputs, base);
   const svg = characterSvg(inputs, base);
   requireShapes(svg, cues);
   const templateFile = path.join(workDir, "index.html");
-  if (!fs.existsSync(templateFile)) throw new Error("composicion: index.html not found");
+  if (!fs.existsSync(templateFile)) throw new Error("composition: index.html not found");
   const template = fs.readFileSync(templateFile, "utf8");
   requireNoParentTraversal(template);
   requireRestRule(template, svg);
@@ -38,19 +38,19 @@ function personajeSetup(workDir, inputs, base) {
   fs.writeFileSync(templateFile, updated);
 }
 
-// --- bocas.json: the mouth cues the upstream Rhubarb CLI wrote offline.
+// --- mouths.json: the mouth cues the upstream Rhubarb CLI wrote offline.
 
 function mouthCues(inputs, base) {
-  const file = resolveInput(requiredInput(inputs, "bocas"), base);
-  if (!fs.existsSync(file)) throw new Error(`bocas: ${file} not found`);
+  const file = resolveInput(requiredInput(inputs, "mouths"), base);
+  if (!fs.existsSync(file)) throw new Error(`mouths: ${file} not found`);
   let data;
   try {
     data = JSON.parse(fs.readFileSync(file, "utf8"));
   } catch (error) {
-    throw new Error(`bocas: ${file} is not valid JSON (${error.message})`);
+    throw new Error(`mouths: ${file} is not valid JSON (${error.message})`);
   }
   if (!Array.isArray(data.mouthCues)) {
-    throw new Error(`bocas: ${file} has no mouthCues array`);
+    throw new Error(`mouths: ${file} has no mouthCues array`);
   }
   return data.mouthCues;
 }
@@ -59,42 +59,42 @@ function cueLetters(cues) {
   const letters = new Set();
   cues.forEach((cue, index) => {
     if (!cue || typeof cue !== "object" || typeof cue.value !== "string") {
-      throw new Error(`bocas: mouthCues[${index}] has no value`);
+      throw new Error(`mouths: mouthCues[${index}] has no value`);
     }
     letters.add(cue.value);
   });
   return letters;
 }
 
-// --- the character: one .boca shape per letter Rhubarb used.
+// --- the character: one .mouth shape per letter Rhubarb used.
 
 function characterSvg(inputs, base) {
-  const file = resolveInput(requiredInput(inputs, "personaje-svg"), base);
-  if (!fs.existsSync(file)) throw new Error(`personaje-svg: ${file} not found`);
+  const file = resolveInput(requiredInput(inputs, "character-svg"), base);
+  if (!fs.existsSync(file)) throw new Error(`character-svg: ${file} not found`);
   return { file, text: fs.readFileSync(file, "utf8") };
 }
 
 function requireShapes(svg, cues) {
-  const ids = bocaIds(svg.text);
+  const ids = mouthIds(svg.text);
   for (const letter of cueLetters(cues)) {
     if (!ids.has(letter)) {
       throw new Error(
-        `personaje-svg: ${svg.file} has no .boca-${letter} shape for Rhubarb mouth ${letter}`,
+        `character-svg: ${svg.file} has no .mouth-${letter} shape for Rhubarb mouth ${letter}`,
       );
     }
   }
 }
 
-function bocaIds(svg) {
+function mouthIds(svg) {
   const ids = new Set();
-  for (const match of svg.matchAll(BOCA_ID_RE)) ids.add(match[1].slice("boca-".length));
+  for (const match of svg.matchAll(MOUTH_ID_RE)) ids.add(match[1].slice("mouth-".length));
   return ids;
 }
 
 // --- the rest rule: the rest mouth must be visible at frame 0.
 //
 // A tl.set at instant 0 never renders, so the CSS carries the rest state:
-// .boca { opacity: 0; } #boca-X { opacity: 1; }. Without it every mouth is
+// .mouth { opacity: 0; } #mouth-X { opacity: 1; }. Without it every mouth is
 // invisible until the first cue changes.
 
 function requireRestRule(template, svg) {
@@ -102,7 +102,7 @@ function requireRestRule(template, svg) {
     if (hasRestRule(source)) return;
   }
   throw new Error(
-    "index.html: the rest rule .boca { opacity: 0; } #boca-X { opacity: 1; } " +
+    "index.html: the rest rule .mouth { opacity: 0; } #mouth-X { opacity: 1; } " +
       "is required so the rest mouth shows at frame 0",
   );
 }
@@ -122,9 +122,9 @@ function ruleHasOpacity(css, selector, opacity) {
 function inject(template, cues, audioStart) {
   const withCues = replaceOnce(
     template,
-    BOCAS_MARKER,
+    MOUTHS_MARKER,
     JSON.stringify(cues),
-    "index.html: /* BOCAS */[] marker is required",
+    "index.html: /* MOUTHS */[] marker is required",
   );
   const declarations = withCues.match(new RegExp(AUDIO_START_DECLARATION, "g")) || [];
   if (declarations.length !== 1) {
@@ -142,11 +142,11 @@ function replaceOnce(text, marker, replacement, message) {
 }
 
 function audioStartOf(inputs) {
-  const raw = inputs["audio-inicio"];
+  const raw = inputs["audio-start"];
   if (raw === undefined || raw === null) return DEFAULT_AUDIO_START;
   const value = Number(raw);
   if (!Number.isFinite(value)) {
-    throw new Error(`audio-inicio must be a finite number, got ${raw}`);
+    throw new Error(`audio-start must be a finite number, got ${raw}`);
   }
   return value;
 }
@@ -167,8 +167,8 @@ function requireNoParentTraversal(template) {
 }
 
 function copyVoice(inputs, base, workDir) {
-  const file = resolveInput(requiredInput(inputs, "voz"), base);
-  if (!fs.existsSync(file)) throw new Error(`voz: ${file} not found`);
+  const file = resolveInput(requiredInput(inputs, "voice"), base);
+  if (!fs.existsSync(file)) throw new Error(`voice: ${file} not found`);
   fs.copyFileSync(file, path.join(workDir, path.basename(file)));
 }
 
@@ -183,4 +183,4 @@ function resolveInput(value, base) {
   return path.isAbsolute(text) ? text : path.resolve(base, text);
 }
 
-module.exports = { personajeSetup };
+module.exports = { characterSetup };

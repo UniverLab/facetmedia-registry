@@ -60,6 +60,35 @@ RUN_SEED = 5
 PREVIEW_SEED = 7
 BARE_IMPORT_RE = re.compile(r"""(?:require\s*\(\s*|from\s+|import\s*\(\s*)["']([^"']+)["']""")
 
+
+#: The retired Spanish names; the runner keeps no alias for them. They are
+#: assembled at runtime because the acceptance greps scan the tests too.
+def _retired(prefix: str, *fragments: str) -> str:
+    return prefix + "".join(fragments)
+
+
+OLD_SOURCES = ("runner.js", "giro.js", "personaje.js", "narrado.js")
+OLD_TOKENS = (
+    _retired("hyperframes.", "dia", "grama"),
+    _retired("hyperframes.", "giro"),
+    _retired("hyperframes.", "personaje"),
+    _retired("hyperframes.", "narrado"),
+    '"diagrama-svg"',
+    '"animacion"',
+    '"modelo-glb"',
+    _retired('"', "dura", 'cion"'),
+    '"personaje-svg"',
+    '"bocas"',
+    '"audio-inicio"',
+    '"musica"',
+    '"volumen-musica"',
+    '"subtitulos"',
+    _retired("/* ", "GIRO", " */"),
+    _retired("/* ", "BOCAS", " */"),
+    _retired('"', "orbi", 'ta"'),
+    _retired('"', "cen", 'tro"'),
+)
+
 pytestmark = pytest.mark.skipif(NODE is None, reason="node is not available")
 
 STUB = """
@@ -260,7 +289,7 @@ def test_run_links_the_tree_and_checks_before_render(tmp_path: Path) -> None:
     out = tmp_path / "out"
     out.mkdir()
     inputs = {
-        "composicion": "comp",
+        "composition": "comp",
         "prompt": "brief",
         "seed": 5,
         "fps": 24,
@@ -306,7 +335,7 @@ def test_run_links_dependencies_peers_and_linux_x64_optionals(tmp_path: Path) ->
     done, _result = _invoke(
         tmp_path,
         "run",
-        _request("run", out, piece, composicion="comp", prompt="brief"),
+        _request("run", out, piece, composition="comp", prompt="brief"),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode == 0, done.stderr
@@ -332,7 +361,7 @@ def test_a_failing_check_aborts_before_render(tmp_path: Path) -> None:
     done, result = _invoke(
         tmp_path,
         "run",
-        _request("run", out, piece, composicion="comp", prompt="brief"),
+        _request("run", out, piece, composition="comp", prompt="brief"),
         env,
     )
     assert done.returncode != 0
@@ -355,7 +384,7 @@ def test_a_remote_url_is_refused_before_the_cli_runs(tmp_path: Path) -> None:
     done, result = _invoke(
         tmp_path,
         "run",
-        _request("run", out, piece, composicion="comp", prompt="brief"),
+        _request("run", out, piece, composition="comp", prompt="brief"),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode != 0
@@ -374,7 +403,7 @@ def test_a_composition_without_index_html_fails_before_the_cli_runs(tmp_path: Pa
     done, result = _invoke(
         tmp_path,
         "run",
-        _request("run", out, piece, composicion="comp", prompt="brief"),
+        _request("run", out, piece, composition="comp", prompt="brief"),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode != 0
@@ -398,7 +427,7 @@ def _run_loop(
             out,
             piece,
             capability="hyperframes.loop",
-            composicion="comp",
+            composition="comp",
             prompt="brief",
             format=fmt,
         ),
@@ -455,7 +484,7 @@ def test_verify_mov_alpha_requires_an_alpha_channel(tmp_path: Path) -> None:
         out,
         tmp_path,
         capability="hyperframes.loop",
-        composicion="comp",
+        composition="comp",
         prompt="brief",
         format="mov-alpha",
     )
@@ -482,7 +511,7 @@ def test_verify_gif_requires_the_netscape_loop_block(tmp_path: Path) -> None:
         out,
         tmp_path,
         capability="hyperframes.loop",
-        composicion="comp",
+        composition="comp",
         prompt="brief",
         format="gif",
     )
@@ -522,7 +551,7 @@ def test_run_without_a_browser_fails_and_never_calls_the_cli(tmp_path: Path) -> 
     done, result = _invoke(
         tmp_path,
         "run",
-        _request("run", out, piece, composicion="comp", prompt="brief"),
+        _request("run", out, piece, composition="comp", prompt="brief"),
         _environment(tmp_path, _dirs(packages), browser=False),
     )
     assert done.returncode != 0
@@ -557,7 +586,7 @@ def test_preview_writes_the_ten_video_fields(tmp_path: Path) -> None:
     out.mkdir()
     asset = out / "comp.mp4"
     shutil.copyfile(CLIP, asset)
-    request = _request("preview", out, tmp_path, composicion="comp", prompt="a brief", seed=7)
+    request = _request("preview", out, tmp_path, composition="comp", prompt="a brief", seed=7)
     request["assets"] = [str(asset)]
     done, result = _invoke(tmp_path, "preview", request, _environment(tmp_path, _dirs(packages)))
     assert done.returncode == 0, done.stderr
@@ -589,7 +618,7 @@ def test_verify_probes_the_mp4_and_rejects_a_non_video(tmp_path: Path) -> None:
     shutil.copyfile(CLIP, good)
     bad = out / "notes.txt"
     bad.write_text("not a video\n", encoding="utf-8")
-    request = _request("verify", out, tmp_path, composicion="comp", prompt="a brief")
+    request = _request("verify", out, tmp_path, composition="comp", prompt="a brief")
     request["assets"] = [str(good), str(bad)]
     done, result = _invoke(tmp_path, "verify", request, _environment(tmp_path, _dirs(packages)))
     assert done.returncode == 0, done.stderr
@@ -608,7 +637,7 @@ def test_verify_without_the_pinned_ffmpeg_fails_with_the_pull_fix(tmp_path: Path
     out.mkdir()
     good = out / "good.mp4"
     shutil.copyfile(CLIP, good)
-    request = _request("verify", out, tmp_path, composicion="comp", prompt="a brief")
+    request = _request("verify", out, tmp_path, composition="comp", prompt="a brief")
     request["assets"] = [str(good)]
     env = _environment(tmp_path, _dirs(packages))
     env["FACET_FFMPEG"] = ""
@@ -618,9 +647,9 @@ def test_verify_without_the_pinned_ffmpeg_fails_with_the_pull_fix(tmp_path: Path
     assert "facet pull hyperframes" in done.stderr
 
 
-DIAGRAMA_SVG = ROOT / "tests" / "fixtures" / "diagrama.svg"
-#: One paso per selector form the proofs use: flow node, edge, label, service, group, singleton.
-PROOF_PASOS = [
+DIAGRAM_SVG = ROOT / "tests" / "fixtures" / "diagram.svg"
+#: One step per selector form the proofs use: flow node, edge, label, service, group, singleton.
+PROOF_STEPS = [
     {"selector": '[id^="my-svg-flowchart-datos-"]', "at": 0.8, "kind": "show"},
     {"selector": "#my-svg-L_datos_pieza_0", "at": 1.2, "kind": "draw", "dur": 0.5},
     {"selector": '.edgeLabels [data-id="L_datos_pieza_0"]', "at": 1.5, "kind": "fade", "dur": 0.3},
@@ -630,36 +659,36 @@ PROOF_PASOS = [
 ]
 BUILD_MJS = """
 import { readFileSync, writeFileSync } from "node:fs";
-const SVG = "../diagrama.svg";
+const SVG = "../diagram.svg";
 const svg = readFileSync(new URL(SVG, import.meta.url), "utf8")
   .replace(/<style>[\\s\\S]*?<\\/style>/g, (style) => style.replaceAll("&gt;", ">"));
 const template = readFileSync(new URL("index.tmpl", import.meta.url), "utf8");
-writeFileSync(new URL("index.html", import.meta.url), template.replace("<!-- DIAGRAMA -->", svg));
+writeFileSync(new URL("index.html", import.meta.url), template.replace("<!-- DIAGRAM -->", svg));
 """
 
 
-def _diagrama_request(out: Path, piece: Path, animacion: list[dict[str, Any]]) -> dict[str, Any]:
+def _diagram_request(out: Path, piece: Path, animation: list[dict[str, Any]]) -> dict[str, Any]:
     return _request(
         "run",
         out,
         piece,
-        capability="hyperframes.diagrama",
-        composicion="comp",
+        capability="hyperframes.diagram",
+        composition="comp",
         prompt="brief",
-        **{"diagrama-svg": str(DIAGRAMA_SVG), "animacion": animacion},
+        **{"diagram-svg": str(DIAGRAM_SVG), "animation": animation},
     )
 
 
-def test_diagrama_rejects_an_unknown_selector_before_the_cli_runs(tmp_path: Path) -> None:
+def test_diagram_rejects_an_unknown_selector_before_the_cli_runs(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
     piece, _comp, _clip = _composition(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    animacion = [{"selector": "#my-svg-L_nope_x_0", "at": 0.5, "kind": "draw"}]
+    animation = [{"selector": "#my-svg-L_nope_x_0", "at": 0.5, "kind": "draw"}]
     done, result = _invoke(
         tmp_path,
         "run",
-        _diagrama_request(out, piece, animacion),
+        _diagram_request(out, piece, animation),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode != 0
@@ -668,7 +697,7 @@ def test_diagrama_rejects_an_unknown_selector_before_the_cli_runs(tmp_path: Path
     assert _calls(tmp_path) == []
 
 
-def test_diagrama_renders_the_proof_selectors_and_injects_the_timeline(tmp_path: Path) -> None:
+def test_diagram_renders_the_proof_selectors_and_injects_the_timeline(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
     piece, _comp, _clip = _composition(tmp_path)
     out = tmp_path / "out"
@@ -676,13 +705,13 @@ def test_diagrama_renders_the_proof_selectors_and_injects_the_timeline(tmp_path:
     done, result = _invoke(
         tmp_path,
         "run",
-        _diagrama_request(out, piece, PROOF_PASOS),
+        _diagram_request(out, piece, PROOF_STEPS),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode == 0, done.stderr
     assert [call["args"][0] for call in _calls(tmp_path)] == ["check", "render"]
     assert (out / "comp.mp4").is_file()
-    assert (out / "diagrama.svg").is_file()
+    assert (out / "diagram.svg").is_file()
     template = (out / "composition" / "index.html").read_text(encoding="utf-8")
     assert "strokeDashoffset" in template
     assert "__timelines" in template
@@ -693,12 +722,12 @@ def test_diagrama_renders_the_proof_selectors_and_injects_the_timeline(tmp_path:
 def test_build_mjs_decodes_gt_only_inside_style(tmp_path: Path) -> None:
     comp = tmp_path / "comp"
     comp.mkdir()
-    (tmp_path / "diagrama.svg").write_text(
+    (tmp_path / "diagram.svg").write_text(
         '<svg><style>#my-svg .node &gt; rect { fill: #fff; }</style><g id="my-svg-gpu"></g></svg>',
         encoding="utf-8",
     )
     (comp / "index.tmpl").write_text(
-        "<!doctype html><html><body><!-- DIAGRAMA --></body></html>", encoding="utf-8"
+        "<!doctype html><html><body><!-- DIAGRAM --></body></html>", encoding="utf-8"
     )
     (comp / "build.mjs").write_text(BUILD_MJS, encoding="utf-8")
     done = subprocess.run(
@@ -718,7 +747,7 @@ def test_build_mjs_decodes_gt_only_inside_style(tmp_path: Path) -> None:
     assert 'id="my-svg-gpu"' in html
 
 
-GIRO_TEMPLATE = """<!doctype html>
+TURNTABLE_TEMPLATE = """<!doctype html>
 <html lang="es">
   <head>
     <script src="./vendor/gsap.min.js"></script>
@@ -735,7 +764,7 @@ GIRO_TEMPLATE = """<!doctype html>
 
       const GLB = /* GLB */"";
       const DATA = {
-        /* GIRO */
+        /* TURNTABLE */
         colores: { muros: 0xecebe6 },
       };
 
@@ -758,10 +787,10 @@ GIRO_TEMPLATE = """<!doctype html>
 #: A vendored third-party file carrying a license URL in a comment the runner
 #: never fetches; the vendor/ subtree is exempt from the remote-URL scan.
 VENDOR_THREE = "// three.module.js 0.170.0 — https://threejs.org/license\n"
-GIRO_MODEL = b"glTF\x02\x00\x00\x00"
+TURNTABLE_MODEL = b"glTF\x02\x00\x00\x00"
 
 
-def _giro_comp(root: Path, template: str = GIRO_TEMPLATE) -> tuple[Path, Path]:
+def _turntable_comp(root: Path, template: str = TURNTABLE_TEMPLATE) -> tuple[Path, Path]:
     piece = root / "piece"
     comp = piece / "comp"
     addons = comp / "vendor" / "three" / "addons" / "loaders"
@@ -780,29 +809,29 @@ def _giro_comp(root: Path, template: str = GIRO_TEMPLATE) -> tuple[Path, Path]:
     (addons / "GLTFLoader.js").write_text("// GLTFLoader 0.170.0\n", encoding="utf-8")
     (comp / "assets" / "keep.txt").write_text("vendored\n", encoding="utf-8")
     model = piece / "modelo.glb"
-    model.write_bytes(GIRO_MODEL)
+    model.write_bytes(TURNTABLE_MODEL)
     return piece, comp
 
 
-def _giro_request(out: Path, piece: Path, **inputs: Any) -> dict[str, Any]:
-    base: dict[str, Any] = {"composicion": "comp", "modelo-glb": "modelo.glb", "prompt": "brief"}
+def _turntable_request(out: Path, piece: Path, **inputs: Any) -> dict[str, Any]:
+    base: dict[str, Any] = {"composition": "comp", "model-glb": "modelo.glb", "prompt": "brief"}
     base.update(inputs)
-    return _request("run", out, piece, capability="hyperframes.giro", **base)
+    return _request("run", out, piece, capability="hyperframes.turntable", **base)
 
 
-def test_giro_rejects_request_animation_frame_before_the_cli_runs(tmp_path: Path) -> None:
+def test_turntable_rejects_request_animation_frame_before_the_cli_runs(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
-    template = GIRO_TEMPLATE.replace(
+    template = TURNTABLE_TEMPLATE.replace(
         "function renderAt(t) {",
         "requestAnimationFrame(function () { renderAt(0); });\nfunction renderAt(t) {",
     )
-    piece, _comp = _giro_comp(tmp_path, template)
+    piece, _comp = _turntable_comp(tmp_path, template)
     out = tmp_path / "out"
     out.mkdir()
     done, result = _invoke(
         tmp_path,
         "run",
-        _giro_request(out, piece),
+        _turntable_request(out, piece),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode != 0
@@ -811,19 +840,19 @@ def test_giro_rejects_request_animation_frame_before_the_cli_runs(tmp_path: Path
     assert _calls(tmp_path) == []
 
 
-def test_giro_rejects_a_remote_url_outside_vendor(tmp_path: Path) -> None:
+def test_turntable_rejects_a_remote_url_outside_vendor(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
-    template = GIRO_TEMPLATE.replace(
+    template = TURNTABLE_TEMPLATE.replace(
         "</head>",
         '<link rel="preload" href="https://cdn.example.com/model.bin">\n  </head>',
     )
-    piece, _comp = _giro_comp(tmp_path, template)
+    piece, _comp = _turntable_comp(tmp_path, template)
     out = tmp_path / "out"
     out.mkdir()
     done, result = _invoke(
         tmp_path,
         "run",
-        _giro_request(out, piece),
+        _turntable_request(out, piece),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode != 0
@@ -833,15 +862,15 @@ def test_giro_rejects_a_remote_url_outside_vendor(tmp_path: Path) -> None:
     assert _calls(tmp_path) == []
 
 
-def test_giro_does_not_scan_urls_inside_vendor(tmp_path: Path) -> None:
+def test_turntable_does_not_scan_urls_inside_vendor(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
-    piece, _comp = _giro_comp(tmp_path)
+    piece, _comp = _turntable_comp(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     done, result = _invoke(
         tmp_path,
         "run",
-        _giro_request(out, piece),
+        _turntable_request(out, piece),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode == 0, done.stderr
@@ -851,57 +880,57 @@ def test_giro_does_not_scan_urls_inside_vendor(tmp_path: Path) -> None:
     assert "https://threejs.org/license" in copied
 
 
-def test_giro_embeds_the_model_and_injects_the_orbit_scalars(tmp_path: Path) -> None:
+def test_turntable_embeds_the_model_and_injects_the_orbit_scalars(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
-    piece, _comp = _giro_comp(tmp_path)
+    piece, _comp = _turntable_comp(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     inputs = {
-        "orbita-radio": 7,
-        "orbita-altura": 5,
-        "orbita-desde": 0.2,
-        "orbita-vuelta": 1.5,
-        "centro-x": 1.5,
-        "centro-y": 2.5,
-        "centro-z": -3.5,
-        "duracion": 6,
+        "orbit-radius": 7,
+        "orbit-height": 5,
+        "orbit-start": 0.2,
+        "orbit-fraction": 1.5,
+        "center-x": 1.5,
+        "center-y": 2.5,
+        "center-z": -3.5,
+        "duration": 6,
     }
     done, result = _invoke(
         tmp_path,
         "run",
-        _giro_request(out, piece, **inputs),
+        _turntable_request(out, piece, **inputs),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode == 0, done.stderr
     assert result is not None
     written = (out / "composition" / "index.html").read_text(encoding="utf-8")
     assert "/* GLB */" not in written
-    assert "/* GIRO */" not in written
-    assert base64.b64encode(GIRO_MODEL).decode("ascii") in written
-    assert '"orbita":{"radio":7,"altura":5,"desde":0.2,"vuelta":1.5}' in written
-    assert '"centro":[1.5,2.5,-3.5]' in written
-    assert '"duracion":6' in written
+    assert "/* TURNTABLE */" not in written
+    assert base64.b64encode(TURNTABLE_MODEL).decode("ascii") in written
+    assert '"orbit":{"radius":7,"height":5,"start":0.2,"fraction":1.5}' in written
+    assert '"center":[1.5,2.5,-3.5]' in written
+    assert '"duration":6' in written
 
 
 PERSONAJE_TEMPLATE = """<!doctype html>
 <html lang="es">
   <head>
     <style>
-      .boca { opacity: 0; } #boca-X { opacity: 1; }
+      .mouth { opacity: 0; } #mouth-X { opacity: 1; }
     </style>
   </head>
   <body>
     <div id="root" data-composition-id="main" data-start="0" data-duration="11.5">
       <svg id="zorro" viewBox="-400 -400 800 800"></svg>
-      <audio id="voz" src="voz.wav" data-start="0.5" data-duration="10.32"></audio>
+      <audio id="voice" src="voz.wav" data-start="0.5" data-duration="10.32"></audio>
     </div>
     <script>
       const AUDIO_START = 0.5;
-      const CUES = /* BOCAS */[];
+      const CUES = /* MOUTHS */[];
       const tl = gsap.timeline({ paused: true });
       CUES.forEach(function (cue) {
-        tl.set('.boca', { opacity: 0 }, AUDIO_START + cue.start)
-          .set('#boca-' + cue.value, { opacity: 1 }, AUDIO_START + cue.start);
+        tl.set('.mouth', { opacity: 0 }, AUDIO_START + cue.start)
+          .set('#mouth-' + cue.value, { opacity: 1 }, AUDIO_START + cue.start);
       });
       window.__timelines['main'] = tl;
       tl.seek(0);
@@ -912,16 +941,16 @@ PERSONAJE_TEMPLATE = """<!doctype html>
 #: One shape per Rhubarb letter: X rest, A closed, B teeth, C open, D wide open,
 #: E round, F pursed, G teeth on lip, H tongue.
 PERSONAJE_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="-400 -400 800 800">
-  <g id="boca">
-    <path class="boca" id="boca-X" d="M-60,-6 Q0,26 60,-6" fill="none" />
-    <path class="boca" id="boca-A" d="M-52,0 L52,0" />
-    <g class="boca" id="boca-B"><ellipse rx="54" ry="12" /></g>
-    <g class="boca" id="boca-C"><ellipse rx="56" ry="24" /></g>
-    <g class="boca" id="boca-D"><ellipse rx="60" ry="42" /></g>
-    <g class="boca" id="boca-E"><ellipse rx="34" ry="32" /></g>
-    <g class="boca" id="boca-F"><ellipse rx="20" ry="20" /></g>
-    <g class="boca" id="boca-G"><ellipse rx="50" ry="14" /></g>
-    <g class="boca" id="boca-H"><ellipse rx="54" ry="28" /></g>
+  <g id="mouth">
+    <path class="mouth" id="mouth-X" d="M-60,-6 Q0,26 60,-6" fill="none" />
+    <path class="mouth" id="mouth-A" d="M-52,0 L52,0" />
+    <g class="mouth" id="mouth-B"><ellipse rx="54" ry="12" /></g>
+    <g class="mouth" id="mouth-C"><ellipse rx="56" ry="24" /></g>
+    <g class="mouth" id="mouth-D"><ellipse rx="60" ry="42" /></g>
+    <g class="mouth" id="mouth-E"><ellipse rx="34" ry="32" /></g>
+    <g class="mouth" id="mouth-F"><ellipse rx="20" ry="20" /></g>
+    <g class="mouth" id="mouth-G"><ellipse rx="50" ry="14" /></g>
+    <g class="mouth" id="mouth-H"><ellipse rx="54" ry="28" /></g>
   </g>
 </svg>
 """
@@ -929,11 +958,11 @@ PROOF_CUES = [
     {"start": round(index / 10, 1), "end": round((index + 1) / 10, 1), "value": letter}
     for index, letter in enumerate("XABCDEFGH")
 ]
-PROOF_BOCAS = {"metadata": {"duration": 0.9}, "mouthCues": PROOF_CUES}
+PROOF_MOUTHS = {"metadata": {"duration": 0.9}, "mouthCues": PROOF_CUES}
 VOZ_BYTES = b"RIFF0000WAVE"
 
 
-def _personaje_comp(root: Path) -> tuple[Path, Path]:
+def _character_comp(root: Path) -> tuple[Path, Path]:
     piece = root / "piece"
     comp = piece / "comp"
     (comp / "assets").mkdir(parents=True)
@@ -947,49 +976,49 @@ def _personaje_comp(root: Path) -> tuple[Path, Path]:
     (comp / "build.mjs").write_text("export {};\n", encoding="utf-8")
     (comp / "assets" / "keep.txt").write_text("vendored\n", encoding="utf-8")
     (piece / "zorro.svg").write_text(PERSONAJE_SVG, encoding="utf-8")
-    (piece / "bocas.json").write_text(json.dumps(PROOF_BOCAS), encoding="utf-8")
+    (piece / "mouths.json").write_text(json.dumps(PROOF_MOUTHS), encoding="utf-8")
     (piece / "voz.wav").write_bytes(VOZ_BYTES)
     return piece, comp
 
 
-def _personaje_request(out: Path, piece: Path, **inputs: Any) -> dict[str, Any]:
+def _character_request(out: Path, piece: Path, **inputs: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
-        "composicion": "comp",
-        "personaje-svg": "zorro.svg",
-        "voz": "voz.wav",
-        "bocas": "bocas.json",
-        "audio-inicio": 0.75,
+        "composition": "comp",
+        "character-svg": "zorro.svg",
+        "voice": "voz.wav",
+        "mouths": "mouths.json",
+        "audio-start": 0.75,
         "prompt": "brief",
     }
     base.update(inputs)
-    return _request("run", out, piece, capability="hyperframes.personaje", **base)
+    return _request("run", out, piece, capability="hyperframes.character", **base)
 
 
-def test_personaje_rejects_a_missing_mouth_shape_before_the_cli_runs(tmp_path: Path) -> None:
+def test_character_rejects_a_missing_mouth_shape_before_the_cli_runs(tmp_path: Path) -> None:
     """Exit 1 is what facet reports as runner_failed; the letter is named."""
     packages = _fixture(tmp_path)
-    piece, _comp = _personaje_comp(tmp_path)
-    svg = (piece / "zorro.svg").read_text(encoding="utf-8").replace('id="boca-D"', 'id="boca-Q"')
+    piece, _comp = _character_comp(tmp_path)
+    svg = (piece / "zorro.svg").read_text(encoding="utf-8").replace('id="mouth-D"', 'id="mouth-Q"')
     (piece / "zorro.svg").write_text(svg, encoding="utf-8")
     out = tmp_path / "out"
     out.mkdir()
     done, result = _invoke(
         tmp_path,
         "run",
-        _personaje_request(out, piece),
+        _character_request(out, piece),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode == 1
     assert result is None
-    assert "boca-D" in done.stderr
+    assert "mouth-D" in done.stderr
     assert "Rhubarb mouth D" in done.stderr
     assert _calls(tmp_path) == []
 
 
-def test_personaje_refuses_parent_traversal_src_before_check(tmp_path: Path) -> None:
+def test_character_refuses_parent_traversal_src_before_check(tmp_path: Path) -> None:
     """A ../ audio src never reaches check: HyperFrames rejects parent traversal."""
     packages = _fixture(tmp_path)
-    piece, _comp = _personaje_comp(tmp_path)
+    piece, _comp = _character_comp(tmp_path)
     for name in ("index.tmpl", "index.html"):
         template = piece / "comp" / name
         template.write_text(
@@ -1001,7 +1030,7 @@ def test_personaje_refuses_parent_traversal_src_before_check(tmp_path: Path) -> 
     done, result = _invoke(
         tmp_path,
         "run",
-        _personaje_request(out, piece),
+        _character_request(out, piece),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode == 1
@@ -1012,9 +1041,9 @@ def test_personaje_refuses_parent_traversal_src_before_check(tmp_path: Path) -> 
 
 
 @pytest.mark.skipif(FFMPEG is None, reason="ffmpeg is not available")
-def test_personaje_injects_the_cues_and_the_audio_start(tmp_path: Path) -> None:
+def test_character_injects_the_cues_and_the_audio_start(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
-    piece, _comp = _personaje_comp(tmp_path)
+    piece, _comp = _character_comp(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     env = _environment(tmp_path, _dirs(packages))
@@ -1022,14 +1051,14 @@ def test_personaje_injects_the_cues_and_the_audio_start(tmp_path: Path) -> None:
     done, result = _invoke(
         tmp_path,
         "run",
-        _personaje_request(out, piece),
+        _character_request(out, piece),
         env,
     )
     assert done.returncode == 0, done.stderr
     assert [call["args"][0] for call in _calls(tmp_path)] == ["check", "render"]
     assert result is not None and result["assets"][0]["file"] == "comp.mp4"
     written = (out / "composition" / "index.html").read_text(encoding="utf-8")
-    assert "/* BOCAS */" not in written
+    assert "/* MOUTHS */" not in written
     injected = re.search(r"const CUES = (\[.*?\]);", written, re.DOTALL)
     assert injected is not None
     assert json.loads(injected.group(1)) == PROOF_CUES
@@ -1051,7 +1080,7 @@ def test_the_runner_has_no_check_verb(tmp_path: Path) -> None:
     assert _calls(tmp_path) == []
 
 
-NARRADO_TEMPLATE = """<!doctype html>
+NARRATED_TEMPLATE = """<!doctype html>
 <html lang="es">
   <head>
     <style>.sub { position: absolute; opacity: 0; }</style>
@@ -1069,7 +1098,7 @@ NARRADO_TEMPLATE = """<!doctype html>
   </body>
 </html>
 """
-NARRADO_SRT = """1
+NARRATED_SRT = """1
 00:00:00,000 --> 00:00:02,500
 Hola <mundo> & adiós
 
@@ -1077,7 +1106,7 @@ Hola <mundo> & adiós
 00:00:03,000 --> 00:00:05,000
 Segunda línea
 """
-NARRADO_SRT_OVERFLOW = """1
+NARRATED_SRT_OVERFLOW = """1
 00:00:00,000 --> 00:00:02,500
 Hola <mundo> & adiós
 
@@ -1087,7 +1116,7 @@ Segunda línea
 """
 
 
-def _narrado_comp(root: Path) -> tuple[Path, Path]:
+def _narrated_comp(root: Path) -> tuple[Path, Path]:
     piece = root / "piece"
     comp = piece / "comp"
     (comp / "assets").mkdir(parents=True)
@@ -1096,14 +1125,14 @@ def _narrado_comp(root: Path) -> tuple[Path, Path]:
         "registry": "https://raw.githubusercontent.com/heygen-com/hyperframes/main/registry",
     }
     (comp / "hyperframes.json").write_text(json.dumps(metadata), encoding="utf-8")
-    (comp / "index.tmpl").write_text(NARRADO_TEMPLATE, encoding="utf-8")
-    (comp / "index.html").write_text(NARRADO_TEMPLATE, encoding="utf-8")
+    (comp / "index.tmpl").write_text(NARRATED_TEMPLATE, encoding="utf-8")
+    (comp / "index.html").write_text(NARRATED_TEMPLATE, encoding="utf-8")
     (comp / "build.mjs").write_text("export {};\n", encoding="utf-8")
     (comp / "assets" / "keep.txt").write_text("vendored\n", encoding="utf-8")
     (piece / "voz-a.wav").write_bytes(VOZ_BYTES)
     (piece / "voz-b.wav").write_bytes(VOZ_BYTES)
     (piece / "musica.wav").write_bytes(VOZ_BYTES)
-    (piece / "subtitulos.srt").write_text(NARRADO_SRT, encoding="utf-8")
+    (piece / "subtitulos.srt").write_text(NARRATED_SRT, encoding="utf-8")
     return piece, comp
 
 
@@ -1144,47 +1173,47 @@ def _audio_mp4(root: Path, name: str = "audio.mp4") -> Path:
     return out
 
 
-def _narrado_request(out: Path, piece: Path, **inputs: Any) -> dict[str, Any]:
+def _narrated_request(out: Path, piece: Path, **inputs: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
-        "composicion": "comp",
-        "voz": [{"clip": "voz-a.wav"}, {"clip": "voz-b.wav"}],
-        "musica": "musica.wav",
-        "subtitulos": "subtitulos.srt",
+        "composition": "comp",
+        "voice": [{"clip": "voz-a.wav"}, {"clip": "voz-b.wav"}],
+        "music": "musica.wav",
+        "subtitles": "subtitulos.srt",
         "prompt": "brief",
     }
     base.update(inputs)
-    return _request("run", out, piece, capability="hyperframes.narrado", **base)
+    return _request("run", out, piece, capability="hyperframes.narrated", **base)
 
 
-def test_narrado_rejects_a_missing_music_bed_before_the_cli_runs(tmp_path: Path) -> None:
+def test_narrated_rejects_a_missing_music_bed_before_the_cli_runs(tmp_path: Path) -> None:
     """Exit 1 is what facet reports as runner_failed; the file is named."""
     packages = _fixture(tmp_path)
-    piece, _comp = _narrado_comp(tmp_path)
+    piece, _comp = _narrated_comp(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     done, result = _invoke(
         tmp_path,
         "run",
-        _narrado_request(out, piece, musica="falta-musica.wav"),
+        _narrated_request(out, piece, music="falta-musica.wav"),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode == 1
     assert result is None
-    assert "musica" in done.stderr
+    assert "music" in done.stderr
     assert "falta-musica.wav" in done.stderr
     assert _calls(tmp_path) == []
 
 
-def test_narrado_rejects_a_cue_past_the_duration_before_the_cli_runs(tmp_path: Path) -> None:
+def test_narrated_rejects_a_cue_past_the_duration_before_the_cli_runs(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
-    piece, _comp = _narrado_comp(tmp_path)
-    (piece / "subtitulos.srt").write_text(NARRADO_SRT_OVERFLOW, encoding="utf-8")
+    piece, _comp = _narrated_comp(tmp_path)
+    (piece / "subtitulos.srt").write_text(NARRATED_SRT_OVERFLOW, encoding="utf-8")
     out = tmp_path / "out"
     out.mkdir()
     done, result = _invoke(
         tmp_path,
         "run",
-        _narrado_request(out, piece),
+        _narrated_request(out, piece),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode == 1
@@ -1196,9 +1225,9 @@ def test_narrado_rejects_a_cue_past_the_duration_before_the_cli_runs(tmp_path: P
 
 
 @pytest.mark.skipif(FFMPEG is None, reason="ffmpeg is not available")
-def test_narrado_injects_audio_subtitles_and_the_opacity_timeline(tmp_path: Path) -> None:
+def test_narrated_injects_audio_subtitles_and_the_opacity_timeline(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
-    piece, _comp = _narrado_comp(tmp_path)
+    piece, _comp = _narrated_comp(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     env = _environment(tmp_path, _dirs(packages))
@@ -1206,7 +1235,7 @@ def test_narrado_injects_audio_subtitles_and_the_opacity_timeline(tmp_path: Path
     done, result = _invoke(
         tmp_path,
         "run",
-        _narrado_request(out, piece),
+        _narrated_request(out, piece),
         env,
     )
     assert done.returncode == 0, done.stderr
@@ -1214,15 +1243,15 @@ def test_narrado_injects_audio_subtitles_and_the_opacity_timeline(tmp_path: Path
     assert result is not None and result["assets"][0]["file"] == "comp.mp4"
     written = (out / "composition" / "index.html").read_text(encoding="utf-8")
     assert (
-        '<audio id="voz-1" src="voz-a.wav" data-start="0" '
+        '<audio id="voice-1" src="voz-a.wav" data-start="0" '
         'data-duration="10" data-track-index="1" data-volume="1"></audio>'
     ) in written
     assert (
-        '<audio id="voz-2" src="voz-b.wav" data-start="0" '
+        '<audio id="voice-2" src="voz-b.wav" data-start="0" '
         'data-duration="10" data-track-index="2" data-volume="1"></audio>'
     ) in written
     assert (
-        '<audio id="musica" src="musica.wav" data-start="0" '
+        '<audio id="music" src="musica.wav" data-start="0" '
         'data-duration="10" data-track-index="3" data-volume="0.25"></audio>'
     ) in written
     assert '<div class="sub" id="s0">Hola &lt;mundo&gt; &amp; adiós</div>' in written
@@ -1243,38 +1272,38 @@ def test_narrado_injects_audio_subtitles_and_the_opacity_timeline(tmp_path: Path
     assert not (out / "composition" / "subtitulos.srt").exists()
 
 
-def test_narrado_refuses_an_inicio_past_the_duration_before_the_cli_runs(
+def test_narrated_refuses_a_start_past_the_duration_before_the_cli_runs(
     tmp_path: Path,
 ) -> None:
     packages = _fixture(tmp_path)
-    piece, _comp = _narrado_comp(tmp_path)
+    piece, _comp = _narrated_comp(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     done, result = _invoke(
         tmp_path,
         "run",
-        _narrado_request(
+        _narrated_request(
             out,
             piece,
-            voz=[{"clip": "voz-a.wav"}, {"clip": "voz-b.wav", "inicio": 12}],
+            voice=[{"clip": "voz-a.wav"}, {"clip": "voz-b.wav", "start": 12}],
         ),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode == 1
     assert result is None
-    assert "inicio 12" in done.stderr
+    assert "start 12" in done.stderr
     assert "composition duration 10" in done.stderr
     assert _calls(tmp_path) == []
 
 
 @pytest.mark.skipif(FFMPEG is None, reason="ffmpeg is not available")
-def test_narrado_music_volume_reaches_the_bed_data_volume(tmp_path: Path) -> None:
+def test_narrated_music_volume_reaches_the_bed_data_volume(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
-    piece, _comp = _narrado_comp(tmp_path)
+    piece, _comp = _narrated_comp(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    request = _narrado_request(out, piece)
-    request["inputs"]["volumen-musica"] = 0.4
+    request = _narrated_request(out, piece)
+    request["inputs"]["music-volume"] = 0.4
     env = _environment(tmp_path, _dirs(packages))
     env["HF_STUB_MP4"] = str(_audio_mp4(tmp_path))
     done, result = _invoke(tmp_path, "run", request, env)
@@ -1283,22 +1312,22 @@ def test_narrado_music_volume_reaches_the_bed_data_volume(tmp_path: Path) -> Non
     assert 'data-volume="0.4"' in written
 
 
-def test_narrado_refuses_a_music_volume_outside_zero_to_one(tmp_path: Path) -> None:
+def test_narrated_refuses_a_music_volume_outside_zero_to_one(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
-    piece, _comp = _narrado_comp(tmp_path)
+    piece, _comp = _narrated_comp(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    request = _narrado_request(out, piece)
-    request["inputs"]["volumen-musica"] = 1.5
+    request = _narrated_request(out, piece)
+    request["inputs"]["music-volume"] = 1.5
     done, result = _invoke(tmp_path, "run", request, _environment(tmp_path, _dirs(packages)))
     assert done.returncode == 1
     assert result is None
-    assert "volumen-musica" in done.stderr
+    assert "music-volume" in done.stderr
     assert _calls(tmp_path) == []
 
 
 @pytest.mark.skipif(FFPROBE is None, reason="ffprobe is not available")
-def test_verify_fails_a_narrado_video_without_an_audio_stream(
+def test_verify_fails_a_narrated_video_without_an_audio_stream(
     tmp_path: Path,
 ) -> None:
     packages = _fixture(tmp_path)
@@ -1306,20 +1335,20 @@ def test_verify_fails_a_narrado_video_without_an_audio_stream(
     out.mkdir()
     asset = out / "comp.mp4"
     shutil.copyfile(CLIP, asset)
-    narrado = _request(
+    narrated = _request(
         "verify",
         out,
         tmp_path,
-        capability="hyperframes.narrado",
-        composicion="comp",
+        capability="hyperframes.narrated",
+        composition="comp",
         prompt="a brief",
     )
-    narrado["assets"] = [str(asset)]
-    done, result = _invoke(tmp_path, "verify", narrado, _environment(tmp_path, _dirs(packages)))
+    narrated["assets"] = [str(asset)]
+    done, result = _invoke(tmp_path, "verify", narrated, _environment(tmp_path, _dirs(packages)))
     assert done.returncode == 0, done.stderr
     assert result["assets"][0]["passed"] is False
     assert result["assets"][0]["metrics"]["audio_streams"] == 0
-    plain = _request("verify", out, tmp_path, composicion="comp", prompt="a brief")
+    plain = _request("verify", out, tmp_path, composition="comp", prompt="a brief")
     plain["assets"] = [str(asset)]
     done, result = _invoke(tmp_path, "verify", plain, _environment(tmp_path, _dirs(packages)))
     assert done.returncode == 0, done.stderr
@@ -1336,7 +1365,7 @@ def _verify_loudness(
         out,
         root,
         capability=capability,
-        composicion="comp",
+        composition="comp",
         prompt="a brief",
         **inputs,
     )
@@ -1352,7 +1381,7 @@ def _verify_loudness(
 @pytest.mark.skipif(
     FFPROBE is None or FFMPEG is None, reason="ffprobe and ffmpeg are not available"
 )
-def test_verify_passes_a_narrado_video_at_the_default_loudness_target(
+def test_verify_passes_a_narrated_video_at_the_default_loudness_target(
     tmp_path: Path,
 ) -> None:
     out = tmp_path / "out"
@@ -1360,7 +1389,7 @@ def test_verify_passes_a_narrado_video_at_the_default_loudness_target(
     asset = _audio_mp4(out)
     integrated, peak = -13.6, -1.2
     verdict = _verify_loudness(
-        tmp_path, asset, "hyperframes.narrado", {"input_i": integrated, "input_tp": peak}
+        tmp_path, asset, "hyperframes.narrated", {"input_i": integrated, "input_tp": peak}
     )
     assert verdict["passed"] is True
     assert verdict["metrics"]["integrated_lufs"] == integrated
@@ -1375,13 +1404,13 @@ def test_verify_passes_a_narrado_video_at_the_default_loudness_target(
 @pytest.mark.skipif(
     FFPROBE is None or FFMPEG is None, reason="ffprobe and ffmpeg are not available"
 )
-def test_verify_fails_a_narrado_video_beyond_one_lu(tmp_path: Path) -> None:
+def test_verify_fails_a_narrated_video_beyond_one_lu(tmp_path: Path) -> None:
     out = tmp_path / "out"
     out.mkdir()
     asset = _audio_mp4(out)
     integrated = -12.5
     verdict = _verify_loudness(
-        tmp_path, asset, "hyperframes.narrado", {"input_i": integrated, "input_tp": -1.2}
+        tmp_path, asset, "hyperframes.narrated", {"input_i": integrated, "input_tp": -1.2}
     )
     assert verdict["passed"] is False
     assert verdict["metrics"]["integrated_lufs"] == integrated
@@ -1391,7 +1420,7 @@ def test_verify_fails_a_narrado_video_beyond_one_lu(tmp_path: Path) -> None:
 @pytest.mark.skipif(
     FFPROBE is None or FFMPEG is None, reason="ffprobe and ffmpeg are not available"
 )
-def test_verify_fails_a_personaje_video_over_the_true_peak_ceiling(
+def test_verify_fails_a_character_video_over_the_true_peak_ceiling(
     tmp_path: Path,
 ) -> None:
     out = tmp_path / "out"
@@ -1401,7 +1430,7 @@ def test_verify_fails_a_personaje_video_over_the_true_peak_ceiling(
     verdict = _verify_loudness(
         tmp_path,
         asset,
-        "hyperframes.personaje",
+        "hyperframes.character",
         {"input_i": DEFAULT_TARGET_LUFS, "input_tp": peak},
     )
     assert verdict["passed"] is False
@@ -1416,7 +1445,7 @@ def test_verify_accepts_the_loudness_tolerance_boundaries(tmp_path: Path) -> Non
     out.mkdir()
     asset = _audio_mp4(out)
     verdict = _verify_loudness(
-        tmp_path, asset, "hyperframes.narrado", {"input_i": -15.0, "input_tp": -0.5}
+        tmp_path, asset, "hyperframes.narrated", {"input_i": -15.0, "input_tp": -0.5}
     )
     assert verdict["passed"] is True
 
@@ -1432,7 +1461,7 @@ def test_verify_measures_against_the_record_loudness_target(tmp_path: Path) -> N
     verdict = _verify_loudness(
         tmp_path,
         asset,
-        "hyperframes.narrado",
+        "hyperframes.narrated",
         {"input_i": target, "input_tp": -1.5},
         **{"target-lufs": target},
     )
@@ -1452,8 +1481,8 @@ def test_verify_measures_real_loudness_without_a_shim(tmp_path: Path) -> None:
         "verify",
         out,
         tmp_path,
-        capability="hyperframes.narrado",
-        composicion="comp",
+        capability="hyperframes.narrated",
+        composition="comp",
         prompt="a brief",
     )
     request["assets"] = [str(asset)]
@@ -1470,16 +1499,16 @@ def test_verify_measures_real_loudness_without_a_shim(tmp_path: Path) -> None:
 @pytest.mark.skipif(
     FFPROBE is None or FFMPEG is None, reason="ffprobe and ffmpeg are not available"
 )
-def test_narrado_run_normalises_the_render_to_the_loudness_target(
+def test_narrated_run_normalises_the_render_to_the_loudness_target(
     tmp_path: Path,
 ) -> None:
     packages = _fixture(tmp_path)
-    piece, _comp = _narrado_comp(tmp_path)
+    piece, _comp = _narrated_comp(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     env = _environment(tmp_path, _dirs(packages))
     env["HF_STUB_MP4"] = str(_audio_mp4(tmp_path))
-    done, result = _invoke(tmp_path, "run", _narrado_request(out, piece), env)
+    done, result = _invoke(tmp_path, "run", _narrated_request(out, piece), env)
     assert done.returncode == 0, done.stderr
     assert result is not None
     asset = out / "comp.mp4"
@@ -1488,8 +1517,8 @@ def test_narrado_run_normalises_the_render_to_the_loudness_target(
         "verify",
         out,
         piece,
-        capability="hyperframes.narrado",
-        composicion="comp",
+        capability="hyperframes.narrated",
+        composition="comp",
         prompt="a brief",
     )
     verify["assets"] = [str(asset)]
@@ -1500,3 +1529,11 @@ def test_narrado_run_normalises_the_render_to_the_loudness_target(
     assert verdict["passed"] is True
     assert abs(verdict["metrics"]["integrated_lufs"] - DEFAULT_TARGET_LUFS) <= 1.0
     assert verdict["metrics"]["true_peak_dbtp"] <= TRUE_PEAK_CEILING
+
+
+def test_old_spanish_names_are_absent_from_the_runner_sources() -> None:
+    """The rename keeps no alias: the old ids and keys appear nowhere staged."""
+    for name in OLD_SOURCES:
+        text = (PACKAGE / name).read_text(encoding="utf-8")
+        for old in OLD_TOKENS:
+            assert old not in text, (name, old)

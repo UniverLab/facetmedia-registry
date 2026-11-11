@@ -72,8 +72,8 @@ A video cannot be subtitled from the video file itself — whisper hears audio:
 
 ## The narrated-video handoff
 
-`hyperframes.narrado` assembles a narrated piece from voice clips, a music
-bed and whisper subtitles, and declares its `subtitulos` input as SubRip
+`hyperframes.narrated` assembles a narrated piece from voice clips, a music
+bed and whisper subtitles, and declares its `subtitles` input as SubRip
 written offline: give it the converted `<origen-stem>.srt`, not the `.vtt`.
 The converted file has been validated for monotonic, non-overlapping cue
 times — so the burn-in parser downstream only ever sees a well-ordered track.
