@@ -472,7 +472,10 @@ def _verify_profile(path: Path) -> dict[str, Any]:
     try:
         rows = _profile_rows(_base_url())
     except (urllib.error.URLError, OSError, ValueError) as exc:
-        raise RuntimeError(f"GET {PROFILES_PATH} failed: {exc}") from None
+        raise RuntimeError(
+            f"GET {PROFILES_PATH} failed: {exc}; "
+            "facet starts this backend for a run and for facet check"
+        ) from None
     ids = {str(entry.get("id", "")) for entry in rows}
     return {
         "file": path.name,

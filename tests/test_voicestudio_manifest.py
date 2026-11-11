@@ -431,3 +431,13 @@ def test_the_readme_documents_the_clone_verdict_and_the_two_voice_rule() -> None
 def test_registering_a_voice_declares_it_uses_no_gated_model() -> None:
     """voicestudio.profile only posts a reference: no engine licence to accept."""
     assert MANIFEST["capabilities"]["profile"]["models"] == []
+
+
+def test_only_profile_verify_uses_the_server() -> None:
+    """Only the profile receipt is checked against the backend facet starts."""
+    flagged = {
+        name
+        for name, cap in MANIFEST["capabilities"].items()
+        if cap.get("verify_uses_server") is True
+    }
+    assert flagged == {"profile"}

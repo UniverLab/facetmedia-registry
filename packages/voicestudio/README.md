@@ -191,7 +191,10 @@ writes only `<name>.profile.json` beside the piece, a receipt with the
 returned profile `id`, `name` and `language`. Nothing else is written, and no
 sample or profile enters the registry. `facet run` verifies by default: the
 receipt passes while its id is still in the backend's `GET /profiles`
-listing. `facet preview` writes `<name>.profile.json.preview.json` for the
+listing. `voicestudio.profile` is the one capability that declares
+`verify_uses_server = true`, so `facet check <name>.profile.json` starts the
+managed backend to re-read that listing; the other capabilities verify
+without it. `facet preview` writes `<name>.profile.json.preview.json` for the
 `generic` viewer (the receipt's id, name and language).
 
 ## Ready versus health

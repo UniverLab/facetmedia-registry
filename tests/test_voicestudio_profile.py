@@ -518,8 +518,9 @@ def test_an_unreadable_profile_listing_fails_the_verification(
         module = _import_runner(monkeypatch, tmp_path)
         receipt = tmp_path / "jheison.profile.json"
         receipt.write_text(json.dumps({"id": PROFILE_ID}), encoding="utf-8")
-        with pytest.raises(RuntimeError, match="GET /profiles failed"):
+        with pytest.raises(RuntimeError, match="GET /profiles failed") as caught:
             module.verify(_request(module.PROFILE_CAPABILITY, {}, tmp_path, [receipt]))
+        assert "facet check" in str(caught.value)
     finally:
         broken.close()
 

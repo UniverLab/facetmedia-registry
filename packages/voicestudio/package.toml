@@ -172,6 +172,7 @@ kind = "text"
 # Registering a voice only posts the reference, which VoiceStudio transcribes
 # server-side: no synthesis engine, so no engine licence to accept.
 models = []
+verify_uses_server = true
 
 [capabilities.profile.inputs.name]
 type = "string"
