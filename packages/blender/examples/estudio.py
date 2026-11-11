@@ -13,7 +13,9 @@ Usage: ``uv run packages/blender/examples/estudio.py`` writes ``estudio.glb``
 beside this file.
 """
 
+import json
 import math
+import struct
 from pathlib import Path
 
 import cadquery as cq
@@ -97,6 +99,31 @@ estudio.add(almohada, name="almohada", color=cq.Color(0.95, 0.95, 0.95))
 estudio.add(mesa, name="mesa", color=cq.Color(0.45, 0.3, 0.18))
 estudio.add(sillas, name="sillas", color=cq.Color(0.92, 0.42, 0.2))
 
+
+
+def matte(glb: Path) -> None:
+    """Make every material dielectric and rough.
+
+    CadQuery's glTF writer omits metallicFactor, and glTF reads a missing one
+    as 1.0: a viewer without an environment map (the HyperFrames turntable)
+    then draws the whole study black.
+    """
+    data = glb.read_bytes()
+    magic, version, _ = struct.unpack("<III", data[:12])
+    length, kind = struct.unpack("<II", data[12:20])
+    doc = json.loads(data[20 : 20 + length])
+    rest = data[20 + length :]
+    for material in doc.get("materials", []):
+        pbr = material.setdefault("pbrMetallicRoughness", {})
+        pbr.setdefault("metallicFactor", 0.0)
+        pbr.setdefault("roughnessFactor", 0.8)
+    chunk = json.dumps(doc, separators=(",", ":")).encode()
+    chunk += b" " * (-len(chunk) % 4)
+    header = struct.pack("<III", magic, version, 20 + len(chunk) + len(rest))
+    glb.write_bytes(header + struct.pack("<II", len(chunk), kind) + chunk + rest)
+
+
 salida = Path(__file__).with_name("estudio.glb")
 estudio.export(str(salida))
+matte(salida)
 print(f"GLB  {salida}  ({len(estudio.children)} piezas)")
