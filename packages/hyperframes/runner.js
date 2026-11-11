@@ -566,8 +566,10 @@ const TIMELINE_TEMPLATE = [
   "  });",
   '  var root = document.querySelector("[data-composition-id]");',
   '  var name = root ? root.getAttribute("data-composition-id") : "main";',
+  '  var key = name || "main";',
   "  window.__timelines = window.__timelines || {};",
-  '  window.__timelines[name || "main"] = tl;',
+  // HyperFrames' check only accepts a string or a plain identifier as the key.
+  "  window.__timelines[key] = tl;",
   "  tl.seek(0);",
   "})();",
 ].join("\n");

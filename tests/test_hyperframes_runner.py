@@ -715,8 +715,19 @@ def test_diagram_renders_the_proof_selectors_and_injects_the_timeline(tmp_path: 
     template = (out / "composition" / "index.html").read_text(encoding="utf-8")
     assert "strokeDashoffset" in template
     assert "__timelines" in template
+    # HyperFrames 0.8.143's check (gsap_timeline_not_registered) only accepts
+    # `window.__timelines[<string or identifier>] = <identifier>`.
+    assert TIMELINE_REGISTRATION.search(template), "check would not see the timeline"
     assert result is not None
     assert result["assets"][0]["file"] == "comp.mp4"
+
+
+#: HyperFrames 0.8.143 `WINDOW_TIMELINE_ASSIGN_PATTERN`, verbatim.
+TIMELINE_REGISTRATION = re.compile(
+    r"window\.__timelines(?:\[\s*(?:[\"']([^\"']+)[\"']|[A-Za-z_$][\w$.]*)\s*\]"
+    r"|\.\s*([A-Za-z_$][\w$]*))\s*=\s*([A-Za-z_$][\w$]*)",
+    re.IGNORECASE,
+)
 
 
 def test_build_mjs_decodes_gt_only_inside_style(tmp_path: Path) -> None:
