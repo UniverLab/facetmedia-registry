@@ -435,18 +435,26 @@ def _doctor_checkout() -> dict[str, Any]:
 
 
 def _doctor_models() -> dict[str, Any]:
-    """The server's checkpoints are present: ACE-Step owns those weights."""
+    """Checkpoints are pending until ACE-Step fetches them on the first run."""
     root = _server_dir() / "checkpoints"
     present: list[str] = []
-    problems: list[str] = []
+    pending: list[str] = []
     for model_id, folder in CHECKPOINT_DIRS.items():
-        path = root / folder
-        if path.is_dir():
+        if (root / folder).is_dir():
             present.append(model_id)
         else:
-            problems.append(f"{model_id}: missing at {path}")
-    detail = f"checkpoints for {', '.join(present)}" if not problems else "; ".join(problems)
-    return _check("models", not problems, detail, PULL_FIX)
+            pending.append(model_id)
+    if not pending:
+        return _check("models", True, f"checkpoints for {', '.join(present)}")
+    parts: list[str] = []
+    if present:
+        parts.append(f"checkpoints for {', '.join(present)}")
+    parts.append(f"pending: {', '.join(pending)}")
+    parts.append(
+        "ACE-Step downloads the pending checkpoints into the checkout"
+        " on the first run, about 11 GB; the first run needs network"
+    )
+    return _check("models", True, "; ".join(parts))
 
 
 def _doctor_server() -> dict[str, Any]:

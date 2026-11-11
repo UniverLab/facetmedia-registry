@@ -709,6 +709,14 @@ def test_the_doctor_separates_the_machine_and_the_checkpoints(tmp_path: Path) ->
     shutil.rmtree(checkout / "checkpoints" / "acestep-v15-turbo")
     broken = _doctor(tmp_path, stub_dir, home)
     models = {check["name"]: check for check in broken["checks"]}["models"]
-    assert models["ok"] is False
-    assert models["fix"] == PULL_FIX
+    assert models["ok"] is True
+    assert models["fix"] == ""
     assert "acestep-v15-turbo" in models["detail"]
+
+    shutil.rmtree(checkout / "checkpoints" / "vae")
+    gone = _doctor(tmp_path, stub_dir, home)
+    gone_models = {check["name"]: check for check in gone["checks"]}["models"]
+    assert gone_models["ok"] is True
+    assert gone_models["fix"] == ""
+    assert "acestep-v15-turbo" in gone_models["detail"]
+    assert "acestep-vae" in gone_models["detail"]

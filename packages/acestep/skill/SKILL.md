@@ -72,8 +72,9 @@ bed with `ducking = true`, `duck-db = -12.0` and `target-lufs = -16.0`, as in
 - The first `facet pull acestep` builds the server from ACE-Step's own
   uv.lock: torch and its CUDA wheels, several GB over several minutes.
   It does not build flash-attn.
-- The checkpoints come from the server on first start; a missing checkout
-  or checkpoint names `facet pull acestep` as its fix.
+- The checkpoints come from the server on first start (about 11 GB; the
+  first run needs network): absent folders are pending, not missing. A
+  missing checkout names `facet pull acestep` as its fix.
 - A caption without the no-drums guidance comes back with a bass and kick
   under 120 Hz and ~60 % of the energy there; the caption decides the style.
 - Measure loudness and peak, but judge timbre by ear: a bed can sit at the

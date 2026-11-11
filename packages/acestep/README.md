@@ -83,8 +83,10 @@ the manifest declares them without a source or byte size.
 `facet doctor acestep` runs `gpu`, `vram`, `gpu_free`, `imports` (`numpy`,
 `pyloudnorm`, `soundfile`), `checkout` (`acestep/api_server.py`) and `models`
 (`checkpoints/acestep-v15-turbo`, `checkpoints/vae`) at `quick` depth, plus
-`server` (`/health`) at `full`. Every failing check names `facet pull acestep`
-as its fix.
+`server` (`/health`) at `full`. The `models` check is always ok: absent
+folders are reported pending because ACE-Step downloads them into the
+checkout's `checkpoints/` on the first run (about 11 GB; the first run needs
+network). Only the `checkout` check names `facet pull acestep` as its fix.
 
 ## Licences
 
