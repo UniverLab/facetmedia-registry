@@ -183,8 +183,9 @@ looping block and a `mov-alpha` without an alpha `pix_fmt`. See
 ### hyperframes.diagram
 
 Every selector is validated before `check`; an unknown id is `runner_failed`,
-exit 1, and nothing renders. `build.mjs` owns the `&gt;` fix inside `<style>`,
-the SVG uses the Ubuntu font at `fontSize` 22px, and GSAP is vendored. See
+exit 1, and nothing renders. The runner inserts the SVG at `<!-- DIAGRAM -->`,
+decoding `&gt;` inside `<style>` and stripping xmlns attributes, the SVG uses
+the Ubuntu font at `fontSize` 22px, and GSAP is vendored. See
 `references/limits.md`.
 
 ### hyperframes.turntable

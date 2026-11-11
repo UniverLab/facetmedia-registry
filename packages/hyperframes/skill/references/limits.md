@@ -47,10 +47,11 @@ vendored tree, the pinned Chromium and the pinned `ffmpeg`/`ffprobe`. `fps` pass
   throws a plain `Error`, exit 1, which facet reports as `runner_failed`;
   nothing renders.
 - **Remote SVG URLs are refused**, except the `w3.org` namespaces.
-- **`build.mjs` owns the `>` fix.** Mermaid writes `>` as `&gt;` inside the
-  SVG's `<style>`; browsers decode it, the HyperFrames CSS parser does not.
-  `build.mjs` replaces `&gt;` with `>` inside `<style>` and inserts the SVG into
-  `index.html` at `<!-- DIAGRAM -->`. The runner never rewrites the SVG.
+- **The runner inserts the SVG at `<!-- DIAGRAM -->`.** Mermaid writes `>`
+  as `&gt;` inside the SVG's `<style>`; browsers decode it, the HyperFrames
+  CSS parser does not. The runner replaces `&gt;` with `>` inside `<style>`
+  and strips `xmlns` attributes before inserting the SVG into `index.html`
+  at `<!-- DIAGRAM -->`. The runner never executes `build.mjs`.
 - **Use the font Mermaid measured with**: `@font-face { src: local('Ubuntu') }`.
   Another build of the font overflows the boxes by about 2px and `check` fails.
 - **`fontSize` is 22px at 1080p** in the SVG style; Mermaid's default is too

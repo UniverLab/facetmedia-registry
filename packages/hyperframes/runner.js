@@ -442,6 +442,7 @@ function copyClips(inputs, base, target) {
 const DIAGRAM_KINDS = new Set(["show", "draw", "fade"]);
 const DEFAULT_DUR = 0.4;
 const SVG_NAMESPACE = /^https?:\/\/www\.w3\.org\//;
+const DIAGRAM_MARKER = "<!-- DIAGRAM -->";
 
 function diagramSetup(workDir, inputs, base) {
   if (!inputs["diagram-svg"]) throw new Error("diagram-svg is required");
@@ -457,8 +458,25 @@ function diagramSetup(workDir, inputs, base) {
   const { ids, dataIds } = svgIdentifiers(svg);
   const source = Array.isArray(inputs.animation) ? inputs.animation : [];
   const steps = source.map((step, index) => stepOf(step, index, ids, dataIds));
-  fs.copyFileSync(svgFile, path.join(path.dirname(workDir), path.basename(svgFile)));
-  injectTimeline(path.join(workDir, "index.html"), steps);
+  const templateFile = path.join(workDir, "index.html");
+  const template = fs.readFileSync(templateFile, "utf8");
+  const updated = insertDiagram(template, sanitizeDiagram(svg));
+  fs.writeFileSync(templateFile, updated);
+  injectTimeline(templateFile, steps);
+}
+
+function sanitizeDiagram(svg) {
+  return svg
+    .replace(/<style>[\s\S]*?<\/style>/g, (style) => style.replaceAll("&gt;", ">"))
+    .replace(/ xmlns(:[a-z]+)?="[^"]*"/g, "");
+}
+
+function insertDiagram(template, svg) {
+  const count = template.split(DIAGRAM_MARKER).length - 1;
+  if (count !== 1) {
+    throw new Error(`index.html: <!-- DIAGRAM --> marker is required; found ${count}`);
+  }
+  return template.replace(DIAGRAM_MARKER, () => svg);
 }
 
 function svgUrls(svg) {

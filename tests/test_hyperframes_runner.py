@@ -205,8 +205,12 @@ def _composition(root: Path) -> tuple[Path, Path, Path]:
         "paths": {"blocks": "compositions", "assets": "assets"},
     }
     (comp / "hyperframes.json").write_text(json.dumps(metadata), encoding="utf-8")
-    (comp / "index.tmpl").write_text("<!doctype html><html><body></body></html>", encoding="utf-8")
-    (comp / "index.html").write_text("<!doctype html><html><body></body></html>", encoding="utf-8")
+    (comp / "index.tmpl").write_text(
+        "<!doctype html><html><body><!-- DIAGRAM --></body></html>", encoding="utf-8"
+    )
+    (comp / "index.html").write_text(
+        "<!doctype html><html><body><!-- DIAGRAM --></body></html>", encoding="utf-8"
+    )
     (comp / "build.mjs").write_text("export {};\n", encoding="utf-8")
     (comp / "assets" / "keep.txt").write_text("vendored\n", encoding="utf-8")
     clip = root / "voz.wav"
@@ -657,14 +661,6 @@ PROOF_STEPS = [
     {"selector": "#my-svg-group-lab", "at": 2.2, "kind": "fade"},
     {"selector": "#my-svg-gpu", "at": 2.6, "kind": "fade"},
 ]
-BUILD_MJS = """
-import { readFileSync, writeFileSync } from "node:fs";
-const SVG = "../diagram.svg";
-const svg = readFileSync(new URL(SVG, import.meta.url), "utf8")
-  .replace(/<style>[\\s\\S]*?<\\/style>/g, (style) => style.replaceAll("&gt;", ">"));
-const template = readFileSync(new URL("index.tmpl", import.meta.url), "utf8");
-writeFileSync(new URL("index.html", import.meta.url), template.replace("<!-- DIAGRAM -->", svg));
-"""
 
 
 def _diagram_request(out: Path, piece: Path, animation: list[dict[str, Any]]) -> dict[str, Any]:
@@ -711,8 +707,10 @@ def test_diagram_renders_the_proof_selectors_and_injects_the_timeline(tmp_path: 
     assert done.returncode == 0, done.stderr
     assert [call["args"][0] for call in _calls(tmp_path)] == ["check", "render"]
     assert (out / "comp.mp4").is_file()
-    assert (out / "diagram.svg").is_file()
+    assert not (out / "diagram.svg").exists()
     template = (out / "composition" / "index.html").read_text(encoding="utf-8")
+    assert 'id="my-svg-flowchart-datos-0"' in template
+    assert "<!-- DIAGRAM -->" not in template
     assert "strokeDashoffset" in template
     assert "__timelines" in template
     # HyperFrames 0.8.143's check (gsap_timeline_not_registered) only accepts
@@ -730,32 +728,81 @@ TIMELINE_REGISTRATION = re.compile(
 )
 
 
-def test_build_mjs_decodes_gt_only_inside_style(tmp_path: Path) -> None:
-    comp = tmp_path / "comp"
-    comp.mkdir()
-    (tmp_path / "diagram.svg").write_text(
-        '<svg><style>#my-svg .node &gt; rect { fill: #fff; }</style><g id="my-svg-gpu"></g></svg>',
+def test_diagram_runner_decodes_gt_only_inside_style(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    piece, _comp, _clip = _composition(tmp_path)
+    svg = piece / "mini.svg"
+    source = (
+        '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">'
+        "<style>#a &gt; .b{}</style><style>#c &gt; .d{}</style>"
+        '<text>&gt;</text><g id="my-svg-gpu"></g></svg>'
+    )
+    svg.write_text(source, encoding="utf-8")
+    out = tmp_path / "out"
+    out.mkdir()
+    request = _request(
+        "run",
+        out,
+        piece,
+        capability="hyperframes.diagram",
+        composition="comp",
+        prompt="brief",
+        **{"diagram-svg": str(svg), "animation": []},
+    )
+    done, result = _invoke(tmp_path, "run", request, _environment(tmp_path, _dirs(packages)))
+    assert done.returncode == 0, done.stderr
+    assert result is not None
+    written = (out / "composition" / "index.html").read_text(encoding="utf-8")
+    assert "<!-- DIAGRAM -->" not in written
+    assert 'id="my-svg-gpu"' in written
+    assert "#a > .b" in written and "#c > .d" in written
+    styles = re.findall(r"<style>(.*?)</style>", written, re.DOTALL)
+    assert styles and all("&gt;" not in style for style in styles)
+    assert "<text>&gt;</text>" in written
+    assert "xmlns" not in written
+    assert svg.read_text(encoding="utf-8") == source
+    assert not (out / "mini.svg").exists()
+
+
+def test_diagram_missing_marker_fails_before_cli(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    piece, comp, _clip = _composition(tmp_path)
+    (comp / "index.html").write_text("<!doctype html><html><body></body></html>", encoding="utf-8")
+    out = tmp_path / "out"
+    out.mkdir()
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _diagram_request(out, piece, PROOF_STEPS),
+        _environment(tmp_path, _dirs(packages)),
+    )
+    assert done.returncode != 0
+    assert result is None
+    assert "<!-- DIAGRAM -->" in done.stderr
+    assert _calls(tmp_path) == []
+    assert not (out / "comp.mp4").exists()
+
+
+def test_diagram_duplicate_marker_fails_before_cli(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    piece, comp, _clip = _composition(tmp_path)
+    (comp / "index.html").write_text(
+        "<!doctype html><html><body><!-- DIAGRAM --><!-- DIAGRAM --></body></html>",
         encoding="utf-8",
     )
-    (comp / "index.tmpl").write_text(
-        "<!doctype html><html><body><!-- DIAGRAM --></body></html>", encoding="utf-8"
+    out = tmp_path / "out"
+    out.mkdir()
+    done, result = _invoke(
+        tmp_path,
+        "run",
+        _diagram_request(out, piece, PROOF_STEPS),
+        _environment(tmp_path, _dirs(packages)),
     )
-    (comp / "build.mjs").write_text(BUILD_MJS, encoding="utf-8")
-    done = subprocess.run(
-        [str(NODE), "build.mjs"],
-        cwd=comp,
-        capture_output=True,
-        text=True,
-        timeout=60,
-        check=False,
-    )
-    assert done.returncode == 0, done.stderr
-    html = (comp / "index.html").read_text(encoding="utf-8")
-    style = re.search(r"<style>(.*?)</style>", html, re.DOTALL)
-    assert style is not None
-    assert "&gt;" not in style.group(1)
-    assert ">" in style.group(1)
-    assert 'id="my-svg-gpu"' in html
+    assert done.returncode != 0
+    assert result is None
+    assert "<!-- DIAGRAM -->" in done.stderr
+    assert _calls(tmp_path) == []
+    assert not (out / "comp.mp4").exists()
 
 
 TURNTABLE_TEMPLATE = """<!doctype html>

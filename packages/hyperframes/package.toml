@@ -593,7 +593,7 @@ description = "Frame rate passed as --fps; the composition's own data-fps applie
 [capabilities.diagram.inputs.diagram-svg]
 type = "path"
 required = true
-description = "Mermaid SVG file as produced by tools/mermaid.sh (for example ciclo.svg or arquitectura.svg), resolved relative to the piece; copied beside the composition so build.mjs can insert it into index.tmpl."
+description = "Mermaid SVG file as produced by tools/mermaid.sh (for example ciclo.svg or arquitectura.svg), resolved relative to the piece; the runner inserts it at `<!-- DIAGRAM -->` in index.html, decoding `&gt;` inside `<style>` and stripping xmlns attributes."
 
 [capabilities.diagram.inputs.animation]
 type = "array"

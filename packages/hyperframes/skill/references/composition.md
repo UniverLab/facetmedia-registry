@@ -21,8 +21,9 @@ resolved relative to the piece file and shipped self-contained.
 - **`index.tmpl`** is the entry template. It is never named `.html`, because
   HyperFrames reads a `.html` file as a second composition.
 - **`build.mjs`** is the piece author's offline bundler. It writes
-  `index.html` from `index.tmpl`, and for a capability it also inlines the
-  Mermaid SVG or the character. The runner never executes it.
+  `index.html` from `index.tmpl`, keeping the runner's markers.
+  The runner never executes it. It also produces the vendored tree for
+  `turntable`.
 - **`index.html`** is the copy the runner edits: every setup reads and writes
   the copied `index.html`, the file HyperFrames renders, so `build.mjs` must
   keep the runner's markers in the `index.html` it writes.
@@ -38,8 +39,8 @@ The split is the same in every capability:
 
 | Half | Who runs it | What it produces |
 |------|-------------|------------------|
-| Offline | the piece author's `build.mjs` | `index.html` keeping the runner's markers, the vendored tree and the inlined SVG or character |
-| Runner-side | the package runner in the copied composition | the runtime values: audio injection, the GLB, the eight orbit scalars, the mouth cues, `AUDIO_START`, the SUBS and AUDIOS markers and the timeline |
+| Offline | the piece author's `build.mjs` | `index.html` keeping the runner's markers and the vendored tree |
+| Runner-side | the package runner in the copied composition | the runtime values: audio injection, the GLB, the eight orbit scalars, the mouth cues, `AUDIO_START`, the diagram SVG at `<!-- DIAGRAM -->`, the SUBS and AUDIOS markers and the timeline |
 
 The runner copies the composition into `<out>/composition` and runs its
 capability setup there before `check`. `build.mjs` is never executed by the

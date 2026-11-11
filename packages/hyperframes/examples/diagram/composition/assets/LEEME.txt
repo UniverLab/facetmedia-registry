@@ -1,2 +1,3 @@
-The Mermaid SVG is copied beside the composition by the runner; build.mjs
-inlines it into index.html. No other media ships with this sample.
+The runner inserts the Mermaid SVG at <!-- DIAGRAM --> in index.html,
+decoding &gt; inside <style> and stripping xmlns attributes; build.mjs only
+copies index.tmpl to index.html. No other media ships with this sample.

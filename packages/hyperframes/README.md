@@ -96,10 +96,10 @@ into it and a GSAP timeline that draws the diagram. It runs the same
 or `arquitectura.svg`) and `animation`, an array of `{ selector, at, kind, dur }`
 steps where `kind` is `show`, `draw` or `fade` and `dur` defaults to `0.4`.
 
-The runner copies the SVG beside the composition (so a `build.mjs` in the
-composition reaches it as `../<file>.svg`), validates every `animation[].selector`
-against the ids and data-ids the SVG actually carries, and only then injects a
-paused timeline into `index.html` before `check`. An unknown id throws a plain
+The runner validates every `animation[].selector`
+against the ids and data-ids the SVG actually carries, inserts the SVG at
+`<!-- DIAGRAM -->` in `index.html`, and only then injects a paused timeline
+into `index.html` before `check`. An unknown id throws a plain
 `Error`, exit 1, which facet reports as `runner_failed`; nothing renders.
 
 ### Stable Mermaid ids
@@ -126,10 +126,11 @@ Selectors are the classic silent failure, so these id shapes are verbatim:
   to zero. A `g` edge is resolved to its inner `path` first.
 - **Build selectors by string concatenation**, never a `${}` template: the
   HyperFrames bundler rejects template literals in selectors.
-- **`build.mjs` owns the `>` fix.** Mermaid writes `>` as `&gt;` inside the
-  SVG's `<style>`; browsers decode it, the HyperFrames CSS parser does not.
-  `build.mjs` replaces `&gt;` with `>` inside `<style>` and inserts the SVG into
-  `index.html` at `<!-- DIAGRAM -->`. The runner never rewrites the SVG.
+- **The runner inserts the SVG at `<!-- DIAGRAM -->`.** Mermaid writes `>`
+  as `&gt;` inside the SVG's `<style>`; browsers decode it, the HyperFrames
+  CSS parser does not. The runner replaces `&gt;` with `>` inside `<style>`
+  and strips `xmlns` attributes before inserting the SVG into `index.html`
+  at `<!-- DIAGRAM -->`. The runner never executes `build.mjs`.
 - **Use the font Mermaid measured with**: `@font-face { src: local('Ubuntu') }`.
   Another build of the font overflows the boxes by about 2px and `check` fails.
 - **`fontSize` is 22px at 1080p** in the SVG style; Mermaid's default is too

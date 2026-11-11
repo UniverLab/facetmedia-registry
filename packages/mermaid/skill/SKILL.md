@@ -61,9 +61,11 @@ HyperFrames packager rejects `${}` templates. Declare the font as
 `@font-face { src: local('Ubuntu') }`, the same family Mermaid measured the
 boxes with; with a Google Fonts file a label overflows 2 px and `check`
 fails. Mermaid writes `>` as `&gt;` inside the SVG `<style>`; the browser
-accepts it but the HyperFrames CSS parser does not, so `build.mjs` rewrites
-it. `build.mjs` inserts the SVG into `index.tmpl`, and the template must not
-be named `.html` — HyperFrames would read it as a second composition.
+accepts it but the HyperFrames CSS parser does not, so the runner decodes it
+and strips the SVG's xmlns attributes when it inserts the SVG into
+`index.html` at `<!-- DIAGRAM -->`. `build.mjs` only copies `index.tmpl` to
+`index.html`, and the template must not be named `.html` — HyperFrames would
+read it as a second composition.
 
 ## Judging the result
 
