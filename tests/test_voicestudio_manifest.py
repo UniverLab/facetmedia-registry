@@ -426,3 +426,8 @@ def test_the_readme_documents_the_clone_verdict_and_the_two_voice_rule() -> None
     assert "projects/prueba-voz/mi-voz/clon/cosyvoice/voz.toml" in READ
     assert "one engine per piece" in READ.lower()
     assert "never uploads" in READ
+
+
+def test_registering_a_voice_declares_it_uses_no_gated_model() -> None:
+    """voicestudio.profile only posts a reference: no engine licence to accept."""
+    assert MANIFEST["capabilities"]["profile"]["models"] == []

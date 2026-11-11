@@ -169,6 +169,9 @@ viewer = "audio"
 [capabilities.profile]
 summary = "A local clone profile created from the person's own reference samples; the receipt carries its id"
 kind = "text"
+# Registering a voice only posts the reference, which VoiceStudio transcribes
+# server-side: no synthesis engine, so no engine licence to accept.
+models = []
 
 [capabilities.profile.inputs.name]
 type = "string"
