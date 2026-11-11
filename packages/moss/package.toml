@@ -12,6 +12,10 @@ uses = ["audiopreview"]
 type = "python-env"
 python = "3.12"
 
+[engine.source]
+repo = "https://github.com/OpenMOSS/MOSS-TTS.git"
+rev = "934d6826b084c46a0d033402174d5f8ac4ed2519"
+
 [transport]
 type = "cli"
 entry = "runner.py"

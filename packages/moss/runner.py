@@ -5,14 +5,15 @@ environment at pull): ``run`` generates one effect from an English
 description and normalises it to ``target-lufs``, ``verify`` measures each
 WAV's loudness against that target, ``preview`` writes the audio preview
 file, ``doctor`` checks the machine (an NVIDIA GPU, the RAM the CPU stage
-needs) plus the package (imports, the pinned clone, the model files).
+needs) plus the package (imports, the pinned source checkout, the model files).
 
-The pipeline code is the ``moss_soundeffect_v2`` package inside the pinned
-MOSS-TTS clone (``MOSS_DIR``, default ``~/Projects/open-source/MOSS-TTS``,
-the same layout the lab's ``tools/efectos.py`` uses); there is no
-``[engine.server]`` — the clone ships no HTTP server, so the runner puts
-the clone on ``sys.path`` and drives ``MossSoundEffectPipeline``
-in-process. Its third-party dependencies are ordinary pip packages.
+The pipeline code is the ``moss_soundeffect_v2`` package inside the
+facet-managed MOSS-TTS source checkout ``[engine.source]`` pins, passed to
+the runner as ``FACET_SOURCE_DIR``; there is no ``[engine.server]`` — the
+checkout ships no HTTP server, so the runner puts the checkout on
+``sys.path`` and drives ``MossSoundEffectPipeline`` in-process. Its
+third-party dependencies are ordinary pip packages. ``MOSS_DIR`` remains
+only for a manual run outside facet.
 
 Memory rule: a full GPU load of this model needs ~9 GB and spills into
 shared memory on the 8 GB card, so ``run`` never does one. The pipeline
@@ -51,10 +52,8 @@ CAPABILITY = "moss.efecto"
 #: The manifest model id and the pipeline's HF repo id.
 MODEL = "moss-soundeffect-v2"
 MODEL_REPO = "OpenMOSS-Team/MOSS-SoundEffect-v2.0"
-#: The MOSS-TTS commit the clone must be pinned to (the lab's checkout).
+#: ``[engine.source]`` pins this; a manual MOSS_DIR checkout must match it.
 CODE_REV = "934d6826b084c46a0d033402174d5f8ac4ed2519"
-#: Where the MOSS-TTS clone lives; ``MOSS_DIR`` overrides, like efectos.py.
-DEFAULT_MOSS_DIR = Path.home() / "Projects" / "open-source" / "MOSS-TTS"
 #: The loudness an effect is normalised to under voice; hits pass a louder one.
 TARGET_LUFS = -23.0
 #: What verify measures with, named for the record.
@@ -145,26 +144,33 @@ def _check_memory() -> None:
 
 
 def _moss_dir() -> Path:
-    """The MOSS-TTS clone: ``MOSS_DIR`` or the lab's conventional location."""
-    return Path(os.environ.get("MOSS_DIR", str(DEFAULT_MOSS_DIR))).expanduser()
+    """The facet-managed MOSS-TTS checkout, or a manual ``MOSS_DIR`` one."""
+    facet_dir = os.environ.get("FACET_SOURCE_DIR")
+    if facet_dir:
+        return Path(facet_dir)
+    manual = os.environ.get("MOSS_DIR")
+    if manual:
+        return Path(manual).expanduser()
+    raise RuntimeError(
+        f"no MOSS-TTS source: run through facet ({PULL_FIX}), or set MOSS_DIR "
+        f"to a MOSS-TTS checkout at {CODE_REV[:12]}"
+    )
 
 
 def _ensure_moss_path() -> None:
-    """Put the pinned clone on ``sys.path`` when the package is not installed.
+    """Put the pinned checkout on ``sys.path`` when the package is not installed.
 
     A pulled environment has no ``moss_soundeffect_v2`` distribution: the
-    code lives in the clone, exactly as the lab's ``tools/efectos.py``
-    re-launches inside it.
+    code lives in the facet-managed source checkout.
     """
     if importlib.util.find_spec("moss_soundeffect_v2") is not None:
         return
-    clone = _moss_dir()
-    if not (clone / "moss_soundeffect_v2").is_dir():
+    source = _moss_dir()
+    if not (source / "moss_soundeffect_v2").is_dir():
         raise RuntimeError(
-            f"the MOSS-TTS clone is not at {clone}: clone OpenMOSS/MOSS-TTS at "
-            f"{CODE_REV[:12]} there or point MOSS_DIR at it"
+            f"the MOSS-TTS source at {source} has no moss_soundeffect_v2: run {PULL_FIX}"
         )
-    sys.path.insert(0, str(clone))
+    sys.path.insert(0, str(source))
 
 
 def _load_pipeline(req: Request) -> Any:
@@ -414,7 +420,7 @@ def _doctor_ram() -> dict[str, Any]:
 
 def _doctor_imports() -> dict[str, Any]:
     """The imports the runner leans on, each with its version."""
-    # The clone check reports a missing clone with its own fix.
+    # The source check reports a missing checkout with its own fix.
     with contextlib.suppress(Exception):
         _ensure_moss_path()
     found: list[str] = []
@@ -436,30 +442,40 @@ def _version(distribution: str) -> str:
         return "unknown"
 
 
-def _doctor_clone() -> dict[str, Any]:
-    """The MOSS-TTS clone exists and its HEAD is the pinned commit."""
-    clone = _moss_dir()
-    fix = f"clone OpenMOSS/MOSS-TTS at {CODE_REV[:12]} into {clone} or set MOSS_DIR"
-    if not (clone / "moss_soundeffect_v2").is_dir():
-        return _check("clone", False, f"no moss_soundeffect_v2 under {clone}", fix)
+def _doctor_source() -> dict[str, Any]:
+    """The facet-managed MOSS-TTS checkout, or a manual one at the pinned commit."""
+    try:
+        source = _moss_dir()
+    except RuntimeError as exc:
+        return _check("source", False, str(exc), PULL_FIX)
+    if not (source / "moss_soundeffect_v2").is_dir():
+        return _check("source", False, f"no moss_soundeffect_v2 under {source}", PULL_FIX)
+    if os.environ.get("FACET_SOURCE_DIR"):
+        return _check("source", True, f"MOSS-TTS at {CODE_REV[:12]} ({source})")
+    return _check_head(source)
+
+
+def _check_head(source: Path) -> dict[str, Any]:
+    """A manual ``MOSS_DIR`` checkout is at the pinned commit."""
+    fix = PULL_FIX
     try:
         done = subprocess.run(
-            ["git", "-C", str(clone), "rev-parse", "HEAD"],
+            ["git", "-C", str(source), "rev-parse", "HEAD"],
             capture_output=True,
             text=True,
             check=False,
             timeout=NVIDIA_SMI_TIMEOUT_S,
         )
     except (OSError, subprocess.TimeoutExpired):
-        return _check("clone", False, f"git cannot read {clone}", fix)
+        return _check("source", False, f"git cannot read {source}", fix)
     head = done.stdout.strip()
     ok = done.returncode == 0 and head == CODE_REV
     detail = (
-        f"MOSS-TTS at {CODE_REV[:12]} ({clone})"
+        f"MOSS-TTS at {CODE_REV[:12]} ({source})"
         if ok
-        else f"{clone} is at {head[:12] or '?'}, pinned is {CODE_REV[:12]}"
+        else f"{source} is at {head[:12] or '?'}, pinned is {CODE_REV[:12]}"
     )
-    return _check("clone", ok, detail, fix)
+    return _check("source", ok, detail, fix)
 
 
 def _doctor_model(req: Request) -> dict[str, Any]:
@@ -479,7 +495,7 @@ def doctor(req: Request) -> dict[str, Any]:
         _doctor_gpu(),
         _doctor_ram(),
         _doctor_imports(),
-        _doctor_clone(),
+        _doctor_source(),
         _doctor_model(req),
     ]
     return {"checks": checks}

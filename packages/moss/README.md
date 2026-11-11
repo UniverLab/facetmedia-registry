@@ -2,17 +2,17 @@
 
 Described sound effects with
 [OpenMOSS/MOSS-SoundEffect-v2.0](https://huggingface.co/OpenMOSS-Team/MOSS-SoundEffect-v2.0)
-(**Apache-2.0**), ported from the lab's `tools/efectos.py`. One capability,
-`moss.efecto`, writing 48 kHz mono WAVs.
+(**Apache-2.0**). One capability, `moss.efecto`, writing 48 kHz mono WAVs.
 
-## The code comes from a pinned clone
+## The code comes from a pinned source checkout
 
-The pipeline code is `moss_soundeffect_v2` inside the MOSS-TTS clone —
-there is no `engine.server`, the clone ships no HTTP server. The runner
-puts `MOSS_DIR` (default `~/Projects/open-source/MOSS-TTS`, like the lab's
-`tools/efectos.py`) on `sys.path` and imports the pipeline in-process.
-`doctor` checks the clone exists and its HEAD is the pinned commit
-(`934d682`).
+The pipeline code is `moss_soundeffect_v2` inside the MOSS-TTS source
+checkout — there is no `engine.server`, the checkout ships no HTTP server.
+`facet pull moss` clones MOSS-TTS at the pinned commit (`934d682`, about
+15 MB of code) beside the model (about 11 GB): never clone it by hand.
+The runner imports the pipeline in-process from `FACET_SOURCE_DIR`, and
+`doctor` checks `moss_soundeffect_v2/` is there. `MOSS_DIR` remains only
+for a manual run outside facet.
 
 ## The memory rule
 
@@ -24,7 +24,7 @@ DiT tensors cast to bf16) and only the active stage moves to the GPU
 loading, `run` estimates the staged peak (~4 GB, the bf16 text encoder
 stage) and refuses with a plain error — reported as `runner_failed` — when
 it cannot fit the card. `doctor` checks the GPU, the ~10 GB of RAM the CPU
-stage needs, the pinned clone and the model files.
+stage needs, the pinned source checkout and the model files.
 
 ## The normalization rule
 
@@ -41,8 +41,7 @@ by listening or by reading the spectrogram.
 
 ## Approved effects
 
-Seven effects were approved on the reference machine, with
-`espectrogramas.png` in the lab's `projects/prueba-efectos/`:
+Seven effects were approved on the reference machine:
 
 - `cafe-ambiente`
 - `campana-notificacion`

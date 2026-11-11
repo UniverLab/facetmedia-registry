@@ -17,6 +17,9 @@ writing the `audio` kind at 48 kHz mono.
   GPU load (~9 GB) does not fit the 8 GB card. One heavy job at a time.
 - About 40 s per effect whatever its length: the pipeline always denoises
   30 s of audio and trims to `segundos`.
+- `facet pull moss` fetches MOSS-TTS at the pinned commit (about 15 MB of
+  code) plus the model (about 11 GB): never clone it by hand. `MOSS_DIR`
+  is only for a manual run outside facet.
 
 ## Pieces
 

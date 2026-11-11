@@ -6,7 +6,7 @@ subprocess against a stub ``facet_runner_sdk``, a stub
 uses), a stub ``torch`` whose CUDA answers are canned, and a stub
 ``moss_soundeffect_v2`` whose pipeline records how it was loaded and
 returns a sine wave. A ``.dist-info`` on the same ``PYTHONPATH`` makes the
-pinned-clone doctor check pass.
+pinned-source doctor check pass.
 
 The memory-guard test needs no model: the stub torch reports a card too
 small for the staged peak, and the runner must exit nonzero naming the
@@ -308,6 +308,15 @@ esac
 FAKE_GIT = f"""#!/bin/sh
 case "$*" in
   *rev-parse*) printf '%s\\n' "{CODE_REV}" ;;
+  *) exec /usr/bin/git "$@" ;;
+esac
+"""
+
+#: A canned git answering a drifted commit: the manual ``MOSS_DIR`` path
+#: reports a HEAD far from the pinned one.
+FAKE_GIT_DRIFT = """#!/bin/sh
+case "$*" in
+  *rev-parse*) printf '%s\\n' "0000000000000000000000000000000000000000" ;;
   *) exec /usr/bin/git "$@" ;;
 esac
 """
@@ -624,15 +633,16 @@ def _doctor(
     home: Path,
     model: Path,
     extra_env: dict[str, str] | None = None,
+    git_stub: str = FAKE_GIT,
 ) -> dict[str, Any]:
-    """The doctor verb on a canned nvidia-smi/git, the stubs, clone and model."""
+    """The doctor verb on a canned nvidia-smi/git, the stubs, source and model."""
     machine = tmp_path / "fake-path"
     machine.mkdir(exist_ok=True)
     smi = machine / "nvidia-smi"
     smi.write_text(FAKE_NVIDIA_SMI, encoding="utf-8")
     smi.chmod(0o755)
     git = machine / "git"
-    git.write_text(FAKE_GIT, encoding="utf-8")
+    git.write_text(git_stub, encoding="utf-8")
     git.chmod(0o755)
     out = tmp_path / "doctor-out"
     out.mkdir(exist_ok=True)
@@ -644,7 +654,8 @@ def _doctor(
         **os.environ,
         "PYTHONPATH": str(stub_dir),
         "FACET_MODELS": str(home / "models" / "direct"),
-        "MOSS_DIR": str(_clone_dir(tmp_path)),
+        "FACET_SOURCE_DIR": str(_clone_dir(tmp_path)),
+        "MOSS_DIR": "",
         "PATH": str(machine) + os.pathsep + os.environ["PATH"],
         **(extra_env or {}),
     }
@@ -674,7 +685,7 @@ def test_the_doctor_checks_machine_and_package(tmp_path: Path) -> None:
     model = _model_dir(tmp_path)
     result = _doctor(tmp_path, stub_dir, home, model)
     checks = {check["name"]: check for check in result["checks"]}
-    assert set(checks) == {"gpu", "ram", "imports", "clone", "model"}
+    assert set(checks) == {"gpu", "ram", "imports", "source", "model"}
     for name, check in checks.items():
         assert check["ok"] is True, f"{name}: {check['detail']}"
 
@@ -696,12 +707,71 @@ def test_the_doctor_refuses_a_card_too_small_for_the_staged_peak(tmp_path: Path)
     assert "staged path" in gpu["detail"]
 
 
+def test_the_facet_source_dir_wins_over_moss_dir(tmp_path: Path) -> None:
+    """Under facet the checkout wins even when ``MOSS_DIR`` points nowhere."""
+    stub_dir = _stub_dir(tmp_path)
+    home = tmp_path / "home"
+    model = _model_dir(tmp_path)
+    result = _doctor(tmp_path, stub_dir, home, model, {"MOSS_DIR": str(tmp_path / "missing")})
+    source = {check["name"]: check for check in result["checks"]}["source"]
+    assert source["ok"] is True
+    assert "moss-clone" in source["detail"]
+
+
+def test_the_facet_source_skips_the_git_check(tmp_path: Path) -> None:
+    """Under facet a drifted git answer never reaches the source check."""
+    stub_dir = _stub_dir(tmp_path)
+    home = tmp_path / "home"
+    model = _model_dir(tmp_path)
+    result = _doctor(tmp_path, stub_dir, home, model, git_stub=FAKE_GIT_DRIFT)
+    source = {check["name"]: check for check in result["checks"]}["source"]
+    assert source["ok"] is True
+
+
+def test_a_manual_checkout_is_pinned_by_git(tmp_path: Path) -> None:
+    """Outside facet ``MOSS_DIR`` falls back to the git HEAD check."""
+    stub_dir = _stub_dir(tmp_path)
+    home = tmp_path / "home"
+    model = _model_dir(tmp_path)
+    clone = _clone_dir(tmp_path / "manual")
+    env = {"FACET_SOURCE_DIR": "", "MOSS_DIR": str(clone)}
+    result = _doctor(tmp_path, stub_dir, home, model, env)
+    source = {check["name"]: check for check in result["checks"]}["source"]
+    assert source["ok"] is True
+
+    drifted = _doctor(tmp_path, stub_dir, home, model, env, git_stub=FAKE_GIT_DRIFT)
+    drifted_source = {check["name"]: check for check in drifted["checks"]}["source"]
+    assert drifted_source["ok"] is False
+    assert f"pinned is {CODE_REV[:12]}" in drifted_source["detail"]
+
+
+def test_no_source_at_all_names_the_pull(tmp_path: Path) -> None:
+    """With neither variable the source check names the facet pull."""
+    stub_dir = _stub_dir(tmp_path)
+    home = tmp_path / "home"
+    model = _model_dir(tmp_path)
+    result = _doctor(tmp_path, stub_dir, home, model, {"FACET_SOURCE_DIR": "", "MOSS_DIR": ""})
+    source = {check["name"]: check for check in result["checks"]}["source"]
+    assert source["ok"] is False
+    assert source["detail"] == (
+        f"no MOSS-TTS source: run through facet ({PULL_FIX}), "
+        f"or set MOSS_DIR to a MOSS-TTS checkout at {CODE_REV[:12]}"
+    )
+    assert source["fix"] == PULL_FIX
+
+
 def test_the_manifest_declares_the_staged_in_process_package() -> None:
     assert MANIFEST["name"] == "moss"
     assert MANIFEST["facet"] == "audio"
     assert MANIFEST["uses"] == ["audiopreview"]
     engine = MANIFEST["engine"]
-    assert engine == {"type": "python-env", "python": "3.12"}
+    assert engine["type"] == "python-env"
+    assert engine["python"] == "3.12"
+    assert engine["source"] == {
+        "repo": "https://github.com/OpenMOSS/MOSS-TTS.git",
+        "rev": CODE_REV,
+    }
+    assert "server" not in engine
     assert MANIFEST["transport"] == {"type": "cli", "entry": "runner.py"}
     requirements = MANIFEST["requirements"]
     assert requirements["gpu"] is True
