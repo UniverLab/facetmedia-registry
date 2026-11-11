@@ -29,9 +29,27 @@ from test_blender_cycle import (
 PRODUCTO = runner.producto
 #: The approved reference: a 6 cm bracket, 60 x 40 x 10 mm in the STL.
 PIECES = [("escuadra", (60.0, 40.0, 10.0))]
+#: The same bracket in metres, for the bounding radius the camera is fitted to.
+REFERENCE_EXTENTS = (0.06, 0.04, 0.01)
 #: Twice the reference span, so the light plan must move with the box.
 LARGE_PIECES = [("escuadra", (120.0, 80.0, 20.0))]
+#: Each studio input, at both ends of the range it refuses.
+OUT_OF_RANGE = [
+    ("exposure", -3.5),
+    ("exposure", 3.5),
+    ("fill", 0.1),
+    ("fill", 1.0),
+    ("light", 0.05),
+    ("light", 11.0),
+]
 SUMMARY_MAX = 160
+#: The floor the old span rule imposed; the fill distance no longer has one.
+FORMER_FLOOR = 0.25
+
+
+def _radius(extents: tuple[float, ...] = REFERENCE_EXTENTS) -> float:
+    """Half the diagonal of the box: the sphere the part is framed inside."""
+    return 0.5 * math.sqrt(sum(side * side for side in extents))
 
 
 def _part(tmp_path: Path) -> Path:
@@ -91,6 +109,8 @@ def test_the_cycle_scales_the_studio_lights_from_the_measured_box(tmp_path: Path
         "height": PRODUCTO.PRODUCT_HEIGHT,
         "samples": PRODUCTO.SAMPLES,
         "exposure": PRODUCTO.EXPOSURE,
+        "fill": PRODUCTO.DEFAULT_FILL,
+        "light": PRODUCTO.DEFAULT_LIGHT,
         "material": "brushed-aluminum",
         "backdrop": "graphite",
     }
@@ -129,8 +149,11 @@ def test_the_recipe_is_a_1200_square_cycles_studio(tmp_path: Path) -> None:
     assert trail["backdrop"] == [0.02, 0.02, 0.025, 1.0]
     assert trail["camera"]["type"] == "PERSP"
     assert trail["camera"]["lens"] == PRODUCTO.LENS
-    # 3 x 0.06 m is under the 25 cm floor, so the camera never enters the part.
-    assert math.dist(trail["camera"]["location"], (0.0, 0.0, 0.0)) == pytest.approx(0.25)
+    distance = PRODUCTO.camera_distance(_radius(), PRODUCTO.DEFAULT_FILL)
+    assert math.dist(trail["camera"]["location"], (0.0, 0.0, 0.0)) == pytest.approx(distance)
+    # 6 cm of bracket is framed closer than the old 25 cm floor ever allowed.
+    assert distance < FORMER_FLOOR
+    assert trail["camera"]["clip_start"] < distance - _radius()
 
 
 def test_the_material_and_backdrop_inputs_reach_the_scene(tmp_path: Path) -> None:
@@ -142,6 +165,71 @@ def test_the_material_and_backdrop_inputs_reach_the_scene(tmp_path: Path) -> Non
     assert trail["backdrop"] == [0.09, 0.09, 0.095, 1.0]
     properties = result["assets"][0]["properties"]
     assert (properties["material"], properties["backdrop"]) == ("steel", "concrete")
+
+
+def test_the_studio_options_default_to_the_approved_recipe() -> None:
+    """No input means today's studio: -0.2 stops, 0.6 fill, one times the light."""
+    assert PRODUCTO.options({}) == pytest.approx((PRODUCTO.EXPOSURE, 0.6, 1.0))
+    assert PRODUCTO.options({"exposure": 0, "fill": 0.2, "light": 0.1}) == pytest.approx(
+        (0.0, 0.2, 0.1)
+    )
+
+
+def test_the_exposure_input_reaches_the_scene_and_the_record(tmp_path: Path) -> None:
+    """A burnt shot is corrected from the piece, and the record says what ran."""
+    result = _render(tmp_path, exposure=1.5)
+    trail = _trail(tmp_path)
+
+    assert trail["render"]["exposure"] == pytest.approx(1.5)
+    properties = result["assets"][0]["properties"]
+    assert properties["exposure"] == pytest.approx(1.5)
+    assert properties["fill"] == PRODUCTO.DEFAULT_FILL
+    assert properties["light"] == PRODUCTO.DEFAULT_LIGHT
+
+
+def test_the_fill_input_sets_the_camera_distance(tmp_path: Path) -> None:
+    """A 0.4 fill pushes the camera back from the default framing of 0.6."""
+    result = _render(tmp_path, fill=0.4)
+    trail = _trail(tmp_path)
+    distance = PRODUCTO.camera_distance(_radius(), 0.4)
+
+    assert math.dist(trail["camera"]["location"], (0.0, 0.0, 0.0)) == pytest.approx(distance)
+    assert trail["camera"]["clip_start"] < distance - _radius()
+    assert distance > PRODUCTO.camera_distance(_radius(), PRODUCTO.DEFAULT_FILL)
+    assert result["assets"][0]["properties"]["fill"] == pytest.approx(0.4)
+
+
+def test_the_light_input_scales_the_energy_but_not_the_distance(tmp_path: Path) -> None:
+    """Twice the light on the same 6 cm part is 8 W at 50 cm, not a new studio."""
+    result = _render(tmp_path, light=2.0)
+    trail = _trail(tmp_path)
+
+    for lamp in trail["lights"].values():
+        assert lamp["energy"] == pytest.approx(8.0)
+        assert lamp["size"] == pytest.approx(0.5)
+        assert math.dist(lamp["location"], (0.0, 0.0, 0.0)) == pytest.approx(0.5)
+    assert result["assets"][0]["properties"]["light"] == pytest.approx(2.0)
+
+
+@pytest.mark.parametrize(("name", "value"), OUT_OF_RANGE)
+def test_an_input_outside_its_range_fails_the_run_loudly(
+    tmp_path: Path, name: str, value: float
+) -> None:
+    """The shot is never rendered with a value the package does not promise."""
+    request = _request(
+        tmp_path, "run", capability="blender.product", part=str(_part(tmp_path)), **{name: value}
+    )
+    env = _env(
+        tmp_path,
+        STUB_SCENE=str(_scene(tmp_path, PIECES)),
+        STUB_TRAIL=str(tmp_path / "trail.json"),
+    )
+
+    done, _ = _call("run", request, tmp_path, env)
+
+    assert done.returncode != 0
+    assert name in done.stderr
+    assert "out of range" in done.stderr
 
 
 def test_verify_measures_the_product_png_at_1200_square(tmp_path: Path) -> None:

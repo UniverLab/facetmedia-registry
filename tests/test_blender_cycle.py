@@ -247,6 +247,7 @@ class Camera:
         self.type = "PERSP"
         self.ortho_scale = 6.0
         self.lens = 50.0
+        self.clip_start = 0.1
 
 
 class Light:
@@ -461,6 +462,7 @@ class RenderOps:
             "type": scene.camera.data.type,
             "ortho_scale": scene.camera.data.ortho_scale,
             "lens": scene.camera.data.lens,
+            "clip_start": scene.camera.data.clip_start,
             "location": list(scene.camera.location),
         }
         TRAIL["sun"] = {

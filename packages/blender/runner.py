@@ -194,6 +194,7 @@ def _producto_run(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
     name = f"{_part_stem(part)}-product"
     destination = f"{str(request['out_dir']).rstrip('/')}/{name}.png"
     windows = _on_windows()
+    exposure, fill, light = producto.options(params)
     producto.render(bpy, _host_path(part, windows), _host_path(destination, windows), params)
     return {
         "tool": {"name": "blender", "version": _version(bpy)},
@@ -207,7 +208,9 @@ def _producto_run(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
                     "width": producto.PRODUCT_WIDTH,
                     "height": producto.PRODUCT_HEIGHT,
                     "samples": producto.SAMPLES,
-                    "exposure": producto.EXPOSURE,
+                    "exposure": exposure,
+                    "fill": fill,
+                    "light": light,
                     "material": str(params.get("material") or producto.DEFAULT_MATERIAL),
                     "backdrop": str(params.get("backdrop") or producto.DEFAULT_BACKDROP),
                 },

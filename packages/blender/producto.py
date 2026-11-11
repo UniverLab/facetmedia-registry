@@ -32,6 +32,17 @@ SAMPLES = 128
 SCALE = 0.001
 #: Slightly under zero: metal highlights clip at the studio's light levels.
 EXPOSURE = -0.2
+#: The exposure a piece may ask for, in stops.
+EXPOSURE_MIN = -3.0
+EXPOSURE_MAX = 3.0
+#: The fraction of the frame's height the part's bounding sphere spans.
+DEFAULT_FILL = 0.6
+FILL_MIN = 0.2
+FILL_MAX = 0.95
+#: A multiplier on the energy the light plan derives from the span.
+DEFAULT_LIGHT = 1.0
+LIGHT_MIN = 0.1
+LIGHT_MAX = 10.0
 LOOK = "AgX - Medium High Contrast"
 SEED = 0
 #: Name -> (base colour, metallic, roughness).
@@ -59,9 +70,8 @@ LIGHTS = ((-35.0, 55.0), (145.0, 25.0))
 #: A three-quarter view looking slightly down at the part.
 CAMERA_AZIMUTH = -35.0
 CAMERA_ELEVATION = 30.0
-#: The camera sits this many part spans away, never closer than 25 cm.
-CAMERA_DISTANCE = 3.0
-CAMERA_MIN_DISTANCE = 0.25
+#: The 36 mm sensor of a square frame: the camera's distance is fitted to it.
+SENSOR_HEIGHT = 36.0
 LENS = 50.0
 #: The span an empty import falls back to: the reference 6 cm piece.
 DEFAULT_SPAN = REFERENCE_SPAN
@@ -82,25 +92,51 @@ def light_plan(span: float) -> tuple[float, float]:
     return energy, distance
 
 
+def options(params: dict[str, Any]) -> tuple[float, float, float]:
+    """The applied ``(exposure, fill, light)``, each inside its documented range."""
+    exposure = _bounded("exposure", params.get("exposure"), EXPOSURE, EXPOSURE_MIN, EXPOSURE_MAX)
+    fill = _bounded("fill", params.get("fill"), DEFAULT_FILL, FILL_MIN, FILL_MAX)
+    light = _bounded("light", params.get("light"), DEFAULT_LIGHT, LIGHT_MIN, LIGHT_MAX)
+    return exposure, fill, light
+
+
+def _bounded(name: str, raw: Any, default: float, low: float, high: float) -> float:
+    """One input, the default when omitted, or a loud failure outside its range."""
+    value = default if raw is None else float(raw)
+    if not low <= value <= high:
+        raise RuntimeError(f"{name} out of range: {value:g} (use {low:g} to {high:g})")
+    return value
+
+
+def camera_distance(radius: float, fill: float) -> float:
+    """The camera distance at which the bounding sphere spans ``fill`` of the frame.
+
+    The vertical field of view comes from the 36 mm sensor of a square frame
+    and the 50 mm lens, so ``tan(fov / 2)`` is ``36 / (2 x 50)``.
+    """
+    return radius / (fill * (SENSOR_HEIGHT / (2 * LENS)))
+
+
 def render(bpy: Any, part: str, destination: str, params: dict[str, Any]) -> None:
     """Import the STL, dress the studio and render it to ``destination``.
 
     ``part`` and ``destination`` are already paths the host can open: the
     runner converts them through ``_host_path`` before handing them over.
     """
+    exposure, fill, light = options(params)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
     bpy.ops.wm.stl_import(filepath=part)
     _scale_roots(scene)
     bpy.context.view_layer.update()
-    centre, span = _bounds(scene)
+    centre, span, radius = _bounds(scene)
     _backdrop(bpy, scene, params)
     _dress(bpy, scene, params)
-    _lights(bpy, scene, centre, span)
-    _camera(bpy, scene, centre, span)
+    _lights(bpy, scene, centre, span, light)
+    _camera(bpy, scene, centre, radius, fill)
     scene.render.resolution_x = PRODUCT_WIDTH
     scene.render.resolution_y = PRODUCT_HEIGHT
-    scene.view_settings.exposure = EXPOSURE
+    scene.view_settings.exposure = exposure
     with suppress(TypeError):
         scene.view_settings.look = LOOK
     _cycles(bpy, scene)
@@ -115,8 +151,13 @@ def _scale_roots(scene: Any) -> None:
         obj.location = tuple(side * SCALE for side in obj.location)
 
 
-def _bounds(scene: Any) -> tuple[tuple[float, float, float], float]:
-    """The part's centre and longest side, in metres; the reference span if empty."""
+def _bounds(scene: Any) -> tuple[tuple[float, float, float], float, float]:
+    """The part's centre, longest side and bounding radius, in metres.
+
+    The radius is half the diagonal of the measured box, so the sphere it
+    describes encloses the part from any angle; an empty import falls back to
+    the reference span, and its radius is the diagonal of that cube's half.
+    """
     points = [
         _world_point(obj.matrix_world, corner)
         for obj in scene.objects
@@ -124,12 +165,13 @@ def _bounds(scene: Any) -> tuple[tuple[float, float, float], float]:
         for corner in obj.bound_box
     ]
     if not points:
-        return (0.0, 0.0, 0.0), DEFAULT_SPAN
+        return (0.0, 0.0, 0.0), DEFAULT_SPAN, 0.5 * math.sqrt(3) * DEFAULT_SPAN
     lows = [min(point[axis] for point in points) for axis in range(3)]
     highs = [max(point[axis] for point in points) for axis in range(3)]
     centre = tuple((lows[axis] + highs[axis]) / 2 for axis in range(3))
-    span = max(highs[axis] - lows[axis] for axis in range(3))
-    return (centre[0], centre[1], centre[2]), span
+    extents = [highs[axis] - lows[axis] for axis in range(3)]
+    radius = 0.5 * math.sqrt(sum(side * side for side in extents))
+    return (centre[0], centre[1], centre[2]), max(extents), radius
 
 
 def _world_point(matrix: Any, corner: Any) -> tuple[float, float, float]:
@@ -178,27 +220,38 @@ def _material(bpy: Any, name: str, recipe: Recipe) -> Any:
     return material
 
 
-def _lights(bpy: Any, scene: Any, centre: tuple[float, float, float], span: float) -> None:
+def _lights(
+    bpy: Any, scene: Any, centre: tuple[float, float, float], span: float, light: float
+) -> None:
     """Two square area lights, their energy and distance derived from the span."""
     energy, distance = light_plan(span)
+    energy *= light
     for index, (azimuth, elevation) in enumerate(LIGHTS, start=1):
-        light = bpy.data.lights.new(f"luz-{index}", "AREA")
-        light.shape = "SQUARE"
-        light.size = distance
-        light.energy = energy
-        obj = bpy.data.objects.new(f"luz-{index}", light)
+        lamp = bpy.data.lights.new(f"luz-{index}", "AREA")
+        lamp.shape = "SQUARE"
+        lamp.size = distance
+        lamp.energy = energy
+        obj = bpy.data.objects.new(f"luz-{index}", lamp)
         scene.collection.objects.link(obj)
         obj.location = _offset(centre, azimuth, elevation, distance)
 
 
-def _camera(bpy: Any, scene: Any, centre: tuple[float, float, float], span: float) -> None:
-    """A 50 mm perspective camera looking down at the part from three quarters."""
+def _camera(
+    bpy: Any, scene: Any, centre: tuple[float, float, float], radius: float, fill: float
+) -> None:
+    """A 50 mm perspective camera looking down at the part from three quarters.
+
+    The distance comes from ``fill`` and the part's bounding radius, and the
+    clip start sits under the part's nearest point, so a small part is never
+    clipped away.
+    """
     data = bpy.data.cameras.new("camara")
     data.type = "PERSP"
     data.lens = LENS
     obj = bpy.data.objects.new("camara", data)
     scene.collection.objects.link(obj)
-    distance = max(CAMERA_DISTANCE * span, CAMERA_MIN_DISTANCE)
+    distance = camera_distance(radius, fill)
+    data.clip_start = (distance - radius) / 2
     obj.location = _offset(centre, CAMERA_AZIMUTH, CAMERA_ELEVATION, distance)
     elevation = math.radians(CAMERA_ELEVATION)
     obj.rotation_euler = (math.pi / 2 - elevation, 0.0, math.radians(CAMERA_AZIMUTH) + math.pi / 2)

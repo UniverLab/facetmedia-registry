@@ -102,7 +102,15 @@ STL `cad.solid` wrote.
 part = "escuadra.stl"
 material = "brushed-aluminum"
 backdrop = "graphite"
+exposure = -0.2   # stops (-3..3): lower it when the metal burns, raise it when it is dark
+fill = 0.6        # frame height the part spans (0.2..0.95): raise it when it is small
+light = 1.0       # multiplies the studio light (0.1..10): lower it for harsh highlights
 ```
+
+Read the render back before shipping it: a shot that is too dark or burnt is
+`exposure`, one where the part is too small or cropped is `fill`, and one that
+is flat or harsh is `light`. The record's properties carry the three values
+that were actually applied.
 
 People and cars are piece data on a scene, not separate pieces. The keys are
 hyphenated, exactly as facet resolves them:

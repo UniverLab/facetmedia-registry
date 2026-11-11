@@ -284,6 +284,9 @@ The approved reference is a brushed-aluminium product photo (about 10 s).
 part = "escuadra.stl"
 material = "brushed-aluminum"  # or "steel"
 backdrop = "graphite"             # or "concrete"
+exposure = -0.2                  # stops: darker when the metal burns
+fill = 0.6                       # frame height the part spans: higher when it is small
+light = 1.0                      # multiplies the light plan: higher when it is flat
 ```
 
 - `part` is the `.stl` `cad.solid` exports beside the piece (60 x 40 x 10 mm
@@ -297,24 +300,37 @@ backdrop = "graphite"             # or "concrete"
 - `backdrop` is `graphite` (near black) or `concrete` (dark grey). Both stay dark
   on purpose: metal needs contrast to read as metal, and a light cyclorama
   flattens the highlight the photo exists for.
+- `exposure` is -3 to 3 stops, **-0.2** by default: lower it when the shot comes
+  out too bright or burnt, raise it when it is too dark.
+- `fill` is 0.2 to 0.95, **0.6** by default: the fraction of the frame's height
+  the part's bounding sphere spans. Raise it when the part looks too small,
+  lower it when the frame crops it.
+- `light` is 0.1 to 10, **1.0** by default: a multiplier on the energy the
+  light plan derives from the part's span. Raise it when the shot is flat,
+  lower it when the highlights are harsh. The lights' distance does not move.
 
 **The light rule.** A fixed studio light burns a small piece out, so the two
 area lights are derived from the part's longest side. A 6 cm piece gets
 **4 W lights 0.50 m away**; the energy scales with the part and is clamped to
-**2-6 W**, the distance to **0.15-2 m**. The keys sit at azimuth -35°/
-elevation 55° and azimuth 145°/elevation 25° around the part's centre, and each
-square light's size is its own distance, which keeps the highlight soft.
+**2-6 W**, the distance to **0.15-2 m**. `light` multiplies that energy and
+leaves the distance alone. The keys sit at azimuth -35°/elevation 55° and
+azimuth 145°/elevation 25° around the part's centre, and each square light's
+size is its own distance, which keeps the highlight soft.
 
 The exposure is **-0.2** under `AgX - Medium High Contrast` on Cycles
 (OPTIX, then CUDA, then CPU) at 128 samples with denoise: darker than the
 daylight photo because the studio's lights sit close to the part. The camera is
-a 50 mm perspective view three-quarters on, `max(3 x span, 0.25 m)` away.
+a 50 mm perspective view three-quarters on, its distance computed from `fill`,
+the part's bounding radius (half the diagonal of its box) and the lens's
+vertical field of view on a 36 mm sensor: `distance = radius / (fill x 0.36)`.
+The 6 cm bracket sits at about 0.17 m, and the clip start stays under the
+part's nearest point, so a small part is never clipped.
 
 One `blender.product` run writes `<part>-product.png` (`image/png`) at
-1200x1200 with properties `width`, `height`, `samples`, `exposure`, `material`
-and `backdrop`; the `part` is the hashed input. `verify` measures the header
-against 1200x1200 and `preview` writes the image kind's file with the material,
-the backdrop and the part in its prompt.
+1200x1200 with properties `width`, `height`, `samples`, `exposure`, `fill`,
+`light`, `material` and `backdrop`; the `part` is the hashed input. `verify`
+measures the header against 1200x1200 and `preview` writes the image kind's
+file with the material, the backdrop and the part in its prompt.
 
 ## Assets
 
