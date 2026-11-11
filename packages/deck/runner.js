@@ -29,6 +29,9 @@ const VIEWPORT = { width: 1060, height: 800 };
 const SCALE = 2;
 const PAGE_RE = /^page-(\d+)\.png$/;
 const RAW_RE = /^\.page-raw-(\d+)\.png$/;
+// The PDF preview's own rasters, cleared and recreated on every preview, the
+// same folder freecad uses. The delivered page PNGs beside the PDF stay put.
+const PREVIEW_DIR = "preview";
 const DOCTOR_HTML = `<!doctype html>
 <html><head><meta charset="utf-8"><style>
 @page { size: 1280px 720px; margin: 0; }
@@ -305,6 +308,62 @@ function recordedPages(asset) {
   return Number.isInteger(count) ? count : null;
 }
 
+function recordedSize(asset) {
+  let stored = null;
+  try {
+    stored = JSON.parse(fs.readFileSync(`${asset}.facet.json`, "utf8"));
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+    return null;
+  }
+  const metrics = stored && stored.verification && stored.verification.metrics;
+  const width = metrics && metrics.width;
+  const height = metrics && metrics.height;
+  if (!Number.isInteger(width) || !Number.isInteger(height)) return null;
+  return { width, height };
+}
+
+// --- the run assets: the PDF, then one image asset per page PNG.
+
+function pageNumber(file) {
+  const match = PAGE_RE.exec(path.basename(String(file)));
+  return match ? Number(match[1]) : 1;
+}
+
+function pdfAsset(name, pageCount, inputs, source) {
+  return {
+    file: `${name}.pdf`,
+    name,
+    kind: "document",
+    mime: "application/pdf",
+    properties: { page_count: pageCount },
+    params: inputs,
+    seed: seedOf(inputs),
+    inputs: [source],
+  };
+}
+
+function pageImageAsset(outDir, file, inputs, source) {
+  const size = raster.pngSize(path.join(outDir, file));
+  return {
+    file,
+    name: path.basename(file, path.extname(file)),
+    kind: "image",
+    mime: "image/png",
+    properties: { page: pageNumber(file), width: size.width, height: size.height },
+    params: inputs,
+    seed: seedOf(inputs),
+    inputs: [source],
+  };
+}
+
+function runAssets(outDir, name, pages, inputs, source) {
+  return [
+    pdfAsset(name, pages.length, inputs, source),
+    ...pages.map((file) => pageImageAsset(outDir, file, inputs, source)),
+  ];
+}
+
 // --- the verbs.
 
 async function runSlides(request) {
@@ -323,18 +382,7 @@ async function runSlides(request) {
   const { version } = packageDir(PLAYWRIGHT);
   return {
     tool: { name: "deck", version },
-    assets: [
-      {
-        file: `${name}.pdf`,
-        name,
-        kind: "document",
-        mime: "application/pdf",
-        properties: { page_count: pages.length },
-        params: inputs,
-        seed: seedOf(inputs),
-        inputs: [source],
-      },
-    ],
+    assets: runAssets(outDir, name, pages, inputs, source),
   };
 }
 
@@ -363,25 +411,22 @@ async function runPage(request) {
   const { version } = packageDir(PLAYWRIGHT);
   return {
     tool: { name: "deck", version },
-    assets: [
-      {
-        file: `${name}.pdf`,
-        name,
-        kind: "document",
-        mime: "application/pdf",
-        properties: { page_count: pages.length },
-        params: inputs,
-        seed: seedOf(inputs),
-        inputs: [source],
-      },
-    ],
+    assets: runAssets(outDir, name, pages, inputs, source),
   };
+}
+
+function isPng(asset) {
+  return /\.png$/i.test(String(asset));
 }
 
 async function verify(request) {
   const assets = [];
-  for (const asset of request.assets || []) assets.push(await verdictOfSlides(asset));
+  for (const asset of request.assets || []) assets.push(await verdictOf(asset));
   return { assets };
+}
+
+async function verdictOf(asset) {
+  return isPng(asset) ? verdictOfImage(asset) : verdictOfSlides(asset);
 }
 
 async function verdictOfSlides(asset) {
@@ -403,24 +448,51 @@ async function verdictOfSlides(asset) {
   };
 }
 
+// A page PNG passes when its header reads and any record beside it agrees on
+// the size; a run verifies in its temp directory before records are written.
+function verdictOfImage(asset) {
+  const file = path.basename(String(asset));
+  const size = raster.pngSize(String(asset));
+  const recorded = recordedSize(asset);
+  if (recorded !== null && (recorded.width !== size.width || recorded.height !== size.height)) {
+    throw new Error(
+      `${file}: ${size.width}x${size.height} but the record says ` +
+        `${recorded.width}x${recorded.height}`,
+    );
+  }
+  return {
+    file,
+    passed: true,
+    metrics: { width: size.width, height: size.height, page: pageNumber(file) },
+    thresholds: {},
+    verifier: "png",
+  };
+}
+
 async function preview(request) {
   const inputs = inputsOf(request);
   const prompt = String(inputs.prompt || "");
   if (!prompt) throw new Error("prompt is required");
   const seed = seedOf(inputs);
-  const chrome = findChrome();
-  if (!chrome) throw new Error(BROWSER_MISSING);
+  const assets = request.assets || [];
+  const browser = assets.some((asset) => !isPng(asset));
+  const chrome = browser ? findChrome() : "";
+  if (browser && !chrome) throw new Error(BROWSER_MISSING);
   const entries = [];
-  for (const asset of request.assets || []) entries.push(await previewOf(asset, seed, chrome));
+  for (const asset of assets) {
+    entries.push(await previewOf(asset, seed, chrome, prompt));
+  }
   return { assets: entries };
 }
 
-async function previewOf(asset, seed, chrome) {
+async function previewOf(asset, seed, chrome, prompt) {
   const file = path.basename(String(asset));
-  const dir = path.dirname(String(asset));
-  clearPages(dir);
+  if (isPng(file)) return previewImage(asset, file, seed, prompt);
+  const dir = path.join(path.dirname(String(asset)), PREVIEW_DIR);
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.mkdirSync(dir, { recursive: true });
   await raster.rasterizePdf(String(asset), dir, chrome);
-  const pages = normalizePages(dir);
+  const pages = normalizePages(dir).map((name) => `${PREVIEW_DIR}/${name}`);
   const summary = `${file} · ${pages.length} page${pages.length === 1 ? "" : "s"} · seed ${seed}`;
   const data = {
     preview: 1,
@@ -428,6 +500,25 @@ async function previewOf(asset, seed, chrome) {
     summary: summary.slice(0, MAX_SUMMARY),
     page_count: pages.length,
     pages,
+  };
+  fs.writeFileSync(`${asset}.preview.json`, `${JSON.stringify(data, null, 2)}\n`);
+  return { file, preview: `${file}.preview.json`, images: [] };
+}
+
+// A page PNG previews as itself: the image kind's schema, measured from the
+// file, so the web app can show it without decoding the record.
+function previewImage(asset, file, seed, prompt) {
+  const size = raster.pngSize(String(asset));
+  const page = pageNumber(file);
+  const data = {
+    preview: 1,
+    kind: "image",
+    summary: `${file} · page ${pad(page, 2)} · ${size.width}×${size.height}`.slice(0, MAX_SUMMARY),
+    name: path.basename(file, path.extname(file)),
+    prompt,
+    seed,
+    width: size.width,
+    height: size.height,
   };
   fs.writeFileSync(`${asset}.preview.json`, `${JSON.stringify(data, null, 2)}\n`);
   return { file, preview: `${file}.preview.json`, images: [] };

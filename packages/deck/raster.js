@@ -18,6 +18,11 @@ const PDFJS_WORKER = path.join("build", "pdf.worker.js");
 const PDFGRAB = path.join(__dirname, "pdfgrab.html");
 const VIEWPORT = { width: 1060, height: 800 };
 const SCALE = 2;
+const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const PNG_IHDR = 12;
+const PNG_WIDTH_AT = 16;
+const PNG_HEIGHT_AT = 20;
+const PNG_HEADER_BYTES = 24;
 
 function nodePathDirs() {
   return (process.env.FACET_NODE_PATH || "").split(path.delimiter).filter(Boolean);
@@ -62,6 +67,25 @@ async function pdfText(pdf) {
   return texts.join("\n");
 }
 
+// A page PNG is a real image asset: its width and height come from the IHDR
+// chunk, so verify can compare them with the record and preview can describe it
+// without decoding the picture.
+function pngSize(file) {
+  const buffer = fs.readFileSync(file);
+  const name = path.basename(String(file));
+  if (
+    buffer.length < PNG_HEADER_BYTES ||
+    !buffer.subarray(0, PNG_SIG.length).equals(PNG_SIG) ||
+    buffer.toString("latin1", PNG_IHDR, PNG_IHDR + 4) !== "IHDR"
+  ) {
+    throw new Error(`${name}: not a PNG`);
+  }
+  return {
+    width: buffer.readUInt32BE(PNG_WIDTH_AT),
+    height: buffer.readUInt32BE(PNG_HEIGHT_AT),
+  };
+}
+
 // A placed PDF has no source HTML: pdfgrab.html renders it with pdf.js inside
 // the same headless Chromium and the runner screenshots one canvas per page.
 async function rasterizePdf(pdf, dir, chrome) {
@@ -93,4 +117,4 @@ async function rasterizePdf(pdf, dir, chrome) {
   }
 }
 
-module.exports = { pdfPageCount, pdfText, rasterizePdf };
+module.exports = { pdfPageCount, pdfText, pngSize, rasterizePdf };

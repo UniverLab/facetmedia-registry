@@ -123,7 +123,9 @@ through the content. Copy the snippets from `references/page.md`.
 
 1. Export with `deck.slides`, `deck.page` or `deck.presenter`. A deck or
    one-page run writes `<base>.pdf` and one `page-NN.png` per page beside the
-   asset; a presenter run writes `<base>.present.html` and `<base>.notes.md`.
+   asset; each PNG is an image asset with its own record, so `facet check`
+   re-verifies it. A presenter run writes `<base>.present.html` and
+   `<base>.notes.md`.
 2. Open the PNG (or a screenshot) and check for overlaps, clipped text,
    overflow and hierarchy.
 3. For anything that is not an image — PDF pages, a deck, an assembled
@@ -137,8 +139,12 @@ through the content. Copy the snippets from `references/page.md`.
 `verify` counts the rendered `page-*.png` files beside the asset — or the PDF's
 own page count from pdf.js when none are rendered — and compares them
 with the `page_count` the record holds; a mismatch stops the check with
-`runner_failed`. The preview file carries `preview`, `kind`, `summary`,
-`page_count` and `pages`, and a person's preview opens the PDF itself.
+`runner_failed`. Every page PNG is its own image asset: it verifies against
+its record, and a PNG whose header size differs from the recorded `width` and
+`height` stops the check. The preview file carries `preview`, `kind`,
+`summary`, `page_count` and `pages`; its rasters live under `preview/`, so
+previewing the PDF leaves the delivered `page-NN.png` files untouched, and a
+person's preview opens the PDF itself.
 
 `deck.presenter`'s `verify` checks the `__PZ_NOTES__` array length against the
 `notes` count, the `---` sections in `notes.md` against the same count and
@@ -160,7 +166,8 @@ stops the check with `runner_failed` naming the check.
 - The page PNGs are `page-01.png`, `page-02.png`, ...; they are clipped
   screenshots of the rendered pages inside the same headless Chromium run —
   placed PDFs go through `pdfgrab.html` and the bundled pdf.js — never a host
-  rasterizer.
+  rasterizer. They are image assets with their own records, so `facet check`
+  re-verifies them, and the PDF preview's rasters live under `preview/`.
 - Hand-writing SVG for a standard chart costs more corrections than a
   Vega-Lite spec; a declarative default pulled into an editorial piece that
   needs a bespoke shape costs more than drawing it. Pick per chart, not per

@@ -53,17 +53,28 @@ content into one tall page.
   from the same Chromium run that wrote the PDF: the runner counts the pages
   with pdf.js, reads the `@page` size (or the laid-out scroll height over the
   page count) and clips one screenshot per page. The names are normalized to
-  at least two digits so `page-01.png` is stable.
+  at least two digits so `page-01.png` is stable. Each PNG travels as its own
+  asset beside the PDF — kind `image`, mime `image/png`, properties
+  `{ page, width, height }` read from its header — so facet copies it out of
+  the run and writes its own record.
 - **`<name>.pdf.preview.json`** — the document preview:
   `{ "preview": 1, "kind": "document", "summary", "page_count", "pages" }`.
-  A person's preview opens the PDF itself in the system browser; there is no
-  viewer server for a document.
+  Its page rasters are written under `preview/` (`pages` entries are
+  `preview/page-01.png`, ...), cleared and recreated on every preview, so a
+  preview never deletes, rewrites or renames the delivered PNGs beside the
+  PDF. A person's preview opens the PDF itself in the system browser; there is
+  no viewer server for a document.
+- **`page-NN.png.preview.json`** — a page PNG previews as the image kind:
+  `{ preview, kind, summary, name, prompt, seed, width, height }`.
 
-`verify` counts the rendered `page-*.png` files beside the asset — falling
+`verify` counts the rendered `page-*.png` files beside the PDF — falling
 back to the PDF's own page count from pdf.js when none are rendered, which is
-the state a placed asset is in until `preview` rasterizes them — compares the
-count with the record's `page_count`, and stops with `runner_failed` on a
-mismatch. The verifier it reports is `chromium-pdfjs`.
+the state a placed asset is in — compares the count with the record's
+`page_count`, and stops with `runner_failed` on a mismatch. The verifier it
+reports is `chromium-pdfjs`. A page PNG verifies on its own: it must be a PNG
+whose header size matches the `width` and `height` its record carries (and in
+the run's temp directory, before a record exists, the header alone), with the
+`png` verifier. `facet check` re-runs both after a preview.
 
 ## One-page pieces
 

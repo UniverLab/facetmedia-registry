@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -37,6 +38,12 @@ RUN_SEED = 3
 PREVIEW_SEED = 7
 PREVIEW_KEYS = {"preview", "kind", "summary", "page_count", "pages"}
 PAGE_NAMES = ["page-01.png", "page-02.png"]
+PREVIEW_PAGES = ["preview/page-01.png", "preview/page-02.png"]
+PNG_WIDTH = 2560
+PNG_HEIGHT = 1440
+IMAGE_SCHEMA = json.loads(
+    (ROOT / "schemas" / "preview" / "image.schema.json").read_text(encoding="utf-8")
+)
 
 pytestmark = pytest.mark.skipif(NODE is None, reason="node is not available")
 
@@ -50,6 +57,17 @@ function log(entry) {
 
 function stubPages() {
   return Number(process.env.DECK_STUB_PAGES || "2");
+}
+
+// A real PNG header: signature, IHDR and the two big-endian dimensions the
+// runner reads back, so every page is a verifiable image asset.
+function png(width, height) {
+  const header = Buffer.alloc(24);
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(header, 0);
+  header.write("IHDR", 12, "latin1");
+  header.writeUInt32BE(width, 16);
+  header.writeUInt32BE(height, 20);
+  return header;
 }
 
 module.exports = {
@@ -87,7 +105,7 @@ module.exports = {
             },
             async screenshot(options) {
               log({ screenshot: options });
-              fs.writeFileSync(options.path, "PNG");
+              fs.writeFileSync(options.path, png(2560, 1440));
             },
             locator(selector) {
               return {
@@ -95,7 +113,7 @@ module.exports = {
                   log({
                     elementScreenshot: { selector, path: options && options.path },
                   });
-                  fs.writeFileSync(options.path, "PNG");
+                  fs.writeFileSync(options.path, png(2560, 1440));
                 },
               };
             },
@@ -295,6 +313,46 @@ def _run(
     return _invoke(root, "run", _request("run", out, piece, inputs=_inputs(seed)), env)
 
 
+def _image_assets(result: Any) -> list[dict[str, Any]]:
+    """The assets after the PDF: one image record per page PNG, in page order."""
+    return list(result["assets"][1:])
+
+
+def _assert_page_images(result: Any, names: list[str]) -> None:
+    """Every page PNG travels as an image asset carrying its page and size."""
+    pdf = result["assets"][0]
+    images = _image_assets(result)
+    assert [image["file"] for image in images] == names
+    assert [image["name"] for image in images] == [Path(name).stem for name in names]
+    for page, image in enumerate(images, start=1):
+        assert (image["kind"], image["mime"]) == ("image", "image/png")
+        assert image["properties"] == {
+            "page": page,
+            "width": PNG_WIDTH,
+            "height": PNG_HEIGHT,
+        }
+        assert image["params"] == pdf["params"]
+        assert image["seed"] == pdf["seed"]
+        assert image["inputs"] == pdf["inputs"]
+
+
+def _assert_image_schema(data: dict[str, Any]) -> None:
+    """Exactly the image schema's keys, with its consts, patterns and minimums."""
+    assert set(data) == set(IMAGE_SCHEMA["required"])
+    for key, rules in IMAGE_SCHEMA["properties"].items():
+        value = data[key]
+        if "const" in rules:
+            assert value == rules["const"], key
+        if rules.get("type") == "string":
+            assert isinstance(value, str) and value, key
+            if "pattern" in rules:
+                assert re.fullmatch(rules["pattern"], value), (key, value)
+        if rules.get("type") == "integer":
+            assert isinstance(value, int) and value >= rules.get("minimum", 0), key
+        if "maxLength" in rules:
+            assert len(value) <= rules["maxLength"], key
+
+
 def test_run_renders_a_paged_pdf_and_screenshots_one_png_per_page(tmp_path: Path) -> None:
     node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
@@ -317,6 +375,7 @@ def test_run_renders_a_paged_pdf_and_screenshots_one_png_per_page(tmp_path: Path
     assert asset["params"]["prompt"] == "brief"
     assert asset["inputs"] == [str(html)]
     assert result["tool"] == {"name": "deck", "version": PLAYWRIGHT_VERSION}
+    _assert_page_images(result, PAGE_NAMES)
     assert (out / "slides.pdf").is_file()
     names = sorted(path.name for path in out.glob("page-*.png"))
     assert names == PAGE_NAMES
@@ -360,6 +419,7 @@ def test_run_writes_one_png_per_pdf_page(tmp_path: Path) -> None:
     done, result = _run(tmp_path, out, piece, env)
     assert done.returncode == 0, done.stderr
     assert result["assets"][0]["properties"] == {"page_count": 3}
+    _assert_page_images(result, ["page-01.png", "page-02.png", "page-03.png"])
     assert sorted(path.name for path in out.glob("page-*.png")) == [
         "page-01.png",
         "page-02.png",
@@ -425,6 +485,50 @@ def test_verify_passes_when_the_page_count_matches(tmp_path: Path) -> None:
     }
 
 
+def test_verify_passes_a_page_png_from_its_header(tmp_path: Path) -> None:
+    """No record beside a page PNG yet: the IHDR alone is the verdict."""
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _slide(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
+    _done, _result = _run(tmp_path, out, piece, env)
+    asset = out / "page-02.png"
+    request = _request("verify", out, piece, assets=[str(asset)])
+    done, result = _invoke(tmp_path, "verify", request, env)
+    assert done.returncode == 0, done.stderr
+    assert result["assets"][0] == {
+        "file": "page-02.png",
+        "passed": True,
+        "metrics": {"width": PNG_WIDTH, "height": PNG_HEIGHT, "page": 2},
+        "thresholds": {},
+        "verifier": "png",
+    }
+
+
+def test_verify_fails_a_page_png_whose_size_differs_from_its_record(tmp_path: Path) -> None:
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _slide(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
+    _done, _result = _run(tmp_path, out, piece, env)
+    asset = out / "page-01.png"
+    record = out / "page-01.png.facet.json"
+    record.write_text(
+        json.dumps({"verification": {"metrics": {"width": 1280, "height": 720, "page": 1}}}),
+        encoding="utf-8",
+    )
+    request = _request("verify", out, piece, assets=[str(asset)])
+    done, result = _invoke(tmp_path, "verify", request, env)
+    assert done.returncode != 0
+    assert result is None
+    assert f"{PNG_WIDTH}x{PNG_HEIGHT}" in done.stderr
+    assert "the record says 1280x720" in done.stderr
+
+
 def test_verify_falls_back_to_pdfjs_when_no_pages_are_rendered(tmp_path: Path) -> None:
     """A placed asset keeps no page PNGs; pdf.js still counts the PDF's pages."""
     node_path = _package(tmp_path)
@@ -477,6 +581,10 @@ def test_preview_writes_the_core_document_fixture_keys(tmp_path: Path) -> None:
     out.mkdir()
     env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
     _done, _result = _run(tmp_path, out, piece, env)
+    delivered = {name: (out / name).read_bytes() for name in PAGE_NAMES}
+    stale = out / "preview"
+    stale.mkdir()
+    (stale / "stale.txt").write_text("old", encoding="utf-8")
     asset = out / "slides.pdf"
     request = _request("preview", out, piece, inputs=_inputs(PREVIEW_SEED), assets=[str(asset)])
     done, result = _invoke(tmp_path, "preview", request, env)
@@ -491,9 +599,11 @@ def test_preview_writes_the_core_document_fixture_keys(tmp_path: Path) -> None:
     assert data["preview"] == 1
     assert data["kind"] == "document"
     assert data["page_count"] == PAGE_COUNT
-    assert data["pages"] == PAGE_NAMES
+    assert data["pages"] == PREVIEW_PAGES
     assert f"seed {PREVIEW_SEED}" in data["summary"]
     assert all((out / name).is_file() for name in data["pages"])
+    assert sorted(path.name for path in (out / "preview").iterdir()) == PAGE_NAMES
+    assert {name: (out / name).read_bytes() for name in PAGE_NAMES} == delivered
 
 
 def test_preview_rasterizes_a_placed_pdf_with_no_source_html(tmp_path: Path) -> None:
@@ -520,8 +630,56 @@ def test_preview_rasterizes_a_placed_pdf_with_no_source_html(tmp_path: Path) -> 
     ]
     data = json.loads((out / "placed.pdf.preview.json").read_text(encoding="utf-8"))
     assert data["page_count"] == PAGE_COUNT
-    assert data["pages"] == PAGE_NAMES
+    assert data["pages"] == PREVIEW_PAGES
     assert all((out / name).is_file() for name in data["pages"])
+    assert not list(out.glob("page-*.png"))
+
+
+def test_preview_writes_the_image_schema_for_a_page_png(tmp_path: Path) -> None:
+    """A page PNG previews as itself: the image kind's exact fields."""
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _slide(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
+    _done, _result = _run(tmp_path, out, piece, env)
+    asset = out / "page-02.png"
+    request = _request("preview", out, piece, inputs=_inputs(PREVIEW_SEED), assets=[str(asset)])
+    done, result = _invoke(tmp_path, "preview", request, env)
+    assert done.returncode == 0, done.stderr
+    assert result["assets"][0] == {
+        "file": "page-02.png",
+        "preview": "page-02.png.preview.json",
+        "images": [],
+    }
+    data = json.loads((out / "page-02.png.preview.json").read_text(encoding="utf-8"))
+    _assert_image_schema(data)
+    assert data["summary"] == f"page-02.png · page 02 · {PNG_WIDTH}×{PNG_HEIGHT}"
+    assert data["kind"] == "image"
+    assert data["name"] == "page-02"
+    assert data["prompt"] == "brief"
+    assert data["seed"] == PREVIEW_SEED
+    assert (data["width"], data["height"]) == (PNG_WIDTH, PNG_HEIGHT)
+    assert not (out / "preview").exists()
+
+
+def test_preview_of_a_page_png_needs_no_browser(tmp_path: Path) -> None:
+    """A page PNG previews from its header alone, as freecad's sheets do."""
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _slide(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
+    _done, _result = _run(tmp_path, out, piece, env)
+    asset = out / "page-01.png"
+    request = _request("preview", out, piece, inputs=_inputs(PREVIEW_SEED), assets=[str(asset)])
+    no_browser = _environment(tmp_path, node_path, bin_dir, chrome=None)
+    done, result = _invoke(tmp_path, "preview", request, no_browser)
+    assert done.returncode == 0, done.stderr
+    assert result["assets"][0]["file"] == "page-01.png"
+    assert (out / "page-01.png.preview.json").is_file()
 
 
 def test_doctor_quick_reports_node_and_chromium_and_no_poppler(tmp_path: Path) -> None:
@@ -615,6 +773,7 @@ def test_page_run_renders_a_one_page_pdf_through_the_screen_path(tmp_path: Path)
     assert asset["params"]["prompt"] == "brief"
     assert asset["inputs"] == [str(html)]
     assert result["tool"] == {"name": "deck", "version": PLAYWRIGHT_VERSION}
+    _assert_page_images(result, ["page-01.png"])
     assert (out / "page.pdf").is_file()
     assert [path.name for path in out.glob("page-*.png")] == ["page-01.png"]
     calls = _calls(tmp_path)
