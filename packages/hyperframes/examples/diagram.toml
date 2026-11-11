@@ -6,33 +6,61 @@ seed = 0
 fps = 24
 
 [[inputs.animation]]
-selector = '[id^="my-svg-flowchart-datos-"]'
-at = 0.4
+selector = "#my-svg-flowchart-datos-0"
+at = 0.3
 kind = "show"
 
 [[inputs.animation]]
 selector = "#my-svg-L_datos_pieza_0"
-at = 0.9
+at = 0.6
 kind = "draw"
-dur = 0.5
+dur = 0.4
 
 [[inputs.animation]]
-selector = '.edgeLabels [data-id="L_datos_pieza_0"]'
+selector = "#my-svg-flowchart-pieza-1"
+at = 1.0
+kind = "show"
+
+[[inputs.animation]]
+selector = "#my-svg-L_pieza_exportar_0"
 at = 1.2
+kind = "draw"
+dur = 0.3
+
+[[inputs.animation]]
+selector = "#my-svg-flowchart-exportar-3"
+at = 1.5
+kind = "show"
+
+[[inputs.animation]]
+selector = "#my-svg-L_exportar_revisar_0"
+at = 1.7
+kind = "draw"
+dur = 0.3
+
+[[inputs.animation]]
+selector = "#my-svg-flowchart-revisar-5"
+at = 2.0
+kind = "show"
+
+[[inputs.animation]]
+selector = "#my-svg-L_revisar_entrega_0"
+at = 2.2
+kind = "draw"
+dur = 0.3
+
+[[inputs.animation]]
+selector = '.edgeLabels [data-id="L_revisar_entrega_0"]'
+at = 2.3
 kind = "fade"
 dur = 0.3
 
 [[inputs.animation]]
-selector = "#my-svg-service-agente"
-at = 1.6
+selector = "#my-svg-flowchart-entrega-11"
+at = 2.5
 kind = "show"
 
 [[inputs.animation]]
-selector = "#my-svg-group-lab"
-at = 1.9
-kind = "fade"
-
-[[inputs.animation]]
 selector = "#my-svg-gpu"
-at = 2.3
+at = 2.9
 kind = "fade"
