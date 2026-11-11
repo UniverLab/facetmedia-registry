@@ -7,6 +7,12 @@ tool_name = "HyperFrames"
 description = "Checked HTML+GSAP compositions rendered to MP4 with the pinned HyperFrames CLI, verified by an ffprobe probe"
 facet = "video"
 
+[browser]
+channel = "chromium"
+revision = "1254"
+version = "158.0.8127.18"
+sha256 = "c6cb06e1574ac2f6c5c38e31551157fbcaa67e6366c89974084553c5a5772592"
+
 [engine]
 type = "node"
 

@@ -28,14 +28,9 @@ fails the verb loudly.
 
 ## Environment
 
-- **`HYPERFRAMES_BROWSER_PATH` (required).** HyperFrames needs a Chromium
-  executable, and this package takes the host's, for example
-  `export HYPERFRAMES_BROWSER_PATH=/usr/bin/google-chrome`. The runner inherits
-  it; it never downloads a browser.
-- **No `[browser]` table.** Core's `pull()` returns from `_pull_node` before
-  `_fetch_browser`, and `_pull_node` never fetches a browser, so a browser table
-  on a node package would never land under `<home>/browsers/`. The host bridge
-  above is the whole browser story.
+- **`[browser]` (declared).** `facet pull` fetches the pinned Chromium; the
+  runner reads `FACET_BROWSER` and hands it to the HyperFrames CLI; the host
+  needs no Chrome.
 - **`HYPERFRAMES_NO_TELEMETRY=1` and `HYPERFRAMES_SKIP_SKILLS=1`** are set by
   the runner on every CLI call, per the lab rule.
 - **`PATH` is inherited**, so the host `ffmpeg` and `ffprobe` are found.
@@ -373,7 +368,7 @@ the probe cannot express: a `gif` must carry the `NETSCAPE2.0` looping block
 `yuva`, …); an opaque MOV fails. `preview` writes `<asset>.preview.json` with
 exactly the video schema's ten fields, and its summary carries the `format`
 label for loop assets. `doctor` reports two checks: the Chromium executable at
-`HYPERFRAMES_BROWSER_PATH`, and `ffmpeg` plus `ffprobe` on `PATH`.
+`FACET_BROWSER`, and `ffmpeg` plus `ffprobe` on `PATH`.
 
 `facet doctor hyperframes` classifies a missing browser or ffmpeg as
 `machine_cannot` with the fix in the check. Run `facet pull hyperframes` once;

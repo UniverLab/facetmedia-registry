@@ -2,7 +2,8 @@
 
 Build a slide deck from one HTML file into a paginated PDF and one PNG per
 page. `deck.slides` is the presentation package: it owns the deck format and
-the export, and wraps the host browser rather than shipping one.
+the export, and wraps the pinned Chromium `facet pull` installs rather than
+shipping one.
 
 ## What it wraps
 
@@ -12,16 +13,14 @@ the export, and wraps the host browser rather than shipping one.
 - **`playwright-core` `1.64.0`** and **`pdfjs-dist` `3.11.174`**, the two
   `[[engine.node.packages]]` entries: the lab's `^1.64.0` range pinned to the
   exact version with its `registry.npmjs.org` tarball and SRI integrity.
-  playwright-core launches the host browser and never downloads one;
+  playwright-core launches the pinned browser and never downloads one;
   pdfjs-dist reads page counts and text and renders placed PDFs inside that
   same browser through `pdfgrab.html`.
-- **The host Chromium.** The runner resolves it from `CHROME_PATH`, then
-  `/usr/bin/google-chrome`, `/usr/bin/chromium`, `/usr/bin/chromium-browser`.
-  There is no `[browser]` table: a node package's pull never fetches a browser,
-  so the host executable is the whole browser story. Every raster — the
-  per-page PNGs, the `deck.pagina` text check and the placed-PDF preview —
-  comes from this Chromium or from the bundled pdf.js, never from a host
-  tool install.
+- **The pinned Chromium.** `facet pull deck` installs it once (~200 MB, shared
+  by the three packages); the runner reads it from `FACET_BROWSER` — no host
+  lookup, no download. Every raster — the per-page PNGs, the `deck.pagina`
+  text check and the placed-PDF preview — comes from this Chromium or from the
+  bundled pdf.js, never from a host tool install.
 
 ## The deck format
 
@@ -133,13 +132,12 @@ with `{ notes }` for `<name>.notes.md`.
 
 ## Environment
 
-- **`CHROME_PATH`** selects the host browser. Without it the runner still finds
-  the three standard Linux paths; `doctor` reports the resolved executable and
-  its fix is `export CHROME_PATH=/usr/bin/google-chrome`.
+- **`FACET_BROWSER`** selects the pinned Chromium `facet pull` installs.
+  `doctor` reports the resolved executable and its fix is `facet pull deck`.
 - **`doctor` at quick depth** checks the node runtime and the Chromium; at
   full depth it renders a one-slide throwaway, so a broken browser fails
   before a real deck does. There is no external rasterizer check: page PNGs,
   page counts and text all come from the Chromium and the bundled pdf.js.
-- **No pull ever fetches the browser or pdf.js.** `pull` installs the pinned
-  npm closure — playwright-core and pdfjs-dist — and any declared `[browser]`;
-  deck declares neither a browser nor a browser asset.
+- **`pull` fetches the browser.** `pull` installs the pinned npm closure —
+  playwright-core and pdfjs-dist — and the declared `[browser]` (Chromium
+  158.0.8127.18, shared by the three packages).

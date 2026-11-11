@@ -52,10 +52,10 @@ A complete approved one-page piece — HTML, PDF and PNG — is in
   and a legend. Hand-written SVG wins in editorial pieces made to measure — an
   annotated diagram, a bespoke shape, a chart that is part of the layout — where
   a declarative default fights the design.
-- The host must have a Chromium (resolved from `CHROME_PATH`, then
-  `/usr/bin/google-chrome`, `/usr/bin/chromium`, `/usr/bin/chromium-browser`);
-  everything else — page PNGs, page counts, text — comes from that browser and
-  the bundled pdf.js. Otherwise `doctor` fails before a run.
+- `facet pull deck` must have installed the pinned Chromium the runner reads
+  from `FACET_BROWSER`; everything else — page PNGs, page counts, text —
+  comes from that browser and the bundled pdf.js. Otherwise `doctor` fails
+  before a run.
 
 ## Pieces
 
@@ -165,7 +165,8 @@ stops the check with `runner_failed` naming the check.
   Vega-Lite spec; a declarative default pulled into an editorial piece that
   needs a bespoke shape costs more than drawing it. Pick per chart, not per
   piece.
-- No browser is downloaded: `CHROME_PATH` must name the host executable.
+- No host browser is used: the runner launches `FACET_BROWSER`, the pinned
+  Chromium `facet pull` installs.
 - In the presenter build, a missing image or stylesheet ref stops the run with
   `runner_failed`; a missing video only prints the lab's `aviso` and never
   fails, so the video file has to travel beside the deck.

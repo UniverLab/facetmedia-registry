@@ -1,6 +1,6 @@
 ---
 name: mermaid
-description: Render a .mmd Mermaid diagram to SVG and PNG with the pinned mermaid-cli and the system Chrome, never a downloaded browser.
+description: Render a .mmd Mermaid diagram to SVG and PNG with the pinned mermaid-cli and the pinned Chromium that `facet pull` installs.
 ---
 # Mermaid
 
@@ -21,8 +21,8 @@ the CLI runs: a missing `theme` or a `fontFamily` that is a list or
   harder to animate, Excalidraw breaks groups, floats labels over arrows and
   needs a CDN, and Python `diagrams` needs Graphviz installed with `sudo`
   while `architecture-beta` already covers its cloud icons.
-- When the host has a system Chrome at `CHROME_PATH`; the package never
-  downloads a browser.
+- When `facet pull mermaid` has installed the pinned Chromium the runner reads
+  from `FACET_BROWSER`.
 
 ## Pieces
 
@@ -85,5 +85,6 @@ the approved diagrams in `examples/`, and use the hand-drawn render at
   patterns use `fontSize: "22px"`.
 - **A bottom port arrow crosses the service label.** Split the exit through a
   `junction`, as `arquitectura.mmd` does with `reparto`.
-- **Chrome is the host's.** Set `CHROME_PATH=/usr/bin/google-chrome`; the
-  runner sets `PUPPETEER_SKIP_DOWNLOAD=1` and never pulls a browser.
+- **Chromium is pinned.** `facet pull mermaid` installs it once (~200 MB,
+  shared by the three packages); the runner reads `FACET_BROWSER` and sets
+  `PUPPETEER_SKIP_DOWNLOAD=1`.

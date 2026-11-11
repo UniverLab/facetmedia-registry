@@ -85,7 +85,7 @@ SKILL_TOKENS = (
     ".boca { opacity: 0; }",
     "--workers 2",
     "vendor/",
-    "HYPERFRAMES_BROWSER_PATH",
+    "FACET_BROWSER",
     "ffmpeg",
     "ffprobe",
     "check",
@@ -163,7 +163,6 @@ def test_the_engine_is_node_with_the_pinned_runtime_and_no_python() -> None:
     assert ENGINE["runtime"] == RUNTIME
     assert ENGINE["runtime_sha256"] == RUNTIME_SHA256
     assert "python" not in MANIFEST["engine"]
-    assert "browser" not in MANIFEST
 
 
 def test_the_71_pins_are_the_resolved_closure() -> None:
@@ -455,7 +454,7 @@ def test_narrado_capability_assembles_voice_music_and_subtitles() -> None:
 def test_the_readme_documents_the_contract_and_the_traps() -> None:
     assert RUNTIME in READ
     assert "0.8.143" in READ
-    assert "HYPERFRAMES_BROWSER_PATH" in READ
+    assert "FACET_BROWSER" in READ
     assert "[browser]" in READ
     assert "check" in READ
     assert "--workers 2" in READ

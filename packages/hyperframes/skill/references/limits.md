@@ -14,10 +14,9 @@ the limits, and they are not piece inputs.
   `vendor/` subtree: vendored third-party files carry license and documentation
   URLs in comments that are never fetched. The composition's own files remain
   fully scanned.
-- **Host Chromium, `HYPERFRAMES_BROWSER_PATH`.** HyperFrames needs a Chromium
-  executable; the package takes the host's, for example
-  `export HYPERFRAMES_BROWSER_PATH=/usr/bin/google-chrome`. It never downloads
-  a browser.
+- **Pinned Chromium, `FACET_BROWSER`.** `facet pull hyperframes` installs the
+  pinned Chromium once (~200 MB, shared by the three packages); the runner
+  reads the executable from `FACET_BROWSER`.
 - **Host `ffmpeg` and `ffprobe` on `PATH`.** No facet mechanism provisions
   them. Without both binaries the run fails `machine_cannot` with
   `ffmpeg and ffprobe are required to encode video (sudo apt-get install -y ffmpeg)`.
@@ -27,7 +26,7 @@ the limits, and they are not piece inputs.
 ## hyperframes.render
 
 `render` uses the full limit set above: `check` first, `--workers 2`, the
-vendored tree, the host Chromium and the host `ffmpeg`/`ffprobe`. `fps` passes
+vendored tree, the pinned Chromium and the host `ffmpeg`/`ffprobe`. `fps` passes
 `--fps`; the composition's `data-fps` applies when it is omitted.
 
 ## hyperframes.loop

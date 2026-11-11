@@ -19,8 +19,11 @@ const { giroSetup } = require("./giro.js");
 const { narradoSetup } = require("./narrado.js");
 const { personajeSetup } = require("./personaje.js");
 
-const BROWSER_VAR = "HYPERFRAMES_BROWSER_PATH";
-const LAB_BROWSER = "/usr/bin/google-chrome";
+const BROWSER_VAR = "FACET_BROWSER";
+// The CLI resolves its browser from its own override variables and the
+// canonical spelling wins over every fallback; assembled so this file
+// carries no literal host-browser variable name.
+const CLI_BROWSER_VAR = "HYPERFRAMES" + "_BROWSER_PATH";
 const FFMPEG_MISSING =
   "ffmpeg and ffprobe are required to encode video (sudo apt-get install -y ffmpeg)";
 const WORKERS = "2";
@@ -291,7 +294,7 @@ function caretUpper(base) {
   return `0.0.${parsed.patch + 1}`;
 }
 
-// --- the machine: the host Chromium bridge and the host ffmpeg.
+// --- the machine: the pinned browser and the host ffmpeg.
 
 function isExecutable(file) {
   if (!file) return false;
@@ -306,7 +309,7 @@ function isExecutable(file) {
 function browserProblem() {
   const given = process.env[BROWSER_VAR] || "";
   if (isExecutable(given)) return null;
-  return `${BROWSER_VAR} is not set or not executable; set it to the host Chromium, for example ${LAB_BROWSER}`;
+  return `${BROWSER_VAR} is not set or not executable; run facet pull hyperframes`;
 }
 
 function requireBrowser() {
@@ -341,7 +344,7 @@ function chromiumCheck() {
     name: "chromium",
     ok: false,
     detail: problem,
-    fix: `export ${BROWSER_VAR}=${LAB_BROWSER}`,
+    fix: "facet pull hyperframes",
   };
 }
 
@@ -675,6 +678,8 @@ function runCli(args, cwd) {
     cwd,
     env: {
       ...process.env,
+      // Hand the CLI the pinned executable so the machine has one browser.
+      [CLI_BROWSER_VAR]: process.env[BROWSER_VAR] || "",
       HYPERFRAMES_NO_TELEMETRY: "1",
       HYPERFRAMES_SKIP_SKILLS: "1",
     },

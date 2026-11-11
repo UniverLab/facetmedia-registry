@@ -7,8 +7,8 @@
 // node runtime (`{{node}} {{entry}} {{verb}} --input ... --result ...`).
 // mermaid-cli owns the render; this script only resolves the npm dependency
 // tree the pinned tarballs leave without node_modules links, validates the
-// .mmd YAML header traps, renders SVG then PNG through the system Chrome the
-// host provides, and writes the image preview. It imports nothing but node
+// .mmd YAML header traps, renders SVG then PNG through the pinned Chromium,
+// and writes the image preview. It imports nothing but node
 // builtins, so it runs before any dependency is linked.
 
 const fs = require("node:fs");
@@ -16,8 +16,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
-const BROWSER_VAR = "CHROME_PATH";
-const LAB_BROWSER = "/usr/bin/google-chrome";
+const BROWSER_VAR = "FACET_BROWSER";
 const MAX_SUMMARY = 160;
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const FOREIGN_PLATFORM =
@@ -290,7 +289,7 @@ function caretUpper(base) {
   return `0.0.${parsed.patch + 1}`;
 }
 
-// --- the machine: the host Chrome the shared browser already provides.
+// --- the machine: the pinned Chromium the facet browser already provides.
 
 function isExecutable(file) {
   if (!file) return false;
@@ -305,7 +304,7 @@ function isExecutable(file) {
 function browserProblem() {
   const given = process.env[BROWSER_VAR] || "";
   if (isExecutable(given)) return null;
-  return `${BROWSER_VAR} is not set or not executable; set it to the system Chrome, for example ${LAB_BROWSER}`;
+  return `${BROWSER_VAR} is not set or not executable; run facet pull mermaid`;
 }
 
 function requireBrowser() {
@@ -353,7 +352,7 @@ function chromeCheck() {
     name: "chrome",
     ok: false,
     detail: problem,
-    fix: `export ${BROWSER_VAR}=${LAB_BROWSER}`,
+    fix: "facet pull mermaid",
   };
 }
 

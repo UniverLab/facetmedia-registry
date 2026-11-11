@@ -4,8 +4,14 @@ requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "facet"
 tool_name = "Deck"
-description = "Slide decks authored as HTML with a CSS @page size, exported to a paginated PDF and one PNG per page through the host Chromium and the bundled pdf.js"
+description = "Slide decks authored as HTML with a CSS @page size, exported to a paginated PDF and one PNG per page through the pinned Chromium that `facet pull` installs and the bundled pdf.js"
 facet = "presentation"
+
+[browser]
+channel = "chromium"
+revision = "1254"
+version = "158.0.8127.18"
+sha256 = "c6cb06e1574ac2f6c5c38e31551157fbcaa67e6366c89974084553c5a5772592"
 
 [engine]
 type = "node"
@@ -70,7 +76,7 @@ description = "Recorded seed; the paginated export is deterministic, so it label
 viewer = "generic"
 
 [capabilities.pagina]
-summary = "Lay out a one-page infographic or poster from HTML + CSS + SVG, exported to a one-page PDF plus its page PNG through the host Chromium's screen-media measured-height render"
+summary = "Lay out a one-page infographic or poster from HTML + CSS + SVG, exported to a one-page PDF plus its page PNG through the pinned Chromium's screen-media measured-height render"
 kind = "document"
 
 [capabilities.pagina.inputs.fuente]

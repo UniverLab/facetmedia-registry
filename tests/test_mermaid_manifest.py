@@ -58,12 +58,11 @@ def test_the_header_names_the_presentation_facet_and_the_pinned_contract() -> No
     assert "mermaid" in MANIFEST["tool_name"].lower() or "mermaid" in MANIFEST["provider"].lower()
 
 
-def test_the_engine_is_node_with_the_shared_runtime_and_no_browser() -> None:
+def test_the_engine_is_node_with_the_shared_runtime() -> None:
     assert MANIFEST["engine"]["type"] == "node"
     assert ENGINE["runtime"] == RUNTIME
     assert ENGINE["runtime_sha256"] == RUNTIME_SHA256
     assert "python" not in MANIFEST["engine"]
-    assert "browser" not in MANIFEST
 
 
 def test_the_193_pins_are_the_resolved_closure() -> None:
@@ -146,7 +145,7 @@ def test_the_readme_documents_the_contract_and_the_traps() -> None:
     for token in (
         "mermaid-cli",
         "fontFamily",
-        "CHROME_PATH",
+        "FACET_BROWSER",
         "PUPPETEER_SKIP_DOWNLOAD",
         "D2",
         "Excalidraw",

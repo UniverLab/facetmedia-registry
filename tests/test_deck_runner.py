@@ -224,8 +224,7 @@ def _environment(
         "DECK_STUB_TEXT": text,
         "PATH": path if path is not None else f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
     }
-    if chrome is not None:
-        environment["CHROME_PATH"] = str(chrome)
+    environment["FACET_BROWSER"] = str(chrome) if chrome is not None else ""
     return environment
 
 
@@ -376,7 +375,7 @@ def test_run_writes_one_png_per_pdf_page(tmp_path: Path) -> None:
 
 
 def test_run_needs_no_host_poppler(tmp_path: Path) -> None:
-    """An empty PATH still runs: Chromium comes from CHROME_PATH, pages from pdf.js."""
+    """An empty PATH still runs: Chromium comes from FACET_BROWSER, pages from pdf.js."""
     node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
     piece, _html = _slide(tmp_path)
@@ -537,6 +536,24 @@ def test_doctor_quick_reports_node_and_chromium_and_no_poppler(tmp_path: Path) -
     checks = result["checks"]
     assert [check["name"] for check in checks] == ["node", "chromium"]
     assert all(check["ok"] for check in checks)
+
+
+def test_doctor_and_run_fail_without_the_facet_browser(tmp_path: Path) -> None:
+    node_path = _package(tmp_path)
+    bin_dir, _chrome = _tools(tmp_path)
+    piece, _html = _slide(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, node_path, bin_dir, chrome=None)
+    done, result = _invoke(tmp_path, "doctor", _request("doctor", out, piece), env)
+    assert done.returncode == 0, done.stderr
+    checks = {check["name"]: check for check in result["checks"]}
+    assert checks["chromium"]["ok"] is False
+    assert checks["chromium"]["fix"] == "facet pull deck"
+    done, result = _run(tmp_path, out, piece, env)
+    assert done.returncode != 0
+    assert result is None
+    assert "FACET_BROWSER is not set or not executable; run facet pull deck" in done.stderr
 
 
 def test_doctor_full_renders_a_one_slide_throwaway(tmp_path: Path) -> None:

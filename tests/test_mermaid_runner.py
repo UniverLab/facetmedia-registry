@@ -5,7 +5,7 @@ points at fixture package directories carrying only ``package.json``; the
 first one holds a stub ``src/cli.js`` that records every call and writes SVG
 and PNG fixtures for ``-o``. That proves the link plan (dependencies, peers,
 linux-x64 optionals, foreign-platform skips, hyphen and bare-partial ranges),
-the header traps failing before the CLI runs, the CHROME_PATH gate and the
+the header traps failing before the CLI runs, the FACET_BROWSER gate and the
 image preview — without downloading a tarball or a browser.
 """
 
@@ -58,7 +58,7 @@ if (log) {
     `${JSON.stringify({
       args,
       skipDownload: process.env.PUPPETEER_SKIP_DOWNLOAD,
-      chrome: process.env.CHROME_PATH,
+      chrome: process.env.FACET_BROWSER,
       cwd: process.cwd(),
     })}\\n`,
   );
@@ -151,7 +151,7 @@ def _environment(
     return {
         "FACET_NODE": str(NODE),
         "FACET_NODE_PATH": os.pathsep.join(str(directory) for directory in dirs),
-        "CHROME_PATH": BROWSER if browser else "",
+        "FACET_BROWSER": BROWSER if browser else "",
         "MMDC_STUB_LOG": str(root / "calls.log"),
         "PATH": path if path is not None else os.environ.get("PATH", ""),
     }
@@ -324,8 +324,8 @@ def test_run_without_chrome_fails_and_never_calls_the_cli(tmp_path: Path) -> Non
     )
     assert done.returncode != 0
     assert result is None
-    assert "CHROME_PATH" in done.stderr
-    assert "/usr/bin/google-chrome" in done.stderr
+    assert "FACET_BROWSER" in done.stderr
+    assert "facet pull mermaid" in done.stderr
     assert _calls(tmp_path) == []
 
 
@@ -340,8 +340,8 @@ def test_doctor_reports_the_cli_and_the_chrome_fix(tmp_path: Path) -> None:
     assert "12.0.0" in checks["mermaid-cli"]["detail"]
     chrome = checks["chrome"]
     assert chrome["ok"] is False
-    assert "CHROME_PATH" in chrome["detail"]
-    assert chrome["fix"] == "export CHROME_PATH=/usr/bin/google-chrome"
+    assert "FACET_BROWSER" in chrome["detail"]
+    assert chrome["fix"] == "facet pull mermaid"
 
 
 def test_doctor_reports_chrome_when_present(tmp_path: Path) -> None:

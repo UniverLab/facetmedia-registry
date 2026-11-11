@@ -1,7 +1,7 @@
 # mermaid
 
 Render a `.mmd` Mermaid diagram to SVG and PNG with the pinned
-`@mermaid-js/mermaid-cli` (12.0.0) and the system Chrome. `mermaid.diagrama`
+`@mermaid-js/mermaid-cli` (12.0.0) and the pinned Chromium that `facet pull` installs. `mermaid.diagrama`
 is the package's only capability: it wraps `mmdc`, never reimplements it, and
 Mermaid is the lab's only diagram tool — what it cannot draw is authored by
 hand in HTML/CSS/SVG and animated in HyperFrames.
@@ -14,11 +14,10 @@ hand in HTML/CSS/SVG and animated in HyperFrames.
   `src/cli.js` is the CLI the staged `runner.js` spawns. The other rows are
   the pinned production closure resolved from registry.npmjs.org with tarball
   and SRI integrity, the same procedure hyperframes used.
-- **The system Chrome, never a download.** `run` requires `CHROME_PATH` to
-  name an executable Chrome (for example `/usr/bin/google-chrome`) and writes
+- **The pinned Chromium.** `facet pull mermaid` installs it once (~200 MB,
+  shared by the three packages); `run` reads it from `FACET_BROWSER` and writes
   a puppeteer config pointing at it; `PUPPETEER_SKIP_DOWNLOAD=1` is set on
-  every CLI call. There is no `[browser]` table and no chromium licence: a
-  node package never pulls a browser.
+  every CLI call. The `[browser]` table pins Chromium 158.0.8127.18.
 - **Iconify packs.** Every render passes
   `--iconPacksNamesAndUrls` with `logos` and `mdi`, so `architecture-beta`
   services can use `logos:<brand>` and `mdi:<icon>` beside the bundled
@@ -98,9 +97,8 @@ The lab's approved outputs live outside the registry:
 
 ## Environment
 
-- **`CHROME_PATH` (required for `run`).** The system Chrome executable, for
-  example `export CHROME_PATH=/usr/bin/google-chrome`. `doctor` reports the
-  fix when it is missing; nothing is installed or pulled.
+- **`FACET_BROWSER` (set by `facet pull`).** The pinned Chromium executable.
+  `doctor` reports the fix `facet pull mermaid` when it is missing.
 - **`FACET_NODE` and `FACET_NODE_PATH`** are set by facet; the runner refuses
   to run outside it.
 - **`PUPPETEER_SKIP_DOWNLOAD=1`** is set by the runner on every CLI call.
@@ -115,4 +113,4 @@ The lab's approved outputs live outside the registry:
 - `preview` writes `<asset>.preview.json` in the image kind's shape, deriving
   the prompt from the diagram's type line and using seed 0.
 - `doctor` reports the extracted mermaid-cli package and the Chrome check;
-  a missing Chrome names `export CHROME_PATH=/usr/bin/google-chrome`.
+  a missing Chromium names `facet pull mermaid`.

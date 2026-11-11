@@ -68,7 +68,7 @@ def test_the_body_names_the_capability() -> None:
 def test_the_skill_teaches_the_header_traps() -> None:
     """The traps the runner enforces are the ones the skill warns about."""
     body = _body()
-    for token in ("fontFamily", "Ubuntu Sans", "CHROME_PATH", "PUPPETEER_SKIP_DOWNLOAD"):
+    for token in ("fontFamily", "Ubuntu Sans", "FACET_BROWSER", "PUPPETEER_SKIP_DOWNLOAD"):
         assert token in body, token
 
 

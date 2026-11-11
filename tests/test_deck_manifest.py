@@ -74,7 +74,6 @@ def test_the_engine_is_node_with_the_shared_runtime_and_no_python() -> None:
     assert ENGINE["runtime"] == RUNTIME
     assert ENGINE["runtime_sha256"] == RUNTIME_SHA256
     assert "python" not in MANIFEST["engine"]
-    assert "browser" not in MANIFEST
 
 
 def test_the_closure_pins_playwright_core_and_pdfjs_dist() -> None:
@@ -248,9 +247,9 @@ def test_the_readme_documents_the_format_outputs_and_host_contract() -> None:
     assert "@page" in READ
     assert "preferCSSPageSize" in READ
     assert "page-01.png" in READ
-    assert "CHROME_PATH" in READ
+    assert "FACET_BROWSER" in READ
     assert PDFJS in READ
     assert "pdfgrab.html" in READ
     assert "poppler" not in READ
     assert "pdftoppm" not in READ
-    assert "no `[browser]` table" in READ
+    assert "[browser]" in READ

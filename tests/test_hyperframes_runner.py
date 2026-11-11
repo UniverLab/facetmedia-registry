@@ -70,6 +70,7 @@ if (log) {
       args,
       telemetry: process.env.HYPERFRAMES_NO_TELEMETRY,
       skills: process.env.HYPERFRAMES_SKIP_SKILLS,
+      browser: process.env.HYPERFRAMES_BROWSER_PATH,
       hasPath: Boolean(process.env.PATH),
       cwd: process.cwd(),
     })}\\n`,
@@ -185,7 +186,8 @@ def _environment(
     return {
         "FACET_NODE": str(NODE),
         "FACET_NODE_PATH": os.pathsep.join(str(directory) for directory in dirs),
-        "HYPERFRAMES_BROWSER_PATH": BROWSER if browser else "",
+        "FACET_BROWSER": BROWSER if browser else "",
+        "HYPERFRAMES_BROWSER_PATH": "/nonexistent/host-chrome",
         "HF_STUB_LOG": str(root / "calls.log"),
         "HF_STUB_MP4": str(CLIP),
         "PATH": path if path is not None else os.environ.get("PATH", ""),
@@ -268,6 +270,7 @@ def test_run_links_the_tree_and_checks_before_render(tmp_path: Path) -> None:
     calls = _calls(tmp_path)
     assert [call["args"][0] for call in calls] == ["check", "render"]
     assert calls[0]["telemetry"] == "1" and calls[0]["skills"] == "1"
+    assert calls[0]["browser"] == BROWSER
     assert calls[0]["hasPath"] is True
     assert calls[0]["cwd"] == str(out / "composition")
     render = calls[1]["args"]
@@ -494,9 +497,8 @@ def test_a_missing_browser_is_reported_by_doctor(tmp_path: Path) -> None:
     checks = {check["name"]: check for check in result["checks"]}
     chromium = checks["chromium"]
     assert chromium["ok"] is False
-    assert "HYPERFRAMES_BROWSER_PATH" in chromium["detail"]
-    assert "/usr/bin/google-chrome" in chromium["detail"]
-    assert chromium["fix"]
+    assert "FACET_BROWSER" in chromium["detail"]
+    assert chromium["fix"] == "facet pull hyperframes"
     ffmpeg = checks["ffmpeg"]
     assert ffmpeg["ok"] is False
     assert ffmpeg["detail"] == FFMPEG_MISSING
@@ -516,7 +518,8 @@ def test_run_without_a_browser_fails_and_never_calls_the_cli(tmp_path: Path) -> 
     )
     assert done.returncode != 0
     assert result is None
-    assert "HYPERFRAMES_BROWSER_PATH" in done.stderr
+    assert "FACET_BROWSER" in done.stderr
+    assert "facet pull hyperframes" in done.stderr
     assert _calls(tmp_path) == []
 
 

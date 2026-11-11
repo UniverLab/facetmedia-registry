@@ -30,8 +30,9 @@ live in `references/composition.md`, `references/timeline.md`,
 - When the composition is self-contained and vendored: no remote script,
   stylesheet, font or media URL outside `hyperframes.json`'s `$schema` and
   `registry` values.
-- When the host has a Chromium at `HYPERFRAMES_BROWSER_PATH` and `ffmpeg` plus
-  `ffprobe` on `PATH`; otherwise `doctor` fails `machine_cannot` before a run.
+- When `facet pull hyperframes` has installed the pinned Chromium the runner
+  reads from `FACET_BROWSER`, with `ffmpeg` plus `ffprobe` on `PATH`;
+  otherwise `doctor` fails `machine_cannot` before a run.
 
 ## Pieces
 
@@ -161,14 +162,14 @@ elements are `#voz-1`, `#voz-2`, … and `#musica`. See `references/id-maps.md`.
 ## Render limits
 
 The machine and the runner set the limits, and they are not piece inputs:
-`check` first, then `--workers 2` at most; everything vendored; the host
-Chromium at `HYPERFRAMES_BROWSER_PATH`; host `ffmpeg` and `ffprobe` on `PATH`.
+`check` first, then `--workers 2` at most; everything vendored; the pinned
+Chromium at `FACET_BROWSER`; host `ffmpeg` and `ffprobe` on `PATH`.
 The remote-URL scan skips the top-level `vendor/` subtree. See
 `references/limits.md`.
 
 ### hyperframes.render
 
-`check` first, `--workers 2`, the vendored tree, the host Chromium and the host
+`check` first, `--workers 2`, the vendored tree, the pinned Chromium and the host
 `ffmpeg`/`ffprobe`. See `references/limits.md`.
 
 ### hyperframes.loop
@@ -235,8 +236,8 @@ The approved lab proofs stay in the lab, referenced by absolute path:
 - **Host ffmpeg is required.** Without it the run fails
   `ffmpeg and ffprobe are required to encode video (sudo apt-get install -y ffmpeg)`;
   nothing is installed on the host.
-- **Host Chromium is required.** Set `HYPERFRAMES_BROWSER_PATH`, for example to
-  `/usr/bin/google-chrome`; the package never downloads a browser.
+- **Pinned Chromium is required.** `facet pull hyperframes` installs it once
+  (~200 MB, shared by the three packages); the runner reads `FACET_BROWSER`.
 - **Workers are fixed at 2.** The cap protects the lab machine and is not a
   piece input.
 - **`check` runs before every render.** A failing check aborts the run with its

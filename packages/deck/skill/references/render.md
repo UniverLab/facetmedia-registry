@@ -33,15 +33,9 @@ renders it with pdf.js inside a fresh headless Chromium run.
 
 ## Chrome resolution
 
-The renderer tries, in order:
-
-1. `CHROME_PATH`, when set;
-2. `/usr/bin/google-chrome`;
-3. `/usr/bin/chromium`;
-4. `/usr/bin/chromium-browser`;
-5. on macOS, `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`.
-
-If none exists the render fails with `No Chrome/Chromium found; set
-CHROME_PATH.` No browser is ever downloaded. Before asking Chrome for a PDF the
-renderer waits for `document.fonts.ready`, so a local font is laid out before
-the page is measured.
+The renderer launches `FACET_BROWSER` — the pinned Chromium `facet pull`
+installs once (~200 MB, shared by the three packages); no host lookup, no
+download. When `FACET_BROWSER` is unset or not executable the render fails
+with `FACET_BROWSER is not set or not executable; run facet pull deck`.
+Before asking Chrome for a PDF the renderer waits for `document.fonts.ready`,
+so a local font is laid out before the page is measured.

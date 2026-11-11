@@ -5,7 +5,7 @@
 //
 // facet stages this file with the package and runs it through the managed node
 // runtime (`{{node}} {{entry}} {{verb}} --input ... --result ...`). The runner
-// renders the slide HTML with the host Chromium through the pinned
+// renders the slide HTML with the pinned Chromium through the pinned
 // `playwright-core`, waiting for `document.fonts.ready`, switching to print
 // media and asking for `preferCSSPageSize` so the page's own `@page` rule wins.
 // It then screenshots one PNG per page from the same Chromium run and reads
@@ -19,15 +19,9 @@ const pagina = require("./pagina.js");
 const raster = require("./raster.js");
 
 const PLAYWRIGHT = "playwright-core";
-const CHROME_CANDIDATES = [
-  "/usr/bin/google-chrome",
-  "/usr/bin/chromium",
-  "/usr/bin/chromium-browser",
-];
-const CHROME_FIX = "export CHROME_PATH=/usr/bin/google-chrome";
-const CHROME_MISSING =
-  "No Chrome/Chromium found; set CHROME_PATH " +
-  `(${CHROME_FIX}). Tried: CHROME_PATH, ${CHROME_CANDIDATES.join(", ")}`;
+const BROWSER_VAR = "FACET_BROWSER";
+const BROWSER_FIX = "facet pull deck";
+const BROWSER_MISSING = `${BROWSER_VAR} is not set or not executable; run ${BROWSER_FIX}`;
 const PAGINA = "deck.pagina";
 const MIN_NODE_MAJOR = 22;
 const MAX_SUMMARY = 160;
@@ -177,7 +171,7 @@ function slideFile(request) {
   return file;
 }
 
-// --- the host Chromium; every raster comes from it or from pdfjs-dist.
+// --- the pinned Chromium; every raster comes from it or from pdfjs-dist.
 
 function isExecutable(file) {
   try {
@@ -189,10 +183,8 @@ function isExecutable(file) {
 }
 
 function findChrome() {
-  const found = [process.env.CHROME_PATH, ...CHROME_CANDIDATES].find(
-    (candidate) => candidate && isExecutable(candidate),
-  );
-  return found || "";
+  const given = process.env[BROWSER_VAR] || "";
+  return isExecutable(given) ? given : "";
 }
 
 // The page geometry a screenshot clip needs: the `@page` size in px when the
@@ -321,7 +313,7 @@ async function runSlides(request) {
   fs.mkdirSync(outDir, { recursive: true });
   const source = slideFile(request);
   const chrome = findChrome();
-  if (!chrome) throw new Error(CHROME_MISSING);
+  if (!chrome) throw new Error(BROWSER_MISSING);
   const name = deckName(inputs);
   const pdf = path.join(outDir, `${name}.pdf`);
   clearPages(outDir);
@@ -355,7 +347,7 @@ async function runPagina(request) {
   const source = slideFile(request);
   pagina.checkSource(fs.readFileSync(source, "utf8"));
   const chrome = findChrome();
-  if (!chrome) throw new Error(CHROME_MISSING);
+  if (!chrome) throw new Error(BROWSER_MISSING);
   const name = deckName(inputs);
   const pdf = path.join(outDir, `${name}.pdf`);
   clearPages(outDir);
@@ -417,7 +409,7 @@ async function preview(request) {
   if (!prompt) throw new Error("prompt is required");
   const seed = seedOf(inputs);
   const chrome = findChrome();
-  if (!chrome) throw new Error(CHROME_MISSING);
+  if (!chrome) throw new Error(BROWSER_MISSING);
   const entries = [];
   for (const asset of request.assets || []) entries.push(await previewOf(asset, seed, chrome));
   return { assets: entries };
@@ -716,7 +708,7 @@ function chromiumCheck() {
   if (chrome) {
     return { name: "chromium", ok: true, detail: `Chromium at ${chrome}`, fix: "" };
   }
-  return { name: "chromium", ok: false, detail: CHROME_MISSING, fix: CHROME_FIX };
+  return { name: "chromium", ok: false, detail: BROWSER_MISSING, fix: BROWSER_FIX };
 }
 
 async function doctor(request) {
@@ -730,7 +722,7 @@ async function throwawayCheck(request) {
   const outDir = path.resolve(request.out_dir || process.cwd());
   const chrome = findChrome();
   if (!chrome) {
-    return { name: "render", ok: false, detail: CHROME_MISSING, fix: CHROME_FIX };
+    return { name: "render", ok: false, detail: BROWSER_MISSING, fix: BROWSER_FIX };
   }
   try {
     fs.mkdirSync(outDir, { recursive: true });
