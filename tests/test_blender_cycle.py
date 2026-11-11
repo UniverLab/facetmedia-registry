@@ -45,9 +45,9 @@ HEIGHT = 1000
 #: The recipe the approved lab render pinned: Cycles on the GPU, denoised.
 SAMPLES = 128
 EXPOSURE = -0.6
-#: The frame's height over its width, the ratio fit_escala renders with.
+#: The frame's height over its width, the ratio fit_scale renders with.
 ASPECT = HEIGHT / WIDTH
-#: The smallest scale fit_escala returns, so a tiny piece stays a piece.
+#: The smallest scale fit_scale returns, so a tiny piece stays a piece.
 SCALE_FLOOR = 4.0
 SKY_STRENGTH = 0.2
 SUN_FORCE = 3.0
@@ -60,7 +60,7 @@ FLOOR_DROP = 0.001
 #: The turned view a piece may ask for.
 TURNED_SCALE = 12.0
 TURNED_EXPOSURE = -0.9
-TURNED_GIRO = 90
+TURNED_ROTATION = 90
 #: The lab's study pieces: names are the material prefixes.
 PIECES = [
     ("muros", (6000.0, 4500.0, 2600.0)),
@@ -634,7 +634,7 @@ def _model(tmp_path: Path) -> Path:
 
 
 def _request(
-    tmp_path: Path, verb: str, capability: str = "blender.foto", **inputs
+    tmp_path: Path, verb: str, capability: str = "blender.photo", **inputs
 ) -> dict[str, object]:
     out = tmp_path / "out"
     out.mkdir(exist_ok=True)
@@ -704,7 +704,7 @@ def test_the_cycle_renders_the_study_and_dresses_every_piece(tmp_path: Path) -> 
     assert done.returncode == 0, done.stdout + done.stderr
     result = json.loads(result_path.read_text(encoding="utf-8"))
     asset = result["assets"][0]
-    assert asset["file"] == "estudio-foto.png"
+    assert asset["file"] == "estudio-photo.png"
     assert (asset["kind"], asset["mime"]) == ("image", "image/png")
     assert asset["seed"] == 0
     assert asset["inputs"] == [str(model)]
@@ -713,10 +713,10 @@ def test_the_cycle_renders_the_study_and_dresses_every_piece(tmp_path: Path) -> 
         "height": HEIGHT,
         "samples": 128,
         "exposure": -0.6,
-        "giro": 0.0,
+        "rotation": 0.0,
     }
     assert result["tool"]["name"] == "blender"
-    with PIL.Image.open(tmp_path / "out" / "estudio-foto.png") as image:
+    with PIL.Image.open(tmp_path / "out" / "estudio-photo.png") as image:
         assert image.size == (WIDTH, HEIGHT)
     trail = _trail(tmp_path)
     assert trail["import_filepath"] == str(model)
@@ -774,7 +774,7 @@ def test_the_recipe_scales_to_metres_and_lights_the_scene(tmp_path: Path) -> Non
     assert render["denoise"] is True
     assert render["exposure"] == EXPOSURE
     assert render["look"] == "AgX - Medium High Contrast"
-    assert render["filepath"] == str(tmp_path / "out" / "estudio-foto.png")
+    assert render["filepath"] == str(tmp_path / "out" / "estudio-photo.png")
     assert trail["camera"]["type"] == "ORTHO"
     assert trail["camera"]["ortho_scale"] == pytest.approx(_expected_scale())
     assert trail["sky_strength"] == SKY_STRENGTH
@@ -807,18 +807,18 @@ def _stub_corners() -> list[tuple[float, float, float]]:
 
 
 def _expected_scale() -> float:
-    """The scale the recipe fits to the stub study when the piece omits escala."""
-    return escena.fit_escala(_stub_corners(), (0.0, 0.0, 0.0), -40.0, 48.0, ASPECT)
+    """The scale the recipe fits to the stub study when the piece omits scale."""
+    return escena.fit_scale(_stub_corners(), (0.0, 0.0, 0.0), -40.0, 48.0, ASPECT)
 
 
 def _projected(
     corner: tuple[float, float, float],
     centre: tuple[float, float, float],
-    azimut: float,
-    elevacion: float,
+    azimuth: float,
+    elevation: float,
 ) -> tuple[float, float]:
     """One corner's frame coordinates along the camera's own right and up axes."""
-    azimuth, elevation = math.radians(azimut), math.radians(elevacion)
+    azimuth, elevation = math.radians(azimuth), math.radians(elevation)
     right = (-math.sin(azimuth), math.cos(azimuth), 0.0)
     up = (
         -math.sin(elevation) * math.cos(azimuth),
@@ -831,25 +831,25 @@ def _projected(
     return across, upright
 
 
-def test_fit_escala_floors_a_one_metre_cube_at_four_metres() -> None:
+def test_fit_scale_floors_a_one_metre_cube_at_four_metres() -> None:
     """A 1 m cube needs less than 4 m, so the floor holds: the photo stays a piece."""
     corners = _box_corners((1.0, 1.0, 1.0))
-    assert escena.fit_escala(corners, (0.0, 0.0, 0.0), -40.0, 48.0, ASPECT) == SCALE_FLOOR
+    assert escena.fit_scale(corners, (0.0, 0.0, 0.0), -40.0, 48.0, ASPECT) == SCALE_FLOOR
 
 
-def test_fit_escala_frames_a_wide_low_block() -> None:
+def test_fit_scale_frames_a_wide_low_block() -> None:
     """A 16 x 12 x 3 m block: every projected corner lands inside the frame."""
     corners = _box_corners((16.0, 12.0, 3.0))
     centre = (0.0, 0.0, 0.0)
-    escala = escena.fit_escala(corners, centre, -40.0, 48.0, ASPECT)
-    assert escala > SCALE_FLOOR
+    scale = escena.fit_scale(corners, centre, -40.0, 48.0, ASPECT)
+    assert scale > SCALE_FLOOR
     for corner in corners:
         across, upright = _projected(corner, centre, -40.0, 48.0)
-        assert abs(across) <= escala / 2
-        assert abs(upright) <= escala * ASPECT / 2
+        assert abs(across) <= scale / 2
+        assert abs(upright) <= scale * ASPECT / 2
 
 
-def test_fit_escala_is_driven_by_height_for_a_tall_tower() -> None:
+def test_fit_scale_is_driven_by_height_for_a_tall_tower() -> None:
     """A 4 x 4 x 16 m tower: the height over the aspect beats the width."""
     corners = _box_corners((4.0, 4.0, 16.0))
     centre = (0.0, 0.0, 0.0)
@@ -857,7 +857,7 @@ def test_fit_escala_is_driven_by_height_for_a_tall_tower() -> None:
     width = 2 * max(abs(across) for across, _upright in spans)
     height = 2 * max(abs(upright) for _across, upright in spans)
     assert height / ASPECT > width
-    assert escena.fit_escala(corners, centre, -40.0, 48.0, ASPECT) == pytest.approx(
+    assert escena.fit_scale(corners, centre, -40.0, 48.0, ASPECT) == pytest.approx(
         1.1 * height / ASPECT
     )
 
@@ -890,8 +890,8 @@ def test_the_piece_camera_the_turn_and_the_exposure_reach_the_scene(tmp_path: Pa
         tmp_path,
         "run",
         model=str(model),
-        camera=[{"azimut": 25, "elevacion": 40, "escala": 12}],
-        giro=90,
+        camera=[{"azimuth": 25, "elevation": 40, "scale": 12}],
+        rotation=90,
         exposure=-0.9,
     )
     env = _env(
@@ -906,16 +906,16 @@ def test_the_piece_camera_the_turn_and_the_exposure_reach_the_scene(tmp_path: Pa
     trail = _trail(tmp_path)
     assert trail["camera"]["ortho_scale"] == TURNED_SCALE
     assert trail["render"]["exposure"] == TURNED_EXPOSURE
-    assert trail["turns"]["muros"] == pytest.approx(math.radians(TURNED_GIRO))
+    assert trail["turns"]["muros"] == pytest.approx(math.radians(TURNED_ROTATION))
     # The glTF importer leaves the pieces in QUATERNION mode, where Blender
     # ignores rotation_euler: the recipe must switch the mode to turn them.
     assert trail["rotmodes"]["muros"] == "XYZ"
     properties = json.loads(result_path.read_text())["assets"][0]["properties"]
-    assert properties["giro"] == float(TURNED_GIRO)
+    assert properties["rotation"] == float(TURNED_ROTATION)
 
 
 def test_no_turn_leaves_the_gltf_import_untouched(tmp_path: Path) -> None:
-    """Without ``giro`` the recipe never rewrites the importer's rotation."""
+    """Without ``rotation`` the recipe never rewrites the importer's rotation."""
     model = _model(tmp_path)
     request = _request(tmp_path, "run", model=str(model))
     env = _env(
@@ -946,7 +946,7 @@ def test_a_piece_without_a_material_prefix_fails_the_run_loudly(tmp_path: Path) 
     assert "piezas sin material" in done.stderr
     assert "techo" in done.stderr
     assert not result_path.exists()
-    assert not (tmp_path / "out" / "estudio-foto.png").exists()
+    assert not (tmp_path / "out" / "estudio-photo.png").exists()
 
 
 def _failures(tmp_path: Path, mode: str) -> tuple[subprocess.CompletedProcess[str], int]:
@@ -1009,8 +1009,8 @@ def test_a_missing_host_names_the_variable_facet_resolves(tmp_path: Path) -> Non
 def test_a_windows_exe_gets_windows_paths_for_the_host(tmp_path: Path) -> None:
     """The conversion the lab's tools/blender.sh does, per path form."""
     assert runner._host_path("/mnt/c/lab/estudio.glb", True) == "C:\\lab\\estudio.glb"
-    assert runner._host_path("/mnt/c/lab/out/estudio-foto.png", True) == (
-        "C:\\lab\\out\\estudio-foto.png"
+    assert runner._host_path("/mnt/c/lab/out/estudio-photo.png", True) == (
+        "C:\\lab\\out\\estudio-photo.png"
     )
     assert runner._host_path("/home/lab/estudio.glb", False) == "/home/lab/estudio.glb"
     # A path outside /mnt asks wslpath, exactly as the lab's script does.
@@ -1031,13 +1031,13 @@ def test_the_scene_receives_the_converted_paths(
     bpy = _import_stub_bpy(tmp_path)
     try:
         runner._render(
-            bpy, "/mnt/c/lab/estudio.glb", "/mnt/c/lab/out/estudio-foto.png", {"model": "x"}
+            bpy, "/mnt/c/lab/estudio.glb", "/mnt/c/lab/out/estudio-photo.png", {"model": "x"}
         )
     finally:
         sys.modules.pop("bpy", None)
     recorded = json.loads(trail.read_text(encoding="utf-8"))
     assert recorded["import_filepath"] == "WIN:/mnt/c/lab/estudio.glb"
-    assert recorded["render"]["filepath"] == "WIN:/mnt/c/lab/out/estudio-foto.png"
+    assert recorded["render"]["filepath"] == "WIN:/mnt/c/lab/out/estudio-photo.png"
 
 
 def test_a_posix_path_becomes_a_unc_path_under_the_discovered_root(
@@ -1051,8 +1051,8 @@ def test_a_posix_path_becomes_a_unc_path_under_the_discovered_root(
     monkeypatch.setattr(runner, "_UNC_ROOT", [""])
     runner._remember_root("\\\\wsl.localhost\\Ubuntu\\tmp\\req.json")
     assert runner._UNC_ROOT[0] == "\\\\wsl.localhost\\Ubuntu"
-    assert runner._host_path("/tmp/out/estudio-foto.png", True) == (
-        "\\\\wsl.localhost\\Ubuntu\\tmp\\out\\estudio-foto.png"
+    assert runner._host_path("/tmp/out/estudio-photo.png", True) == (
+        "\\\\wsl.localhost\\Ubuntu\\tmp\\out\\estudio-photo.png"
     )
     # A drive path is the Windows build's own and is left alone.
     assert runner._host_path("/mnt/c/lab/estudio.glb", True) == "C:\\lab\\estudio.glb"
@@ -1084,7 +1084,7 @@ def _import_stub_bpy(tmp_path: Path):
 
 def test_verify_measures_the_png_header_without_blender(tmp_path: Path) -> None:
     """verify and preview answer under plain Python: no host binary needed."""
-    good = tmp_path / "out" / "estudio-foto.png"
+    good = tmp_path / "out" / "estudio-photo.png"
     good.parent.mkdir()
     PIL.Image.new("RGB", (WIDTH, HEIGHT), (10, 20, 30)).save(good)
     small = tmp_path / "out" / "small.png"
@@ -1109,7 +1109,7 @@ def test_verify_measures_the_png_header_without_blender(tmp_path: Path) -> None:
 
 def test_preview_writes_the_image_schema(tmp_path: Path) -> None:
     """The preview file carries exactly the image kind's fields."""
-    photo = tmp_path / "out" / "estudio-foto.png"
+    photo = tmp_path / "out" / "estudio-photo.png"
     photo.parent.mkdir()
     PIL.Image.new("RGB", (WIDTH, HEIGHT), (10, 20, 30)).save(photo)
     request = _request(
@@ -1117,7 +1117,7 @@ def test_preview_writes_the_image_schema(tmp_path: Path) -> None:
         "preview",
         model="estudio.glb",
         exposure=-0.6,
-        giro=0,
+        rotation=0,
         assets=[str(photo)],
     )
 
@@ -1125,13 +1125,13 @@ def test_preview_writes_the_image_schema(tmp_path: Path) -> None:
 
     assert done.returncode == 0, done.stdout + done.stderr
     entry = json.loads(result_path.read_text(encoding="utf-8"))["assets"][0]
-    assert entry["file"] == "estudio-foto.png"
-    assert entry["preview"] == "estudio-foto.png.preview.json"
+    assert entry["file"] == "estudio-photo.png"
+    assert entry["preview"] == "estudio-photo.png.preview.json"
     data = json.loads((photo.parent / entry["preview"]).read_text(encoding="utf-8"))
     assert set(data) == set(SCHEMA["required"])
     assert data["preview"] == 1
     assert data["kind"] == "image"
-    assert data["name"] == "estudio-foto"
+    assert data["name"] == "estudio-photo"
     assert (data["width"], data["height"]) == (WIDTH, HEIGHT)
     assert data["seed"] == 0
     assert data["prompt"].startswith("estudio · daylight architectural photo")
@@ -1314,7 +1314,7 @@ def test_assets_skips_files_already_present_with_the_right_size(
 ) -> None:
     """The lab's size skip: a second run downloads nothing."""
     polyhaven.add("test-sky", "sky")
-    request = _assets_request(tmp_path, "cielo", [{"id": "test-sky"}])
+    request = _assets_request(tmp_path, "sky", [{"id": "test-sky"}])
     env = _assets_env(tmp_path, polyhaven)
 
     first, _ = _call("run", request, tmp_path, env)
@@ -1330,7 +1330,7 @@ def test_assets_md5_mismatch_fails_the_run(tmp_path: Path, polyhaven: _Polyhaven
     polyhaven.add("test-sky", "sky")
     record = polyhaven.files["files/test-sky"]["hdri"]["2k"]["hdr"]
     record["md5"] = "0" * 32
-    request = _assets_request(tmp_path, "cielo", [{"id": "test-sky"}])
+    request = _assets_request(tmp_path, "sky", [{"id": "test-sky"}])
 
     done, result_path = _call("run", request, tmp_path, _assets_env(tmp_path, polyhaven))
 
@@ -1357,11 +1357,11 @@ def test_assets_refuses_a_model_over_four_million_polygons(
 def test_assets_verify_passes_on_the_run_receipt(tmp_path: Path, polyhaven: _PolyhavenStub) -> None:
     """verify re-measures every file the receipt lists, one verdict per asset."""
     polyhaven.add("test-sky", "sky")
-    request = _assets_request(tmp_path, "cielo", [{"id": "test-sky"}])
+    request = _assets_request(tmp_path, "sky", [{"id": "test-sky"}])
     env = _assets_env(tmp_path, polyhaven)
     done, _ = _call("run", request, tmp_path, env)
     assert done.returncode == 0, done.stdout + done.stderr
-    receipt = tmp_path / "out" / "cielo.assets.json"
+    receipt = tmp_path / "out" / "sky.assets.json"
 
     verify = _request(tmp_path, "verify", capability="blender.assets")
     verify["assets"] = [str(receipt)]
@@ -1369,7 +1369,7 @@ def test_assets_verify_passes_on_the_run_receipt(tmp_path: Path, polyhaven: _Pol
 
     assert done.returncode == 0, done.stdout + done.stderr
     verdict = json.loads(result_path.read_text(encoding="utf-8"))["assets"][0]
-    assert verdict["file"] == "cielo.assets.json"
+    assert verdict["file"] == "sky.assets.json"
     assert verdict["passed"] is True
     assert verdict["verifier"] == "polyhaven-receipt"
     assert verdict["metrics"] == {"files": 1, "present": 1}

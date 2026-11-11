@@ -8,10 +8,10 @@ element per piece carrying its name), scales it to metres, assigns one
 Principled material per piece by name prefix — a piece left without one fails
 the run loudly — builds the sun plus sky wash, the axonometric camera and the
 Cycles GPU settings (OPTIX, 128 samples, denoise, exposure -0.6 under AgX
-Medium High Contrast), and writes ``<model>-foto.png`` at 1600x1000.
+Medium High Contrast), and writes ``<model>-photo.png`` at 1600x1000.
 ``verify`` measures the PNG header, ``preview`` writes the image kind's
 preview file, and ``doctor`` reports the Blender-side modules.
-``blender.producto`` reuses the same four verbs for ``producto.py``: one STL
+``blender.product`` reuses the same four verbs for ``producto.py``: one STL
 part in a studio, 1200x1200, its lights scaled from the part's bounding box.
 
 Started with plain Python — ``python runner.py run ...``, as the tests and a
@@ -53,13 +53,13 @@ RENDER_HEIGHT = 1000
 #: Cycles on the GPU: 128 samples with denoise is the lab's 8-10 s recipe.
 SAMPLES = 128
 DEFAULT_EXPOSURE = -0.6
-#: The lab's axonometric view: azimut and elevacion in degrees. The escala is
+#: The lab's axonometric view: azimuth and elevation in degrees. The scale is
 #: fitted to the whole model when the piece omits it.
-DEFAULT_CAMERA = {"azimut": -40.0, "elevacion": 48.0}
+DEFAULT_CAMERA = {"azimuth": -40.0, "elevation": 48.0}
 #: How far the orthographic camera sits from the model, in frame widths.
 CAMERA_DISTANCE = 2.5
-#: What the run appends to the model's stem: ``estudio.glb`` -> ``estudio-foto.png``.
-ASSET_SUFFIX = "-foto"
+#: What the run appends to the model's stem: ``estudio.glb`` -> ``estudio-photo.png``.
+ASSET_SUFFIX = "-photo"
 #: Cycles' sampling seed: one scene gives the same photo every run.
 SEED = 0
 #: The lab's headless flags; the exit-code flag must precede ``--python``.
@@ -108,9 +108,9 @@ def main(argv: list[str] | None = None) -> int:
 
 def _verbs(capability: str) -> dict[str, Any]:
     """The verb table of the capability the request names."""
-    if capability == "blender.producto":
+    if capability == "blender.product":
         return PRODUCTO_VERBS
-    if capability == "blender.recorrido":
+    if capability == "blender.tour":
         return RECORRIDO_VERBS
     return VERBS
 
@@ -177,7 +177,7 @@ def _run(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
                     "height": RENDER_HEIGHT,
                     "samples": SAMPLES,
                     "exposure": _exposure(params),
-                    "giro": _giro(params),
+                    "rotation": _rotation(params),
                 },
                 "params": params,
                 "seed": SEED,
@@ -191,7 +191,7 @@ def _producto_run(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
     """Render one studio product shot and report it as the image asset it is."""
     params = dict(request.get("inputs") or {})
     part = str(params["part"])
-    name = f"{_part_stem(part)}-producto"
+    name = f"{_part_stem(part)}-product"
     destination = f"{str(request['out_dir']).rstrip('/')}/{name}.png"
     windows = _on_windows()
     producto.render(bpy, _host_path(part, windows), _host_path(destination, windows), params)
@@ -221,7 +221,7 @@ def _producto_run(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
 
 def _verify(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
     """Measure each PNG's header against the recipe's size."""
-    product = request.get("capability") == "blender.producto"
+    product = request.get("capability") == "blender.product"
     width = producto.PRODUCT_WIDTH if product else RENDER_WIDTH
     height = producto.PRODUCT_HEIGHT if product else RENDER_HEIGHT
     thresholds = {"width": width, "height": height}
@@ -258,7 +258,7 @@ def _asset_verdict(
 def _preview(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
     """Write the image kind's preview file beside each asset."""
     params = dict(request.get("inputs") or {})
-    product = request.get("capability") == "blender.producto"
+    product = request.get("capability") == "blender.product"
     entries: list[dict[str, Any]] = []
     for item in request.get("assets") or []:
         path = str(item)
@@ -284,7 +284,8 @@ def _foto_preview(name: str, width: int, height: int, params: dict[str, Any]) ->
         "preview": 1,
         "kind": "image",
         "summary": (
-            f"{name} · {width}×{height} · giro {_giro(params):g} · exposure {_exposure(params):g}"
+            f"{name} · {width}×{height} · rotation {_rotation(params):g} · "
+            f"exposure {_exposure(params):g}"
         ),
         "name": name,
         "prompt": _prompt(params),
@@ -298,7 +299,7 @@ def _producto_preview(name: str, width: int, height: int, params: dict[str, Any]
     """The product shot's preview: material and backdrop name the studio."""
     material = str(params.get("material") or producto.DEFAULT_MATERIAL)
     backdrop = str(params.get("backdrop") or producto.DEFAULT_BACKDROP)
-    stem = _part_stem(str(params.get("part") or "producto"))
+    stem = _part_stem(str(params.get("part") or "product"))
     return {
         "preview": 1,
         "kind": "image",
@@ -320,8 +321,8 @@ def _prompt(params: dict[str, Any]) -> str:
     stem = posixpath.splitext(posixpath.basename(str(params.get("model", ""))))[0]
     camera = _camera(params)
     return (
-        f"{stem} · daylight architectural photo · azimut {camera['azimut']:g} "
-        f"elevacion {camera['elevacion']:g} · giro {_giro(params):g} · "
+        f"{stem} · daylight architectural photo · azimuth {camera['azimuth']:g} "
+        f"elevation {camera['elevation']:g} · rotation {_rotation(params):g} · "
         f"exposure {_exposure(params):g}"
     )
 
@@ -375,11 +376,11 @@ def _doctor_devices(bpy: Any) -> dict[str, Any]:
 
 
 VERBS = {"run": _run, "verify": _verify, "preview": _preview, "doctor": _doctor}
-#: ``blender.producto`` keeps verify, preview and doctor; its run is the studio.
+#: ``blender.product`` keeps verify, preview and doctor; its run is the studio.
 PRODUCTO_VERBS = {**VERBS, "run": _producto_run}
 
 
-# --- blender.recorrido: the Eevee camera tour, its MP4 probe and its preview.
+# --- blender.tour: the Eevee camera tour, its MP4 probe and its preview.
 #
 # The capability is kind video. Its run is Eevee (``recorrido.py``); verify
 # reads the MP4's ISO BMFF boxes with the standard library alone, because a
@@ -408,7 +409,7 @@ def _recorrido_run(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
 def _host_scene(params: dict[str, Any], windows: bool) -> dict[str, Any]:
     """The tour's params with the scene blends converted; the asset keeps it raw."""
     converted = dict(params)
-    for key in ("personas-blend", "autos-blend"):
+    for key in ("people-blend", "cars-blend"):
         blend = params.get(key)
         if blend:
             converted[key] = _host_path(str(blend), windows)
@@ -433,10 +434,10 @@ def _entry(request: dict[str, Any]) -> dict[str, Any]:
 
     ``verify`` and ``preview`` receive the piece's inputs; ``facet check`` and
     ``facet preview`` pass the record's params for one asset, which are the
-    entry itself. A ``recorrido`` list is accepted first when a piece has one.
+    entry itself. A ``tour`` list is accepted first when a piece has one.
     """
     inputs = dict(request.get("inputs") or {})
-    raw = inputs.get("recorrido")
+    raw = inputs.get("tour")
     items = raw if isinstance(raw, list) else [inputs]
     entries = [item for item in items if isinstance(item, dict)]
     return entries[0] if entries else {}
@@ -650,7 +651,7 @@ def _manifest_tool() -> dict[str, str]:
 
 def _dressing_root(params: dict[str, Any]) -> str:
     """The Poly Haven root the scene reads, or nothing when it dresses nothing."""
-    if params.get("cielo") or params.get("texturas") or params.get("plantas"):
+    if params.get("sky") or params.get("textures") or params.get("plants"):
         return str(_polyhaven_root())
     return ""
 
@@ -662,24 +663,24 @@ def _render(bpy: Any, model: str, destination: str, params: dict[str, Any]) -> N
     scene = bpy.context.scene
     bpy.ops.import_scene.gltf(filepath=_host_path(model, windows))
     escena.scale_roots(scene)
-    _turn_roots(scene, _giro(params))
+    _turn_roots(scene, _rotation(params))
     escena.bake_pieces(bpy, scene)
     bpy.context.view_layer.update()
     centre = escena.centre(scene)
     camera = _camera(params)
-    if "escala" not in camera:
-        camera["escala"] = escena.fit_escala(
+    if "scale" not in camera:
+        camera["scale"] = escena.fit_scale(
             escena.model_corners(scene),
             centre,
-            camera["azimut"],
-            camera["elevacion"],
+            camera["azimuth"],
+            camera["elevation"],
             RENDER_HEIGHT / RENDER_WIDTH,
         )
     floor_z = escena.floor(bpy, scene, centre)
     converted = _host_scene(params, windows)
     root = _dressing_root(params)
     escena.dress_scene(bpy, scene, converted, root, floor_z)
-    item = escena.cielo_item(converted)
+    item = escena.sky_item(converted)
     if item:
         escena.sky_hdri(bpy, scene, item, root)
     else:
@@ -714,15 +715,15 @@ def _place_camera(
     bpy: Any, scene: Any, camera: dict[str, float], centre: tuple[float, float, float]
 ) -> None:
     """An orthographic camera looking at the model's centre from the view."""
-    azimuth, elevation = math.radians(camera["azimut"]), math.radians(camera["elevacion"])
+    azimuth, elevation = math.radians(camera["azimuth"]), math.radians(camera["elevation"])
     direction = (
         math.cos(elevation) * math.cos(azimuth),
         math.cos(elevation) * math.sin(azimuth),
         math.sin(elevation),
     )
-    distance = max(camera["escala"], 1.0) * CAMERA_DISTANCE
+    distance = max(camera["scale"], 1.0) * CAMERA_DISTANCE
     data = bpy.data.cameras.new("camara")
-    data.type, data.ortho_scale = "ORTHO", camera["escala"]
+    data.type, data.ortho_scale = "ORTHO", camera["scale"]
     obj = bpy.data.objects.new("camara", data)
     scene.collection.objects.link(obj)
     obj.location = tuple(centre[axis] + distance * direction[axis] for axis in range(3))
@@ -755,9 +756,9 @@ def _cycles(bpy: Any, scene: Any) -> None:
 
 
 def _camera(params: dict[str, Any]) -> dict[str, float]:
-    """The piece's camera view: azimut and elevacion, plus escala when given.
+    """The piece's camera view: azimuth and elevation, plus scale when given.
 
-    An omitted escala is fitted to the whole model in ``_render``; an explicit
+    An omitted scale is fitted to the whole model in ``_render``; an explicit
     one always wins, so it travels here only when the piece gives it.
     """
     view = dict(DEFAULT_CAMERA)
@@ -765,14 +766,14 @@ def _camera(params: dict[str, Any]) -> dict[str, float]:
     if isinstance(items, list) and items and isinstance(items[0], dict):
         first = items[0]
         view.update({key: float(value) for key, value in first.items() if key in view})
-        if "escala" in first:
-            view["escala"] = float(first["escala"])
+        if "scale" in first:
+            view["scale"] = float(first["scale"])
     return view
 
 
-def _giro(params: dict[str, Any]) -> float:
+def _rotation(params: dict[str, Any]) -> float:
     """The model's turn about Z, in degrees."""
-    return float(params.get("giro", 0.0))
+    return float(params.get("rotation", 0.0))
 
 
 def _exposure(params: dict[str, Any]) -> float:
@@ -781,17 +782,17 @@ def _exposure(params: dict[str, Any]) -> float:
 
 
 def _asset_name(model: str) -> str:
-    """``estudio.glb`` -> ``estudio-foto``: the image schema's base name."""
+    """``estudio.glb`` -> ``estudio-photo``: the image schema's base name."""
     stem = posixpath.splitext(posixpath.basename(model))[0].lower()
     safe = UNSAFE_NAME.sub("-", stem).strip("-")
-    return f"{safe or 'foto'}{ASSET_SUFFIX}"
+    return f"{safe or 'photo'}{ASSET_SUFFIX}"
 
 
 def _part_stem(part: str) -> str:
     """``escuadra.STL`` -> ``escuadra``: the product asset's base name."""
     stem = posixpath.splitext(posixpath.basename(part))[0].lower()
     safe = UNSAFE_NAME.sub("-", stem).strip("-")
-    return safe or "producto"
+    return safe or "product"
 
 
 def _version(bpy: Any) -> str:

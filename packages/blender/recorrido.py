@@ -1,8 +1,8 @@
 """The camera tour: a 10 s orbit of the daylight scene, rendered by Eevee.
 
-``blender.recorrido`` moves through the scene ``escena.py`` builds — the same
+``blender.tour`` moves through the scene ``escena.py`` builds — the same
 glTF import, millimetre scale, per-prefix materials, sun plus sky wash and
-floor the daylight photo uses — and writes ``<model>-recorrido.mp4``. The
+floor the daylight photo uses — and writes ``<model>-tour.mp4``. The
 recipe is the lab's ``projects/prueba-render-arq/escena.py`` tour block.
 
 **Eevee, never Cycles.** A tour is 240 frames at 1280x720 and 24 fps: Cycles
@@ -10,7 +10,7 @@ takes about 45 minutes for that, Eevee about 100 s, at a level of quality that
 holds because the scene is static and only the camera moves. Cycles stays the
 still-photo engine where every frame is looked at.
 
-The camera starts at the piece's ``azimut``/``elevacion``/``distancia`` start
+The camera starts at the piece's ``azimuth``/``elevation``/``distance`` start
 triple and glides to its end triple with a smoothstep ``t*t*(3-2*t)`` — it
 leaves and arrives gently, like a camera crane. One ``location`` and one
 ``rotation_euler`` keyframe per frame is what makes Blender interpolate the
@@ -45,13 +45,13 @@ DEFAULT_FPS = 24
 #: A 30 mm lens frames the study from 14 m away.
 DEFAULT_FOCAL = 30.0
 #: Start -> end of each part of the move: around, down, and closer.
-DEFAULT_AZIMUT = (-75.0, -15.0)
-DEFAULT_ELEVACION = (55.0, 40.0)
-DEFAULT_DISTANCIA = (14.0, 10.5)
+DEFAULT_AZIMUTH = (-75.0, -15.0)
+DEFAULT_ELEVATION = (55.0, 40.0)
+DEFAULT_DISTANCE = (14.0, 10.5)
 #: A tour is deterministic, so the seed only labels the record.
 DEFAULT_SEED = 0
-#: What the run appends to the model's stem: ``estudio.glb`` -> ``estudio-recorrido``.
-ASSET_SUFFIX = "-recorrido"
+#: What the run appends to the model's stem: ``estudio.glb`` -> ``estudio-tour``.
+ASSET_SUFFIX = "-tour"
 #: A start/end pair has exactly two numbers.
 PAIR_LENGTH = 2
 UNSAFE_NAME = re.compile(r"[^a-z0-9-]+")
@@ -67,9 +67,9 @@ class Tour:
     frames: int
     fps: int
     focal: float
-    azimut: Pair
-    elevacion: Pair
-    distancia: Pair
+    azimuth: Pair
+    elevation: Pair
+    distance: Pair
 
 
 def plan(params: dict[str, Any]) -> Tour:
@@ -80,17 +80,17 @@ def plan(params: dict[str, Any]) -> Tour:
         frames=seconds * fps,
         fps=fps,
         focal=float(params.get("focal", DEFAULT_FOCAL)),
-        azimut=_pair(params.get("azimut"), DEFAULT_AZIMUT),
-        elevacion=_pair(params.get("elevacion"), DEFAULT_ELEVACION),
-        distancia=_pair(params.get("distancia"), DEFAULT_DISTANCIA),
+        azimuth=_pair(params.get("azimuth"), DEFAULT_AZIMUTH),
+        elevation=_pair(params.get("elevation"), DEFAULT_ELEVATION),
+        distance=_pair(params.get("distance"), DEFAULT_DISTANCE),
     )
 
 
 def _pair(value: Any, default: Pair) -> Pair:
-    """One ``{ inicio, fin }`` item, or a bare pair, or the default."""
+    """One ``{ start, end }`` item, or a bare pair, or the default."""
     item = value[0] if isinstance(value, list) and value else value
     if isinstance(item, dict):
-        return (float(item.get("inicio", default[0])), float(item.get("fin", default[1])))
+        return (float(item.get("start", default[0])), float(item.get("end", default[1])))
     if isinstance(item, list) and len(item) == PAIR_LENGTH:
         return (float(item[0]), float(item[1]))
     return default
@@ -104,9 +104,9 @@ def smooth(t: float) -> float:
 def pose(tour: Tour, frame: int, centre: tuple[float, float, float]) -> tuple[tuple, tuple]:
     """``(location, rotation_euler)`` of the camera on the given frame."""
     t = smooth(frame / (tour.frames - 1)) if tour.frames > 1 else 1.0
-    azimuth = _at(tour.azimut, t)
-    elevation = _at(tour.elevacion, t)
-    distance = _at(tour.distancia, t)
+    azimuth = _at(tour.azimuth, t)
+    elevation = _at(tour.elevation, t)
+    distance = _at(tour.distance, t)
     azimuth_rad, elevation_rad = math.radians(azimuth), math.radians(elevation)
     offset = (
         distance * math.cos(elevation_rad) * math.cos(azimuth_rad),
@@ -134,7 +134,7 @@ def render(bpy: Any, model: str, destination: str, params: dict[str, Any], root:
     centre = escena.centre(scene)
     floor_z = escena.floor(bpy, scene, centre)
     escena.dress_scene(bpy, scene, params, root, floor_z)
-    item = escena.cielo_item(params)
+    item = escena.sky_item(params)
     if item:
         escena.sky_hdri(bpy, scene, item, root)
     else:
@@ -191,20 +191,20 @@ def _settings(scene: Any, tour: Tour) -> None:
 
 
 def asset_name(model: str) -> str:
-    """``estudio.glb`` -> ``estudio-recorrido``: the asset's base name."""
+    """``estudio.glb`` -> ``estudio-tour``: the asset's base name."""
     return f"{stem(model)}{ASSET_SUFFIX}"
 
 
 def stem(model: str) -> str:
     """``estudio.glb`` -> ``estudio``: the sanitized base name of a model."""
     name = posixpath.splitext(posixpath.basename(model))[0].lower()
-    return UNSAFE_NAME.sub("-", name).strip("-") or "recorrido"
+    return UNSAFE_NAME.sub("-", name).strip("-") or "tour"
 
 
 def prompt(name: str, tour: Tour) -> str:
     """The tour line a preview carries: what the camera does, in one line."""
-    azimuth = f"{tour.azimut[0]:g}→{tour.azimut[1]:g}"
-    return f"{name} · camera tour · azimut {azimuth} · {tour.frames}f @ {tour.fps}fps"
+    azimuth = f"{tour.azimuth[0]:g}→{tour.azimuth[1]:g}"
+    return f"{name} · camera tour · azimuth {azimuth} · {tour.frames}f @ {tour.fps}fps"
 
 
 def asset(params: dict[str, Any], model: str) -> dict[str, Any]:

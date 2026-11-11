@@ -44,7 +44,7 @@ def _render(
     tmp_path: Path, pieces: list[tuple[str, tuple[float, float, float]]] | None = None, **inputs
 ) -> dict:
     request = _request(
-        tmp_path, "run", capability="blender.producto", part=str(_part(tmp_path)), **inputs
+        tmp_path, "run", capability="blender.product", part=str(_part(tmp_path)), **inputs
     )
     env = _env(
         tmp_path,
@@ -83,7 +83,7 @@ def test_the_cycle_scales_the_studio_lights_from_the_measured_box(tmp_path: Path
         assert math.dist(light["location"], (0.0, 0.0, 0.0)) == pytest.approx(0.5)
 
     asset = result["assets"][0]
-    assert asset["file"] == "escuadra-producto.png"
+    assert asset["file"] == "escuadra-product.png"
     assert (asset["kind"], asset["mime"], asset["seed"]) == ("image", "image/png", 0)
     assert asset["inputs"] == [str(part)]
     assert asset["properties"] == {
@@ -91,11 +91,11 @@ def test_the_cycle_scales_the_studio_lights_from_the_measured_box(tmp_path: Path
         "height": PRODUCTO.PRODUCT_HEIGHT,
         "samples": PRODUCTO.SAMPLES,
         "exposure": PRODUCTO.EXPOSURE,
-        "material": "aluminio-cepillado",
-        "backdrop": "grafito",
+        "material": "brushed-aluminum",
+        "backdrop": "graphite",
     }
     assert result["tool"]["name"] == "blender"
-    with PIL.Image.open(tmp_path / "out" / "escuadra-producto.png") as image:
+    with PIL.Image.open(tmp_path / "out" / "escuadra-product.png") as image:
         assert image.size == (PRODUCTO.PRODUCT_WIDTH, PRODUCTO.PRODUCT_HEIGHT)
 
 
@@ -124,8 +124,8 @@ def test_the_recipe_is_a_1200_square_cycles_studio(tmp_path: Path) -> None:
     assert render["denoise"] is True
     assert render["exposure"] == PRODUCTO.EXPOSURE
     assert render["look"] == "AgX - Medium High Contrast"
-    assert render["filepath"] == str(tmp_path / "out" / "escuadra-producto.png")
-    assert trail["materials"] == {"escuadra": "aluminio-cepillado"}
+    assert render["filepath"] == str(tmp_path / "out" / "escuadra-product.png")
+    assert trail["materials"] == {"escuadra": "brushed-aluminum"}
     assert trail["backdrop"] == [0.02, 0.02, 0.025, 1.0]
     assert trail["camera"]["type"] == "PERSP"
     assert trail["camera"]["lens"] == PRODUCTO.LENS
@@ -135,23 +135,23 @@ def test_the_recipe_is_a_1200_square_cycles_studio(tmp_path: Path) -> None:
 
 def test_the_material_and_backdrop_inputs_reach_the_scene(tmp_path: Path) -> None:
     """Steel on cement is a different studio, not the same one renamed."""
-    result = _render(tmp_path, material="acero", backdrop="cemento")
+    result = _render(tmp_path, material="steel", backdrop="concrete")
     trail = _trail(tmp_path)
 
-    assert trail["materials"] == {"escuadra": "acero"}
+    assert trail["materials"] == {"escuadra": "steel"}
     assert trail["backdrop"] == [0.09, 0.09, 0.095, 1.0]
     properties = result["assets"][0]["properties"]
-    assert (properties["material"], properties["backdrop"]) == ("acero", "cemento")
+    assert (properties["material"], properties["backdrop"]) == ("steel", "concrete")
 
 
 def test_verify_measures_the_product_png_at_1200_square(tmp_path: Path) -> None:
     """verify answers without Blender and rejects the daylight 1600 frame."""
-    good = tmp_path / "out" / "escuadra-producto.png"
+    good = tmp_path / "out" / "escuadra-product.png"
     good.parent.mkdir()
     PIL.Image.new("RGB", (PRODUCTO.PRODUCT_WIDTH, PRODUCTO.PRODUCT_HEIGHT)).save(good)
-    large = tmp_path / "out" / "estudio-foto.png"
+    large = tmp_path / "out" / "estudio-photo.png"
     PIL.Image.new("RGB", (1600, 1600)).save(large)
-    request = _request(tmp_path, "verify", capability="blender.producto")
+    request = _request(tmp_path, "verify", capability="blender.product")
     request["assets"] = [str(good), str(large)]
 
     done, result_path = _call("verify", request, tmp_path, {**os.environ, "PATH": str(tmp_path)})
@@ -168,13 +168,13 @@ def test_verify_measures_the_product_png_at_1200_square(tmp_path: Path) -> None:
 
 def test_preview_writes_the_image_schema_for_a_product_shot(tmp_path: Path) -> None:
     """The preview names the studio the shot came from, not the daylight one."""
-    photo = tmp_path / "out" / "escuadra-producto.png"
+    photo = tmp_path / "out" / "escuadra-product.png"
     photo.parent.mkdir()
     PIL.Image.new("RGB", (PRODUCTO.PRODUCT_WIDTH, PRODUCTO.PRODUCT_HEIGHT)).save(photo)
     request = _request(
         tmp_path,
         "preview",
-        capability="blender.producto",
+        capability="blender.product",
         part=str(_part(tmp_path)),
         assets=[str(photo)],
     )
@@ -183,16 +183,16 @@ def test_preview_writes_the_image_schema_for_a_product_shot(tmp_path: Path) -> N
 
     assert done.returncode == 0, done.stdout + done.stderr
     entry = json.loads(result_path.read_text(encoding="utf-8"))["assets"][0]
-    assert entry["file"] == "escuadra-producto.png"
-    assert entry["preview"] == "escuadra-producto.png.preview.json"
+    assert entry["file"] == "escuadra-product.png"
+    assert entry["preview"] == "escuadra-product.png.preview.json"
     data = json.loads((photo.parent / entry["preview"]).read_text(encoding="utf-8"))
     assert set(data) == set(SCHEMA["required"])
     assert data["preview"] == 1 and data["kind"] == "image"
-    assert data["name"] == "escuadra-producto"
+    assert data["name"] == "escuadra-product"
     assert (data["width"], data["height"]) == (
         PRODUCTO.PRODUCT_WIDTH,
         PRODUCTO.PRODUCT_HEIGHT,
     )
     assert data["seed"] == 0
-    assert data["prompt"] == "escuadra · product photo · aluminio-cepillado on grafito · studio"
+    assert data["prompt"] == "escuadra · product photo · brushed-aluminum on graphite · studio"
     assert len(data["summary"]) <= SUMMARY_MAX

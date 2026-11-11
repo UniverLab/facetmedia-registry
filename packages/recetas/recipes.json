@@ -54,8 +54,8 @@
           "verify": "The receipt's files are all present."
         },
         {
-          "capability": "blender.foto",
-          "handoff": "estudio-foto.png (model estudio.glb, personas-blend personas.blend + personas, autos-blend autos.blend + autos)",
+          "capability": "blender.photo",
+          "handoff": "estudio-photo.png (model estudio.glb, people-blend people.blend + people, cars-blend cars.blend + cars)",
           "verify": "Look at the PNG."
         },
         {

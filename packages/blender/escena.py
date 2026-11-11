@@ -1,6 +1,6 @@
 """The daylight scene both blender renders share: glTF, metres, materials, light.
 
-``blender.foto`` photographs this scene and ``blender.recorrido`` moves a
+``blender.photo`` photographs this scene and ``blender.tour`` moves a
 camera through it, so the pieces every render needs live here once: the glTF
 import's millimetres to metres, the floor the sun casts its shadow on, one
 Principled material per piece-name prefix, and the sky texture plus sun pair.
@@ -25,7 +25,7 @@ SCALE = 0.001
 #: The view transform that keeps sun plus sky from washing the colours out.
 LOOK = "AgX - Medium High Contrast"
 #: The sun the approved render uses, and the sky wash strength beside it.
-SUN = {"azimut": 210.0, "elevacion": 32.0, "fuerza": 3.0}
+SUN = {"azimuth": 210.0, "elevation": 32.0, "strength": 3.0}
 SKY_STRENGTH = 0.2
 SUN_ANGLE_DEG = 2.0
 #: The outside floor that receives the shadows, in metres.
@@ -161,21 +161,21 @@ def model_corners(scene: Any) -> list[tuple[float, float, float]]:
     ]
 
 
-def fit_escala(
+def fit_scale(
     corners: list[tuple[float, float, float]],
     centre: tuple[float, float, float],
-    azimut_deg: float,
-    elevacion_deg: float,
+    azimuth_deg: float,
+    elevation_deg: float,
     aspect: float,
 ) -> float:
     """The orthographic scale framing every corner, with a 10% margin.
 
-    The frame is ``escala`` wide and ``escala * aspect`` high, so the scale
+    The frame is ``scale`` wide and ``scale * aspect`` high, so the scale
     is the wider of the projected width and the projected height over the
     aspect; a tall model counts as much as a wide one. Never below 4 m, so
     a tiny piece still photographs as a piece and not a pixel.
     """
-    azimuth, elevation = math.radians(azimut_deg), math.radians(elevacion_deg)
+    azimuth, elevation = math.radians(azimuth_deg), math.radians(elevation_deg)
     right = (-math.sin(azimuth), math.cos(azimuth), 0.0)
     up = (
         -math.sin(elevation) * math.cos(azimuth),
@@ -211,30 +211,30 @@ def fetched(root: str, asset_id: str, name: str, res: str) -> Path:
     )
 
 
-def cielo_item(params: dict[str, Any]) -> dict[str, Any]:
-    """The piece's sky: the first cielo item, the way _camera reads camera."""
-    items = params.get("cielo")
+def sky_item(params: dict[str, Any]) -> dict[str, Any]:
+    """The piece's sky: the first sky item, the way _camera reads camera."""
+    items = params.get("sky")
     if isinstance(items, list) and items and isinstance(items[0], dict):
         return dict(items[0])
     return {}
 
 
-def texturas(params: dict[str, Any]) -> dict[str, dict[str, Any]]:
+def textures(params: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """The piece's textures by prefix; a repeated prefix fails loudly."""
     recipes: dict[str, dict[str, Any]] = {}
-    for item in params.get("texturas") or []:
+    for item in params.get("textures") or []:
         if not isinstance(item, dict):
             continue
-        prefix = str(item.get("prefijo", ""))
+        prefix = str(item.get("prefix", ""))
         if prefix in recipes:
-            raise RuntimeError(f"texturas: prefijo repetido: {prefix}")
+            raise RuntimeError(f"textures: prefix repeated: {prefix}")
         recipes[prefix] = item
     return recipes
 
 
-def plantas(params: dict[str, Any]) -> list[dict[str, Any]]:
+def plants(params: dict[str, Any]) -> list[dict[str, Any]]:
     """The piece's plant placements, in the order it lists them."""
-    return [item for item in params.get("plantas") or [] if isinstance(item, dict)]
+    return [item for item in params.get("plants") or [] if isinstance(item, dict)]
 
 
 def dress(
@@ -281,13 +281,13 @@ def textured(bpy: Any, prefix: str, item: dict[str, Any], root: str) -> Any:
     """One Poly Haven texture material: diff, rough and a bump from the rough.
 
     Ported from the lab's ``textura``/``material``: the world-space position is
-    box-projected at ``1/lado`` metres, ``diff.jpg`` tints the base colour
+    box-projected at ``1/size`` metres, ``diff.jpg`` tints the base colour
     through the hue/saturation/value adjust, and ``rough.jpg`` drives both the
     roughness and a 0.15 bump. ``nor_gl.jpg`` is never loaded: the lab's models
     carry no UVs for a normal map.
     """
     asset_id = str(item["id"])
-    lado = float(item.get("lado", LADO))
+    size = float(item.get("size", LADO))
     diff = fetched(root, asset_id, "diff.jpg", TEXTURE_RES)
     rough = fetched(root, asset_id, "rough.jpg", TEXTURE_RES)
     block = bpy.data.materials.new(prefix)
@@ -296,14 +296,14 @@ def textured(bpy: Any, prefix: str, item: dict[str, Any], root: str) -> Any:
     bsdf = nodes["Principled BSDF"]
     geo = nodes.new("ShaderNodeNewGeometry")
     mapping = nodes.new("ShaderNodeMapping")
-    mapping.inputs["Scale"].default_value = [1 / lado] * 3
+    mapping.inputs["Scale"].default_value = [1 / size] * 3
     links.new(geo.outputs["Position"], mapping.inputs["Vector"])
     vector = mapping.outputs["Vector"]
     colour = _textura(bpy, nodes, links, vector, diff, True)
     ajuste = (
-        float(item.get("matiz", AJUSTE[0])),
-        float(item.get("saturacion", AJUSTE[1])),
-        float(item.get("valor", AJUSTE[2])),
+        float(item.get("hue", AJUSTE[0])),
+        float(item.get("saturation", AJUSTE[1])),
+        float(item.get("value", AJUSTE[2])),
     )
     tint = nodes.new("ShaderNodeHueSaturation")
     for key, value in zip(("Hue", "Saturation", "Value"), ajuste, strict=True):
@@ -364,19 +364,19 @@ def _place_plant(
             obj.matrix_parent_inverse = anchor.matrix_world.inverted()
     anchor.location = [float(placement["x"]), float(placement["y"]), floor_z]
     anchor.rotation_mode = "XYZ"
-    anchor.rotation_euler[2] = math.radians(float(placement.get("giro", 0)))
+    anchor.rotation_euler[2] = math.radians(float(placement.get("rotation", 0)))
 
 
 def sky_hdri(bpy: Any, scene: Any, item: dict[str, Any], root: str) -> None:
-    """The fetched HDRI sky: an environment texture turned by giro, no lamp.
+    """The fetched HDRI sky: an environment texture turned by rotation, no lamp.
 
-    Ported from the lab's ``cielo``: the Mapping node turns the HDRI about Z,
+    Ported from the lab's ``sky``: the Mapping node turns the HDRI about Z,
     which sets where the sun falls, and ``use_sun_shadow`` lets Eevee pull a
     shadow-casting sun out of the HDRI. There is no "sol" lamp beside it.
     """
     asset_id = str(item["id"])
     route = fetched(root, asset_id, "sky.hdr", SKY_RES)
-    world = bpy.data.worlds.new("cielo")
+    world = bpy.data.worlds.new("sky")
     scene.world = world
     world.use_nodes = True
     nodes, links = world.node_tree.nodes, world.node_tree.links
@@ -384,22 +384,22 @@ def sky_hdri(bpy: Any, scene: Any, item: dict[str, Any], root: str) -> None:
     mapping = nodes.new("ShaderNodeMapping")
     hdri = nodes.new("ShaderNodeTexEnvironment")
     hdri.image = bpy.data.images.load(str(route))
-    mapping.inputs["Rotation"].default_value[2] = math.radians(float(item.get("giro", GIRO)))
+    mapping.inputs["Rotation"].default_value[2] = math.radians(float(item.get("rotation", GIRO)))
     links.new(coords.outputs["Generated"], mapping.inputs["Vector"])
     links.new(mapping.outputs["Vector"], hdri.inputs["Vector"])
     links.new(hdri.outputs["Color"], nodes["Background"].inputs["Color"])
-    nodes["Background"].inputs["Strength"].default_value = float(item.get("fuerza", FUERZA))
+    nodes["Background"].inputs["Strength"].default_value = float(item.get("strength", FUERZA))
     world.use_sun_shadow = True
 
 
 def dress_scene(bpy: Any, scene: Any, params: dict[str, Any], root: str, floor_z: float) -> None:
     """The whole dressed scene: materials, people, cars and plants, in order."""
-    dress(bpy, scene, dict(MATERIALS), texturas(params), root)
+    dress(bpy, scene, dict(MATERIALS), textures(params), root)
     blend, placements = people(params)
     personas(bpy, scene, blend, placements, floor_z)
     car_blend, cars = autos_params(params)
     autos(bpy, scene, car_blend, cars, floor_z)
-    place_plants(bpy, scene, plantas(params), root, floor_z)
+    place_plants(bpy, scene, plants(params), root, floor_z)
 
 
 def material(bpy: Any, name: str, recipe: Recipe) -> Any:
@@ -433,8 +433,8 @@ def assign(scene: Any, materials: dict[str, Any]) -> list[str]:
 
 def people(params: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
     """The prebuilt collection blend and the placements a piece asks for."""
-    blend = params.get("personas-blend")
-    placements = [item for item in params.get("personas") or [] if isinstance(item, dict)]
+    blend = params.get("people-blend")
+    placements = [item for item in params.get("people") or [] if isinstance(item, dict)]
     return (str(blend) if blend else ""), placements
 
 
@@ -454,40 +454,40 @@ def personas(
     if not placements:
         return
     if not blend:
-        raise RuntimeError(f"{len(placements)} personas but no personas-blend")
+        raise RuntimeError(f"{len(placements)} people but no people-blend")
     for placement in placements:
-        nombre = str(placement["nombre"])
-        collection = _loaded(bpy, blend, nombre, scene)
-        root = _root(collection, nombre)
+        name = str(placement["name"])
+        collection = _loaded(bpy, blend, name, scene)
+        root = _root(collection, name)
         root.location = (float(placement["x"]), float(placement["y"]), floor_z)
         root.rotation_mode = "XYZ"
-        root.rotation_euler[2] = math.radians(float(placement.get("giro", 0)))
+        root.rotation_euler[2] = math.radians(float(placement.get("rotation", 0)))
 
 
-def _loaded(bpy: Any, blend: str, nombre: str, scene: Any) -> Any:
+def _loaded(bpy: Any, blend: str, name: str, scene: Any) -> Any:
     """Link one named collection of the blend into the scene; raise if absent."""
     with bpy.data.libraries.load(blend) as (source, target):
-        if nombre not in source.collections:
+        if name not in source.collections:
             names = sorted(source.collections)
-            raise KeyError(f"{nombre} is not a collection in {blend} (has: {names})")
-        target.collections = [nombre]
+            raise KeyError(f"{name} is not a collection in {blend} (has: {names})")
+        target.collections = [name]
     collection = target.collections[0]
     scene.collection.children.link(collection)
     return collection
 
 
-def _root(collection: Any, nombre: str) -> Any:
+def _root(collection: Any, name: str) -> Any:
     """The collection's single parentless object: the skeleton root."""
     roots = [obj for obj in collection.objects if obj.parent is None]
     if len(roots) != 1:
-        raise RuntimeError(f"{nombre}: expected one root object, found {len(roots)}")
+        raise RuntimeError(f"{name}: expected one root object, found {len(roots)}")
     return roots[0]
 
 
 def autos_params(params: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
     """The prebuilt car blend and the placements a piece asks for."""
-    blend = params.get("autos-blend")
-    placements = [item for item in params.get("autos") or [] if isinstance(item, dict)]
+    blend = params.get("cars-blend")
+    placements = [item for item in params.get("cars") or [] if isinstance(item, dict)]
     return (str(blend) if blend else ""), placements
 
 
@@ -507,22 +507,22 @@ def autos(
     if not placements:
         return
     if not blend:
-        raise RuntimeError(f"{len(placements)} autos but no autos-blend")
+        raise RuntimeError(f"{len(placements)} cars but no cars-blend")
     for placement in placements:
-        nombre = str(placement["nombre"])
-        collection = _loaded(bpy, blend, nombre, scene)
-        root = _root(collection, nombre)
+        name = str(placement["name"])
+        collection = _loaded(bpy, blend, name, scene)
+        root = _root(collection, name)
         root.location = (float(placement["x"]), float(placement["y"]), floor_z)
         root.rotation_mode = "XYZ"
-        root.rotation_euler[2] = math.radians(float(placement.get("giro", 0)))
+        root.rotation_euler[2] = math.radians(float(placement.get("rotation", 0)))
 
 
 def sky_and_sun(bpy: Any, scene: Any) -> None:
     """A sky texture washing the scene from the sun's direction, plus the sun."""
-    world = bpy.data.worlds.new("cielo")
+    world = bpy.data.worlds.new("sky")
     scene.world = world
     world.use_nodes = True
-    azimuth, elevation = math.radians(SUN["azimut"]), math.radians(SUN["elevacion"])
+    azimuth, elevation = math.radians(SUN["azimuth"]), math.radians(SUN["elevation"])
     try:
         sky = world.node_tree.nodes.new("ShaderNodeTexSky")
         sky.sun_elevation, sky.sun_rotation = elevation, azimuth
@@ -532,7 +532,7 @@ def sky_and_sun(bpy: Any, scene: Any) -> None:
     except (AttributeError, KeyError, RuntimeError, TypeError):
         world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.75, 0.82, 0.92, 1)
     light = bpy.data.lights.new("sol", "SUN")
-    light.energy, light.angle = SUN["fuerza"], math.radians(SUN_ANGLE_DEG)
+    light.energy, light.angle = SUN["strength"], math.radians(SUN_ANGLE_DEG)
     sun = bpy.data.objects.new("sol", light)
     scene.collection.objects.link(sun)
     sun.rotation_euler = (math.pi / 2 - elevation, 0, azimuth + math.pi / 2)

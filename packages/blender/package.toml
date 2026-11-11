@@ -32,217 +32,217 @@ platforms = ["linux"]
 subject = "Blender (the host application this package drives)"
 spdx = "GPL-2.0-or-later"
 
-[capabilities.foto]
+[capabilities.photo]
 summary = "Daylight architectural photo of a CadQuery glTF with Cycles on the GPU (1600x1000, ~11 s)"
 kind = "image"
 
-[capabilities.foto.inputs.model]
+[capabilities.photo.inputs.model]
 type = "path"
 required = true
 description = "glTF (.glb) exported by cad.solid from a CadQuery Assembly, one element per piece carrying its name, resolved relative to the piece file; never STEP, which Blender does not open without an extra plugin."
 
-[capabilities.foto.inputs.camera]
+[capabilities.photo.inputs.camera]
 type = "array"
-description = "Camera view as one { azimut, elevacion, escala } item: degrees for the two angles, the orthographic scale in metres; when escala is omitted it is computed to fit the whole model with a 10% margin."
+description = "Camera view as one { azimuth, elevation, scale } item: degrees for the two angles, the orthographic scale in metres; when scale is omitted it is computed to fit the whole model with a 10% margin."
 
-[capabilities.foto.inputs.camera.items.azimut]
+[capabilities.photo.inputs.camera.items.azimuth]
 type = "number"
 default = -40
 min = -360
 max = 360
 description = "Azimuth in degrees, measured from +X towards +Y."
 
-[capabilities.foto.inputs.camera.items.elevacion]
+[capabilities.photo.inputs.camera.items.elevation]
 type = "number"
 default = 48
 min = -89
 max = 89
 description = "Elevation in degrees above the floor."
 
-[capabilities.foto.inputs.camera.items.escala]
+[capabilities.photo.inputs.camera.items.scale]
 type = "number"
 min = 0.5
 max = 200
 description = "Orthographic scale in metres: the width of the frame the camera fits; when omitted, computed to fit the whole model with a 10% margin."
 
-[capabilities.foto.inputs.giro]
+[capabilities.photo.inputs.rotation]
 type = "number"
 default = 0
 min = -360
 max = 360
 description = "Turn of the whole model about Z in degrees; the sun keeps its place, so the light changes with the facade."
 
-[capabilities.foto.inputs.exposure]
+[capabilities.photo.inputs.exposure]
 type = "number"
 default = -0.6
 min = -10
 max = 10
 description = "Exposure in stops under the AgX - Medium High Contrast view transform; -0.6 keeps sun plus sky wash from washing the colours out."
 
-[capabilities.foto.inputs.personas-blend]
+[capabilities.photo.inputs.people-blend]
 type = "path"
 description = "Prebuilt MPFB collection .blend (one collection per person, the skeleton root at its base), resolved relative to the piece file. Never generated here."
 
-[capabilities.foto.inputs.personas]
+[capabilities.photo.inputs.people]
 type = "array"
 default = []
-description = "People to stand in the scene, one { nombre, x, y, giro } item each: the collection name in personas-blend and its place in metres. The lab's three placements are the reference example, never a default."
+description = "People to stand in the scene, one { name, x, y, rotation } item each: the collection name in people-blend and its place in metres. The lab's three placements are the reference example, never a default."
 
-[capabilities.foto.inputs.personas.items.nombre]
+[capabilities.photo.inputs.people.items.name]
 type = "string"
 required = true
-description = "Collection name in personas-blend; a name the file does not hold fails the run loudly."
+description = "Collection name in people-blend; a name the file does not hold fails the run loudly."
 
-[capabilities.foto.inputs.personas.items.x]
+[capabilities.photo.inputs.people.items.x]
 type = "number"
 required = true
 description = "X position in metres, in the scene's own axes; people are never scaled with the model."
 
-[capabilities.foto.inputs.personas.items.y]
+[capabilities.photo.inputs.people.items.y]
 type = "number"
 required = true
 description = "Y position in metres, in the scene's own axes."
 
-[capabilities.foto.inputs.personas.items.giro]
+[capabilities.photo.inputs.people.items.rotation]
 type = "number"
 default = 0
 description = "Turn about Z in degrees from the -y facing the collection has by default."
 
-[capabilities.foto.inputs.autos-blend]
+[capabilities.photo.inputs.cars-blend]
 type = "path"
 description = "Prebuilt car-collection .blend (one collection per car hung from an anchor EMPTY at its base centre, facing -y), resolved relative to the piece file. Never generated here."
 
-[capabilities.foto.inputs.autos]
+[capabilities.photo.inputs.cars]
 type = "array"
 default = []
-description = "Cars to park in the scene, one { nombre, x, y, giro } item each: the collection name in autos-blend and its place in metres. The lab's sedan, camioneta and compacto placements are the reference example, never a default."
+description = "Cars to park in the scene, one { name, x, y, rotation } item each: the collection name in cars-blend and its place in metres. The lab's sedan, camioneta and compacto placements are the reference example, never a default."
 
-[capabilities.foto.inputs.autos.items.nombre]
+[capabilities.photo.inputs.cars.items.name]
 type = "string"
 required = true
-description = "Collection name in autos-blend; a name the file does not hold fails the run loudly."
+description = "Collection name in cars-blend; a name the file does not hold fails the run loudly."
 
-[capabilities.foto.inputs.autos.items.x]
+[capabilities.photo.inputs.cars.items.x]
 type = "number"
 required = true
 description = "X position in metres, in the scene's own axes; cars are never scaled with the model."
 
-[capabilities.foto.inputs.autos.items.y]
+[capabilities.photo.inputs.cars.items.y]
 type = "number"
 required = true
 description = "Y position in metres, in the scene's own axes."
 
-[capabilities.foto.inputs.autos.items.giro]
+[capabilities.photo.inputs.cars.items.rotation]
 type = "number"
 default = 0
 description = "Turn about Z in degrees from the -y facing the collection has by default."
 
-[capabilities.foto.inputs.cielo]
+[capabilities.photo.inputs.sky]
 type = "array"
 default = []
-description = "Sky as one { id, giro, fuerza } item: the Poly Haven HDRI id, its turn about Z in degrees and the background strength; the scene then has no sun lamp. The runner reads only the first item."
+description = "Sky as one { id, rotation, strength } item: the Poly Haven HDRI id, its turn about Z in degrees and the background strength; the scene then has no sun lamp. The runner reads only the first item."
 
-[capabilities.foto.inputs.cielo.items.id]
+[capabilities.photo.inputs.sky.items.id]
 type = "string"
 required = true
 description = "Poly Haven HDRI id, the last part of its polyhaven.com URL; it must already be fetched with blender.assets."
 
-[capabilities.foto.inputs.cielo.items.giro]
+[capabilities.photo.inputs.sky.items.rotation]
 type = "number"
 default = 200
 description = "Turn of the HDRI about Z in degrees, which sets where the sun falls."
 
-[capabilities.foto.inputs.cielo.items.fuerza]
+[capabilities.photo.inputs.sky.items.strength]
 type = "number"
 default = 1.0
 description = "Background strength of the HDRI sky."
 
-[capabilities.foto.inputs.texturas]
+[capabilities.photo.inputs.textures]
 type = "array"
 default = []
-description = "Textures by piece prefix, one { prefijo, id, lado, matiz, saturacion, valor } item each; a prefix without an item keeps its flat MATERIALS colour."
+description = "Textures by piece prefix, one { prefix, id, size, hue, saturation, value } item each; a prefix without an item keeps its flat MATERIALS colour."
 
-[capabilities.foto.inputs.texturas.items.prefijo]
+[capabilities.photo.inputs.textures.items.prefix]
 type = "enum"
 values = ["almohada", "cama", "mesa", "muros", "pavimento", "piso", "sillas", "suelo", "vidrio"]
 required = true
-description = "Piece prefix the texture dresses, one of the keys of MATERIALS in escena.py."
+description = "Piece-name prefix the texture dresses, one of the keys of MATERIALS in escena.py; the values come from the piece names in your own CAD model, so they keep the model's spelling."
 
-[capabilities.foto.inputs.texturas.items.id]
+[capabilities.photo.inputs.textures.items.id]
 type = "string"
 required = true
 description = "Poly Haven texture id, the last part of its polyhaven.com URL; it must already be fetched with blender.assets."
 
-[capabilities.foto.inputs.texturas.items.lado]
+[capabilities.photo.inputs.textures.items.size]
 type = "number"
 default = 2.0
 description = "Tile side in metres of the box projection."
 
-[capabilities.foto.inputs.texturas.items.matiz]
+[capabilities.photo.inputs.textures.items.hue]
 type = "number"
 default = 0.5
 description = "Hue adjust of the lab's ajuste triple; 0.5 keeps the hue."
 
-[capabilities.foto.inputs.texturas.items.saturacion]
+[capabilities.photo.inputs.textures.items.saturation]
 type = "number"
 default = 1.0
 description = "Saturation adjust of the lab's ajuste triple."
 
-[capabilities.foto.inputs.texturas.items.valor]
+[capabilities.photo.inputs.textures.items.value]
 type = "number"
 default = 1.0
 description = "Value adjust of the lab's ajuste triple."
 
-[capabilities.foto.inputs.plantas]
+[capabilities.photo.inputs.plants]
 type = "array"
 default = []
-description = "Plants to stand in the scene, one { id, x, y, giro } item each: the Poly Haven model id and its place in metres."
+description = "Plants to stand in the scene, one { id, x, y, rotation } item each: the Poly Haven model id and its place in metres."
 
-[capabilities.foto.inputs.plantas.items.id]
+[capabilities.photo.inputs.plants.items.id]
 type = "string"
 required = true
 description = "Poly Haven model id, the last part of its polyhaven.com URL; it must already be fetched with blender.assets."
 
-[capabilities.foto.inputs.plantas.items.x]
+[capabilities.photo.inputs.plants.items.x]
 type = "number"
 required = true
 description = "X position in metres, in the scene's own axes."
 
-[capabilities.foto.inputs.plantas.items.y]
+[capabilities.photo.inputs.plants.items.y]
 type = "number"
 required = true
 description = "Y position in metres, in the scene's own axes."
 
-[capabilities.foto.inputs.plantas.items.giro]
+[capabilities.photo.inputs.plants.items.rotation]
 type = "number"
 default = 0
 description = "Turn about Z in degrees."
 
-[capabilities.foto.preview]
+[capabilities.photo.preview]
 viewer = "image"
 
-[capabilities.producto]
+[capabilities.product]
 summary = "Studio product photo of a CAD STL under two area lights with Cycles on the GPU (1200x1200, ~10 s)"
 kind = "image"
 
-[capabilities.producto.inputs.part]
+[capabilities.product.inputs.part]
 type = "path"
 required = true
 description = "STL (.stl) written by cad.solid beside the piece, resolved relative to the piece file; millimetres, scaled to metres by the runner."
 
-[capabilities.producto.inputs.material]
+[capabilities.product.inputs.material]
 type = "enum"
-values = ["aluminio-cepillado", "acero"]
-default = "aluminio-cepillado"
+values = ["brushed-aluminum", "steel"]
+default = "brushed-aluminum"
 description = "Metal the whole part is dressed in: brushed aluminium (roughness 0.38) or steel (roughness 0.22); both fully metallic."
 
-[capabilities.producto.inputs.backdrop]
+[capabilities.product.inputs.backdrop]
 type = "enum"
-values = ["grafito", "cemento"]
-default = "grafito"
+values = ["graphite", "concrete"]
+default = "graphite"
 description = "Seamless backdrop: graphite (near black) or cement (dark grey); both keep the metal's contrast."
 
-[capabilities.producto.preview]
+[capabilities.product.preview]
 viewer = "image"
 
 [capabilities.assets]
@@ -275,234 +275,234 @@ description = "Pinned resolution; the lab default applies when omitted (2k for s
 [capabilities.assets.preview]
 viewer = "generic"
 
-[capabilities.recorrido]
+[capabilities.tour]
 summary = "Animated camera tour of a CadQuery glTF in Eevee on the GPU (240 frames at 1280x720, 24 fps, ~100 s)"
 kind = "video"
 
-[capabilities.recorrido.inputs.model]
+[capabilities.tour.inputs.model]
 type = "path"
 required = true
 description = "glTF (.glb) exported by cad.solid from a CadQuery Assembly, one element per piece carrying its name, resolved relative to the piece file; never STEP, which Blender does not open without an extra plugin."
 
-[capabilities.recorrido.inputs.azimut]
+[capabilities.tour.inputs.azimuth]
 type = "array"
-description = "Azimuth the camera starts and ends at, as one { inicio, fin } item in degrees, measured from +X towards +Y; the lab's orbit when omitted."
+description = "Azimuth the camera starts and ends at, as one { start, end } item in degrees, measured from +X towards +Y; the lab's orbit when omitted."
 
-[capabilities.recorrido.inputs.azimut.items.inicio]
+[capabilities.tour.inputs.azimuth.items.start]
 type = "number"
 default = -75
 min = -360
 max = 360
 description = "Azimuth in degrees on the first frame."
 
-[capabilities.recorrido.inputs.azimut.items.fin]
+[capabilities.tour.inputs.azimuth.items.end]
 type = "number"
 default = -15
 min = -360
 max = 360
 description = "Azimuth in degrees on the last frame."
 
-[capabilities.recorrido.inputs.elevacion]
+[capabilities.tour.inputs.elevation]
 type = "array"
-description = "Elevation the camera starts and ends at, as one { inicio, fin } item in degrees above the floor."
+description = "Elevation the camera starts and ends at, as one { start, end } item in degrees above the floor."
 
-[capabilities.recorrido.inputs.elevacion.items.inicio]
+[capabilities.tour.inputs.elevation.items.start]
 type = "number"
 default = 55
 min = -89
 max = 89
 description = "Elevation in degrees on the first frame."
 
-[capabilities.recorrido.inputs.elevacion.items.fin]
+[capabilities.tour.inputs.elevation.items.end]
 type = "number"
 default = 40
 min = -89
 max = 89
 description = "Elevation in degrees on the last frame."
 
-[capabilities.recorrido.inputs.distancia]
+[capabilities.tour.inputs.distance]
 type = "array"
-description = "Distance from the model's centre the camera starts and ends at, as one { inicio, fin } item in metres; the move starts far and comes closer."
+description = "Distance from the model's centre the camera starts and ends at, as one { start, end } item in metres; the move starts far and comes closer."
 
-[capabilities.recorrido.inputs.distancia.items.inicio]
+[capabilities.tour.inputs.distance.items.start]
 type = "number"
 default = 14.0
 min = 0.5
 max = 200
 description = "Distance in metres on the first frame."
 
-[capabilities.recorrido.inputs.distancia.items.fin]
+[capabilities.tour.inputs.distance.items.end]
 type = "number"
 default = 10.5
 min = 0.5
 max = 200
 description = "Distance in metres on the last frame."
 
-[capabilities.recorrido.inputs.focal]
+[capabilities.tour.inputs.focal]
 type = "number"
 default = 30
 min = 18
 max = 100
 description = "Lens focal length in millimetres; 30 mm frames the study from 14 m."
 
-[capabilities.recorrido.inputs.seconds]
+[capabilities.tour.inputs.seconds]
 type = "integer"
 default = 10
 min = 2
 max = 60
 description = "Clip length in seconds; the frame count is seconds x fps."
 
-[capabilities.recorrido.inputs.fps]
+[capabilities.tour.inputs.fps]
 type = "integer"
 default = 24
 min = 12
 max = 60
 description = "Frame rate; the lab's 24 fps plays the orbit smoothly."
 
-[capabilities.recorrido.inputs.seed]
+[capabilities.tour.inputs.seed]
 type = "integer"
 default = 0
 min = 0
 description = "Sampling seed; Eevee's render is deterministic, so it only labels the record."
 
-[capabilities.recorrido.inputs.personas-blend]
+[capabilities.tour.inputs.people-blend]
 type = "path"
 description = "Prebuilt MPFB collection .blend (one collection per person, the skeleton root at its base), resolved relative to the piece file. Never generated here."
 
-[capabilities.recorrido.inputs.personas]
+[capabilities.tour.inputs.people]
 type = "array"
 default = []
-description = "People to stand in the scene, one { nombre, x, y, giro } item each: the collection name in personas-blend and its place in metres. The lab's three placements are the reference example, never a default."
+description = "People to stand in the scene, one { name, x, y, rotation } item each: the collection name in people-blend and its place in metres. The lab's three placements are the reference example, never a default."
 
-[capabilities.recorrido.inputs.personas.items.nombre]
+[capabilities.tour.inputs.people.items.name]
 type = "string"
 required = true
-description = "Collection name in personas-blend; a name the file does not hold fails the run loudly."
+description = "Collection name in people-blend; a name the file does not hold fails the run loudly."
 
-[capabilities.recorrido.inputs.personas.items.x]
+[capabilities.tour.inputs.people.items.x]
 type = "number"
 required = true
 description = "X position in metres, in the scene's own axes; people are never scaled with the model."
 
-[capabilities.recorrido.inputs.personas.items.y]
+[capabilities.tour.inputs.people.items.y]
 type = "number"
 required = true
 description = "Y position in metres, in the scene's own axes."
 
-[capabilities.recorrido.inputs.personas.items.giro]
+[capabilities.tour.inputs.people.items.rotation]
 type = "number"
 default = 0
 description = "Turn about Z in degrees from the -y facing the collection has by default."
 
-[capabilities.recorrido.inputs.autos-blend]
+[capabilities.tour.inputs.cars-blend]
 type = "path"
 description = "Prebuilt car-collection .blend (one collection per car hung from an anchor EMPTY at its base centre, facing -y), resolved relative to the piece file. Never generated here."
 
-[capabilities.recorrido.inputs.autos]
+[capabilities.tour.inputs.cars]
 type = "array"
 default = []
-description = "Cars to park in the scene, one { nombre, x, y, giro } item each: the collection name in autos-blend and its place in metres. The lab's sedan, camioneta and compacto placements are the reference example, never a default."
+description = "Cars to park in the scene, one { name, x, y, rotation } item each: the collection name in cars-blend and its place in metres. The lab's sedan, camioneta and compacto placements are the reference example, never a default."
 
-[capabilities.recorrido.inputs.autos.items.nombre]
+[capabilities.tour.inputs.cars.items.name]
 type = "string"
 required = true
-description = "Collection name in autos-blend; a name the file does not hold fails the run loudly."
+description = "Collection name in cars-blend; a name the file does not hold fails the run loudly."
 
-[capabilities.recorrido.inputs.autos.items.x]
+[capabilities.tour.inputs.cars.items.x]
 type = "number"
 required = true
 description = "X position in metres, in the scene's own axes; cars are never scaled with the model."
 
-[capabilities.recorrido.inputs.autos.items.y]
+[capabilities.tour.inputs.cars.items.y]
 type = "number"
 required = true
 description = "Y position in metres, in the scene's own axes."
 
-[capabilities.recorrido.inputs.autos.items.giro]
+[capabilities.tour.inputs.cars.items.rotation]
 type = "number"
 default = 0
 description = "Turn about Z in degrees from the -y facing the collection has by default."
 
-[capabilities.recorrido.inputs.cielo]
+[capabilities.tour.inputs.sky]
 type = "array"
 default = []
-description = "Sky as one { id, giro, fuerza } item: the Poly Haven HDRI id, its turn about Z in degrees and the background strength; the scene then has no sun lamp. The runner reads only the first item."
+description = "Sky as one { id, rotation, strength } item: the Poly Haven HDRI id, its turn about Z in degrees and the background strength; the scene then has no sun lamp. The runner reads only the first item."
 
-[capabilities.recorrido.inputs.cielo.items.id]
+[capabilities.tour.inputs.sky.items.id]
 type = "string"
 required = true
 description = "Poly Haven HDRI id, the last part of its polyhaven.com URL; it must already be fetched with blender.assets."
 
-[capabilities.recorrido.inputs.cielo.items.giro]
+[capabilities.tour.inputs.sky.items.rotation]
 type = "number"
 default = 200
 description = "Turn of the HDRI about Z in degrees, which sets where the sun falls."
 
-[capabilities.recorrido.inputs.cielo.items.fuerza]
+[capabilities.tour.inputs.sky.items.strength]
 type = "number"
 default = 1.0
 description = "Background strength of the HDRI sky."
 
-[capabilities.recorrido.inputs.texturas]
+[capabilities.tour.inputs.textures]
 type = "array"
 default = []
-description = "Textures by piece prefix, one { prefijo, id, lado, matiz, saturacion, valor } item each; a prefix without an item keeps its flat MATERIALS colour."
+description = "Textures by piece prefix, one { prefix, id, size, hue, saturation, value } item each; a prefix without an item keeps its flat MATERIALS colour."
 
-[capabilities.recorrido.inputs.texturas.items.prefijo]
+[capabilities.tour.inputs.textures.items.prefix]
 type = "enum"
 values = ["almohada", "cama", "mesa", "muros", "pavimento", "piso", "sillas", "suelo", "vidrio"]
 required = true
-description = "Piece prefix the texture dresses, one of the keys of MATERIALS in escena.py."
+description = "Piece-name prefix the texture dresses, one of the keys of MATERIALS in escena.py; the values come from the piece names in your own CAD model, so they keep the model's spelling."
 
-[capabilities.recorrido.inputs.texturas.items.id]
+[capabilities.tour.inputs.textures.items.id]
 type = "string"
 required = true
 description = "Poly Haven texture id, the last part of its polyhaven.com URL; it must already be fetched with blender.assets."
 
-[capabilities.recorrido.inputs.texturas.items.lado]
+[capabilities.tour.inputs.textures.items.size]
 type = "number"
 default = 2.0
 description = "Tile side in metres of the box projection."
 
-[capabilities.recorrido.inputs.texturas.items.matiz]
+[capabilities.tour.inputs.textures.items.hue]
 type = "number"
 default = 0.5
 description = "Hue adjust of the lab's ajuste triple; 0.5 keeps the hue."
 
-[capabilities.recorrido.inputs.texturas.items.saturacion]
+[capabilities.tour.inputs.textures.items.saturation]
 type = "number"
 default = 1.0
 description = "Saturation adjust of the lab's ajuste triple."
 
-[capabilities.recorrido.inputs.texturas.items.valor]
+[capabilities.tour.inputs.textures.items.value]
 type = "number"
 default = 1.0
 description = "Value adjust of the lab's ajuste triple."
 
-[capabilities.recorrido.inputs.plantas]
+[capabilities.tour.inputs.plants]
 type = "array"
 default = []
-description = "Plants to stand in the scene, one { id, x, y, giro } item each: the Poly Haven model id and its place in metres."
+description = "Plants to stand in the scene, one { id, x, y, rotation } item each: the Poly Haven model id and its place in metres."
 
-[capabilities.recorrido.inputs.plantas.items.id]
+[capabilities.tour.inputs.plants.items.id]
 type = "string"
 required = true
 description = "Poly Haven model id, the last part of its polyhaven.com URL; it must already be fetched with blender.assets."
 
-[capabilities.recorrido.inputs.plantas.items.x]
+[capabilities.tour.inputs.plants.items.x]
 type = "number"
 required = true
 description = "X position in metres, in the scene's own axes."
 
-[capabilities.recorrido.inputs.plantas.items.y]
+[capabilities.tour.inputs.plants.items.y]
 type = "number"
 required = true
 description = "Y position in metres, in the scene's own axes."
 
-[capabilities.recorrido.inputs.plantas.items.giro]
+[capabilities.tour.inputs.plants.items.rotation]
 type = "number"
 default = 0
 description = "Turn about Z in degrees."
 
-[capabilities.recorrido.preview]
+[capabilities.tour.preview]
 viewer = "video"

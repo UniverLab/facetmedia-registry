@@ -68,9 +68,9 @@ how to judge them.
    box.
 2. `blender.assets` → `estudio.assets.json`. Verify: the receipt's files
    are all present.
-3. `blender.foto` → `estudio-foto.png`, from model `estudio.glb`, plus
-   `personas-blend` + `personas` and `autos-blend` + `autos`. The people and
-   cars are `blender.foto` INPUTS, never capabilities of their own. Verify:
+3. `blender.photo` → `estudio-photo.png`, from model `estudio.glb`, plus
+   `people-blend` + `people` and `cars-blend` + `cars`. The people and
+   cars are `blender.photo` INPUTS, never capabilities of their own. Verify:
    look at the PNG — pixel size and the people in frame.
 4. `deck.pagina` → `render-arq.pdf` + `page-01.png`, from
    `render-arq.html`. Verify: one PDF page and its page-01 PNG.
@@ -115,7 +115,7 @@ recipe and its step count and the fields `receta`, `steps` and `packages`.
 - The plans name existing capabilities by id, and a recipe naming a missing
   capability fails its own test. Do not hand-edit the data file to add a
   step.
-- People and cars are `blender.foto` inputs (`personas`, `autos`), not
-  capabilities; there is no `blender.personas` or `blender.autos` to run.
+- People and cars are `blender.photo` inputs (`people`, `cars`), not
+  capabilities; there is no `blender.people` or `blender.cars` to run.
 - `hyperframes.narrado` reads SubRip: hand it `guion.srt`, not the
   whisper `.json` or `.vtt`.

@@ -1,4 +1,4 @@
-"""The dressed scene: fetched sky, textures and plants in foto and recorrido.
+"""The dressed scene: fetched sky, textures and plants in photo and tour.
 
 No real Blender, no network and no facet installed. A stub ``bpy`` answers
 the calls the dressing path makes — the HDRI sky, the box-projected texture
@@ -6,7 +6,7 @@ materials with their bump, and the anchored plant imports — and records a
 trail of what reached the scene: which world lights it, which images loaded
 in which colour space, and where each plant anchor stands.
 
-The failure paths need no stub at all: a repeated ``prefijo`` and a missing
+The failure paths need no stub at all: a repeated ``prefix`` and a missing
 fetched file raise before anything renders, and the message names the
 ``blender.assets`` entry that fetches the file.
 """
@@ -634,19 +634,19 @@ def _load_escena():
 escena = _load_escena()
 
 
-def test_repeated_prefijo_fails_with_the_exact_message() -> None:
-    """Two items with the same prefijo fail before anything renders."""
+def test_repeated_prefix_fails_with_the_exact_message() -> None:
+    """Two items with the same prefix fail before anything renders."""
     with pytest.raises(RuntimeError) as caught:
-        escena.texturas(
-            {"texturas": [{"prefijo": "suelo", "id": "a"}, {"prefijo": "suelo", "id": "b"}]}
+        escena.textures(
+            {"textures": [{"prefix": "suelo", "id": "a"}, {"prefix": "suelo", "id": "b"}]}
         )
-    assert str(caught.value) == "texturas: prefijo repetido: suelo"
+    assert str(caught.value) == "textures: prefix repeated: suelo"
 
 
 def test_missing_texture_names_the_assets_entry() -> None:
     """A texture id that was never fetched names its diff.jpg and the 2k entry."""
     with pytest.raises(RuntimeError) as caught:
-        escena.textured(None, "suelo", {"prefijo": "suelo", "id": "leafy"}, "/no/root")
+        escena.textured(None, "suelo", {"prefix": "suelo", "id": "leafy"}, "/no/root")
     assert str(caught.value) == (
         "missing leafy/diff.jpg: fetch it with blender.assets "
         '[[inputs.assets]] with id = "leafy" and res = "2k"'
@@ -673,13 +673,13 @@ def test_missing_sky_names_the_assets_entry() -> None:
     )
 
 
-def test_cielo_item_reads_only_the_first_item() -> None:
-    """The runner reads the first cielo item and ignores the rest, like camera."""
-    params = {"cielo": [{"id": "first", "giro": 90}, {"id": "second", "giro": 10}]}
-    assert escena.cielo_item(params) == {"id": "first", "giro": 90}
-    assert escena.cielo_item({}) == {}
-    assert escena.cielo_item({"cielo": []}) == {}
-    assert escena.cielo_item({"cielo": "klopp"}) == {}
+def test_sky_item_reads_only_the_first_item() -> None:
+    """The runner reads the first sky item and ignores the rest, like camera."""
+    params = {"sky": [{"id": "first", "rotation": 90}, {"id": "second", "rotation": 10}]}
+    assert escena.sky_item(params) == {"id": "first", "rotation": 90}
+    assert escena.sky_item({}) == {}
+    assert escena.sky_item({"sky": []}) == {}
+    assert escena.sky_item({"sky": "klopp"}) == {}
 
 
 def _stub_bpy() -> object:
@@ -749,18 +749,18 @@ def _request(tmp_path: Path, capability: str, **inputs) -> dict:
 def _dressing_inputs(model: str) -> dict:
     return {
         "model": model,
-        "cielo": [{"id": "kloppenheim_06_puresky", "giro": 200, "fuerza": 1.0}],
-        "texturas": [
+        "sky": [{"id": "kloppenheim_06_puresky", "rotation": 200, "strength": 1.0}],
+        "textures": [
             {
-                "prefijo": "suelo",
+                "prefix": "suelo",
                 "id": "aerial_grass_rock",
-                "lado": 3.0,
-                "matiz": 0.5,
-                "saturacion": 1.0,
-                "valor": 0.9,
+                "size": 3.0,
+                "hue": 0.5,
+                "saturation": 1.0,
+                "value": 0.9,
             }
         ],
-        "plantas": [{"id": "shrub_02", "x": 7.4, "y": 2.25, "giro": 90}],
+        "plants": [{"id": "shrub_02", "x": 7.4, "y": 2.25, "rotation": 90}],
     }
 
 
@@ -784,17 +784,17 @@ def _trail(tmp_path: Path) -> dict:
     return json.loads((tmp_path / "trail.json").read_text(encoding="utf-8"))
 
 
-def test_foto_dresses_sky_textures_and_plants(tmp_path: Path, runner, monkeypatch) -> None:
+def test_photo_dresses_sky_textures_and_plants(tmp_path: Path, runner, monkeypatch) -> None:
     """Every dressing input reaches the scene builder: sky, maps and anchor."""
     model = _model(tmp_path)
-    request = _request(tmp_path, "blender.foto", **_dressing_inputs(str(model)))
+    request = _request(tmp_path, "blender.photo", **_dressing_inputs(str(model)))
 
     result = _call(runner, tmp_path, request, monkeypatch)
 
-    assert result["assets"][0]["file"] == "estudio-foto.png"
+    assert result["assets"][0]["file"] == "estudio-photo.png"
     trail = _trail(tmp_path)
     sky = trail["sky"]
-    assert sky["world"] == "cielo"
+    assert sky["world"] == "sky"
     assert sky["rotation"] == pytest.approx(math.radians(200))
     assert sky["strength"] == 1.0
     assert sky["image"].endswith("kloppenheim_06_puresky/sky.hdr")
@@ -826,11 +826,11 @@ def test_foto_dresses_sky_textures_and_plants(tmp_path: Path, runner, monkeypatc
     assert trail["flat"]["muros"] == [0.92, 0.91, 0.88, 1]
 
 
-def test_cielo_only_adds_no_sun_lamp(tmp_path: Path, runner, monkeypatch) -> None:
+def test_sky_only_adds_no_sun_lamp(tmp_path: Path, runner, monkeypatch) -> None:
     """A sky without textures or plants still replaces the procedural sun."""
     model = _model(tmp_path)
     request = _request(
-        tmp_path, "blender.foto", model=str(model), cielo=[{"id": "kloppenheim_06_puresky"}]
+        tmp_path, "blender.photo", model=str(model), sky=[{"id": "kloppenheim_06_puresky"}]
     )
 
     _call(runner, tmp_path, request, monkeypatch)
@@ -844,15 +844,15 @@ def test_cielo_only_adds_no_sun_lamp(tmp_path: Path, runner, monkeypatch) -> Non
     assert trail["flat"]["suelo"] == [0.80, 0.80, 0.78, 1]
 
 
-def test_recorrido_dresses_the_same_scene(tmp_path: Path, runner, monkeypatch) -> None:
+def test_tour_dresses_the_same_scene(tmp_path: Path, runner, monkeypatch) -> None:
     """The tour reads the same three inputs through the same scene builder."""
     model = _model(tmp_path)
     inputs = _dressing_inputs(str(model)) | {"seconds": 2, "fps": 12}
-    request = _request(tmp_path, "blender.recorrido", **inputs)
+    request = _request(tmp_path, "blender.tour", **inputs)
 
     result = _call(runner, tmp_path, request, monkeypatch)
 
-    assert result["assets"][0]["file"] == "estudio-recorrido.mp4"
+    assert result["assets"][0]["file"] == "estudio-tour.mp4"
     trail = _trail(tmp_path)
     assert trail["render_calls"] == [{"write_still": False, "animation": True}]
     assert trail["camera"] == "camara"
@@ -867,13 +867,13 @@ def test_recorrido_dresses_the_same_scene(tmp_path: Path, runner, monkeypatch) -
 def test_missing_texture_fails_the_run_with_the_exact_message(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
-    """A texturas id with no fetched folder fails the run, naming the entry."""
+    """A textures id with no fetched folder fails the run, naming the entry."""
     model = _model(tmp_path)
     request = _request(
         tmp_path,
-        "blender.foto",
+        "blender.photo",
         model=str(model),
-        texturas=[{"prefijo": "suelo", "id": "leafy"}],
+        textures=[{"prefix": "suelo", "id": "leafy"}],
     )
 
     with pytest.raises(RuntimeError) as caught:
@@ -885,10 +885,10 @@ def test_missing_texture_fails_the_run_with_the_exact_message(
     )
 
 
-def test_foto_bakes_before_materials(tmp_path: Path, runner, monkeypatch) -> None:
-    """The foto run bakes every piece before any material is created."""
+def test_photo_bakes_before_materials(tmp_path: Path, runner, monkeypatch) -> None:
+    """The photo run bakes every piece before any material is created."""
     model = _model(tmp_path)
-    request = _request(tmp_path, "blender.foto", model=str(model))
+    request = _request(tmp_path, "blender.photo", model=str(model))
 
     _call(runner, tmp_path, request, monkeypatch)
 

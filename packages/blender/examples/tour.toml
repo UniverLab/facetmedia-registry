@@ -2,9 +2,9 @@
 # in Eevee. estudio.glb ships beside this piece.
 [inputs]
 model = "estudio.glb"
-azimut = [{ inicio = -75, fin = -15 }]
-elevacion = [{ inicio = 55, fin = 40 }]
-distancia = [{ inicio = 14.0, fin = 10.5 }]
+azimuth = [{ start = -75, end = -15 }]
+elevation = [{ start = 55, end = 40 }]
+distance = [{ start = 14.0, end = 10.5 }]
 focal = 30
 seconds = 10
 fps = 24

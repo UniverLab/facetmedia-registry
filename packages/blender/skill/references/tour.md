@@ -38,7 +38,7 @@ in the shared scene so the tour and the photo read as the same place.
 ## The move: one smoothstep, one keyframe per frame
 
 The camera starts at the piece's start triple and ends at its end triple. The
-lab's defaults are azimut -75 → -15, elevacion 55 → 40 and distancia 14.0 →
+lab's defaults are azimuth -75 → -15, elevation 55 → 40 and distance 14.0 →
 10.5 m, with a 30 mm lens and a 500 m far clip.
 
 The interpolation is the camera-crane ease, not a line:
@@ -49,7 +49,7 @@ def smooth(t):
 ```
 
 For each frame the runner computes `t = smooth(n / (frames - 1))`, walks each
-of the three legs from `inicio` to `fin`, places the camera on the orbit and
+of the three legs from `start` to `end`, places the camera on the orbit and
 inserts one `location` and one `rotation_euler` keyframe on that frame. 240
 frames therefore mean 240 location keys and 240 rotation keys, on frames 1 to
 240. Blender interpolates between them; the pose on screen is the ease, so the
@@ -59,11 +59,11 @@ The pose is a plain orbit around the model's centre:
 
 ```python
 offset = (
-    distance * cos(elevacion) * cos(azimut),
-    distance * cos(elevacion) * sin(azimut),
-    distance * sin(elevacion),
+    distance * cos(elevation) * cos(azimuth),
+    distance * cos(elevation) * sin(azimuth),
+    distance * sin(elevation),
 )
-rotation = (pi / 2 - elevacion, 0.0, azimut + pi / 2)
+rotation = (pi / 2 - elevation, 0.0, azimuth + pi / 2)
 ```
 
 ## The file Blender writes
@@ -83,7 +83,7 @@ scene.render.use_file_extension = False
 `media_type = "VIDEO"` and `file_format = "FFMPEG"` pick the video writer;
 `MPEG4` with `H264` is the container and codec; `HIGH` is the constant-rate
 factor. `use_file_extension = False` keeps the exact output path, so the clip
-lands as `<model>-recorrido.mp4` and the probe reads its width, height, frame
+lands as `<model>-tour.mp4` and the probe reads its width, height, frame
 count and fps back from the file.
 
 ## What `verify` checks

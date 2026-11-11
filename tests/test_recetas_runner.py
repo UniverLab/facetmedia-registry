@@ -33,7 +33,7 @@ CHAINS = {
         "whisper-subs.subtitulos",
         "hyperframes.narrado",
     ],
-    "render-arq": ["cad.solid", "blender.assets", "blender.foto", "deck.pagina"],
+    "render-arq": ["cad.solid", "blender.assets", "blender.photo", "deck.pagina"],
     "material-voz": ["kokoro.speak", "acestep.bed", "deck.slides"],
     "demo-herramienta": ["demostage.demo", "deck.slides"],
 }

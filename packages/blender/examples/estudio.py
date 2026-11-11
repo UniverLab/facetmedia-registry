@@ -2,7 +2,7 @@
 # requires-python = ">=3.11,<3.14"
 # dependencies = ["cadquery==2.8.0"]
 # ///
-"""The lab's study as a CadQuery Assembly, exported as glTF for blender.foto.
+"""The lab's study as a CadQuery Assembly, exported as glTF for blender.photo.
 
 Each piece is one Assembly element, and its name is the material prefix
 ``render.py`` matches: muros, piso, vidrio-*, cama, almohada, mesa, sillas.

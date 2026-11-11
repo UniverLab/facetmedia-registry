@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "blender"
 MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
 INDEX = tomllib.loads((ROOT / "index.toml").read_text(encoding="utf-8"))
-CAPABILITY = MANIFEST["capabilities"]["foto"]
+CAPABILITY = MANIFEST["capabilities"]["photo"]
 INPUTS = CAPABILITY["inputs"]
 READ = (PACKAGE / "README.md").read_text(encoding="utf-8")
 SKILL = (PACKAGE / "skill" / "SKILL.md").read_text(encoding="utf-8")
@@ -42,9 +42,9 @@ EXPOSURE = -0.6
 #: The tour's frame-rate bounds, from the spec.
 FPS_MIN = 12
 FPS_MAX = 60
-#: The dressing defaults the manifest pins for foto and recorrido alike.
-GIRO_DEFAULT = 200
-LADO_DEFAULT = 2.0
+#: The dressing defaults the manifest pins for photo and tour alike.
+ROTATION_DEFAULT = 200
+SIZE_DEFAULT = 2.0
 
 
 def _versions(value: str) -> tuple[int, int, int]:
@@ -138,30 +138,30 @@ def test_the_index_carries_the_package_in_order() -> None:
 def test_the_capability_is_the_image_kind() -> None:
     assert CAPABILITY["kind"] == "image"
     assert CAPABILITY["preview"] == {"viewer": "image"}
-    assert MANIFEST["capabilities"].keys() == {"foto", "assets", "producto", "recorrido"}
+    assert MANIFEST["capabilities"].keys() == {"photo", "assets", "product", "tour"}
 
 
 def test_the_tour_is_the_video_kind_with_the_lab_recipe() -> None:
-    """blender.recorrido is the Eevee camera tour: video kind, video viewer."""
-    tour = MANIFEST["capabilities"]["recorrido"]
+    """blender.tour is the Eevee camera tour: video kind, video viewer."""
+    tour = MANIFEST["capabilities"]["tour"]
     assert tour["kind"] == "video"
     assert tour["preview"] == {"viewer": "video"}
     assert set(tour["inputs"]) == {
         "model",
-        "azimut",
-        "elevacion",
-        "distancia",
+        "azimuth",
+        "elevation",
+        "distance",
         "focal",
         "seconds",
         "fps",
         "seed",
-        "personas-blend",
-        "personas",
-        "autos-blend",
-        "autos",
-        "cielo",
-        "texturas",
-        "plantas",
+        "people-blend",
+        "people",
+        "cars-blend",
+        "cars",
+        "sky",
+        "textures",
+        "plants",
     }
     assert tour["inputs"]["model"]["type"] == "path"
     assert tour["inputs"]["model"]["required"] is True
@@ -170,25 +170,25 @@ def test_the_tour_is_the_video_kind_with_the_lab_recipe() -> None:
 
 
 def test_the_tour_pairs_carry_the_spec_ranges_and_defaults() -> None:
-    """Each leg is one { inicio, fin } item, the angle ranges foto already uses."""
-    inputs = MANIFEST["capabilities"]["recorrido"]["inputs"]
+    """Each leg is one { start, end } item, the angle ranges photo already uses."""
+    inputs = MANIFEST["capabilities"]["tour"]["inputs"]
     expected = {
-        "azimut": ((-75, -15), (-360, 360)),
-        "elevacion": ((55, 40), (-89, 89)),
-        "distancia": ((14.0, 10.5), (0.5, 200)),
+        "azimuth": ((-75, -15), (-360, 360)),
+        "elevation": ((55, 40), (-89, 89)),
+        "distance": ((14.0, 10.5), (0.5, 200)),
     }
     for name, (defaults, (low, high)) in expected.items():
         field = inputs[name]
         assert field["type"] == "array", name
-        assert set(field["items"]) == {"inicio", "fin"}, name
-        for key, value in zip(("inicio", "fin"), defaults, strict=True):
+        assert set(field["items"]) == {"start", "end"}, name
+        for key, value in zip(("start", "end"), defaults, strict=True):
             item = field["items"][key]
             assert item["default"] == value, (name, key)
             assert (item["min"], item["max"]) == (low, high), (name, key)
 
 
 def test_the_tour_scalars_carry_the_spec_ranges() -> None:
-    inputs = MANIFEST["capabilities"]["recorrido"]["inputs"]
+    inputs = MANIFEST["capabilities"]["tour"]["inputs"]
     assert (inputs["focal"]["default"], inputs["focal"]["min"], inputs["focal"]["max"]) == (
         30,
         18,
@@ -231,77 +231,77 @@ def test_the_model_input_is_required_and_relative() -> None:
     assert "STEP" in model["description"]
 
 
-def test_the_scene_parameters_are_camera_giro_and_exposure() -> None:
+def test_the_scene_parameters_are_camera_rotation_and_exposure() -> None:
     """The scene the approved render sets, no more and no less."""
     assert set(INPUTS) == {
         "model",
         "camera",
-        "giro",
+        "rotation",
         "exposure",
-        "personas-blend",
-        "personas",
-        "autos-blend",
-        "autos",
-        "cielo",
-        "texturas",
-        "plantas",
+        "people-blend",
+        "people",
+        "cars-blend",
+        "cars",
+        "sky",
+        "textures",
+        "plants",
     }
     camera = INPUTS["camera"]
     assert camera["type"] == "array"
-    assert set(camera["items"]) == {"azimut", "elevacion", "escala"}
-    assert INPUTS["giro"]["default"] == 0
+    assert set(camera["items"]) == {"azimuth", "elevation", "scale"}
+    assert INPUTS["rotation"]["default"] == 0
     assert INPUTS["exposure"]["default"] == EXPOSURE
     assert INPUTS["exposure"]["min"] < EXPOSURE < INPUTS["exposure"]["max"]
 
 
 def test_people_are_piece_data_on_both_scene_capabilities() -> None:
     """FR1: the prebuilt blend plus one placement item per person, both scenes."""
-    for capability in ("foto", "recorrido"):
+    for capability in ("photo", "tour"):
         inputs = MANIFEST["capabilities"][capability]["inputs"]
-        blend = inputs["personas-blend"]
+        blend = inputs["people-blend"]
         assert blend["type"] == "path", capability
         assert "required" not in blend, capability
         assert "Never generated here" in blend["description"], capability
         assert "projects/" not in blend["description"], capability
-        people = inputs["personas"]
+        people = inputs["people"]
         assert people["type"] == "array", capability
         assert people["default"] == [], capability
         assert "required" not in people, capability
         items = people["items"]
-        assert set(items) == {"nombre", "x", "y", "giro"}, capability
-        assert items["nombre"]["type"] == "string"
-        assert items["nombre"]["required"] is True
+        assert set(items) == {"name", "x", "y", "rotation"}, capability
+        assert items["name"]["type"] == "string"
+        assert items["name"]["required"] is True
         for axis in ("x", "y"):
             assert items[axis]["type"] == "number", (capability, axis)
             assert items[axis]["required"] is True, (capability, axis)
-        assert items["giro"]["type"] == "number"
-        assert items["giro"]["default"] == 0
-        assert "-y" in items["giro"]["description"]
+        assert items["rotation"]["type"] == "number"
+        assert items["rotation"]["default"] == 0
+        assert "-y" in items["rotation"]["description"]
 
 
 def test_cars_are_piece_data_on_both_scene_capabilities() -> None:
     """FR1: the prebuilt car blend plus one placement item per car, both scenes."""
-    for capability in ("foto", "recorrido"):
+    for capability in ("photo", "tour"):
         inputs = MANIFEST["capabilities"][capability]["inputs"]
-        blend = inputs["autos-blend"]
+        blend = inputs["cars-blend"]
         assert blend["type"] == "path", capability
         assert "required" not in blend, capability
         assert "Never generated here" in blend["description"], capability
         assert "projects/" not in blend["description"], capability
-        cars = inputs["autos"]
+        cars = inputs["cars"]
         assert cars["type"] == "array", capability
         assert cars["default"] == [], capability
         assert "required" not in cars, capability
         items = cars["items"]
-        assert set(items) == {"nombre", "x", "y", "giro"}, capability
-        assert items["nombre"]["type"] == "string"
-        assert items["nombre"]["required"] is True
+        assert set(items) == {"name", "x", "y", "rotation"}, capability
+        assert items["name"]["type"] == "string"
+        assert items["name"]["required"] is True
         for axis in ("x", "y"):
             assert items[axis]["type"] == "number", (capability, axis)
             assert items[axis]["required"] is True, (capability, axis)
-        assert items["giro"]["type"] == "number"
-        assert items["giro"]["default"] == 0
-        assert "-y" in items["giro"]["description"]
+        assert items["rotation"]["type"] == "number"
+        assert items["rotation"]["default"] == 0
+        assert "-y" in items["rotation"]["description"]
 
 
 def test_the_skill_validates_in_the_core_format() -> None:
@@ -318,7 +318,7 @@ def test_the_skill_validates_in_the_core_format() -> None:
     body = rest[0]
     positions = [body.index(heading) for heading in HEADINGS]
     assert positions == sorted(positions)
-    assert "blender.foto" in body
+    assert "blender.photo" in body
 
 
 def _load_escena():
@@ -331,43 +331,44 @@ def _load_escena():
 
 
 def test_the_dressing_inputs_ride_on_both_scene_capabilities() -> None:
-    """cielo, texturas and plantas are arrays of fixed-field items, both scenes."""
-    for capability in ("foto", "recorrido"):
+    """sky, textures and plants are arrays of fixed-field items, both scenes."""
+    for capability in ("photo", "tour"):
         inputs = MANIFEST["capabilities"][capability]["inputs"]
-        for name in ("cielo", "texturas", "plantas"):
+        for name in ("sky", "textures", "plants"):
             field = inputs[name]
             assert field["type"] == "array", (capability, name)
             assert field["default"] == [], (capability, name)
             assert "required" not in field, (capability, name)
             assert "one" in field["description"], (capability, name)
-        sky = inputs["cielo"]["items"]
-        assert set(sky) == {"id", "giro", "fuerza"}, capability
+        sky = inputs["sky"]["items"]
+        assert set(sky) == {"id", "rotation", "strength"}, capability
         assert sky["id"]["type"] == "string" and sky["id"]["required"] is True
-        assert sky["giro"]["default"] == GIRO_DEFAULT and sky["giro"]["type"] == "number"
-        assert sky["fuerza"]["default"] == 1.0 and sky["fuerza"]["type"] == "number"
-        cloth = inputs["texturas"]["items"]
-        assert set(cloth) == {"prefijo", "id", "lado", "matiz", "saturacion", "valor"}
-        assert cloth["prefijo"]["type"] == "enum" and cloth["prefijo"]["required"] is True
+        assert sky["rotation"]["default"] == ROTATION_DEFAULT
+        assert sky["rotation"]["type"] == "number"
+        assert sky["strength"]["default"] == 1.0 and sky["strength"]["type"] == "number"
+        cloth = inputs["textures"]["items"]
+        assert set(cloth) == {"prefix", "id", "size", "hue", "saturation", "value"}
+        assert cloth["prefix"]["type"] == "enum" and cloth["prefix"]["required"] is True
         assert cloth["id"]["type"] == "string" and cloth["id"]["required"] is True
-        assert cloth["lado"]["default"] == LADO_DEFAULT and cloth["lado"]["type"] == "number"
-        assert (cloth["matiz"]["default"], cloth["saturacion"]["default"]) == (0.5, 1.0)
-        assert cloth["valor"]["default"] == 1.0
-        greens = inputs["plantas"]["items"]
-        assert set(greens) == {"id", "x", "y", "giro"}, capability
+        assert cloth["size"]["default"] == SIZE_DEFAULT and cloth["size"]["type"] == "number"
+        assert (cloth["hue"]["default"], cloth["saturation"]["default"]) == (0.5, 1.0)
+        assert cloth["value"]["default"] == 1.0
+        greens = inputs["plants"]["items"]
+        assert set(greens) == {"id", "x", "y", "rotation"}, capability
         assert greens["id"]["required"] is True
         assert greens["x"]["required"] is True and greens["y"]["required"] is True
-        assert greens["giro"]["default"] == 0
+        assert greens["rotation"]["default"] == 0
         for group in (sky, cloth, greens):
             for item in group.values():
                 assert item["description"], (capability, item)
 
 
-def test_the_prefijo_enum_is_the_material_set() -> None:
-    """The texturas prefijo enum is exactly the keys of escena.MATERIALS."""
+def test_the_prefix_enum_is_the_material_set() -> None:
+    """The textures prefix enum is exactly the keys of escena.MATERIALS."""
     expected = set(_load_escena().MATERIALS)
     assert expected and "pavimento" in expected
-    for capability in ("foto", "recorrido"):
-        values = MANIFEST["capabilities"][capability]["inputs"]["texturas"]["items"]["prefijo"][
+    for capability in ("photo", "tour"):
+        values = MANIFEST["capabilities"][capability]["inputs"]["textures"]["items"]["prefix"][
             "values"
         ]
         assert set(values) == expected, capability
@@ -385,4 +386,4 @@ def test_the_readme_documents_the_host_contract_the_route_and_the_rule() -> None
     assert "AgX - Medium High Contrast" in READ
     assert "-0.6" in READ
     assert "machine_cannot" in READ
-    assert "personas-blend" in READ
+    assert "people-blend" in READ

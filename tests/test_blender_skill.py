@@ -2,8 +2,8 @@
 
 The skill is the only place an agent learns the package, so these tests pin
 what a person reads: the front matter and the four headings the core requires
-in order, every capability id (``blender.foto``, ``blender.producto``,
-``blender.assets``, ``blender.recorrido``), the two hyphenated input names
+in order, every capability id (``blender.photo``, ``blender.product``,
+``blender.assets``, ``blender.tour``), the two hyphenated input names
 facet resolves, the tour example over the shipped glTF, and the two reference
 files.
 """
@@ -22,7 +22,7 @@ EXAMPLES = PACKAGE / "examples"
 REFERENCES = PACKAGE / "skill" / "references"
 MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
 HEADINGS = ("## When to use", "## Pieces", "## Judging the result", "## Pitfalls")
-CAPABILITIES = ("blender.foto", "blender.producto", "blender.assets", "blender.recorrido")
+CAPABILITIES = ("blender.photo", "blender.product", "blender.assets", "blender.tour")
 DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
 #: A reference the skill cites, as ``references/<name>.md``.
@@ -55,13 +55,13 @@ def test_capability_ids_and_hyphenated_inputs() -> None:
     _, body = _front_matter()
     for capability in CAPABILITIES:
         assert capability in body, capability
-    assert "personas-blend" in body
-    assert "autos-blend" in body
+    assert "people-blend" in body
+    assert "cars-blend" in body
     # The manifest is the source of truth for the spelling facet resolves.
-    for capability in ("foto", "recorrido"):
+    for capability in ("photo", "tour"):
         inputs = MANIFEST["capabilities"][capability]["inputs"]
-        assert "personas-blend" in inputs, capability
-        assert "autos-blend" in inputs, capability
+        assert "people-blend" in inputs, capability
+        assert "cars-blend" in inputs, capability
 
 
 def test_the_skill_keeps_the_lab_numbers_verbatim() -> None:
@@ -85,7 +85,7 @@ def test_the_skill_carries_both_placement_contracts() -> None:
     _, body = _front_matter()
     for token in ("-y", "floor", "after", "dress", "anchor", "1.5 m", "52°"):
         assert token in body, token
-    assert "personas-blend" in body and "autos-blend" in body
+    assert "people-blend" in body and "cars-blend" in body
 
 
 def test_the_skill_records_the_rejected_alternatives() -> None:
@@ -108,28 +108,28 @@ def test_every_reference_the_skill_cites_exists() -> None:
         assert path.stat().st_size > 0, name
 
 
-def test_recorrido_toml_parses_model_glb() -> None:
+def test_tour_toml_parses_model_glb() -> None:
     """The tour example parses and points at the glb that ships beside it."""
-    piece = EXAMPLES / "recorrido.toml"
+    piece = EXAMPLES / "tour.toml"
     assert piece.is_file()
     data = tomllib.loads(piece.read_text(encoding="utf-8"))
     inputs = data["inputs"]
     model = EXAMPLES / inputs["model"]
     assert model.resolve() == (EXAMPLES / "estudio.glb").resolve()
     assert model.is_file()
-    # The lab's start/end triples, one { inicio, fin } item each.
-    assert inputs["azimut"] == [{"inicio": -75, "fin": -15}]
-    assert inputs["elevacion"] == [{"inicio": 55, "fin": 40}]
-    assert inputs["distancia"] == [{"inicio": 14.0, "fin": 10.5}]
+    # The lab's start/end triples, one { start, end } item each.
+    assert inputs["azimuth"] == [{"start": -75, "end": -15}]
+    assert inputs["elevation"] == [{"start": 55, "end": 40}]
+    assert inputs["distance"] == [{"start": 14.0, "end": 10.5}]
     assert (inputs["focal"], inputs["seconds"], inputs["fps"]) == (30, 10, 24)
 
 
-def test_recorrido_toml_is_a_runnable_tour_piece() -> None:
-    """The example carries every input ``blender.recorrido`` reads, no extras."""
-    data = tomllib.loads((EXAMPLES / "recorrido.toml").read_text(encoding="utf-8"))
-    tour_inputs = set(MANIFEST["capabilities"]["recorrido"]["inputs"])
+def test_tour_toml_is_a_runnable_tour_piece() -> None:
+    """The example carries every input ``blender.tour`` reads, no extras."""
+    data = tomllib.loads((EXAMPLES / "tour.toml").read_text(encoding="utf-8"))
+    tour_inputs = set(MANIFEST["capabilities"]["tour"]["inputs"])
     assert set(data["inputs"]) <= tour_inputs
-    assert {"model", "azimut", "elevacion", "distancia", "focal", "seconds", "fps"} == set(
+    assert {"model", "azimuth", "elevation", "distance", "focal", "seconds", "fps"} == set(
         data["inputs"]
     )
 
@@ -145,7 +145,7 @@ def test_references_exist() -> None:
     for token in ("BLENDER_EEVEE", "smooth", "FFMPEG", "H264", "1280x720"):
         assert token in tour_text, token
     people_text = people.read_text(encoding="utf-8")
-    for token in ("personas-blend", "autos-blend", "runner_failed", "not_found", "MPFB"):
+    for token in ("people-blend", "cars-blend", "runner_failed", "not_found", "MPFB"):
         assert token in people_text, token
 
 
@@ -180,21 +180,21 @@ def test_skill_never_asks_to_extend_materials() -> None:
 
 
 def _dressing_example() -> dict:
-    """The Dressing section's foto piece: the block that carries cielo."""
+    """The Dressing section's photo piece: the block that carries sky."""
     blocks = re.findall(r"```toml\n(.*?)```", SKILL, re.DOTALL)
-    dressed = [tomllib.loads(block) for block in blocks if "cielo" in block]
-    assert len(dressed) == 1, "one foto piece carries the dressing inputs"
+    dressed = [tomllib.loads(block) for block in blocks if "\nsky =" in block]
+    assert len(dressed) == 1, "one photo piece carries the dressing inputs"
     return dressed[0]["inputs"]
 
 
 def test_the_dressing_example_uses_only_declared_inputs() -> None:
     """The example parses and stays inside the manifest: keys, fields, enum."""
     example = _dressing_example()
-    declared = MANIFEST["capabilities"]["foto"]["inputs"]
+    declared = MANIFEST["capabilities"]["photo"]["inputs"]
     assert set(example) <= set(declared)
-    assert {"model", "cielo", "texturas", "plantas"} <= set(example)
-    enum = set(declared["texturas"]["items"]["prefijo"]["values"])
-    for name in ("cielo", "texturas", "plantas"):
+    assert {"model", "sky", "textures", "plants"} <= set(example)
+    enum = set(declared["textures"]["items"]["prefix"]["values"])
+    for name in ("sky", "textures", "plants"):
         items = declared[name]["items"]
         required = {key for key, item in items.items() if item.get("required")}
         defaults = {key for key, item in items.items() if "default" in item}
@@ -202,7 +202,7 @@ def test_the_dressing_example_uses_only_declared_inputs() -> None:
         for entry in example[name]:
             assert set(entry) <= set(items), (name, entry)
             assert required <= set(entry), (name, entry)
-    assert {entry["prefijo"] for entry in example["texturas"]} <= enum
+    assert {entry["prefix"] for entry in example["textures"]} <= enum
 
 
 def test_the_dressing_example_fetches_before_rendering() -> None:
@@ -212,9 +212,9 @@ def test_the_dressing_example_fetches_before_rendering() -> None:
     assert len(pieces) == 1, "one blender.assets piece fetches the dressing set"
     entries = {entry["id"]: entry for entry in pieces[0]["inputs"]["assets"]}
     example = _dressing_example()
-    wanted = {example["cielo"][0]["id"]}
-    wanted |= {entry["id"] for entry in example["texturas"]}
-    wanted |= {entry["id"] for entry in example["plantas"]}
+    wanted = {example["sky"][0]["id"]}
+    wanted |= {entry["id"] for entry in example["textures"]}
+    wanted |= {entry["id"] for entry in example["plants"]}
     assert wanted <= set(entries)
     for asset_id in wanted:
         assert entries[asset_id]["res"] in ("1k", "2k")

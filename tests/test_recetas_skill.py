@@ -4,7 +4,7 @@ The skill is the only place an agent learns the recipes, so these tests pin
 what a person reads: the front matter, the four headings the core requires
 in order, one recipe per complete piece with the same chains the data file
 carries, and that every named capability resolves against the packages in
-this registry. People and cars are ``blender.foto`` inputs, never
+this registry. People and cars are ``blender.photo`` inputs, never
 capabilities, and no references directory ships.
 """
 
@@ -32,7 +32,7 @@ CHAINS = {
         "whisper-subs.subtitulos",
         "hyperframes.narrado",
     ],
-    "render-arq": ["cad.solid", "blender.assets", "blender.foto", "deck.pagina"],
+    "render-arq": ["cad.solid", "blender.assets", "blender.photo", "deck.pagina"],
     "material-voz": ["kokoro.speak", "acestep.bed", "deck.slides"],
     "demo-herramienta": ["demostage.demo", "deck.slides"],
 }
@@ -100,16 +100,16 @@ def test_the_skill_carries_each_handoff_and_verification() -> None:
             assert verify in flat, f"{receta}: {step['verify']} missing"
 
 
-def test_personas_and_autos_are_foto_inputs_not_capabilities() -> None:
+def test_people_and_cars_are_photo_inputs_not_capabilities() -> None:
     capabilities = _registry_capabilities()
-    assert "blender.personas" not in capabilities
-    assert "blender.autos" not in capabilities
-    foto = tomllib.loads(
+    assert "blender.people" not in capabilities
+    assert "blender.cars" not in capabilities
+    photo = tomllib.loads(
         (ROOT / "packages" / "blender" / "package.toml").read_text(encoding="utf-8")
-    )["capabilities"]["foto"]["inputs"]
-    assert "personas" in foto and "autos" in foto
+    )["capabilities"]["photo"]["inputs"]
+    assert "people" in photo and "cars" in photo
     body = _body()
-    assert "personas-blend" in body and "autos-blend" in body
+    assert "people-blend" in body and "cars-blend" in body
     assert "INPUTS, never capabilities" in body
 
 

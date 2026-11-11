@@ -1,6 +1,6 @@
 """The product shot: one CAD part in a photographic studio, on Cycles.
 
-``blender.producto`` photographs the STL that ``cad.solid`` writes beside the
+``blender.product`` photographs the STL that ``cad.solid`` writes beside the
 piece: the part is imported in millimetres, scaled to metres, dressed in one
 metallic Principled material and shot at 1200x1200 under two area lights
 against a dark backdrop. The recipe is the lab's approved
@@ -36,16 +36,16 @@ LOOK = "AgX - Medium High Contrast"
 SEED = 0
 #: Name -> (base colour, metallic, roughness).
 MATERIALS = {
-    "aluminio-cepillado": ((0.75, 0.76, 0.78), 1.0, 0.38),
-    "acero": ((0.55, 0.57, 0.60), 1.0, 0.22),
+    "brushed-aluminum": ((0.75, 0.76, 0.78), 1.0, 0.38),
+    "steel": ((0.55, 0.57, 0.60), 1.0, 0.22),
 }
 #: Name -> linear RGB of the seamless backdrop.
 BACKDROPS = {
-    "grafito": (0.02, 0.02, 0.025),
-    "cemento": (0.09, 0.09, 0.095),
+    "graphite": (0.02, 0.02, 0.025),
+    "concrete": (0.09, 0.09, 0.095),
 }
-DEFAULT_MATERIAL = "aluminio-cepillado"
-DEFAULT_BACKDROP = "grafito"
+DEFAULT_MATERIAL = "brushed-aluminum"
+DEFAULT_BACKDROP = "graphite"
 #: The reference the light rule is pinned to: 6 cm across is 4 W at 50 cm.
 REFERENCE_SPAN = 0.06
 REFERENCE_ENERGY = 4.0

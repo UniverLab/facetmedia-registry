@@ -3,7 +3,7 @@
 No real Blender and no network. A stub ``bpy`` records what the runner did: the
 materials dressed before any library load, each person's root location, scale
 and yaw after the collection was linked, and where the camera came in the
-order. The prebuilt ``personas.blend`` is a JSON catalog of collection names
+order. The prebuilt ``people.blend`` is a JSON catalog of collection names
 and root counts, so a name the file does not hold and a collection that holds
 two roots are both reproducible without the MPFB add-on.
 """
@@ -27,9 +27,9 @@ RUNNER = PACKAGE / "runner.py"
 FLOOR_DROP = 0.001
 #: The lab's reference triple, from projects/prueba-render-arq/escena.py:45.
 PEOPLE = [
-    {"nombre": "luis", "x": 3.0, "y": 2.6, "giro": 90},
-    {"nombre": "ana", "x": 4.5, "y": 3.85, "giro": 180},
-    {"nombre": "sara", "x": 1.45, "y": -1.3, "giro": 180},
+    {"name": "luis", "x": 3.0, "y": 2.6, "rotation": 90},
+    {"name": "ana", "x": 4.5, "y": 3.85, "rotation": 180},
+    {"name": "sara", "x": 1.45, "y": -1.3, "rotation": 180},
 ]
 CATALOG = {"luis": 1, "ana": 1, "sara": 1}
 #: The lab's study pieces: names are the material prefixes.
@@ -245,7 +245,7 @@ class LibraryCollection:
 
 
 def _catalog():
-    source = os.environ.get("STUB_PERSONAS", "")
+    source = os.environ.get("STUB_PEOPLE", "")
     return json.loads(Path(source).read_text()) if source else {}
 
 
@@ -568,7 +568,7 @@ def _scene(tmp_path: Path) -> Path:
 
 
 def _catalog(tmp_path: Path, names: dict[str, int]) -> Path:
-    path = tmp_path / "personas.json"
+    path = tmp_path / "people.json"
     path.write_text(json.dumps(names), encoding="utf-8")
     return path
 
@@ -580,12 +580,12 @@ def _model(tmp_path: Path) -> Path:
 
 
 def _blend(tmp_path: Path) -> Path:
-    path = tmp_path / "personas.blend"
+    path = tmp_path / "people.blend"
     path.write_bytes(b"BLENDER-stub")
     return path
 
 
-def _request(tmp_path: Path, verb: str, capability: str = "blender.foto", **inputs) -> dict:
+def _request(tmp_path: Path, verb: str, capability: str = "blender.photo", **inputs) -> dict:
     out = tmp_path / "out"
     out.mkdir(exist_ok=True)
     return {
@@ -607,7 +607,7 @@ def _env(tmp_path: Path, catalog: dict[str, int] | None = None) -> dict[str, str
         "STUB_BPY": str(_stub_bpy(tmp_path)),
         "STUB_SCENE": str(_scene(tmp_path)),
         "STUB_TRAIL": str(tmp_path / "trail.json"),
-        "STUB_PERSONAS": str(_catalog(tmp_path, CATALOG if catalog is None else catalog)),
+        "STUB_PEOPLE": str(_catalog(tmp_path, CATALOG if catalog is None else catalog)),
     }
     env.pop("PYTHONPATH", None)
     return env
@@ -651,7 +651,7 @@ def test_people_load_after_dress_and_stand_on_the_floor(tmp_path: Path) -> None:
         tmp_path,
         "run",
         model=str(model),
-        **{"personas-blend": str(_blend(tmp_path)), "personas": PEOPLE},
+        **{"people-blend": str(_blend(tmp_path)), "people": PEOPLE},
     )
 
     done, result_path = _call("run", request, tmp_path, _env(tmp_path))
@@ -665,25 +665,25 @@ def test_people_load_after_dress_and_stand_on_the_floor(tmp_path: Path) -> None:
     assert last_dress < first_load
     floor_z = trail["floor"][2]
     for placement in PEOPLE:
-        root = trail["people"][f"{placement['nombre']}-root"]
+        root = trail["people"][f"{placement['name']}-root"]
         assert root["location"][:2] == [placement["x"], placement["y"]]
         assert root["location"][2] == pytest.approx(floor_z)
         assert root["scale"] == [1.0, 1.0, 1.0]
-        assert root["yaw"] == pytest.approx(math.radians(placement["giro"]))
+        assert root["yaw"] == pytest.approx(math.radians(placement["rotation"]))
         assert root["mode"] == "XYZ"
     # Nobody was dressed: the people were not part of the scene at dress time.
     assert all(not blocks for blocks in trail["person_materials"].values())
 
 
 def test_the_unknown_name_lists_the_collections_the_blend_holds(tmp_path: Path) -> None:
-    """A nombre the blend does not hold fails loudly, naming what it has."""
+    """A name the blend does not hold fails loudly, naming what it has."""
     model = _model(tmp_path)
     blend = _blend(tmp_path)
     request = _request(
         tmp_path,
         "run",
         model=str(model),
-        **{"personas-blend": str(blend), "personas": [{"nombre": "nadie", "x": 1, "y": 2}]},
+        **{"people-blend": str(blend), "people": [{"name": "nadie", "x": 1, "y": 2}]},
     )
 
     done, result_path = _call("run", request, tmp_path, _env(tmp_path))
@@ -692,7 +692,7 @@ def test_the_unknown_name_lists_the_collections_the_blend_holds(tmp_path: Path) 
     assert f"nadie is not a collection in {blend}" in done.stderr
     assert "(has: ['ana', 'luis', 'sara'])" in done.stderr
     assert not result_path.exists()
-    assert not (tmp_path / "out" / "estudio-foto.png").exists()
+    assert not (tmp_path / "out" / "estudio-photo.png").exists()
 
 
 def test_a_collection_with_two_roots_fails_loudly(tmp_path: Path) -> None:
@@ -703,8 +703,8 @@ def test_a_collection_with_two_roots_fails_loudly(tmp_path: Path) -> None:
         "run",
         model=str(model),
         **{
-            "personas-blend": str(_blend(tmp_path)),
-            "personas": [{"nombre": "dos", "x": 0, "y": 0}],
+            "people-blend": str(_blend(tmp_path)),
+            "people": [{"name": "dos", "x": 0, "y": 0}],
         },
     )
 
@@ -713,7 +713,7 @@ def test_a_collection_with_two_roots_fails_loudly(tmp_path: Path) -> None:
     assert done.returncode != 0
     assert "dos: expected one root object, found 2" in done.stderr
     assert not result_path.exists()
-    assert not (tmp_path / "out" / "estudio-foto.png").exists()
+    assert not (tmp_path / "out" / "estudio-photo.png").exists()
 
 
 def test_an_empty_list_never_touches_the_missing_blend(tmp_path: Path) -> None:
@@ -723,7 +723,7 @@ def test_an_empty_list_never_touches_the_missing_blend(tmp_path: Path) -> None:
         tmp_path,
         "run",
         model=str(model),
-        **{"personas-blend": str(tmp_path / "nada.blend"), "personas": []},
+        **{"people-blend": str(tmp_path / "nada.blend"), "people": []},
     )
 
     done, result_path = _call("run", request, tmp_path, _env(tmp_path))
@@ -739,11 +739,11 @@ def test_the_tour_loads_people_before_it_builds_the_camera(tmp_path: Path) -> No
     request = _request(
         tmp_path,
         "run",
-        capability="blender.recorrido",
+        capability="blender.tour",
         model=str(model),
         seconds=2,
         fps=12,
-        **{"personas-blend": str(_blend(tmp_path)), "personas": PEOPLE},
+        **{"people-blend": str(_blend(tmp_path)), "people": PEOPLE},
     )
 
     done, result_path = _call("run", request, tmp_path, _env(tmp_path))
@@ -757,11 +757,10 @@ def test_the_tour_loads_people_before_it_builds_the_camera(tmp_path: Path) -> No
     assert last_dress < first_load < events.index("camera")
     assert trail["animation"] is True
     for placement in PEOPLE:
-        root = trail["people"][f"{placement['nombre']}-root"]
+        root = trail["people"][f"{placement['name']}-root"]
         assert root["location"][:2] == [placement["x"], placement["y"]]
         assert root["location"][2] == pytest.approx(trail["floor"][2])
         assert root["scale"] == [1.0, 1.0, 1.0]
     assert (
-        "personas-blend"
-        in json.loads(result_path.read_text(encoding="utf-8"))["assets"][0]["params"]
+        "people-blend" in json.loads(result_path.read_text(encoding="utf-8"))["assets"][0]["params"]
     )

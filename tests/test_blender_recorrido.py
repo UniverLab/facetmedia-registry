@@ -472,7 +472,7 @@ def _request(tmp_path: Path, verb: str, assets: list[str] | None = None, **input
     return {
         "protocol": 1,
         "verb": verb,
-        "capability": "blender.recorrido",
+        "capability": "blender.tour",
         "inputs": inputs,
         "out_dir": str(out),
         "piece_dir": str(tmp_path),
@@ -521,12 +521,12 @@ def test_the_tour_renders_in_eevee_with_its_recipe(tmp_path: Path, runner, monke
     assert render["frames"] == [1, FRAMES]
     assert (render["media_type"], render["file_format"]) == ("VIDEO", "FFMPEG")
     assert render["ffmpeg"] == {"format": "MPEG4", "codec": "H264", "crf": "HIGH"}
-    assert render["filepath"] == str(tmp_path / "out" / "estudio-recorrido.mp4")
+    assert render["filepath"] == str(tmp_path / "out" / "estudio-tour.mp4")
     # A perspective camera with the default 30 mm lens, as the recipe says.
     assert trail["camera"] == {"type": "PERSP", "lens": 30.0, "clip_end": 500.0}
 
     asset = result["assets"][0]
-    assert asset["file"] == "estudio-recorrido.mp4"
+    assert asset["file"] == "estudio-tour.mp4"
     assert (asset["kind"], asset["mime"]) == ("video", "video/mp4")
     assert asset["properties"] == {
         "width": WIDTH,
@@ -546,10 +546,10 @@ def test_the_animation_render_writes_the_mp4(tmp_path: Path, runner, monkeypatch
 
     calls = _trail(tmp_path)["render_calls"]
     assert calls == [{"animation": True, "write_still": False}]
-    assert (tmp_path / "out" / "estudio-recorrido.mp4").is_file()
+    assert (tmp_path / "out" / "estudio-tour.mp4").is_file()
 
 
-def test_recorrido_bakes_before_materials(tmp_path: Path, runner, monkeypatch) -> None:
+def test_tour_bakes_before_materials(tmp_path: Path, runner, monkeypatch) -> None:
     """The tour bakes every piece before any material is created."""
     model = _model(tmp_path)
     request = _request(tmp_path, "run", model=str(model), seconds=2, fps=12)
@@ -600,7 +600,7 @@ def test_the_camera_moves_from_the_start_triple_to_the_end_triple(
     poses = _trail(tmp_path)["camera_poses"]
     first = poses["1"]["location"]
     last = poses[str(FRAMES)]["location"]
-    # Azimut -75, elevacion 55, distancia 14.0 at the start; -15/40/10.5 at the end.
+    # Azimut -75, elevation 55, distance 14.0 at the start; -15/40/10.5 at the end.
     start = 14.0
     assert math.hypot(math.hypot(first[0], first[1]), first[2]) == pytest.approx(start)
     assert poses["1"]["rotation_euler"][0] == pytest.approx(math.pi / 2 - math.radians(55))
@@ -617,9 +617,9 @@ def test_the_move_uses_the_smoothstep_and_the_piece_pairs(
         tmp_path,
         "run",
         model=str(model),
-        azimut=[{"inicio": -90, "fin": 90}],
-        elevacion=[{"inicio": 60, "fin": 30}],
-        distancia=[{"inicio": 20.0, "fin": 10.0}],
+        azimuth=[{"start": -90, "end": 90}],
+        elevation=[{"start": 60, "end": 30}],
+        distance=[{"start": 20.0, "end": 10.0}],
         focal=WIDE_FOCAL,
         seconds=SHORT_SECONDS,
         fps=SHORT_FPS,
@@ -628,7 +628,7 @@ def test_the_move_uses_the_smoothstep_and_the_piece_pairs(
 
     tour = runner.recorrido.plan(request["inputs"])
     assert (tour.frames, tour.fps, tour.focal) == (SHORT_FRAMES, SHORT_FPS, WIDE_FOCAL)
-    assert (tour.azimut, tour.elevacion, tour.distancia) == (
+    assert (tour.azimuth, tour.elevation, tour.distance) == (
         (-90.0, 90.0),
         (60.0, 30.0),
         (20.0, 10.0),
@@ -652,9 +652,9 @@ def test_a_tour_without_a_model_entry_falls_back_to_the_lab_defaults(runner) -> 
     """The plan's defaults are the lab's: 10 s, 24 fps, -75/-15, 55/40, 14/10.5."""
     tour = runner.recorrido.plan({})
     assert (tour.frames, tour.fps, tour.focal) == (240, 24, 30.0)
-    assert tour.azimut == (-75.0, -15.0)
-    assert tour.elevacion == (55.0, 40.0)
-    assert tour.distancia == (14.0, 10.5)
+    assert tour.azimuth == (-75.0, -15.0)
+    assert tour.elevation == (55.0, 40.0)
+    assert tour.distance == (14.0, 10.5)
 
 
 # --- the probe: a struct-built MP4 with known measurements.
@@ -735,7 +735,7 @@ def test_the_probe_reads_other_measurements_too(tmp_path: Path, runner) -> None:
 
 def test_verify_passes_an_mp4_that_matches_the_entry(tmp_path: Path, runner, monkeypatch) -> None:
     """The thresholds come from the piece's entry, and the probe meets them."""
-    clip = tmp_path / "out" / "estudio-recorrido.mp4"
+    clip = tmp_path / "out" / "estudio-tour.mp4"
     clip.parent.mkdir()
     clip.write_bytes(_mp4(WIDTH, HEIGHT, FRAMES, FPS))
     request = _request(tmp_path, "verify", assets=[str(clip)], model="estudio.glb")
@@ -758,7 +758,7 @@ def test_verify_fails_a_clip_whose_frame_count_disagrees(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
     """A 120-frame clip against a 10 s 24 fps entry fails on the frame count."""
-    clip = tmp_path / "out" / "estudio-recorrido.mp4"
+    clip = tmp_path / "out" / "estudio-tour.mp4"
     clip.parent.mkdir()
     clip.write_bytes(_mp4(WIDTH, HEIGHT, 120, FPS))
     request = _request(tmp_path, "verify", assets=[str(clip)], model="estudio.glb")
@@ -816,7 +816,7 @@ def test_verify_passes_a_truncated_mp4_false_without_raising(
     tmp_path: Path, runner, monkeypatch, build
 ) -> None:
     """No malformed clip escapes the verdict: each one comes back passed False."""
-    clip = tmp_path / "out" / "estudio-recorrido.mp4"
+    clip = tmp_path / "out" / "estudio-tour.mp4"
     clip.parent.mkdir()
     clip.write_bytes(build())
     request = _request(tmp_path, "verify", assets=[str(clip)], model="estudio.glb")
@@ -832,7 +832,7 @@ def test_preview_writes_the_video_schema_beside_the_clip(
     tmp_path: Path, runner, monkeypatch
 ) -> None:
     """The preview carries the probe's measurements and the tour line."""
-    clip = tmp_path / "out" / "estudio-recorrido.mp4"
+    clip = tmp_path / "out" / "estudio-tour.mp4"
     clip.parent.mkdir()
     clip.write_bytes(_mp4(WIDTH, HEIGHT, FRAMES, FPS))
     request = _request(tmp_path, "preview", assets=[str(clip)], model="estudio.glb", seed=7)
@@ -840,27 +840,27 @@ def test_preview_writes_the_video_schema_beside_the_clip(
     result = _call(runner, tmp_path, "preview", request, monkeypatch)
 
     entry = result["assets"][0]
-    assert entry["file"] == "estudio-recorrido.mp4"
-    assert entry["preview"] == "estudio-recorrido.mp4.preview.json"
+    assert entry["file"] == "estudio-tour.mp4"
+    assert entry["preview"] == "estudio-tour.mp4.preview.json"
     data = json.loads((clip.parent / entry["preview"]).read_text(encoding="utf-8"))
     assert set(data) == set(VIDEO_SCHEMA["required"])
     assert data["preview"] == 1 and data["kind"] == "video"
-    assert data["name"] == "estudio-recorrido"
+    assert data["name"] == "estudio-tour"
     assert (data["width"], data["height"]) == (WIDTH, HEIGHT)
     assert (data["length"], data["fps"]) == (FRAMES, FPS)
     assert data["seed"] == SEED
-    assert data["prompt"] == ("estudio-recorrido · camera tour · azimut -75→-15 · 240f @ 24fps")
+    assert data["prompt"] == ("estudio-tour · camera tour · azimuth -75→-15 · 240f @ 24fps")
     assert len(data["summary"]) <= SUMMARY_MAX
 
 
 def test_the_default_route_is_untouched(runner) -> None:
-    """producto and the default table keep their verbs; recorrido has its own."""
+    """product and the default table keep their verbs; tour has its own."""
     assert set(runner.VERBS) == {"run", "verify", "preview", "doctor"}
     assert runner.PRODUCTO_VERBS["run"].__name__ == "_producto_run"
     assert runner.RECORRIDO_VERBS["run"].__name__ == "_recorrido_run"
     assert runner.RECORRIDO_VERBS["verify"].__name__ == "_recorrido_verify"
     assert runner.RECORRIDO_VERBS["preview"].__name__ == "_recorrido_preview"
     assert runner.RECORRIDO_VERBS["doctor"].__name__ == "_doctor"
-    assert runner._verbs("blender.recorrido") is runner.RECORRIDO_VERBS
-    assert runner._verbs("blender.producto") is runner.PRODUCTO_VERBS
-    assert runner._verbs("blender.foto") is runner.VERBS
+    assert runner._verbs("blender.tour") is runner.RECORRIDO_VERBS
+    assert runner._verbs("blender.product") is runner.PRODUCTO_VERBS
+    assert runner._verbs("blender.photo") is runner.VERBS

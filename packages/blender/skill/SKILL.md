@@ -4,7 +4,7 @@ description: Daylight architectural photos of CadQuery glTF models through a hos
 ---
 # Blender
 
-Render architecture from the CAD you already modelled: `blender.foto` takes
+Render architecture from the CAD you already modelled: `blender.photo` takes
 the glTF that `cad.solid` exported from a CadQuery `Assembly` and gives back
 a daylight photo at 1600x1000. The package writes the `image` kind, so the
 photo opens in the image viewer and its preview carries the size, the turning
@@ -23,18 +23,18 @@ put `blender` on `PATH`); `facet doctor blender` fails with
   piece and a meaningful name (`muros`, `piso`, `cama`, ...), because the name
   is what decides each piece's material.
 - When a person should see one finished part as a catalogue photo:
-  `blender.producto` shoots the STL from `cad.solid` at 1200x1200, with the
+  `blender.product` shoots the STL from `cad.solid` at 1200x1200, with the
   studio lights scaled to the part's own size.
 - When a person should watch the model instead of a single still:
-  `blender.recorrido` orbits the same glTF in Eevee and writes an MP4.
-- When the scene needs a human scale: `blender.foto` and `blender.recorrido`
-  take a prebuilt people `.blend` (`personas-blend`) and one `personas` item
+  `blender.tour` orbits the same glTF in Eevee and writes an MP4.
+- When the scene needs a human scale: `blender.photo` and `blender.tour`
+  take a prebuilt people `.blend` (`people-blend`) and one `people` item
   per person. The blend comes from the lab flow, never from this package.
   Each collection is named for the person, its single root stands on the
   floor the sun casts on, and the people face -y by default. They load after
   the model is dressed, so their own MPFB materials are never re-dressed.
 - When the scene needs cars for scale or setting: both scenes take a prebuilt
-  car `.blend` (`autos-blend`) and one `autos` item per car. The lab builds it
+  car `.blend` (`cars-blend`) and one `cars` item per car. The lab builds it
   once from the Quaternius Cars pack (CC0, real proportions, low poly), and
   the package only places it. Each car hangs from an anchor EMPTY at the
   centre of its base and faces -y too; keep cars about 1.5 m from a 2.5 m
@@ -66,33 +66,33 @@ A turned view with a different exposure:
 ```toml
 [inputs]
 model = "estudio.glb"
-giro = 90
+rotation = 90
 exposure = -0.9
-camera = [{ azimut = 25, elevacion = 40, escala = 12 }]
+camera = [{ azimuth = 25, elevation = 40, scale = 12 }]
 ```
 
-Omit `escala` to fit the whole model; set it smaller to crop in.
+Omit `scale` to fit the whole model; set it smaller to crop in.
 
-Run it with `facet run blender.foto <piece>.toml --out build/`; the asset lands
-as `<model>-foto.png` beside the piece unless `--out` says otherwise.
+Run it with `facet run blender.photo <piece>.toml --out build/`; the asset lands
+as `<model>-photo.png` beside the piece unless `--out` says otherwise.
 
-A tour over the same study (`examples/recorrido.toml`), the lab's start and
+A tour over the same study (`examples/tour.toml`), the lab's start and
 end triples written out:
 
 ```toml
 [inputs]
 model = "estudio.glb"
-azimut = [{ inicio = -75, fin = -15 }]
-elevacion = [{ inicio = 55, fin = 40 }]
-distancia = [{ inicio = 14.0, fin = 10.5 }]
+azimuth = [{ start = -75, end = -15 }]
+elevation = [{ start = 55, end = 40 }]
+distance = [{ start = 14.0, end = 10.5 }]
 focal = 30
 seconds = 10
 fps = 24
 ```
 
-`blender.recorrido` renders 240 frames at 1280x720 in ~100 s with Eevee. Run
-it with `facet run blender.recorrido <piece>.toml`; the clip lands as
-`<model>-recorrido.mp4`.
+`blender.tour` renders 240 frames at 1280x720 in ~100 s with Eevee. Run
+it with `facet run blender.tour <piece>.toml`; the clip lands as
+`<model>-tour.mp4`.
 
 A product photo has no example piece because no STL ships: point `part` at the
 STL `cad.solid` wrote.
@@ -100,8 +100,8 @@ STL `cad.solid` wrote.
 ```toml
 [inputs]
 part = "escuadra.stl"
-material = "aluminio-cepillado"
-backdrop = "grafito"
+material = "brushed-aluminum"
+backdrop = "graphite"
 ```
 
 People and cars are piece data on a scene, not separate pieces. The keys are
@@ -110,22 +110,22 @@ hyphenated, exactly as facet resolves them:
 ```toml
 [inputs]
 model = "estudio.glb"
-personas-blend = "personas.blend"
-personas = [
-  { nombre = "luis", x = 3.0, y = 2.6, giro = 90 },
-  { nombre = "ana", x = 4.5, y = 3.85, giro = 180 },
-  { nombre = "sara", x = 1.45, y = -1.3, giro = 180 },
+people-blend = "people.blend"
+people = [
+  { name = "luis", x = 3.0, y = 2.6, rotation = 90 },
+  { name = "ana", x = 4.5, y = 3.85, rotation = 180 },
+  { name = "sara", x = 1.45, y = -1.3, rotation = 180 },
 ]
-autos-blend = "autos.blend"
-autos = [
-  { nombre = "sedan", x = -2.7, y = 0.8, giro = 0 },
-  { nombre = "camioneta", x = -5.1, y = 0.8, giro = 0 },
+cars-blend = "cars.blend"
+cars = [
+  { name = "sedan", x = -2.7, y = 0.8, rotation = 0 },
+  { name = "camioneta", x = -5.1, y = 0.8, rotation = 0 },
 ]
 ```
 
 Those placements are the lab's triple as the reference example, never a
-default: omit `personas` or `autos` and nothing is added. `personas-blend` and
-`autos-blend` are optional too; a scene without them has no people and no cars.
+default: omit `people` or `cars` and nothing is added. `people-blend` and
+`cars-blend` are optional too; a scene without them has no people and no cars.
 
 The lab's people catalog holds 14 outfits, 6 pairs of shoes, 10 hairstyles and
 23 skins; the arms sit 40° down from the A pose, and the car faces are smooth
@@ -138,42 +138,43 @@ writing `<name>.assets.json` as the receipt `verify` re-checks.
 
 ## Dressing the scene
 
-`blender.foto` and `blender.recorrido` render the fetched Poly Haven sky,
+`blender.photo` and `blender.tour` render the fetched Poly Haven sky,
 textures and plants when the piece asks for them; without them the procedural
 sky, the flat colours and the empty ground stay exactly as they are. The three
 inputs are arrays of fixed-field items, the way `camera` is, and the runner
-reads only the first `cielo` item:
+reads only the first `sky` item:
 
 ```toml
 [inputs]
 model = "estudio.glb"
-cielo = [{ id = "kloppenheim_06_puresky", giro = 200, fuerza = 1.0 }]
-texturas = [
-  { prefijo = "suelo", id = "aerial_grass_rock", lado = 3.0, matiz = 0.5, saturacion = 1.0, valor = 0.9 },
-  { prefijo = "piso", id = "brushed_concrete", lado = 2.0, matiz = 0.5, saturacion = 1.0, valor = 1.0 },
+sky = [{ id = "kloppenheim_06_puresky", rotation = 200, strength = 1.0 }]
+textures = [
+  { prefix = "suelo", id = "aerial_grass_rock", size = 3.0, hue = 0.5, saturation = 1.0, value = 0.9 },
+  { prefix = "piso", id = "brushed_concrete", size = 2.0, hue = 0.5, saturation = 1.0, value = 1.0 },
 ]
-plantas = [
-  { id = "shrub_02", x = 7.4, y = 2.25, giro = 90 },
+plants = [
+  { id = "shrub_02", x = 7.4, y = 2.25, rotation = 90 },
 ]
 ```
 
-- `cielo` holds one `{ id, giro, fuerza }` item: the HDRI id, its turn about Z
+- `sky` holds one `{ id, rotation, strength }` item: the HDRI id, its turn about Z
   in degrees (200 by default, which sets where the sun falls) and the
   background strength (1.0 by default). With it the scene has no `sol` lamp:
   the HDRI lights the render and `use_sun_shadow` pulls the shadows out of it.
-- `texturas` holds one `{ prefijo, id, lado, matiz, saturacion, valor }` item
+- `textures` holds one `{ prefix, id, size, hue, saturation, value }` item
   per dressed prefix: the texture id, the tile side in metres (2.0 by default)
-  and the hue/saturation/value adjust (0.5, 1.0 and 1.0 by default). A prefix
-  without an item keeps its flat `MATERIALS` colour, and the ground plane
-  `suelo` is textured by the item with `prefijo = "suelo"`. Two items with the
-  same `prefijo` fail the run with `texturas: prefijo repetido: <prefijo>`.
-- `plantas` holds one `{ id, x, y, giro }` item per plant: the model id, its
+  and the hue/saturation/value adjust (0.5, 1.0 and 1.0 by default). `prefix`
+  values are the piece names in your own CAD model, so they keep that model's
+  spelling. A prefix without an item keeps its flat `MATERIALS` colour, and the
+  ground plane `suelo` is textured by the item with `prefix = "suelo"`. Two
+  items with the same `prefix` fail the run with
+  `textures: prefix repeated: <prefix>`.
+- `plants` holds one `{ id, x, y, rotation }` item per plant: the model id, its
   place in metres on the ground level and its turn about Z (0 by default).
   Plants stand the way people and cars do, after the dressing, so no prefix
   check touches them.
 - A referenced id must already be fetched: a missing folder or file fails the
-  run before rendering with the `blender.assets` entry that fetches it. Foto
-  and recorrido never download.
+  run before rendering with the `blender.assets` entry that fetches it. Photo and tour never download.
 
 These ids are verified on polyhaven.com; the id is the last part of the
 asset's URL:
@@ -236,7 +237,7 @@ or car pack folder: that state lives in the lab, outside this package.
   glTF element name, as the cad export names it. Rename the piece in its
   model with one of them; nothing is rendered half-dressed.
 - **Do not raise the exposure to brighten a dark photo.** Under
-  `AgX - Medium High Contrast` at -0.6, `sol + cielo` washes the colours out;
+  `AgX - Medium High Contrast` at -0.6, `sol + sky` washes the colours out;
   move the sun or lower `exposure` instead of lighting the scene harder.
 - **Cycles on the GPU needs a real device.** Without OptiX/CUDA it falls back
   to CPU and the render takes minutes, not the 11 s the recipe is measured at.

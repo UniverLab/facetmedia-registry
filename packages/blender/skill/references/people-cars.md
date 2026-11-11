@@ -1,12 +1,12 @@
 # People and cars
 
 Neither Poly Haven nor this package makes a person or a car. Each blend is
-built once, outside this package, and `blender.foto` and `blender.recorrido`
+built once, outside this package, and `blender.photo` and `blender.tour`
 load it as a path input and place its collections.
 
-## The people blend: `personas-blend`
+## The people blend: `people-blend`
 
-`personas.py` generates people with MPFB 2 (MakeHuman for Blender; the code is
+A generator script builds the people blend with MPFB 2 (MakeHuman for Blender; the code is
 GPL, the people it makes are CC0). Each person is described as the dictionary
 `HumanService.deserialize_from_dict` takes: traits from 0 to 1 (age 0.5 is 25
 years), skin, hair and clothes by package file name. Three people take about
@@ -15,7 +15,7 @@ name, and the collection's single root object is the skeleton.
 
 Contract:
 
-- One collection per person, named by the `nombre` a placement item uses.
+- One collection per person, named by the `name` a placement item uses.
 - A single root object (the armature), its origin at the person's base.
 - The people face -y by default, like the cars.
 - The package does not scale people with the model: they are placed in metres
@@ -30,16 +30,16 @@ ages; they read a little generic up close, which is fine for an aerial view.
 Placement item, one per person:
 
 ```toml
-{ nombre = "luis", x = 3.0, y = 2.6, giro = 90 }
+{ name = "luis", x = 3.0, y = 2.6, rotation = 90 }
 ```
 
-`nombre` is the collection name; `x` and `y` are metres in the scene's axes;
-`giro` turns about Z in degrees from the -y facing. A name the blend does not
+`name` is the collection name; `x` and `y` are metres in the scene's axes;
+`rotation` turns about Z in degrees from the -y facing. A name the blend does not
 hold fails the run loudly.
 
-## The car blend: `autos-blend`
+## The car blend: `cars-blend`
 
-`autos.py` imports the Quaternius Cars pack (CC0, real proportions, low poly,
+A generator script imports the Quaternius Cars pack (CC0, real proportions, low poly,
 about 1,500 faces per car): `NormalCar1` (sedan, 4.2 m), `NormalCar2`
 (compact, 3.3 m), `SUV` (camioneta), `Taxi`, `SportsCar`, `SportsCar2` and
 `Cop`. The files live in the lab's `assets/quaternius-cars/`, in FBX except
@@ -53,7 +53,7 @@ model reads smooth, and it turns every car to face -y.
 
 Contract:
 
-- One collection per car, named by the `nombre` a placement item uses.
+- One collection per car, named by the `name` a placement item uses.
 - The collection hangs from an anchor EMPTY at the centre of the car's base.
 - The car faces -y by default.
 - `escena.py` loads and places cars with the same function it uses for people.
@@ -61,11 +61,11 @@ Contract:
 Placement item, one per car:
 
 ```toml
-{ nombre = "sedan", x = -2.7, y = 0.8, giro = 0 }
+{ name = "sedan", x = -2.7, y = 0.8, rotation = 0 }
 ```
 
 The lab's two placements are `("sedan", -2.7, 0.8, 0)` and
-`("camioneta", -5.1, 0.8, 0)`, from `escena.py`; `autos.py` also builds a
+`("camioneta", -5.1, 0.8, 0)`, from `escena.py`; the generator also builds a
 `compacto` collection that page never places. These are the reference example,
 never a default.
 
@@ -86,8 +86,8 @@ the sky and camera, so they are lit and filmed like the rest of the scene.
 
 ## What fails, and where
 
-- **A missing blend is a core pre-run `not_found`.** `personas-blend` and
-  `autos-blend` are path inputs; facet resolves them relative to the piece
+- **A missing blend is a core pre-run `not_found`.** `people-blend` and
+  `cars-blend` are path inputs; facet resolves them relative to the piece
   file before Blender starts. A path that does not resolve fails with
   `not_found` (exit 2), with no render attempted.
 - **A name the blend does not hold is a runner failure.** The runner raises,

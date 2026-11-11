@@ -1,8 +1,8 @@
 # blender
 
-Daylight architectural photos of your own CAD: `facet run blender.foto
+Daylight architectural photos of your own CAD: `facet run blender.photo
 <piece>.toml` takes the glTF that CadQuery's `Assembly` exported and gives back
-`<model>-foto.png` at 1600x1000 — the lab's study renders in about 11 s on the
+`<model>-photo.png` at 1600x1000 — the lab's study renders in about 11 s on the
 GPU. It belongs to the **`image`** facet and writes the **`image`** kind, so the
 photo shows through the image viewer.
 
@@ -44,7 +44,7 @@ env = "BLENDER_EXE"
   the resolved binary is a `.exe` under WSL, facet converts every path
   argument through `wslpath -w`.
 
-The runner is Blender's script, so `blender.foto` and `doctor` use `bpy`
+The runner is Blender's script, so `blender.photo` and `doctor` use `bpy`
 directly and need Blender; `blender.assets` needs none — it is standard-library
 Python and `urllib` — and `verify` and `preview` answer under plain Python too.
 
@@ -63,7 +63,7 @@ estudio.export("estudio.glb")  # glTF binary: one element per piece, with its na
 
 - **Never STEP.** Blender does not open STEP without an extra plugin, and a
   glTF carries the piece names the materials need. This is why the route is
-  `cad.solid` script → `Assembly.export(...glb)` → `blender.foto`.
+  `cad.solid` script → `Assembly.export(...glb)` → `blender.photo`.
 - **One element per piece, named.** `Assembly.export` writes one glTF node per
   added element with the name it was added under; that name is what the runner
   matches its materials against.
@@ -103,11 +103,11 @@ than letting Blender's default grey stand in.
 
 ## People for scale
 
-`blender.foto` and `blender.recorrido` can stand **generated people** in the
+`blender.photo` and `blender.tour` can stand **generated people** in the
 scene, which is what gives the model its scale: a door, a bed or a table only
 reads as its real size next to a person.
 
-The people are **built once, outside this package**: a `personas.blend` made
+The people are **built once, outside this package**: a `people.blend` made
 with MPFB 2.0.18, the MakeHuman CC0 asset pack and traits 0-1 — one collection
 per person, arms lowered 40 degrees, the skeleton root at the collection's
 base. This package never generates people, never needs the MPFB add-on and
@@ -116,23 +116,23 @@ never downloads an asset pack: loading a linked collection needs no add-on.
 ```toml
 [inputs]
 model = "estudio.glb"
-personas-blend = "personas.blend"          # resolved relative to the piece
-personas = [
-  { nombre = "luis", x = 3.0,  y = 2.6,  giro = 90 },
-  { nombre = "ana",  x = 4.5,  y = 3.85, giro = 180 },
-  { nombre = "sara", x = 1.45, y = -1.3, giro = 180 },
+people-blend = "people.blend"          # resolved relative to the piece
+people = [
+  { name = "luis", x = 3.0,  y = 2.6,  rotation = 90 },
+  { name = "ana",  x = 4.5,  y = 3.85, rotation = 180 },
+  { name = "sara", x = 1.45, y = -1.3, rotation = 180 },
 ]
 ```
 
-- `personas-blend` is the prebuilt collection `.blend`, resolved relative to
+- `people-blend` is the prebuilt collection `.blend`, resolved relative to
   the piece file. The core resolves it **before the runner starts**, so a
   missing file is refused with the path's `not_found` wording instead of a
   failed render.
-- `personas` is one item per person: `nombre` is the collection's name in the
-  blend, `x` and `y` are metres in the scene's own axes, and `giro` is a turn
+- `people` is one item per person: `name` is the collection's name in the
+  blend, `x` and `y` are metres in the scene's own axes, and `rotation` is a turn
   about Z in degrees from the **-y facing** the collections have by default.
   The triple above is the reference example, never a default:
-  without `personas` nobody stands in the scene.
+  without `people` nobody stands in the scene.
 - Each collection is loaded with `bpy.data.libraries.load`, linked into the
   scene, and its **single parentless root** is stood at `(x, y, floor_z)`.
   `floor_z` is the floor plane's own level, the lowest mesh minus one
@@ -141,9 +141,9 @@ personas = [
   They load **after** the materials are dressed, so their own MPFB skin and
   clothing materials are never checked against the prefix set and never
   cleared.
-- A `nombre` the blend does not hold fails the run with
-  `<nombre> is not a collection in <blend> (has: [...])`; a collection without
-  exactly one root fails with `<nombre>: expected one root object, found <n>`.
+- A `name` the blend does not hold fails the run with
+  `<name> is not a collection in <blend> (has: [...])`; a collection without
+  exactly one root fails with `<name>: expected one root object, found <n>`.
   Both reach the caller as `runner_failed`. Nobody is silently dropped.
 
 ## Cars for scale
@@ -152,7 +152,7 @@ The same two capabilities can **park cars** in the scene, which is what gives
 the model its urban scale: a study reads as a street scene only next to
 vehicles.
 
-The cars are **built once, outside this package**: an `autos.blend` made from
+The cars are **built once, outside this package**: a `cars.blend` made from
 the Quaternius Cars Pack (CC0) — one collection per car, hung from an anchor
 `EMPTY` at the car's base centre, every car facing **-y**. This package never
 generates cars, never checks for a pack and never downloads one: loading a
@@ -161,33 +161,33 @@ linked collection needs no add-on.
 ```toml
 [inputs]
 model = "estudio.glb"
-autos-blend = "autos.blend"            # resolved relative to the piece
-autos = [
-  { nombre = "sedan",      x = -2.7, y = 0.8 },
-  { nombre = "camioneta",  x = -5.1, y = 0.8 },
-  { nombre = "compacto",   x = 1.0,  y = -2.0, giro = 90 },
+cars-blend = "cars.blend"            # resolved relative to the piece
+cars = [
+  { name = "sedan",      x = -2.7, y = 0.8 },
+  { name = "camioneta",  x = -5.1, y = 0.8 },
+  { name = "compacto",   x = 1.0,  y = -2.0, rotation = 90 },
 ]
 ```
 
-- `autos-blend` is the prebuilt car-collection `.blend`, resolved relative to
+- `cars-blend` is the prebuilt car-collection `.blend`, resolved relative to
   the piece file. The core resolves it **before the runner starts**, so a
   missing file is refused with the path's `not_found` wording instead of a
   failed render.
-- `autos` is one item per car: `nombre` is the collection's name in the blend,
-  `x` and `y` are metres in the scene's own axes, and `giro` is a turn about Z
+- `cars` is one item per car: `name` is the collection's name in the blend,
+  `x` and `y` are metres in the scene's own axes, and `rotation` is a turn about Z
   in degrees from the **-y facing** the collections have by default. The
   placements above — sedan and camioneta on the car-entry pavement by the left
   wall, plus a turned compacto — are the reference example, never a default:
-  without `autos` no car parks.
+  without `cars` no car parks.
 - Each collection is loaded with `bpy.data.libraries.load` after the materials
   are dressed — the pack's own paint and glass materials carry no piece prefix
   — linked into the scene, and its **single parentless root** (the anchor
   `EMPTY` at the base centre) is stood at `(x, y, floor_z)`, `floor_z` being
   the floor plane's level, the lowest mesh minus one millimetre. Cars arrive in
   metres and are **never scaled or turned with the model**.
-- The failures are the people's, verbatim: an unknown `nombre` raises
-  `<nombre> is not a collection in <blend> (has: [...])` and a collection
-  without exactly one root raises `<nombre>: expected one root object, found
+- The failures are the people's, verbatim: an unknown `name` raises
+  `<name> is not a collection in <blend> (has: [...])` and a collection
+  without exactly one root raises `<name>: expected one root object, found
   <n>`; both reach the caller as `runner_failed`.
 - Cars read as scale only if they stay **about 1.5 m** from a wall or each
   other: pack a row flush against the facade and the eye reads them as
@@ -196,46 +196,48 @@ autos = [
 ## Dressing the scene
 
 Both scenes can render the **fetched Poly Haven sky, textures and plants** the
-lab's render used: `cielo` (one `{ id, giro, fuerza }` item), `texturas` (one
-`{ prefijo, id, lado, matiz, saturacion, valor }` item per prefix) and
-`plantas` (one `{ id, x, y, giro }` item per plant). Without them the procedural
+lab's render used: `sky` (one `{ id, rotation, strength }` item), `textures` (one
+`{ prefix, id, size, hue, saturation, value }` item per prefix) and
+`plants` (one `{ id, x, y, rotation }` item per plant). Without them the procedural
 sky, the flat colours and the empty ground stay exactly as they are.
 
 ```toml
 [inputs]
 model = "estudio.glb"
-cielo = [{ id = "kloppenheim_06_puresky", giro = 200, fuerza = 1.0 }]
-texturas = [
-  { prefijo = "suelo", id = "aerial_grass_rock", lado = 3.0, matiz = 0.5, saturacion = 1.0, valor = 0.9 },
+sky = [{ id = "kloppenheim_06_puresky", rotation = 200, strength = 1.0 }]
+textures = [
+  { prefix = "suelo", id = "aerial_grass_rock", size = 3.0, hue = 0.5, saturation = 1.0, value = 0.9 },
 ]
-plantas = [
-  { id = "shrub_02", x = 7.4, y = 2.25, giro = 90 },
+plants = [
+  { id = "shrub_02", x = 7.4, y = 2.25, rotation = 90 },
 ]
 ```
 
-- The HDRI id is the last part of its polyhaven.com URL. With `cielo` the scene
+- The HDRI id is the last part of its polyhaven.com URL. With `sky` the scene
   has **no `sol` lamp**: the HDRI lights the render and `use_sun_shadow` pulls
   the shadows out of it.
-- A texture item box-projects `diff.jpg` at `lado` metres through the
+- A texture item box-projects `diff.jpg` at `size` metres through the
   hue/saturation/value adjust; `rough.jpg` drives the roughness and a 0.15
   bump. `nor_gl.jpg` is never loaded: the models carry no UVs. Every piece
   takes its prefix's texture, the model's own walls and slabs (`muros`, `piso`)
-  as well as the ground plane. A prefix without an item keeps its flat colour,
-  and two items with the same `prefijo` fail the run with
-  `texturas: prefijo repetido: <prefijo>`.
+  as well as the ground plane. `prefix` values are the piece names in your own
+  CAD model, so they keep that model's spelling (the example names are its
+  content, not this package's vocabulary). A prefix without an item keeps its
+  flat colour, and two items with the same `prefix` fail the run with
+  `textures: prefix repeated: <prefix>`.
 - Plants stand at `(x, y, floor_z)` like people and cars, after the dressing.
   Plant models are heavy (`potted_plant_01` is about 96k polygons,
   `island_tree_01` about 3.7M), so use few.
 - A referenced id must already be fetched: a missing folder or file fails the
   run with `missing <id>/<file>: fetch it with blender.assets
   [[inputs.assets]] with id = "<id>" and res = "<res>"` (`2k` for a sky or
-  texture, `1k` for a model). Foto and recorrido never download; fetch the set
+  texture, `1k` for a model). Photo and tour never download; fetch the set
   first with one `blender.assets` piece (see `## Assets` below).
 
 ## The exposure rule
 
 The scene is lit by a sun plus a sky texture washing from the same direction —
-unless `cielo` dresses it, when the fetched HDRI is the light and there is no
+unless `sky` dresses it, when the fetched HDRI is the light and there is no
 `sol` lamp (see "Dressing the scene").
 That pair over-exposes easily, so the view transform is **`AgX - Medium High
 Contrast`** with **exposure -0.6**, which keeps the sun and the sky wash from
@@ -249,29 +251,29 @@ then CPU) at **128 samples with denoise**, the recipe the lab measured at about
 
 ## Piece fields
 
-What `facet describe blender.foto --json` reports for this manifest:
+What `facet describe blender.photo --json` reports for this manifest:
 
 | Field | Type | Required | Default | Notes |
 |-------|------|----------|---------|-------|
 | `model` | path | yes | — | the `.glb` from CadQuery's `Assembly`, relative to the piece file |
-| `camera` | array | no | the lab's axonometric view | one item: `{ azimut = -40, elevacion = 48, escala }` (degrees for the two angles; `escala` is the orthographic scale in metres, and when omitted it is fitted to the whole model with a 10% margin) |
-| `giro` | number | no | `0` | turn of the whole model about Z in degrees; the sun stays put |
+| `camera` | array | no | the lab's axonometric view | one item: `{ azimuth = -40, elevation = 48, scale }` (degrees for the two angles; `scale` is the orthographic scale in metres, and when omitted it is fitted to the whole model with a 10% margin) |
+| `rotation` | number | no | `0` | turn of the whole model about Z in degrees; the sun stays put |
 | `exposure` | number | no | `-0.6` | stops under `AgX - Medium High Contrast` |
-| `personas-blend` | path | no | — | the prebuilt MPFB collection `.blend`, relative to the piece file |
-| `personas` | array | no | `[]` | one item per person: `{ nombre, x, y, giro = 0 }` (metres, degrees about Z) |
-| `autos-blend` | path | no | — | the prebuilt car-collection `.blend`, relative to the piece file |
-| `autos` | array | no | `[]` | one item per car: `{ nombre, x, y, giro = 0 }` (metres, degrees about Z) |
-| `cielo` | array | no | `[]` — the procedural sky and `sol` lamp stay | one item: `{ id, giro = 200, fuerza = 1.0 }` — the fetched Poly Haven HDRI, which then replaces the lamp |
-| `texturas` | array | no | `[]` | one item per dressed prefix: `{ prefijo, id, lado = 2.0, matiz = 0.5, saturacion = 1.0, valor = 1.0 }` |
-| `plantas` | array | no | `[]` | one item per plant: `{ id, x, y, giro = 0 }` (metres, degrees about Z) |
+| `people-blend` | path | no | — | the prebuilt MPFB collection `.blend`, relative to the piece file |
+| `people` | array | no | `[]` | one item per person: `{ name, x, y, rotation = 0 }` (metres, degrees about Z) |
+| `cars-blend` | path | no | — | the prebuilt car-collection `.blend`, relative to the piece file |
+| `cars` | array | no | `[]` | one item per car: `{ name, x, y, rotation = 0 }` (metres, degrees about Z) |
+| `sky` | array | no | `[]` — the procedural sky and `sol` lamp stay | one item: `{ id, rotation = 200, strength = 1.0 }` — the fetched Poly Haven HDRI, which then replaces the lamp |
+| `textures` | array | no | `[]` | one item per dressed prefix: `{ prefix, id, size = 2.0, hue = 0.5, saturation = 1.0, value = 1.0 }` |
+| `plants` | array | no | `[]` | one item per plant: `{ id, x, y, rotation = 0 }` (metres, degrees about Z) |
 
-`blender.recorrido` takes the same `personas-blend`, `personas`, `autos-blend`,
-`autos`, `cielo`, `texturas` and `plantas` fields; the rest of its row set is
+`blender.tour` takes the same `people-blend`, `people`, `cars-blend`,
+`cars`, `sky`, `textures` and `plants` fields; the rest of its row set is
 in "Camera tours".
 
 ## Product photos
 
-`facet run blender.producto <piece>.toml` photographs one CAD part the way a
+`facet run blender.product <piece>.toml` photographs one CAD part the way a
 catalogue does: the **STL** that `cad.solid` writes beside the piece is
 imported, scaled from millimetres to metres, dressed in a metal and shot on
 Cycles at **1200x1200** under two studio area lights against a dark backdrop.
@@ -280,19 +282,19 @@ The approved reference is a brushed-aluminium product photo (about 10 s).
 ```toml
 [inputs]
 part = "escuadra.stl"
-material = "aluminio-cepillado"  # or "acero"
-backdrop = "grafito"             # or "cemento"
+material = "brushed-aluminum"  # or "steel"
+backdrop = "graphite"             # or "concrete"
 ```
 
 - `part` is the `.stl` `cad.solid` exports beside the piece (60 x 40 x 10 mm
   for the reference bracket), resolved relative to the piece file. The runner
   measures its bounding box after the import, so nothing about the part's size
   is assumed.
-- `material` is `aluminio-cepillado` (brushed aluminium: metallic 1, roughness
-  0.38) or `acero` (steel: metallic 1, roughness 0.22). An unknown name fails
+- `material` is `brushed-aluminum` (brushed aluminium: metallic 1, roughness
+  0.38) or `steel` (steel: metallic 1, roughness 0.22). An unknown name fails
   the run loudly (`material desconocido`), so a part is never left in Blender's
   default grey.
-- `backdrop` is `grafito` (near black) or `cemento` (dark grey). Both stay dark
+- `backdrop` is `graphite` (near black) or `concrete` (dark grey). Both stay dark
   on purpose: metal needs contrast to read as metal, and a light cyclorama
   flattens the highlight the photo exists for.
 
@@ -308,7 +310,7 @@ The exposure is **-0.2** under `AgX - Medium High Contrast` on Cycles
 daylight photo because the studio's lights sit close to the part. The camera is
 a 50 mm perspective view three-quarters on, `max(3 x span, 0.25 m)` away.
 
-One `blender.producto` run writes `<part>-producto.png` (`image/png`) at
+One `blender.product` run writes `<part>-product.png` (`image/png`) at
 1200x1200 with properties `width`, `height`, `samples`, `exposure`, `material`
 and `backdrop`; the `part` is the hashed input. `verify` measures the header
 against 1200x1200 and `preview` writes the image kind's file with the material,
@@ -316,11 +318,11 @@ the backdrop and the part in its prompt.
 
 ## Assets
 
-One `blender.foto` run writes one asset:
+One `blender.photo` run writes one asset:
 
-- `<model>-foto.png` (`image/png`) at 1600x1000, `kind = "image"`, the `model`
+- `<model>-photo.png` (`image/png`) at 1600x1000, `kind = "image"`, the `model`
   as the hashed input, and properties `width`, `height`, `samples`,
-  `exposure` and `giro`.
+  `exposure` and `rotation`.
 
 `tool` is `{"name": "blender", "version": "5.2.2 LTS"}` — the build that
 actually rendered.
@@ -346,8 +348,8 @@ downloader — performs the fetch.
 
 ## Camera tours
 
-`facet run blender.recorrido <piece>.toml` moves a camera through the same
-daylight scene the photo uses and writes `<model>-recorrido.mp4`
+`facet run blender.tour <piece>.toml` moves a camera through the same
+daylight scene the photo uses and writes `<model>-tour.mp4`
 (1280x720, 24 fps, 10 s by default). The camera starts at the piece's start
 triple and glides to its end triple with a smoothstep, `t*t*(3-2*t)`: it leaves
 and arrives gently, like a crane, instead of starting and stopping dead.
@@ -355,9 +357,9 @@ and arrives gently, like a crane, instead of starting and stopping dead.
 ```toml
 [inputs]
 model = "estudio.glb"
-azimut = [{ inicio = -75, fin = -15 }]    # degrees
-elevacion = [{ inicio = 55, fin = 40 }]   # degrees above the floor
-distancia = [{ inicio = 14.0, fin = 10.5 }]  # metres from the model's centre
+azimuth = [{ start = -75, end = -15 }]    # degrees
+elevation = [{ start = 55, end = 40 }]   # degrees above the floor
+distance = [{ start = 14.0, end = 10.5 }]  # metres from the model's centre
 focal = 30                                # millimetres
 seconds = 10
 fps = 24
@@ -387,15 +389,15 @@ frame count): width 1280, height 720, the entry's `fps`, and
 as its metric, never an exception. `preview` writes
 `<clip>.mp4.preview.json` for the video viewer, with the probe's measurements
 and the prompt line
-`<stem> · camera tour · azimut <start>→<end> · <frames>f @ <fps>fps`.
+`<stem> · camera tour · azimuth <start>→<end> · <frames>f @ <fps>fps`.
 
 ## Verification and doctor
 
 `verify` measures the PNG header (the IHDR, which needs no third-party module
 inside Blender): the file must parse as a PNG and measure exactly 1600x1000 for
-`blender.foto`, or 1200x1200 for `blender.producto`. The metrics carry `width`
+`blender.photo`, or 1200x1200 for `blender.product`. The metrics carry `width`
 and `height`; a file that is not a PNG carries `error` and fails. For
-`blender.recorrido` it probes the MP4's boxes instead, carrying `width`,
+`blender.tour` it probes the MP4's boxes instead, carrying `width`,
 `height`, `frames` and `fps`.
 
 `facet preview <name>.png` writes `<name>.png.preview.json` for the `image`
@@ -429,12 +431,12 @@ that arrive into the models dir and are re-verified on every fetch.
 
 `examples/estudio.toml` renders the lab's study (`estudio.glb`, shipped beside
 the piece and regenerated by `estudio.py` — the model the approved
-`estudio-foto.png` came from):
+`estudio-photo.png` came from):
 
 ```toml
 [inputs]
 model = "estudio.glb"
 ```
 
-Run it with `scripts/try-package.sh blender foto packages/blender/examples/estudio.toml`.
-The record lands beside the photo as `estudio-foto.png.facet.json`.
+Run it with `scripts/try-package.sh blender photo packages/blender/examples/estudio.toml`.
+The record lands beside the photo as `estudio-photo.png.facet.json`.
