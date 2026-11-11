@@ -27,6 +27,10 @@ put `blender` on `PATH`); `facet doctor blender` fails with
   studio lights scaled to the part's own size.
 - When a person should watch the model instead of a single still:
   `blender.tour` orbits the same glTF in Eevee and writes an MP4.
+- When no recipe fits: `blender.scene` renders one PNG from your own Blender
+  script, and `blender.animation` renders one MP4 from it. You model, light
+  and animate; facet owns only the output settings. See
+  `references/scene.md` for the contract.
 - When the scene needs a human scale: `blender.photo` and `blender.tour`
   take a prebuilt people `.blend` (`people-blend`) and one `people` item
   per person. The blend comes from the lab flow, never from this package.
@@ -93,6 +97,32 @@ fps = 24
 `blender.tour` renders 240 frames at 1280x720 in ~100 s with Eevee. Run
 it with `facet run blender.tour <piece>.toml`; the clip lands as
 `<model>-tour.mp4`.
+
+A scripted still (`examples/scene/scene.toml`) and its animation
+(`examples/scene/animation.toml`) share one script (`examples/scene/build.py`):
+a plane, three Principled primitives, two lights and a camera keyframed over
+frames 1..120, so the same file stills and animates.
+
+```toml
+[inputs]
+script = "build.py"
+name = "estudio-script"
+```
+
+```toml
+[inputs]
+script = "build.py"
+name = "estudio-animado"
+```
+
+`script` is resolved relative to the piece file and must set `scene.camera`.
+`name` writes `<name>.png` or `<name>.mp4`. `width`/`height` (64..4096,
+1920x1080), `engine` (`cycles` for a still, `eevee` for an animation),
+`samples` (128 for Cycles, 64 for Eevee TAA), `exposure` (-5..5) and `seed`
+are facet's: the runner applies them after the script, overriding whatever
+it set. An animation also takes `frames` (1..1440, 120) and `fps` (1..60,
+24). The full contract — globals, working directory, overrides, the camera
+rule, the unsandboxed warning — is `references/scene.md`.
 
 A product photo has no example piece because no STL ships: point `part` at the
 STL `cad.solid` wrote.
@@ -215,6 +245,10 @@ size. `preview` writes `<asset>.preview.json` for the image kind with `name`,
 `prompt` (the recipe line), `seed`, `width` and `height`, and the viewer shows
 the photo itself. A tour is checked by the MP4 probe instead: width, height,
 frame count and fps from the file itself, against the piece's entry.
+A scripted still is checked the same way against its own width and height,
+and a scripted animation by the MP4 probe against its own width, height,
+frames and fps; a flat still fails the run itself. No verifier judges the
+look — that is the script's, which is to say yours.
 
 Beyond the size, a person judges the photo: the model stands on the floor
 plane, the sun casts a shadow, the walls are not white-clipped and the rooms
@@ -224,6 +258,9 @@ and cars sit on their wheels, not through the pavement.
 `references/tour.md` has the Eevee flags, the smoothstep move and the ffmpeg
 settings Blender writes the MP4 with. `references/people-cars.md` has the two
 prebuilt-blend contracts, the placement item shapes and the lab triples.
+`references/scene.md` has the scripted-scene contract: the globals, the
+working directory, what the runner overrides, the camera rule, what facet
+verifies (the file, never the look) and the unsandboxed warning.
 
 `facet doctor blender` resolves the host Blender (`blender.path`,
 `BLENDER_EXE`, `PATH`) and fails `machine_cannot` below 5.2; the package's own

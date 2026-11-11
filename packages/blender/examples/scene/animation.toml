@@ -1,0 +1,6 @@
+# An animation from the agent's own script: build.py's keyframed camera move
+# over the default range (120 frames at 24 fps) in Eevee, encoded by Blender's
+# own FFmpeg output.
+[inputs]
+script = "build.py"
+name = "estudio-animado"

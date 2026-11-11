@@ -46,6 +46,7 @@ import mp4
 import polyhaven
 import producto
 import recorrido
+import scene_script
 
 #: The image the daylight recipe produces, per the approved lab render.
 RENDER_WIDTH = 1600
@@ -112,7 +113,19 @@ def _verbs(capability: str) -> dict[str, Any]:
         return PRODUCTO_VERBS
     if capability == "blender.tour":
         return RECORRIDO_VERBS
+    if capability in scene_script.CAPABILITIES:
+        return scene_script.verbs(capability, _script_host())
     return VERBS
+
+
+def _script_host() -> scene_script.Host:
+    """The runner's helpers a scripted scene borrows instead of reimplementing."""
+    return scene_script.Host(
+        lambda value: _host_path(value, _on_windows()),
+        _cycles,
+        _png_size,
+        _polyhaven_root,
+    )
 
 
 def _bpy() -> Any:

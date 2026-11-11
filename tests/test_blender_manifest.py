@@ -138,7 +138,14 @@ def test_the_index_carries_the_package_in_order() -> None:
 def test_the_capability_is_the_image_kind() -> None:
     assert CAPABILITY["kind"] == "image"
     assert CAPABILITY["preview"] == {"viewer": "image"}
-    assert MANIFEST["capabilities"].keys() == {"photo", "assets", "product", "tour"}
+    assert MANIFEST["capabilities"].keys() == {
+        "photo",
+        "assets",
+        "product",
+        "tour",
+        "scene",
+        "animation",
+    }
 
 
 def test_the_tour_is_the_video_kind_with_the_lab_recipe() -> None:

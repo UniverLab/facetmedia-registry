@@ -4,7 +4,7 @@ requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "Blender project (Blender Foundation)"
 tool_name = "Blender"
-description = "Daylight architectural photos of CadQuery glTF models with Blender Cycles on the GPU and animated camera tours in Eevee, checked by pixel size and an MP4 probe"
+description = "Daylight architectural photos of CadQuery glTF models with Blender Cycles on the GPU, animated camera tours in Eevee, and agent-scripted scenes and animations from the agent's own Blender script, checked by pixel size and an MP4 probe"
 facet = "image"
 
 [engine]
@@ -526,4 +526,132 @@ default = 0
 description = "Turn about Z in degrees."
 
 [capabilities.tour.preview]
+viewer = "video"
+
+[capabilities.scene]
+summary = "A still from the agent's own Blender script, rendered with facet-owned output settings (1920x1080, ~2 s)"
+kind = "image"
+
+[capabilities.scene.inputs.script]
+type = "path"
+required = true
+description = "Blender Python script that builds the scene, resolved relative to the piece file; it must set scene.camera."
+
+[capabilities.scene.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name: writes <name>.png."
+
+[capabilities.scene.inputs.width]
+type = "integer"
+default = 1920
+min = 64
+max = 4096
+description = "Render width in pixels; facet owns the output size, whatever the script sets."
+
+[capabilities.scene.inputs.height]
+type = "integer"
+default = 1080
+min = 64
+max = 4096
+description = "Render height in pixels; facet owns the output size, whatever the script sets."
+
+[capabilities.scene.inputs.engine]
+type = "enum"
+values = ["cycles", "eevee"]
+default = "cycles"
+description = "Render engine; facet applies it after the script, on the GPU through the runner's Cycles helper."
+
+[capabilities.scene.inputs.samples]
+type = "integer"
+default = 128
+min = 1
+max = 4096
+description = "Render samples: Cycles samples, or Eevee TAA render samples; facet applies them after the script."
+
+[capabilities.scene.inputs.exposure]
+type = "number"
+default = 0.0
+min = -5
+max = 5
+description = "Exposure in stops under the scene's own colour management; facet applies it after the script."
+
+[capabilities.scene.inputs.seed]
+type = "integer"
+default = 0
+description = "Cycles sampling seed; recorded either way."
+
+[capabilities.scene.preview]
+viewer = "image"
+
+[capabilities.animation]
+summary = "An animation from the agent's own Blender script, encoded by Blender's own FFmpeg output (120 frames at 1920x1080, 24 fps)"
+kind = "video"
+
+[capabilities.animation.inputs.script]
+type = "path"
+required = true
+description = "Blender Python script that builds the scene, resolved relative to the piece file; it must set scene.camera."
+
+[capabilities.animation.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name: writes <name>.mp4."
+
+[capabilities.animation.inputs.width]
+type = "integer"
+default = 1920
+min = 64
+max = 4096
+description = "Render width in pixels; facet owns the output size, whatever the script sets."
+
+[capabilities.animation.inputs.height]
+type = "integer"
+default = 1080
+min = 64
+max = 4096
+description = "Render height in pixels; facet owns the output size, whatever the script sets."
+
+[capabilities.animation.inputs.engine]
+type = "enum"
+values = ["cycles", "eevee"]
+default = "eevee"
+description = "Render engine; facet applies it after the script, on the GPU through the runner's Cycles helper."
+
+[capabilities.animation.inputs.samples]
+type = "integer"
+default = 64
+min = 1
+max = 4096
+description = "Render samples: Cycles samples, or Eevee TAA render samples; facet applies them after the script."
+
+[capabilities.animation.inputs.exposure]
+type = "number"
+default = 0.0
+min = -5
+max = 5
+description = "Exposure in stops under the scene's own colour management; facet applies it after the script."
+
+[capabilities.animation.inputs.seed]
+type = "integer"
+default = 0
+description = "Cycles sampling seed; recorded either way."
+
+[capabilities.animation.inputs.frames]
+type = "integer"
+default = 120
+min = 1
+max = 1440
+description = "Frame count; facet renders the range 1..frames, whatever the script sets."
+
+[capabilities.animation.inputs.fps]
+type = "integer"
+default = 24
+min = 1
+max = 60
+description = "Frame rate; facet applies it after the script."
+
+[capabilities.animation.preview]
 viewer = "video"

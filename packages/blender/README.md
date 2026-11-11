@@ -407,6 +407,50 @@ as its metric, never an exception. `preview` writes
 and the prompt line
 `<stem> · camera tour · azimuth <start>→<end> · <frames>f @ <fps>fps`.
 
+## Scripted scenes
+
+`facet run blender.scene <piece>.toml` renders one PNG from the piece's own
+Blender script, and `blender.animation` renders one MP4 from it. The recipes
+above fix the scene; the script builds it — a plane, three primitives, two
+lights and a camera in `examples/scene/build.py`, keyframed over frames
+1..120 so the same file stills and animates:
+
+```toml
+[inputs]
+script = "build.py"
+name = "estudio-script"
+```
+
+The contract the runner enforces, in order:
+
+- It starts from `bpy.ops.wm.read_factory_settings(use_empty=True)` and
+  executes the script with `runpy.run_path`, with the script's own directory
+  as the working directory. The script's globals carry `FACET_ASSETS` (the
+  Poly Haven root `blender.assets` fills) and `FACET_PIECE_DIR` (the script's
+  directory), so skies and textures arrive through `blender.assets`, never a
+  download inside the script. Paths go through the host conversion the other
+  capabilities use, so a Windows host Blender opens them.
+- The script must set `scene.camera`. A run without one fails loudly, and so
+  does a script that raises: the message names the script, the exception type
+  and the last traceback lines.
+- After the script, the runner applies facet's output settings, overriding
+  whatever the script set: the resolution at 100 %, the engine and its
+  samples (Cycles on the GPU through the runner's helper, then its samples
+  and seed; Eevee with TAA render samples), the seed, and the exposure. An
+  animation also gets the frame range 1..`frames`, the `fps`, and the tour's
+  MP4 block (FFMPEG/MPEG4/H264, `HIGH`, no file extension), then the output
+  path. Everything else stays the script's: the world, the lights, the
+  materials, the colour-management look and view transform, the keyframes.
+- A still whose luminance is flat fails the run as a uniform image — check
+  the camera's framing and the lights — and the run records its mean and
+  standard deviation. facet verifies only the file: the PNG's size, or the
+  MP4's width, height, frames and fps. Aesthetics are the agent's, never the
+  verifier's.
+
+The script runs **unsandboxed with the person's permissions**, like any code
+the agent writes: it can read and write what the person can, so review it
+like a shell command, not like a prompt.
+
 ## Verification and doctor
 
 `verify` measures the PNG header (the IHDR, which needs no third-party module
@@ -414,7 +458,9 @@ inside Blender): the file must parse as a PNG and measure exactly 1600x1000 for
 `blender.photo`, or 1200x1200 for `blender.product`. The metrics carry `width`
 and `height`; a file that is not a PNG carries `error` and fails. For
 `blender.tour` it probes the MP4's boxes instead, carrying `width`,
-`height`, `frames` and `fps`.
+`height`, `frames` and `fps`. `blender.scene` verifies the PNG against the
+piece's own width and height, and `blender.animation` probes the MP4 against
+the piece's own width, height, frames and fps — the file, never the look.
 
 `facet preview <name>.png` writes `<name>.png.preview.json` for the `image`
 kind with `name`, `prompt` (the recipe line: model, view, turning, exposure),
