@@ -33,11 +33,12 @@ fails the verb loudly.
   needs no Chrome.
 - **`HYPERFRAMES_NO_TELEMETRY=1` and `HYPERFRAMES_SKIP_SKILLS=1`** are set by
   the runner on every CLI call, per the lab rule.
-- **`PATH` is inherited**, so the host `ffmpeg` and `ffprobe` are found.
-- **Host ffmpeg is required.** No facet mechanism provisions it: the
-  `ffmpeg-static`/`ffprobe-static` tarballs hold only an `install.js` downloader
-  and no script runs at install time. Without both binaries the run fails with
-  `ffmpeg and ffprobe are required to encode video (sudo apt-get install -y ffmpeg)`
+- **`[ffmpeg]` (declared).** `facet pull hyperframes` downloads the pinned
+  FFmpeg build once (~150 MB, GPL-3.0); the runner reads `ffmpeg` from
+  `FACET_FFMPEG` and `ffprobe` from `FACET_FFPROBE`, and the HyperFrames CLI
+  keeps finding `ffmpeg` through the `PATH` core prepends. Without both
+  binaries the run fails with
+  `ffmpeg and ffprobe are required to encode video; run facet pull hyperframes`
   (`machine_cannot`), and nothing is installed on the host.
 
 ## The composition
@@ -367,11 +368,11 @@ burned in as opacity cues at run time.
 
 ## Verifying
 
-`verify` probes every asset with the host `ffprobe`: a video stream with a
+`verify` probes every asset with the pinned `ffprobe`: a video stream with a
 positive width, height, frame count and frame rate passes, and the metrics are
 the probe's. A `hyperframes.narrado` or `hyperframes.personaje` asset with no
 audio stream fails, since the mix needs its voices; those two also need the
-host `ffmpeg`, because `verify` measures integrated loudness and true peak with
+pinned `ffmpeg`, because `verify` measures integrated loudness and true peak with
 a `loudnorm` pass, adds `integrated_lufs` and `true_peak_dbtp` to the metrics,
 and passes only within ±1 LU of `target-lufs` with true peak at or below
 -0.5 dBTP. For `hyperframes.loop` assets the verdict adds two format checks
@@ -381,7 +382,7 @@ the probe cannot express: a `gif` must carry the `NETSCAPE2.0` looping block
 `yuva`, …); an opaque MOV fails. `preview` writes `<asset>.preview.json` with
 exactly the video schema's ten fields, and its summary carries the `format`
 label for loop assets. `doctor` reports two checks: the Chromium executable at
-`FACET_BROWSER`, and `ffmpeg` plus `ffprobe` on `PATH`.
+`FACET_BROWSER`, and `ffmpeg` at `FACET_FFMPEG` with `ffprobe` at `FACET_FFPROBE`.
 
 `facet doctor hyperframes` classifies a missing browser or ffmpeg as
 `machine_cannot` with the fix in the check. Run `facet pull hyperframes` once;

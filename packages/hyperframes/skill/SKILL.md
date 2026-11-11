@@ -31,7 +31,8 @@ live in `references/composition.md`, `references/timeline.md`,
   stylesheet, font or media URL outside `hyperframes.json`'s `$schema` and
   `registry` values.
 - When `facet pull hyperframes` has installed the pinned Chromium the runner
-  reads from `FACET_BROWSER`, with `ffmpeg` plus `ffprobe` on `PATH`;
+  reads from `FACET_BROWSER` and the pinned FFmpeg it reads from
+  `FACET_FFMPEG` and `FACET_FFPROBE`;
   otherwise `doctor` fails `machine_cannot` before a run.
 
 ## Pieces
@@ -163,14 +164,15 @@ elements are `#voz-1`, `#voz-2`, … and `#musica`. See `references/id-maps.md`.
 
 The machine and the runner set the limits, and they are not piece inputs:
 `check` first, then `--workers 2` at most; everything vendored; the pinned
-Chromium at `FACET_BROWSER`; host `ffmpeg` and `ffprobe` on `PATH`.
+Chromium at `FACET_BROWSER`; the pinned `ffmpeg` at `FACET_FFMPEG` and
+`ffprobe` at `FACET_FFPROBE`.
 The remote-URL scan skips the top-level `vendor/` subtree. See
 `references/limits.md`.
 
 ### hyperframes.render
 
-`check` first, `--workers 2`, the vendored tree, the pinned Chromium and the host
-`ffmpeg`/`ffprobe`. See `references/limits.md`.
+`check` first, `--workers 2`, the vendored tree, the pinned Chromium and the
+pinned `ffmpeg`/`ffprobe`. See `references/limits.md`.
 
 ### hyperframes.loop
 
@@ -219,7 +221,7 @@ required exactly once and every cue must fit `data-duration`.
 `verify` probes the MP4 with `ffprobe`: a video stream with positive width,
 height, frame count and frame rate passes, and a `narrado` or `personaje`
 asset additionally needs an audio stream. For those two it also measures
-integrated loudness and true peak with the host `ffmpeg`, adds both to the
+integrated loudness and true peak with the pinned `ffmpeg`, adds both to the
 metrics, and passes only within ±1 LU of `target-lufs` with true peak at or
 below -0.5 dBTP. `preview` writes the video kind's
 ten fields, with the summary `{name} · {width}x{height} · {length}f @ {fps}fps ·
@@ -239,9 +241,9 @@ The approved examples ship in `examples/`:
 - **Remote URLs are refused.** Vendor every asset into the composition; only
   `$schema` and `registry` in `hyperframes.json` may stay remote. The `vendor/`
   subtree is exempt from the scan.
-- **Host ffmpeg is required.** Without it the run fails
-  `ffmpeg and ffprobe are required to encode video (sudo apt-get install -y ffmpeg)`;
-  nothing is installed on the host.
+- **Pinned FFmpeg is required.** `facet pull hyperframes` installs it once
+  (~150 MB); without it the run fails
+  `ffmpeg and ffprobe are required to encode video; run facet pull hyperframes`.
 - **Pinned Chromium is required.** `facet pull hyperframes` installs it once
   (~200 MB, shared by the three packages); the runner reads `FACET_BROWSER`.
 - **Workers are fixed at 2.** The cap protects the lab machine and is not a

@@ -223,8 +223,17 @@ def test_the_licenses_cover_the_tool_and_the_notable_dependencies() -> None:
         ("sharp", "Apache-2.0"),
         ("esbuild", "MIT"),
         ("puppeteer-core", "Apache-2.0"),
+        ("FFmpeg (BtbN static build)", "GPL-3.0-or-later"),
     }
     assert not any("chromium" in subject.lower() for subject, _ in licenses)
+
+
+def test_the_ffmpeg_table_pins_the_operator_measured_build() -> None:
+    assert MANIFEST["ffmpeg"] == {
+        "version": "n8.1.3-27-g8dca1586f4",
+        "url": "https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/autobuild-2026-10-31-12-59/ffmpeg-n8.1.3-27-g8dca1586f4-linux64-gpl-8.1.tar.xz",
+        "sha256": "41e9c565594c390622cf968d82fa4135d9e9a11d06c1515644288cbc844e3380",
+    }
 
 
 def test_the_requirements_fit_the_reference_machine() -> None:
@@ -478,6 +487,5 @@ def test_the_readme_documents_the_contract_and_the_traps() -> None:
     assert "--workers 2" in READ
     assert "index.tmpl" in READ
     assert "timeline" in READ
-    assert (
-        "ffmpeg and ffprobe are required to encode video (sudo apt-get install -y ffmpeg)" in READ
-    )
+    assert "[ffmpeg]" in READ
+    assert "facet pull hyperframes" in READ

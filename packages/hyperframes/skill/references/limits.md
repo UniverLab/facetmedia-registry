@@ -17,16 +17,18 @@ the limits, and they are not piece inputs.
 - **Pinned Chromium, `FACET_BROWSER`.** `facet pull hyperframes` installs the
   pinned Chromium once (~200 MB, shared by the three packages); the runner
   reads the executable from `FACET_BROWSER`.
-- **Host `ffmpeg` and `ffprobe` on `PATH`.** No facet mechanism provisions
-  them. Without both binaries the run fails `machine_cannot` with
-  `ffmpeg and ffprobe are required to encode video (sudo apt-get install -y ffmpeg)`.
+- **Pinned `ffmpeg` and `ffprobe`, `FACET_FFMPEG`/`FACET_FFPROBE`.**
+  `facet pull hyperframes` installs the pinned GPL-3.0 build once (~150 MB).
+  Without both binaries the run fails `machine_cannot` with
+  `ffmpeg and ffprobe are required to encode video; run facet pull hyperframes`.
+  The HyperFrames CLI keeps finding `ffmpeg` through the `PATH` core prepends.
 - **Node `22.21.0` and HyperFrames `0.8.143`** are pinned; `HYPERFRAMES_NO_TELEMETRY=1`
   and `HYPERFRAMES_SKIP_SKILLS=1` are set on every CLI call.
 
 ## hyperframes.render
 
 `render` uses the full limit set above: `check` first, `--workers 2`, the
-vendored tree, the pinned Chromium and the host `ffmpeg`/`ffprobe`. `fps` passes
+vendored tree, the pinned Chromium and the pinned `ffmpeg`/`ffprobe`. `fps` passes
 `--fps`; the composition's `data-fps` applies when it is omitted.
 
 ## hyperframes.loop

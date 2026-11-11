@@ -7,7 +7,7 @@ fixture for ``render``. That proves the link plan (dependencies, non-optional
 peers, linux-x64 optional deps, two ``string-width`` versions), check first,
 the workers cap and the lab environment variables, without downloading a
 tarball or rendering a real composition. ``preview`` and ``verify`` probe the
-checked-in MP4 fixture with the host ``ffprobe`` and skip when it is absent.
+checked-in MP4 fixture with the pinned ``ffprobe`` and skip when it is absent.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ DEFAULT_TARGET_LUFS = -14.0
 TRUE_PEAK_CEILING = -0.5
 LOUDNESS_TOLERANCE_LU = 1.0
 BROWSER = shutil.which("sh") or "/bin/sh"
-FFMPEG_MISSING = "ffmpeg and ffprobe are required to encode video (sudo apt-get install -y ffmpeg)"
+FFMPEG_MISSING = "ffmpeg and ffprobe are required to encode video; run facet pull hyperframes"
 FIELDS = {
     "preview",
     "kind",
@@ -192,6 +192,8 @@ def _environment(
         "FACET_NODE": str(NODE),
         "FACET_NODE_PATH": os.pathsep.join(str(directory) for directory in dirs),
         "FACET_BROWSER": BROWSER if browser else "",
+        "FACET_FFMPEG": FFMPEG or "",
+        "FACET_FFPROBE": FFPROBE or "",
         "HYPERFRAMES_BROWSER_PATH": "/nonexistent/host-chrome",
         "HF_STUB_LOG": str(root / "calls.log"),
         "HF_STUB_MP4": str(CLIP),
@@ -497,6 +499,8 @@ def test_a_missing_browser_is_reported_by_doctor(tmp_path: Path) -> None:
     empty = tmp_path / "empty-bin"
     empty.mkdir()
     env = _environment(tmp_path, _dirs(packages), browser=False, path=str(empty))
+    env["FACET_FFMPEG"] = ""
+    env["FACET_FFPROBE"] = ""
     done, result = _invoke(tmp_path, "doctor", _request("doctor", tmp_path, tmp_path), env)
     assert done.returncode == 0, done.stderr
     checks = {check["name"]: check for check in result["checks"]}
@@ -507,7 +511,7 @@ def test_a_missing_browser_is_reported_by_doctor(tmp_path: Path) -> None:
     ffmpeg = checks["ffmpeg"]
     assert ffmpeg["ok"] is False
     assert ffmpeg["detail"] == FFMPEG_MISSING
-    assert ffmpeg["fix"] == ""
+    assert ffmpeg["fix"] == "facet pull hyperframes"
 
 
 def test_run_without_a_browser_fails_and_never_calls_the_cli(tmp_path: Path) -> None:
@@ -541,6 +545,9 @@ def test_doctor_reports_the_host_tools_when_present(tmp_path: Path) -> None:
     assert checks["chromium"]["ok"] is True
     has_ffmpeg = bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
     assert checks["ffmpeg"]["ok"] is has_ffmpeg
+    if has_ffmpeg:
+        assert FFMPEG in checks["ffmpeg"]["detail"]
+        assert FFPROBE in checks["ffmpeg"]["detail"]
 
 
 @pytest.mark.skipif(FFPROBE is None, reason="ffprobe is not available")
@@ -592,6 +599,23 @@ def test_verify_probes_the_mp4_and_rejects_a_non_video(tmp_path: Path) -> None:
     assert (passed["metrics"]["width"], passed["metrics"]["height"]) == (WIDTH, HEIGHT)
     assert passed["metrics"]["frames"] == FRAMES and passed["metrics"]["fps"] == FPS
     assert failed["file"] == "notes.txt" and failed["passed"] is False
+
+
+def test_verify_without_the_pinned_ffmpeg_fails_with_the_pull_fix(tmp_path: Path) -> None:
+    """Without FACET_FFMPEG the run fails naming facet pull, never apt."""
+    packages = _fixture(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    good = out / "good.mp4"
+    shutil.copyfile(CLIP, good)
+    request = _request("verify", out, tmp_path, composicion="comp", prompt="a brief")
+    request["assets"] = [str(good)]
+    env = _environment(tmp_path, _dirs(packages))
+    env["FACET_FFMPEG"] = ""
+    done, result = _invoke(tmp_path, "verify", request, env)
+    assert done.returncode != 0
+    assert result is None
+    assert "facet pull hyperframes" in done.stderr
 
 
 DIAGRAMA_SVG = ROOT / "tests" / "fixtures" / "diagrama.svg"

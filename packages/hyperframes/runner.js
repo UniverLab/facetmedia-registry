@@ -8,7 +8,7 @@
 // HyperFrames owns `check` and `render`; this script only resolves the npm
 // dependency tree the pinned tarballs leave without node_modules links,
 // refuses remote URLs, runs check before render, probes the MP4 with the
-// host ffprobe, and writes the video preview. `hyperframes.loop` reuses the
+// pinned ffprobe, and writes the video preview. `hyperframes.loop` reuses the
 // same check-first path for GIF and MOV-with-alpha exports. It imports
 // nothing but node builtins, so it runs before any dependency is linked.
 
@@ -20,12 +20,14 @@ const { narradoSetup } = require("./narrado.js");
 const { personajeSetup } = require("./personaje.js");
 
 const BROWSER_VAR = "FACET_BROWSER";
+const FFMPEG_VAR = "FACET_FFMPEG";
+const FFPROBE_VAR = "FACET_FFPROBE";
 // The CLI resolves its browser from its own override variables and the
 // canonical spelling wins over every fallback; assembled so this file
 // carries no literal host-browser variable name.
 const CLI_BROWSER_VAR = "HYPERFRAMES" + "_BROWSER_PATH";
 const FFMPEG_MISSING =
-  "ffmpeg and ffprobe are required to encode video (sudo apt-get install -y ffmpeg)";
+  "ffmpeg and ffprobe are required to encode video; run facet pull hyperframes";
 const WORKERS = "2";
 const MAX_SUMMARY = 160;
 const LOOP_FORMATS = {
@@ -294,7 +296,7 @@ function caretUpper(base) {
   return `0.0.${parsed.patch + 1}`;
 }
 
-// --- the machine: the pinned browser and the host ffmpeg.
+// --- the machine: the pinned browser and facet's pinned ffmpeg.
 
 function isExecutable(file) {
   if (!file) return false;
@@ -317,13 +319,17 @@ function requireBrowser() {
   if (problem) throw new Error(problem);
 }
 
-function which(name) {
-  for (const dir of (process.env.PATH || "").split(path.delimiter)) {
-    if (!dir) continue;
-    const candidate = path.join(dir, name);
-    if (isExecutable(candidate)) return candidate;
-  }
-  return "";
+function ffmpegPaths() {
+  const ffmpeg = process.env[FFMPEG_VAR] || "";
+  const ffprobe = process.env[FFPROBE_VAR] || "";
+  if (isExecutable(ffmpeg) && isExecutable(ffprobe)) return { ffmpeg, ffprobe };
+  return null;
+}
+
+function requireFfmpeg() {
+  const found = ffmpegPaths();
+  if (!found) throw new Error(FFMPEG_MISSING);
+  return found;
 }
 
 function doctor() {
@@ -349,11 +355,21 @@ function chromiumCheck() {
 }
 
 function ffmpegCheck() {
-  const missing = ["ffmpeg", "ffprobe"].filter((name) => !which(name));
-  if (missing.length) {
-    return { name: "ffmpeg", ok: false, detail: FFMPEG_MISSING, fix: "" };
+  const found = ffmpegPaths();
+  if (!found) {
+    return {
+      name: "ffmpeg",
+      ok: false,
+      detail: FFMPEG_MISSING,
+      fix: "facet pull hyperframes",
+    };
   }
-  return { name: "ffmpeg", ok: true, detail: "ffmpeg and ffprobe are on PATH", fix: "" };
+  return {
+    name: "ffmpeg",
+    ok: true,
+    detail: `ffmpeg at ${found.ffmpeg}, ffprobe at ${found.ffprobe}`,
+    fix: "",
+  };
 }
 
 // --- resolving the piece's paths.
@@ -698,7 +714,7 @@ function runCli(args, cwd) {
 }
 
 function verify(request) {
-  if (!which("ffprobe")) throw new Error(FFMPEG_MISSING);
+  requireFfmpeg();
   return { assets: (request.assets || []).map((asset) => verdictOf(asset, request)) };
 }
 
@@ -719,8 +735,7 @@ function targetLufsOf(request) {
 function loudnormMeasured(file, target) {
   const shim = process.env.FACET_TEST_LOUDNESS_JSON;
   if (shim) return JSON.parse(shim);
-  const ffmpeg = which("ffmpeg");
-  if (!ffmpeg) throw new Error(FFMPEG_MISSING);
+  const { ffmpeg } = requireFfmpeg();
   const done = spawnSync(
     ffmpeg,
     [
@@ -775,8 +790,7 @@ function normalizeLoudness(file, target) {
       throw new Error("loudnorm printed no usable integrated loudness");
     }
   }
-  const ffmpeg = which("ffmpeg");
-  if (!ffmpeg) throw new Error(FFMPEG_MISSING);
+  const { ffmpeg } = requireFfmpeg();
   const filter = [
     `loudnorm=I=${target}:TP=-1:LRA=11`,
     `measured_I=${measured.input_i}`,
@@ -869,7 +883,7 @@ function verdictOf(asset, request) {
 }
 
 function preview(request) {
-  if (!which("ffprobe")) throw new Error(FFMPEG_MISSING);
+  requireFfmpeg();
   const inputs = inputsOf(request);
   const prompt = String(inputs.prompt || "");
   if (!prompt) throw new Error("prompt is required");
@@ -931,7 +945,7 @@ function gifHasLoop(file) {
 
 function probe(file) {
   const done = spawnSync(
-    which("ffprobe"),
+    requireFfmpeg().ffprobe,
     ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", file],
     { encoding: "utf8" },
   );
