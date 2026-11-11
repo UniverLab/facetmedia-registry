@@ -4,13 +4,22 @@ requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "debpalash (VoiceStudio)"
 tool_name = "VoiceStudio"
-description = "Narration through a self-started VoiceStudio backend with the voxcpm2, omnivoice or cosyvoice engine, checked by transcription"
+description = "Narration through a facet-managed VoiceStudio backend with the voxcpm2, omnivoice or cosyvoice engine, checked by transcription"
 facet = "voice"
 uses = ["textnorm", "audiopreview"]
 
 [engine]
 type = "python-env"
-python = "3.12"
+python = "3.11"
+
+[engine.server]
+repo = "https://github.com/debpalash/VoiceStudio.git"
+rev = "c2ef99817fc4f2e0271a223c357e57e8df93cbde"
+requirements = "uv.lock"
+launch = ["python", "-m", "uvicorn", "main:app", "--app-dir", "backend", "--host", "127.0.0.1", "--port", "{{port}}"]
+health_url = "http://127.0.0.1:{{port}}/health"
+timeout_s = 600
+env = { OMNIVOICE_DATA_DIR = "{{data}}" }
 
 [transport]
 type = "cli"
@@ -19,7 +28,7 @@ entry = "runner.py"
 [requirements]
 gpu = true
 ram_gb = 8
-disk_gb = 2
+disk_gb = 40
 exclusive = true
 platforms = ["linux"]
 
@@ -58,7 +67,7 @@ requires_acceptance = true
 terms_url = "https://huggingface.co/k2-fsa/OmniVoice"
 
 [capabilities.speak]
-summary = "Narration through a self-started VoiceStudio backend (engine voxcpm2 or omnivoice), checked by transcription"
+summary = "Narration through a facet-managed VoiceStudio backend (engine voxcpm2 or omnivoice), checked by transcription"
 kind = "audio"
 
 [capabilities.speak.inputs.voice]

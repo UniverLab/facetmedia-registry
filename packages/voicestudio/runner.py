@@ -9,19 +9,20 @@ rate exceeds the threshold is regenerated with ``seed + 1`` (at most three
 tries per clip, the last attempt kept), ``verify`` transcribes existing
 assets, ``preview`` writes the audio preview file, ``doctor`` checks the
 machine (an NVIDIA GPU, its VRAM readable, no model but the backend's
-holding GPU memory) plus the package (imports, models, clone) at ``quick``
-depth, and the backend status and the default profile at ``full`` depth.
+holding GPU memory) plus the package (imports, models) at ``quick``
+depth, and, at ``full`` depth, the backend status, the default profile and
+each sidecar engine's install state.
 
 The runner never reimplements the licence gate: an ``omnivoice`` piece whose
 CC-BY-NC terms are not recorded fails in the core with
 ``license_not_accepted`` (exit 4), before the runner starts.
 
-This runner is a pure client: it never starts, stops or holds the backend.
-The backend is user-started for now (the lab recipe, named by a run when
-nothing answers and printed by ``doctor``); managed provisioning is the
-core's follow-up. The base URL is ``FACET_SERVER_URL`` (future managed
-mode), else ``VOICESTUDIO_URL``, else ``http://127.0.0.1:3900`` — the
-environment that ``facet run`` sets up reaches the runner untouched.
+This runner is a client of a facet-managed server: facet pulls VoiceStudio
+from its pinned ``uv.lock`` and starts it for each run, with its state
+under ``<FACET_HOME>/data/voicestudio/``. The base URL is
+``FACET_SERVER_URL`` (the managed server), else ``VOICESTUDIO_URL``, else
+``http://127.0.0.1:3900`` — the environment that ``facet run`` sets up
+reaches the runner untouched.
 
 Heavy imports go through ``importlib`` inside the functions: the verification
 side (``textnorm``) is stdlib-only, so a broken environment still lets the
@@ -43,7 +44,6 @@ import urllib.request
 import wave
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -87,11 +87,8 @@ NVIDIA_SMI_TIMEOUT_S = 4.0
 SPEAK_TIMEOUT_S = 900.0
 #: Attempts per clip: the piece's seed, then ``seed + 1`` while over the WER.
 MAX_TRIES = 3
-#: The person's clone tested by the lab (never bundled, never modified).
-CLONE_PATH = Path.home() / "Projects" / "open-source" / "VoiceStudio"
 #: The default cloned voice profile (registered locally with POST /profiles).
 DEFAULT_VOICE = "narradora"
-DEFAULT_PROFILE_ID = "a082932b"
 #: The capability that speaks a local clone profile, and the one engine it uses.
 CLONE_CAPABILITY = "voicestudio.clone"
 CLONE_ENGINE = "cosyvoice"
@@ -101,13 +98,10 @@ PROFILE_CAPABILITY = "voicestudio.profile"
 PROFILE_SUFFIX = ".profile.json"
 #: What verify reports as the profile receipt's verifier.
 PROFILE_VERIFIER = "voicestudio-profiles"
-#: Where the missing-profile refusal sends the person: profile creation is its own spec.
-CLONE_PROFILE_SPEC = "create a clone profile from local samples, projects/prueba-voz/mi-voz/"
-#: The recreate recipe for a missing profile, as the backend expects it.
-PROFILE_RECIPE = (
-    "POST /profiles multipart name=narradora kind=clone language=es with "
-    "ref_audio and the ref_text from projects/prueba-voz/narradora/voz.toml"
-)
+#: Where the missing-profile refusal sends the person: profile creation is its own verb.
+CLONE_PROFILE_SPEC = "facet run voicestudio.profile <piece> with the person's own name"
+#: The recreate recipe for a missing default profile, as the person runs it.
+PROFILE_RECIPE = 'facet run voicestudio.profile <piece> with name = "narradora"'
 #: Imports the doctor proves, with the distribution each comes from.
 DOCTOR_IMPORTS = (
     ("faster_whisper", "faster-whisper"),
@@ -127,15 +121,6 @@ def _base_url() -> str:
     facet_url = str(os.environ.get("FACET_SERVER_URL") or "").strip()
     voice_url = str(os.environ.get("VOICESTUDIO_URL") or "").strip()
     return facet_url or voice_url or DEFAULT_BASE_URL
-
-
-def _start_recipe(base_url: str) -> str:
-    """The user-start recipe: the lab's uvicorn command from the clone."""
-    port = urlsplit(base_url).port or urlsplit(DEFAULT_BASE_URL).port
-    return (
-        f"cd {CLONE_PATH} && "
-        f"python -m uvicorn main:app --app-dir backend --host 127.0.0.1 --port {port}"
-    )
 
 
 def _fetch_json(base_url: str, path: str, timeout_s: float) -> Any:
@@ -164,15 +149,15 @@ def _post_speak(base_url: str, name: str, body: dict[str, Any]) -> bytes:
 
 
 def _status(base_url: str) -> dict[str, Any]:
-    """GET /model/status, naming the start recipe when nothing answers."""
+    """GET /model/status; facet starts the backend for each run."""
     try:
         payload = _fetch_json(base_url, STATUS_PATH, CONNECT_TIMEOUT_S)
     except ValueError as exc:
         raise RuntimeError(f"{base_url}{STATUS_PATH} answered no JSON: {exc}") from None
     except OSError as exc:
-        recipe = _start_recipe(base_url)
         raise RuntimeError(
-            f"no VoiceStudio backend at {base_url} ({exc}) — start it with: {recipe}"
+            f"no VoiceStudio backend at {base_url} ({exc}); "
+            "facet starts it for each run — see facet doctor voicestudio"
         ) from None
     if not isinstance(payload, dict):
         raise RuntimeError(f"{base_url}{STATUS_PATH} answered no JSON object")
@@ -376,6 +361,11 @@ def _profile_module() -> Any:
     return importlib.import_module("profile")
 
 
+def _engines() -> Any:
+    """The sidecar provisioning helpers, imported only when a verb needs them."""
+    return importlib.import_module("engines")
+
+
 def _run_profile(req: Request) -> dict[str, Any]:
     """Validate the reference, POST one clone profile, write its receipt."""
     params = dict(req.inputs)
@@ -452,6 +442,9 @@ def run(req: Request) -> dict[str, Any]:
     _wait_ready(base_url)
     if clone:
         _check_clone_voice(base_url, clips[0]["voice"])
+    engine = clips[0]["model"]
+    if engine in _engines().SIDECAR_ENGINES:
+        _engines()._ensure_engine(base_url, engine)
     whisper = _whisper(req)
     assets = [_narrate(whisper, base_url, clip, req.out_dir) for clip in clips]
     return {"tool": dict(TOOL), "assets": assets}
@@ -613,14 +606,13 @@ def _preview_data(whisper: Any, audio: Any, path: Path, clip: dict[str, Any]) ->
 
 @runner.verb("doctor")
 def doctor(req: Request) -> dict[str, Any]:
-    """The package doctor: machine, imports, models, the clone, and (full) the backend."""
+    """The package doctor: machine, imports and models, plus (full) the backend."""
     checks = [
         _doctor_gpu(),
         _doctor_vram(),
         _doctor_gpu_free(_base_url()),
         _doctor_imports(),
         _doctor_models(req),
-        _doctor_clone(),
     ]
     if req.depth == "full":
         base_url = _base_url()
@@ -628,6 +620,8 @@ def doctor(req: Request) -> dict[str, Any]:
         checks.append(backend)
         if backend["ok"]:
             checks.append(_doctor_profile(base_url))
+            for engine in _engines().SIDECAR_ENGINES:
+                checks.append(_doctor_engine(base_url, engine))
     return {"checks": checks}
 
 
@@ -761,35 +755,16 @@ def _tree_bytes(path: Path) -> int | None:
     return None
 
 
-def _doctor_clone() -> dict[str, Any]:
-    """The VoiceStudio clone is present and its backend importable."""
-    clone_fix = f"git clone https://github.com/debpalash/VoiceStudio {CLONE_PATH}"
-    app = CLONE_PATH / "backend" / "main.py"
-    if not CLONE_PATH.is_dir():
-        return _verdict(
-            "clone", False, f"the VoiceStudio clone is missing at {CLONE_PATH}", clone_fix
-        )
-    if not app.is_file():
-        return _verdict(
-            "clone",
-            False,
-            f"{CLONE_PATH} has no backend/main.py — not the VoiceStudio tree",
-            clone_fix,
-        )
-    return _verdict("clone", True, f"{CLONE_PATH} (backend/main.py present)")
-
-
 def _doctor_backend(base_url: str) -> dict[str, Any]:
-    """The backend answers /model/status, or the doctor prints the recipe."""
+    """The backend answers /model/status; facet starts it for each run."""
     try:
         payload = _fetch_json(base_url, STATUS_PATH, CONNECT_TIMEOUT_S)
     except (urllib.error.URLError, OSError, ValueError) as exc:
-        recipe = _start_recipe(base_url)
         return _verdict(
             "backend",
             False,
-            f"not answering at {base_url}: {exc} — start it with: {recipe}",
-            recipe,
+            f"not answering at {base_url}: {exc} — facet starts it for each run",
+            "facet doctor voicestudio",
         )
     state = _state(payload)
     if state == "error":
@@ -797,9 +772,27 @@ def _doctor_backend(base_url: str) -> dict[str, Any]:
             "backend",
             False,
             f"state error at {base_url}: {json.dumps(payload)[:200]}",
-            _start_recipe(base_url),
+            "facet doctor voicestudio",
         )
     return _verdict("backend", True, f"{state}: {json.dumps(payload)[:120]}")
+
+
+def _doctor_engine(base_url: str, engine: str) -> dict[str, Any]:
+    """One sidecar engine's install status, read only: the doctor never POSTs."""
+    try:
+        status = _engines().engine_status(base_url, engine)
+    except (urllib.error.URLError, OSError, ValueError, RuntimeError) as exc:
+        return _verdict(f"engines-{engine}", False, f"GET install status failed: {exc}")
+    if bool(status.get("installed")):
+        return _verdict(
+            f"engines-{engine}", True, f"{engine} installed at {status.get('install_dir')}"
+        )
+    size = _engines().ENGINE_SIZES_GB[engine]
+    return _verdict(
+        f"engines-{engine}",
+        True,
+        f"{engine} not installed yet; the first run that uses it installs it (~{size} GB)",
+    )
 
 
 def _profile_rows(base_url: str) -> list[dict[str, Any]]:
@@ -837,14 +830,12 @@ def _doctor_profile(base_url: str) -> dict[str, Any]:
     except (urllib.error.URLError, OSError, ValueError) as exc:
         return _verdict("profile", False, f"GET {PROFILES_PATH} failed: {exc}")
     names = {str(entry.get("name", "")) for entry in profiles}
-    ids = {str(entry.get("id", "")) for entry in profiles}
-    if DEFAULT_VOICE in names or DEFAULT_PROFILE_ID in ids:
-        return _verdict("profile", True, f"{DEFAULT_VOICE} ({DEFAULT_PROFILE_ID}) registered")
+    if DEFAULT_VOICE in names:
+        return _verdict("profile", True, f"{DEFAULT_VOICE} registered")
     return _verdict(
         "profile",
         False,
-        f"no {DEFAULT_VOICE} ({DEFAULT_PROFILE_ID}) in {PROFILES_PATH} — recreate it from "
-        f"the host: {PROFILE_RECIPE} (profiles live in the person's machine, never bundled)",
+        f"no {DEFAULT_VOICE} in {PROFILES_PATH} — create it with: {PROFILE_RECIPE}",
         PROFILE_RECIPE,
     )
 

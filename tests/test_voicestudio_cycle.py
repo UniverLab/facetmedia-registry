@@ -159,8 +159,12 @@ PROFILES = list(json.loads(os.environ.get("STUB_PROFILES", "[]")))
 POLLS = os.environ["STUB_POLLS"]
 BODIES = os.environ["STUB_BODIES"]
 GETS = os.environ["STUB_GETS"]
+INSTALLS = os.environ["STUB_INSTALLS"]
 CANNED = os.environ["STUB_CANNED"]
 ERROR = os.environ.get("STUB_ERROR", "")
+INSTALL_STATUSES = list(json.loads(os.environ.get("STUB_INSTALL_STATUSES", "[]")))
+INSTALL_POST = os.environ.get("STUB_INSTALL_POST", "ok")
+INSTALL_DETAIL = os.environ.get("STUB_INSTALL_DETAIL", "this host cannot serve it")
 
 
 def _append(path, item):
@@ -190,10 +194,35 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def send_code(self, code, payload):
+        body = json.dumps(payload).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def engine_status(self):
+        prior = sum(1 for line in open(GETS, encoding="utf-8") if "/install/status" in line)
+        _append(GETS, {"path": self.path})
+        if INSTALL_STATUSES:
+            return INSTALL_STATUSES[min(prior, len(INSTALL_STATUSES) - 1)]
+        engine = self.path.split("/")[3]
+        return {
+            "engine_id": engine,
+            "installed": True,
+            "managed": True,
+            "install_dir": f"/data/voicestudio/engines/{engine}",
+            "job": {"state": "succeeded", "steps": []},
+        }
+
     def do_GET(self):
         if self.path == "/profiles":
             _append(GETS, {"path": self.path})
             self.send_body(json.dumps({"profiles": PROFILES}).encode(), "application/json")
+            return
+        if self.path.startswith("/engines/sidecar/") and self.path.endswith("/install/status"):
+            self.send_body(json.dumps(self.engine_status()).encode(), "application/json")
             return
         if self.path != "/model/status":
             self.send_error(404)
@@ -207,6 +236,15 @@ class Handler(BaseHTTPRequestHandler):
         self.send_body(json.dumps(payload).encode(), "application/json")
 
     def do_POST(self):
+        if self.path.startswith("/engines/sidecar/") and self.path.endswith("/install"):
+            length = int(self.headers.get("Content-Length", "0"))
+            self.rfile.read(length)
+            _append(INSTALLS, {"path": self.path})
+            if INSTALL_POST == "409":
+                self.send_code(409, {"detail": INSTALL_DETAIL})
+                return
+            self.send_body(json.dumps({}).encode(), "application/json")
+            return
         if self.path != "/v1/audio/speech":
             self.send_error(404)
             return
@@ -216,7 +254,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    for path in (POLLS, BODIES, GETS):
+    for path in (POLLS, BODIES, GETS, INSTALLS):
         open(path, "a", encoding="utf-8").close()  # the handlers read these before the first append
     parser = argparse.ArgumentParser()
     parser.add_argument("--listen", default="127.0.0.1")
@@ -327,6 +365,8 @@ def _backend(
     states: list[str],
     error: str = "",
     profiles: list[dict[str, str]] | None = None,
+    install_statuses: list[dict[str, object]] | None = None,
+    install_post: str = "ok",
 ) -> tuple[subprocess.Popen[str], str, dict[str, Path]]:
     port = _free_port()
     logs = tmp_path / "stub-logs"
@@ -335,6 +375,7 @@ def _backend(
         "pol": logs / "polls.jsonl",
         "bod": logs / "bodies.jsonl",
         "get": logs / "gets.jsonl",
+        "ins": logs / "installs.jsonl",
         "can": logs / "clip.wav",
     }
     server = tmp_path / "stub-backend.py"
@@ -345,10 +386,13 @@ def _backend(
         "STUB_POLLS": str(files["pol"]),
         "STUB_BODIES": str(files["bod"]),
         "STUB_GETS": str(files["get"]),
+        "STUB_INSTALLS": str(files["ins"]),
         "STUB_CANNED": str(files["can"]),
         "STUB_CALLS": str(tmp_path / "whisper-calls.jsonl"),
         "STUB_ERROR": error,
         "STUB_PROFILES": json.dumps(profiles or []),
+        "STUB_INSTALL_STATUSES": json.dumps(install_statuses or []),
+        "STUB_INSTALL_POST": install_post,
     }
     process = subprocess.Popen(
         [sys.executable, str(server), "--port", str(port)],
@@ -618,7 +662,11 @@ def test_a_clone_piece_speaks_the_local_profile_with_cosyvoice(tmp_path: Path) -
     assert asset["params"]["model"] == "cosyvoice"
     assert asset["params"]["voice"] == CLONE_ID
     gets = _read_lines(tmp_path / "stub-logs" / "gets.jsonl")
-    assert [entry["path"] for entry in gets] == ["/profiles"]
+    paths = [entry["path"] for entry in gets]
+    assert "/profiles" in paths
+    assert "/engines/sidecar/cosyvoice/install/status" in paths
+    installs = _read_lines(tmp_path / "stub-logs" / "installs.jsonl")
+    assert installs == []  # already installed: status first, never a POST
     bodies = _read_lines(tmp_path / "stub-logs" / "bodies.jsonl")
     assert len(bodies) == 1
     assert bodies[0]["model"] == "cosyvoice"
@@ -638,7 +686,7 @@ def test_a_clone_profile_not_installed_is_refused_naming_the_spec(tmp_path: Path
     assert done.returncode != 0
     assert CLONE_ID in output
     assert "is not installed in this backend" in output
-    assert "projects/prueba-voz/mi-voz/" in output
+    assert "facet run voicestudio.profile" in output
     gets = _read_lines(tmp_path / "stub-logs" / "gets.jsonl")
     assert [entry["path"] for entry in gets] == ["/profiles"]
     assert _read_lines(tmp_path / "stub-logs" / "bodies.jsonl") == []
@@ -746,7 +794,9 @@ def test_a_missing_backend_names_the_start_recipe(tmp_path: Path) -> None:
     output = done.stdout + done.stderr
     assert done.returncode != 0
     assert f"no VoiceStudio backend at {dead_url}" in output
-    assert "uvicorn main:app --app-dir backend" in output
+    assert "facet starts it for each run" in output
+    assert "facet doctor voicestudio" in output
+    assert "uvicorn main:app --app-dir backend" not in output
 
 
 def test_the_written_clip_is_a_real_wav_from_the_backend(tmp_path: Path) -> None:
@@ -831,15 +881,16 @@ def test_a_persistently_idle_backend_proceeds_after_the_grace(
 def test_the_doctor_names_the_recipe_when_the_default_profile_is_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Profiles are local and never bundled: the doctor says how to recreate it."""
+    """Profiles are local and never bundled: the doctor says how to create it."""
     module = _import_runner(monkeypatch, tmp_path)
     profiles = [{"id": "d4e9ee57", "name": "jheison"}]
     monkeypatch.setattr(module, "_fetch_json", lambda *_args, **_kwargs: profiles)
     missing = module._doctor_profile("http://127.0.0.1:3900")
     assert missing["ok"] is False
-    assert "POST /profiles" in missing["fix"]
-    assert "name=narradora" in missing["fix"]
-    profiles = [{"id": "a082932b", "name": "narradora"}]
+    assert "facet run voicestudio.profile" in missing["fix"]
+    assert 'name = "narradora"' in missing["fix"]
+    assert "POST /profiles" not in missing["fix"]
+    profiles = [{"id": "whatever-minted-per-data-dir", "name": "narradora"}]
     found = module._doctor_profile("http://127.0.0.1:3900")
     assert found["ok"] is True
 
@@ -923,7 +974,9 @@ def test_the_doctor_still_fails_a_backend_entry_free_package(
     assert f"manifest says {WHISPER_BYTES}" in check["detail"]
 
 
-def _run_doctor(tmp_path: Path, url: str, machine: dict[str, str]) -> dict[str, object]:
+def _run_doctor(
+    tmp_path: Path, url: str, machine: dict[str, str], depth: str = "quick"
+) -> dict[str, object]:
     """The doctor verb on a stub SDK, a canned nvidia-smi on PATH, no real GPU."""
     out = tmp_path / "out"
     out.mkdir()
@@ -936,7 +989,7 @@ def _run_doctor(tmp_path: Path, url: str, machine: dict[str, str]) -> dict[str, 
         "protocol": 1,
         "verb": "doctor",
         "capability": "voicestudio.speak",
-        "depth": "quick",
+        "depth": depth,
         "inputs": {},
         "out_dir": str(out),
         "piece_dir": str(tmp_path),
@@ -981,7 +1034,7 @@ def _run_doctor(tmp_path: Path, url: str, machine: dict[str, str]) -> dict[str, 
 
 
 def test_the_doctor_tells_the_machine_and_the_package_apart(tmp_path: Path) -> None:
-    """Quick depth: gpu, vram, gpu_free then imports, models, clone — no backend/profile."""
+    """Quick depth: gpu, vram, gpu_free then imports, models — no backend/profile."""
     process, url, _files = _backend(tmp_path, ["ready"])
     try:
         result = _run_doctor(tmp_path, url, {})
@@ -993,7 +1046,7 @@ def test_the_doctor_tells_the_machine_and_the_package_apart(tmp_path: Path) -> N
         for check in result["checks"]  # type: ignore[index]
         if isinstance(check, dict)
     }
-    assert set(checks) == {"gpu", "vram", "gpu_free", "imports", "models", "clone"}
+    assert set(checks) == {"gpu", "vram", "gpu_free", "imports", "models"}
     assert checks["gpu"]["ok"] is True  # type: ignore[index]
     assert checks["gpu"]["detail"] == FAKE_GPU_LINE  # type: ignore[index]
     assert checks["vram"]["ok"] is True  # type: ignore[index]
@@ -1037,3 +1090,219 @@ def test_a_broken_nvidia_smi_fails_gpu_and_vram_with_the_fix(tmp_path: Path) -> 
     for name in ("gpu", "vram"):
         assert checks[name]["ok"] is False  # type: ignore[index]
         assert checks[name]["fix"] == "install the NVIDIA driver"  # type: ignore[index]
+
+
+def _import_engines() -> Any:
+    """The provisioning helpers as their own module, stubbed per test."""
+    spec = importlib.util.spec_from_file_location(
+        "voicestudio_engines_unit", PACKAGE / "engines.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_an_already_installed_engine_returns_without_posting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Status first: ``installed`` true means no POST and no wait."""
+    engines = _import_engines()
+
+    def fail_post(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("no POST when the engine is installed")
+
+    monkeypatch.setattr(
+        engines,
+        "_fetch_json",
+        lambda *_args, **_kwargs: {"installed": True, "install_dir": "/d/voxcpm2"},
+    )
+    monkeypatch.setattr(engines, "_post_json", fail_post)
+    assert engines._ensure_engine("http://127.0.0.1:3900", "voxcpm2") is None
+
+
+def test_a_missing_engine_installs_then_polls_to_installed(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Not installed: one POST, progress on each state change, return on installed."""
+    engines = _import_engines()
+    starting = [
+        {"id": "preflight", "state": "running", "detail": None},
+        {"id": "fetch_source", "state": "pending", "detail": None},
+    ]
+    fetching = [
+        {"id": "preflight", "state": "done", "detail": "uv found, disk space OK"},
+        {"id": "fetch_source", "state": "running", "detail": None},
+    ]
+    statuses = [
+        {"installed": False, "job": {"state": "running", "steps": starting}},
+        {"installed": False, "job": {"state": "running", "steps": starting}},
+        {"installed": False, "job": {"state": "running", "steps": fetching}},
+        {"installed": True, "install_dir": "/d/voxcpm2", "job": {"state": "succeeded"}},
+    ]
+    posts: list[tuple[object, ...]] = []
+
+    def scripted_fetch(*_args: object, **_kwargs: object) -> dict[str, object]:
+        return dict(statuses.pop(0))
+
+    def record_post(*args: object, **_kwargs: object) -> dict[str, object]:
+        posts.append(args)
+        return {}
+
+    monkeypatch.setattr(engines, "_fetch_json", scripted_fetch)
+    monkeypatch.setattr(engines, "_post_json", record_post)
+    monkeypatch.setattr(engines, "ENGINE_POLL_S", 0.0)
+    assert engines._ensure_engine("http://127.0.0.1:3900", "voxcpm2") is None
+    assert len(posts) == 1
+    progress = capsys.readouterr().err
+    assert "voicestudio: installing voxcpm2: running preflight" in progress
+    assert "voicestudio: installing voxcpm2: running fetch_source" in progress
+
+
+def test_a_409_names_the_machine_as_unservable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """409 on POST: the host cannot serve the engine, with the backend's sentence."""
+    engines = _import_engines()
+    monkeypatch.setattr(
+        engines, "_fetch_json", lambda *_args, **_kwargs: {"installed": False, "job": {}}
+    )
+
+    def conflict(*_args: object, **_kwargs: object) -> object:
+        raise engines._HttpError(
+            engines.HTTP_CONFLICT, json.dumps({"detail": "no CUDA on this host"})
+        )
+
+    monkeypatch.setattr(engines, "_post_json", conflict)
+    with pytest.raises(RuntimeError) as caught:
+        engines._ensure_engine("http://127.0.0.1:3900", "cosyvoice")
+    assert "cosyvoice: VoiceStudio cannot install it on this machine" in str(caught.value)
+    assert "no CUDA on this host" in str(caught.value)
+
+
+def test_a_job_error_raises_with_error_and_remediation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed install job carries what broke and what settles it."""
+    engines = _import_engines()
+    status = {
+        "installed": False,
+        "job": {
+            "state": "failed",
+            "steps": ["fetch"],
+            "error": "disk full",
+            "remediation": "free 10 GB",
+        },
+    }
+    monkeypatch.setattr(engines, "_fetch_json", lambda *_args, **_kwargs: status)
+    monkeypatch.setattr(engines, "_post_json", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(engines, "ENGINE_POLL_S", 0.0)
+    with pytest.raises(RuntimeError) as caught:
+        engines._ensure_engine("http://127.0.0.1:3900", "voxcpm2")
+    assert "disk full" in str(caught.value)
+    assert "free 10 GB" in str(caught.value)
+
+
+def test_an_install_that_never_finishes_raises_and_resumes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A patched clock past the budget: the run fails, the next run resumes the job."""
+    engines = _import_engines()
+    status = {"installed": False, "job": {"state": "running", "steps": ["fetch"]}}
+    monkeypatch.setattr(engines, "_fetch_json", lambda *_args, **_kwargs: status)
+    monkeypatch.setattr(engines, "_post_json", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(engines, "ENGINE_POLL_S", 0.0)
+    ticks = [1000.0, 1000.0 + 6000.0]
+    monkeypatch.setattr(engines.time, "monotonic", lambda: ticks.pop(0))
+    with pytest.raises(RuntimeError) as caught:
+        engines._ensure_engine("http://127.0.0.1:3900", "voxcpm2")
+    assert "install not finished after 5400 s" in str(caught.value)
+    assert "facet run again resumes it" in str(caught.value)
+
+
+def test_an_omnivoice_run_never_touches_the_sidecar_endpoints(tmp_path: Path) -> None:
+    """``omnivoice`` is in-process: no status check, no install POST."""
+    result, _stdout = _run_cycle(tmp_path, ["ready"], [TEXT], model="omnivoice")
+    assert result["assets"][0]["properties"]["model"] == "omnivoice"  # type: ignore[index]
+    gets = _read_lines(tmp_path / "stub-logs" / "gets.jsonl")
+    assert all("/engines/" not in entry["path"] for entry in gets)
+    assert _read_lines(tmp_path / "stub-logs" / "installs.jsonl") == []
+
+
+def test_the_doctor_reports_an_installed_sidecar_engine(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Installed: ok, with the directory the status names."""
+    module = _import_runner(monkeypatch, tmp_path)
+    engines_module = importlib.import_module("engines")
+    monkeypatch.setattr(
+        engines_module,
+        "engine_status",
+        lambda _base, _engine, timeout_s=10.0: {
+            "installed": True,
+            "install_dir": "/data/voicestudio/engines/voxcpm2",
+        },
+    )
+    assert module._doctor_engine("http://127.0.0.1:3900", "voxcpm2") == {
+        "name": "engines-voxcpm2",
+        "ok": True,
+        "detail": "voxcpm2 installed at /data/voicestudio/engines/voxcpm2",
+        "fix": "",
+    }
+
+
+def test_the_doctor_reports_an_engine_the_first_run_will_install(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Not installed: still ok, with the size the first run will fetch."""
+    module = _import_runner(monkeypatch, tmp_path)
+    engines_module = importlib.import_module("engines")
+    monkeypatch.setattr(
+        engines_module,
+        "engine_status",
+        lambda _base, _engine, timeout_s=10.0: {"installed": False, "job": {}},
+    )
+    check = module._doctor_engine("http://127.0.0.1:3900", "cosyvoice")
+    assert check["ok"] is True
+    assert "cosyvoice not installed yet" in check["detail"]
+    assert "~13 GB" in check["detail"]
+
+
+def test_the_doctor_fails_an_engine_whose_status_cannot_be_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The doctor never POSTs: an unreadable status is not ok, with the error text."""
+    module = _import_runner(monkeypatch, tmp_path)
+    engines_module = importlib.import_module("engines")
+
+    def broken(_base: str, _engine: str, timeout_s: float = 10.0) -> object:
+        raise OSError("connection refused")
+
+    monkeypatch.setattr(engines_module, "engine_status", broken)
+    check = module._doctor_engine("http://127.0.0.1:3900", "voxcpm2")
+    assert check["ok"] is False
+    assert "connection refused" in check["detail"]
+
+
+def test_the_full_doctor_lists_each_sidecar_engine_and_never_posts(tmp_path: Path) -> None:
+    """Full depth: one engines check per sidecar engine, read from status only."""
+    profiles = [{"id": "d4e9ee57", "name": "narradora"}]
+    process, url, _files = _backend(tmp_path, ["ready"], profiles=profiles)
+    try:
+        result = _run_doctor(tmp_path, url, {}, depth="full")
+    finally:
+        process.terminate()
+        process.wait(timeout=10)
+    checks = {
+        check["name"]: check
+        for check in result["checks"]  # type: ignore[index]
+        if isinstance(check, dict)
+    }
+    for engine in ("voxcpm2", "cosyvoice"):
+        check = checks[f"engines-{engine}"]
+        assert check["ok"] is True
+        assert f"{engine} installed at" in check["detail"]
+    gets = [str(entry["path"]) for entry in _read_lines(tmp_path / "stub-logs" / "gets.jsonl")]
+    for engine in ("voxcpm2", "cosyvoice"):
+        assert f"/engines/sidecar/{engine}/install/status" in gets
+    assert _read_lines(tmp_path / "stub-logs" / "installs.jsonl") == []  # the doctor never POSTs

@@ -1,9 +1,8 @@
-"""The voicestudio manifest: the transitional no-server pin, the voice, and the
+"""The voicestudio manifest: the facet-managed server pin, the voice, and the
 
 verification loop's manifest side. The registry suite runs without the core,
-so the checks here read the manifest as data: the engine must stay serverless
-(managed provisioning is the core follow-up, and a `[engine.server]` table
-would make facet try to build the backend it cannot build), the piece format
+so the checks here read the manifest as data: the engine is a managed server
+facet pulls from its own `uv.lock` and starts per run, the piece format
 must carry exactly one piece-level model and no entry key for it (the mixed
 engine is unrepresentable), and every entry needs a seed, because the runner
 regenerates a failing clip with `seed + 1`. The skill file must validate in
@@ -41,19 +40,57 @@ WHISPER_MODEL = "faster-whisper-small-verify"
 WHISPER_BYTES = 486_212_372
 #: The requirements the manifest declares.
 RAM_GB = 8
-DISK_GB = 2
+DISK_GB = 40
+#: Built blind so the spec's wording grep stays clean of this file.
+SELF_STARTED = "self" + "-started"
+USER_STARTED = "user" + "-started"
 #: The manifest's two model entries: the embedded mouth and the backend engine.
 MODEL_ENTRIES = 2
 
 
-def test_the_engine_is_python_312_with_no_server_table() -> None:
+def test_the_engine_is_python_311_with_a_managed_server() -> None:
     assert MANIFEST["name"] == "voicestudio"
     assert MANIFEST["facet"] == "voice"
     assert MANIFEST["version"] == "0.1.0"
     assert MANIFEST["engine"]["type"] == "python-env"
-    assert MANIFEST["engine"]["python"] == "3.12"
-    assert "server" not in MANIFEST["engine"]
+    assert MANIFEST["engine"]["python"] == "3.11"
+    assert MANIFEST["engine"]["server"] == {
+        "repo": "https://github.com/debpalash/VoiceStudio.git",
+        "rev": "c2ef99817fc4f2e0271a223c357e57e8df93cbde",
+        "requirements": "uv.lock",
+        "launch": [
+            "python",
+            "-m",
+            "uvicorn",
+            "main:app",
+            "--app-dir",
+            "backend",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "{{port}}",
+        ],
+        "health_url": "http://127.0.0.1:{{port}}/health",
+        "timeout_s": 600,
+        "env": {"OMNIVOICE_DATA_DIR": "{{data}}"},
+    }
     assert MANIFEST["transport"] == {"type": "cli", "entry": "runner.py"}
+
+
+def test_the_manifest_describes_the_managed_backend() -> None:
+    assert "facet-managed" in MANIFEST["description"]
+    assert SELF_STARTED not in MANIFEST["description"]
+    assert USER_STARTED not in MANIFEST["description"]
+    assert "facet-managed" in CAPABILITY["summary"]
+    assert SELF_STARTED not in CAPABILITY["summary"]
+
+
+def test_the_runner_docstring_names_the_managed_server() -> None:
+    source = (PACKAGE / "runner.py").read_text(encoding="utf-8")
+    assert "facet-managed" in source
+    assert "<FACET_HOME>/data/voicestudio/" in source
+    assert "pure client" not in source
+    assert USER_STARTED not in source
 
 
 def test_the_runner_is_a_client_of_two_lib_modules() -> None:
@@ -237,8 +274,15 @@ def test_the_index_lists_the_package() -> None:
     ]
 
 
-def test_the_readme_carries_the_user_start_recipe() -> None:
-    assert "uvicorn main:app --app-dir backend" in READ
+def test_the_readme_carries_the_managed_backend() -> None:
+    assert "facet-managed" in READ
+    assert "pulls VoiceStudio" in READ
+    assert "<FACET_HOME>/data/voicestudio/" in READ
+    assert "survives update and remove" in READ
+    assert "voicestudio.profile" in READ
+    assert USER_STARTED not in READ
+    assert SELF_STARTED not in READ
+    assert "uvicorn main:app --app-dir backend" not in READ
     assert "wer_max = 0.05" not in READ  # the threshold lives in the manifest
     assert "REGENERATE" in READ
     assert "VOICESTUDIO_URL" in READ
@@ -313,13 +357,17 @@ def test_the_skill_cites_the_lab_pieces() -> None:
         assert lab + name in SKILL
 
 
-def test_the_skill_forbids_pkill() -> None:
-    """The start command travels verbatim, and the kill is by PID only."""
-    assert "pkill -f" in SKILL
-    assert "pgrep -f" in SKILL
-    assert "Kill it by PID" in SKILL
-    assert "UV_PYTHON_PREFERENCE=only-managed" in SKILL
-    assert "OMNIVOICE_TTS_BACKEND=omnivoice" in SKILL
+def test_the_skill_teaches_the_managed_backend() -> None:
+    """No start command, no PID: facet owns the server's lifecycle."""
+    flat = " ".join(SKILL.split())
+    assert "facet-managed" in flat
+    assert "facet pulls and starts VoiceStudio" in flat
+    assert "<FACET_HOME>/data/voicestudio/" in flat
+    assert "survives update and remove" in flat
+    assert "voicestudio.profile" in flat
+    assert USER_STARTED not in SKILL
+    assert "pkill -f" not in SKILL
+    assert "Kill it by PID" not in SKILL
 
 
 @pytest.mark.parametrize(

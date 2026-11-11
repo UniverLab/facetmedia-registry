@@ -1,6 +1,6 @@
 ---
 name: voicestudio
-description: Narrate Spanish through a started VoiceStudio backend on the voxcpm2 or omnivoice engine, verifying every clip by transcription and regenerating it over 5 % WER.
+description: Narrate Spanish through a facet-managed VoiceStudio backend on the voxcpm2 or omnivoice engine, verifying every clip by transcription and regenerating it over 5 % WER.
 ---
 # VoiceStudio
 
@@ -17,8 +17,9 @@ profile from the person's own samples; its recipe lives in the package README.
   lab picked for naturalness; `voxcpm2` is the commercial-safe default.
 - When you need narration already verified: the runner transcribes every
   clip with faster-whisper and regenerates the bad ones with another seed.
-- Needs a backend that is already running (its start command lives in the
-  package README). For CPU-only narration without a backend, use `kokoro.speak`.
+- The backend is facet-managed: facet pulls and starts VoiceStudio for each
+  run, with its data under `<FACET_HOME>/data/voicestudio/`. For CPU-only
+  narration without a backend, use `kokoro.speak`.
 - When a person's own clone is the point: `voicestudio.clone` takes a local
   profile id and `cosyvoice`, only with the owner's permission. Two voices are
   two pieces (narrator on `omnivoice`, person on `cosyvoice`).
@@ -146,19 +147,16 @@ its first seed passed on first hearing.
 - **One engine per piece.** The piece-level `model` is the only model field
   and an entry cannot override it — two voices belong in two files that
   interleave later in HyperFrames. Two engines also do not fit in 8 GB.
-- **The backend is user-started for now.** `facet run` waits for a backend
-  at `http://127.0.0.1:3900` (or `$VOICESTUDIO_URL`) and does not start
-  one. `facet doctor voicestudio --json --full` prints the start command.
+- **The backend is facet-managed.** `facet run` starts the managed server;
+  its data lives in `<FACET_HOME>/data/voicestudio/` and survives update
+  and remove. The first run that uses an engine installs it: about 8 GB for
+  `voxcpm2`, about 13 GB for `cosyvoice` (`omnivoice` is in-process). The
+  first step on a new machine is creating the voice profiles with
+  `voicestudio.profile` from the person's own reference recordings.
 - **The same `seed` does not repeat a clip.** The output varies a little
   between calls.
-- **Start it with the lab command, stop it by PID.** The backend start
-  command is
-  `UV_PYTHON_PREFERENCE=only-managed OMNIVOICE_TTS_BACKEND=omnivoice "$(uvx --from uv python -c 'import uv; print(uv.find_uv_bin())')" run --no-sync uvicorn main:app --app-dir backend --host 127.0.0.1 --port 3900`
-  (its `uv.lock` wants uv ≥ 0.8 and the global one is older). Never kill it
-  with `pkill -f` or `pgrep -f` and a pattern that appears in your own
-  command: they kill your shell. Kill it by PID.
-- **Cloned profiles live on the person's machine** (the backend's omnivoice
-  store) and are never bundled. A missing `narradora` profile is recreated
-  from the host with `POST /profiles`; the doctor names the recipe.
+- **Cloned profiles live in the person's data dir** and are never bundled.
+  A missing profile is created with `voicestudio.profile` from the person's
+  own reference recordings; the doctor names the recipe.
 - **Verification is always on.** There is no skip field in the piece format
   and no flag the runner would accept. A clip is heard back every time.

@@ -49,43 +49,36 @@ manifest cannot say this twice — the entry list simply has no `model` key.
 The piece-level `model` is the manifest model id the core gates on: an
 `omnivoice` piece needs its acceptance, a `voxcpm2` one needs nothing.
 
-## The backend is user-started (for now)
+## The backend is facet-managed
 
-The runner is a pure client: it never starts, stops or holds anything —
-facet owns server lifecycle, and the runner only reads URLs. The
-transitional architecture (this version of the package ships no
-`[engine.server]` table) is because the core's server provisioning only
-runs `uv pip install -r <requirements-in-tree>` today, while the lab-tested
-VoiceStudio tree ships no requirements.txt — its canonical install is a
-project-dir `uv pip install --constraint deploy/torch-constraints.txt .`.
-Once the core accepts that install shape, the backend becomes a managed
-server started by `facet` itself; this package then graduates per that
-follow-up spec.
+Facet pulls VoiceStudio at the pinned revision from its own `uv.lock`,
+builds its server venv and starts it for each run: no clone, no start
+command. Its data lives in `<FACET_HOME>/data/voicestudio/` (the backend's
+`OMNIVOICE_DATA_DIR`) and survives update and remove.
 
-Until then, start the backend once, from the clone, exactly like the lab
-runs it:
-
-```sh
-cd ~/Projects/open-source/VoiceStudio
-python -m uvicorn main:app --app-dir backend --host 127.0.0.1 --port 3900
-```
+The first run that uses an engine installs it through the backend's own
+loopback API: about 8 GB for `voxcpm2`, about 13 GB for `cosyvoice`.
+`omnivoice` is in-process and installs nothing. The first step on a new
+machine is creating the voice profiles with `voicestudio.profile` from the
+person's own reference recordings (see
+[Making a profile](#making-a-profile-voicestudioprofile)).
 
 `facet doctor voicestudio --json` also runs the machine checks itself: an
 NVIDIA GPU, its VRAM readable, and no model but the backend's holding GPU
-memory (one at a time). With `--full` it prints the start command above
-whenever the backend is not answering.
+memory (one at a time). With `--full` it also probes the backend status,
+the default voice profile and each sidecar engine's install state.
 
-A run against a backend that is not answering fails naming that command
-too, so a forgotten `uvicorn` is one line of output, not a stack trace.
+A run against a backend that is not answering fails naming the managed
+server, so a missing backend is one line of output, not a stack trace.
 
 ## Base URL
 
 The runner resolves the backend URL in this order:
 
-1. `$FACET_SERVER_URL` — where facet's managed server will sit later;
-2. `$VOICESTUDIO_URL` — the person's own choice (the lab's default port
+1. `$FACET_SERVER_URL` — the managed server facet starts for each run;
+2. `$VOICESTUDIO_URL` — the person's own choice (the default port
    is 3900);
-3. `http://127.0.0.1:3900` — the lab recipe.
+3. `http://127.0.0.1:3900` — the managed server's default port.
 
 The environment `facet run` hands the runner includes the person's own
 variables untouched, so `VOICESTUDIO_URL` works without extra config.
@@ -255,16 +248,13 @@ owns the GPU, an `idle` one has nothing loaded (the VRAM rows say what is
 free), and when none answers, any compute process on the GPU fails the
 check (`stop the other GPU job: one model at a time`).
 Then the runner's imports and the embedded whisper model (missing files:
-`facet pull voicestudio`), plus the VoiceStudio clone at
-`~/Projects/open-source/VoiceStudio` and its backend.
-With `--full` it also probes `GET /model/status` and the default voice
-profile: `narradora` (id `a082932b`). Profiles are local to the person's
-machine and are NEVER bundled with the package; a missing `narradora`
-profile is recreated from the host with
-`POST /profiles multipart name=narradora kind=clone language=es` and its
-`ref_audio` plus the `ref_text` from the lab piece
-(`projects/prueba-voz/narradora/voz.toml`) — the doctor's report names this
-recipe as a host hint.
+`facet pull voicestudio`).
+With `--full` it also probes `GET /model/status`, the default voice
+profile `narradora`, and each sidecar engine's install state. Profiles are
+local to the person's data dir and are NEVER bundled with the package; a
+missing `narradora` profile is created with
+`facet run voicestudio.profile <piece>` with `name = "narradora"` — the
+doctor's report names this recipe.
 
 ## Licences
 
