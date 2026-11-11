@@ -76,6 +76,14 @@ text = "La hipótesis quedó verificada."
 seed = 11
 ```
 
+Write proper nouns and brand names as they are pronounced in Spanish
+(`fáset media`, not `facetMedia`): the verification transcribes the clip and a
+name the engine reads letter by letter fails the word error rate, as
+`facetMedia` -> `imedienta` did. Keep the real spelling for the subtitles.
+
+The first clip on an engine installs it (about 8 GB for `voxcpm2`, 13 GB for
+`cosyvoice`); `cosyvoice` needs `g++` on the machine to build.
+
 Run a piece with `facet run voicestudio.speak <piece.toml> --out build/`;
 every clip becomes `<name>.wav`. Each clip carries its own `seed` — it is
 required, because the verification loop restarts a failed clip with `seed + 1`.

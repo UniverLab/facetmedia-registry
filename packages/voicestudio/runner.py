@@ -787,6 +787,9 @@ def _doctor_engine(base_url: str, engine: str) -> dict[str, Any]:
         return _verdict(
             f"engines-{engine}", True, f"{engine} installed at {status.get('install_dir')}"
         )
+    problem = _engines().compiler_problem(engine)
+    if problem:
+        return _verdict(f"engines-{engine}", False, problem, _engines().CXX_FIX)
     size = _engines().ENGINE_SIZES_GB[engine]
     return _verdict(
         f"engines-{engine}",

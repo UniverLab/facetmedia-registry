@@ -19,7 +19,7 @@ requirements = "uv.lock"
 launch = ["python", "-m", "uvicorn", "main:app", "--app-dir", "backend", "--host", "127.0.0.1", "--port", "{{port}}"]
 health_url = "http://127.0.0.1:{{port}}/health"
 timeout_s = 600
-env = { OMNIVOICE_DATA_DIR = "{{data}}" }
+env = { OMNIVOICE_DATA_DIR = "{{data}}", CC = "gcc", CXX = "g++" }
 
 [transport]
 type = "cli"

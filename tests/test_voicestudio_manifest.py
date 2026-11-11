@@ -72,7 +72,7 @@ def test_the_engine_is_python_311_with_a_managed_server() -> None:
         ],
         "health_url": "http://127.0.0.1:{{port}}/health",
         "timeout_s": 600,
-        "env": {"OMNIVOICE_DATA_DIR": "{{data}}"},
+        "env": {"OMNIVOICE_DATA_DIR": "{{data}}", "CC": "gcc", "CXX": "g++"},
     }
     assert MANIFEST["transport"] == {"type": "cli", "entry": "runner.py"}
 

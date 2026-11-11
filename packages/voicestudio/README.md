@@ -58,6 +58,10 @@ command. Its data lives in `<FACET_HOME>/data/voicestudio/` (the backend's
 
 The first run that uses an engine installs it through the backend's own
 loopback API: about 8 GB for `voxcpm2`, about 13 GB for `cosyvoice`.
+`cosyvoice` compiles pyworld from source on install, so it needs a C++
+compiler (`sudo apt install build-essential`); the server runs with
+`CC=gcc` and `CXX=g++` because facet's managed Python names clang, and the
+doctor and the run refuse the install up front when `g++` is missing.
 `omnivoice` is in-process and installs nothing. The first step on a new
 machine is creating the voice profiles with `voicestudio.profile` from the
 person's own reference recordings (see

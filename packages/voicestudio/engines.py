@@ -10,6 +10,7 @@ in-process and never needs this.
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 import time
 import urllib.error
@@ -25,6 +26,21 @@ ENGINE_INSTALL_TIMEOUT_S = 5400.0
 ENGINE_SIZES_GB = {"voxcpm2": 8, "cosyvoice": 13}
 #: The POST answer that means the host cannot serve the engine.
 HTTP_CONFLICT = 409
+#: Engines whose install compiles a C++ extension: cosyvoice builds pyworld
+#: from source. The server env sets CC=gcc and CXX=g++, because facet's
+#: managed Python names clang, which most Linux hosts do not have.
+NEEDS_CXX = ("cosyvoice",)
+CXX_FIX = "sudo apt install build-essential"
+
+
+def compiler_problem(engine: str) -> str:
+    """Why this machine cannot build ``engine`` on install, or ``""`` when it can."""
+    if engine in NEEDS_CXX and shutil.which("g++") is None:
+        return (
+            f"{engine} builds pyworld from source on install and needs a C++ compiler; "
+            f"g++ is not on PATH (fix: {CXX_FIX})"
+        )
+    return ""
 
 
 class _HttpError(RuntimeError):
@@ -115,6 +131,9 @@ def _ensure_engine(base_url: str, engine: str) -> None:
             return
     except (urllib.error.URLError, OSError, ValueError) as exc:
         raise RuntimeError(f"{engine}: no VoiceStudio backend at {base_url}: {exc}") from None
+    problem = compiler_problem(engine)
+    if problem:
+        raise RuntimeError(problem)
     try:
         _post_json(base_url, _install_path(engine), 10.0)
     except _HttpError as exc:

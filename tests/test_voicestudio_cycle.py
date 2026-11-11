@@ -1306,3 +1306,43 @@ def test_the_full_doctor_lists_each_sidecar_engine_and_never_posts(tmp_path: Pat
     for engine in ("voxcpm2", "cosyvoice"):
         assert f"/engines/sidecar/{engine}/install/status" in gets
     assert _read_lines(tmp_path / "stub-logs" / "installs.jsonl") == []  # the doctor never POSTs
+
+
+def test_the_doctor_fails_cosyvoice_when_no_cxx_compiler_can_build_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """cosyvoice compiles pyworld on install: without g++ the doctor names the fix."""
+    module = _import_runner(monkeypatch, tmp_path)
+    engines_module = importlib.import_module("engines")
+    monkeypatch.setattr(
+        engines_module,
+        "engine_status",
+        lambda _base, _engine, timeout_s=10.0: {"installed": False, "job": {}},
+    )
+    monkeypatch.setattr(engines_module.shutil, "which", lambda _name: None)
+    check = module._doctor_engine("http://127.0.0.1:3900", "cosyvoice")
+    assert check["ok"] is False
+    assert "g++" in check["detail"]
+    assert check["fix"] == "sudo apt install build-essential"
+    assert module._doctor_engine("http://127.0.0.1:3900", "voxcpm2")["ok"] is True
+
+
+def test_ensure_engine_refuses_cosyvoice_before_posting_without_a_compiler(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The install is never started when it would fail compiling pyworld."""
+    _import_runner(monkeypatch, tmp_path)
+    engines_module = importlib.import_module("engines")
+    posts: list[str] = []
+    monkeypatch.setattr(
+        engines_module,
+        "engine_status",
+        lambda _base, _engine, timeout_s=10.0: {"installed": False, "job": {}},
+    )
+    monkeypatch.setattr(
+        engines_module, "_post_json", lambda _base, path, _timeout: posts.append(path)
+    )
+    monkeypatch.setattr(engines_module.shutil, "which", lambda _name: None)
+    with pytest.raises(RuntimeError, match="build-essential"):
+        engines_module._ensure_engine("http://127.0.0.1:3900", "cosyvoice")
+    assert posts == []
