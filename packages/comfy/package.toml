@@ -160,7 +160,7 @@ description = "Asset base name: writes <name>.png."
 type = "string"
 required = true
 pattern = '(?i)^(?!.*\b(?:captions?|chart|graph|labels?|letters?|logo|sign|text|title|words?)\b).*$'
-description = "English prompt; illustration, backgrounds or mood only, never data or lettering."
+description = "English prompt; illustration, backgrounds or mood only. These words are refused anywhere in it, even negated (\"no text\"): caption, chart, graph, label, letter, logo, sign, text, title, word. Leave them out: the flows draw no lettering."
 
 [capabilities.still.inputs.image.items.seed]
 type = "integer"
@@ -215,7 +215,7 @@ description = "Asset base name: writes <name>.png."
 type = "string"
 required = true
 pattern = '(?i)^(?!.*\b(?:captions?|chart|graph|labels?|letters?|logo|sign|text|title|words?)\b).*$'
-description = "English instruction describing the edit; keeps framing and character, never adds data or lettering."
+description = "English instruction describing the edit; keeps framing and character, never adds data or lettering. These words are refused anywhere in it, even negated (\"no text\"): caption, chart, graph, label, letter, logo, sign, text, title, word. Leave them out: the flows draw no lettering."
 
 [capabilities.edit.inputs.image.items.seed]
 type = "integer"
@@ -264,7 +264,7 @@ description = "First frame of the clip, relative to the piece file; uploaded by 
 type = "string"
 required = true
 pattern = '(?i)^(?!.*\b(?:captions?|chart|graph|labels?|letters?|logo|sign|text|title|words?)\b).*$'
-description = "English prompt describing the movement inside the frame, never data or lettering."
+description = "English prompt describing the movement inside the frame, never data or lettering. These words are refused anywhere in it, even negated (\"no text\"): caption, chart, graph, label, letter, logo, sign, text, title, word. Leave them out: the flows draw no lettering."
 
 [capabilities.clip.inputs.image.items.seed]
 type = "integer"

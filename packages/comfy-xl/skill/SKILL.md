@@ -141,7 +141,10 @@ VAE — are Apache-2.0, commercial use allowed, and no acceptance is needed.
 - Seeds are part of the result: change only the prompt to explore, then keep
   the seed of the image you approved.
 - Generated images hold no text or data: no caption, no watermark, no
-  numbers inside the picture.
+  numbers inside the picture. Prompts must not mention caption, chart,
+  graph, label, letter, logo, sign, text, title or word even to forbid
+  them: the prompt pattern refuses those words anywhere, including
+  "no text".
 - The edit and clip flows upload the reference or each first frame to the
   server's `/upload/image` before running; the log prints one
   `<file> uploaded as <name>` line per upload.
