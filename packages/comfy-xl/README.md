@@ -10,7 +10,7 @@ write the **`image`** kind and show through the image viewer, the clip
 writes the **`video`** kind and shows through the video viewer. A GPU with
 24 GB of VRAM is required: about a minute per 1344 × 768 image on z-image,
 and about 7 minutes per two-second clip on wan22-i2v-14b, about half that
-on its `wan22-i2v-14b-rapido` draft variant.
+on its `wan22-i2v-14b-fast` draft variant.
 
 This package has not yet been run on a 24 GB GPU by the lab: the flows
 mirror the official ComfyUI templates, and they ship marked as not yet run
@@ -101,8 +101,8 @@ The fields below are what `facet describe comfy-xl.clip --json` reports.
 | `image[].width` | integer | no | `1280` | 64 to 2048, a multiple of 64 |
 | `image[].height` | integer | no | `704` | 64 to 2048, a multiple of 64 |
 | `image[].length` | integer | no | `49` | frames at 24 fps: `49` ≈ 2 s, `121` ≈ 5 s |
-| `image[].negative` | string | no | flow default | what to keep out of the clip; omitting it keeps Wan's official Chinese negative, and `wan22-i2v-14b-rapido` at cfg 1 ignores it |
-| `workflow` | enum | no | `"wan22-i2v-14b"` | `"wan22-i2v-14b"`, or `"wan22-i2v-14b-rapido"` for a draft-only clip |
+| `image[].negative` | string | no | flow default | what to keep out of the clip; omitting it keeps Wan's official Chinese negative, and `wan22-i2v-14b-fast` at cfg 1 ignores it |
+| `workflow` | enum | no | `"wan22-i2v-14b"` | `"wan22-i2v-14b"`, or `"wan22-i2v-14b-fast"` for a draft-only clip |
 
 The length must be `4n+1` frames — 49, 121 — because the Wan latent keeps one
 frame plus groups of four. The schema cannot express that, so piece validation
@@ -124,7 +124,7 @@ stills. The log prints one `<file> uploaded as <name>` line per entry.
 
 ### Drafts
 
-`workflow = "wan22-i2v-14b-rapido"` runs the same two-stage Wan graph with
+`workflow = "wan22-i2v-14b-fast"` runs the same two-stage Wan graph with
 the two lightx2v 4-step LoRAs, four steps and a CFG of 1, so a clip takes
 about half the time. It is a **draft**: halfway through it drifts from the
 input image — the light and the composition change — so it is for trying a
@@ -147,7 +147,7 @@ Illustrations, backgrounds and mood only.
 A **flow** is a ComfyUI API graph whose inputs written as `"$key"` are
 filled, in order, from the flow's own `params`, then the entry. The still
 piece's `workflow` input picks the one still flow, the clip's picks
-`wan22-i2v-14b` or its `wan22-i2v-14b-rapido` draft, and an edit always uses
+`wan22-i2v-14b` or its `wan22-i2v-14b-fast` draft, and an edit always uses
 `qwen-image-edit`. The package ships four, derived from the official
 ComfyUI templates shipped with the pinned ComfyUI's
 `comfyui_workflow_templates_json` 0.11.78:
@@ -157,7 +157,7 @@ ComfyUI templates shipped with the pinned ComfyUI's
 | `z-image` | Z-Image base unet, Qwen3 clip, Z-Image VAE | `still` | photographic realism at full precision |
 | `qwen-image-edit` | Qwen-Image-Edit unet, Qwen2.5-VL clip, Qwen-Image VAE | `edit` | editing a reference image by instruction |
 | `wan22-i2v-14b` | Wan 2.2 I2V 14B high- and low-noise unets, UMT5 clip, Wan 2.1 VAE | `clip` | movement inside a still: fog, steam, a slow push in |
-| `wan22-i2v-14b-rapido` | the same, plus the high- and low-noise lightx2v LoRAs | `clip` | motion drafts in half the time |
+| `wan22-i2v-14b-fast` | the same, plus the high- and low-noise lightx2v LoRAs | `clip` | motion drafts in half the time |
 
 - `$prompt`, `$seed`, `$width`, `$height` and `$name` come from the entry;
   the edit and clip flows add `$image`, the uploaded reference or first frame,
@@ -193,7 +193,7 @@ One run writes one PNG per entry, each with a record (`kind = "image"`,
 `mime = "image/png"`, `seed` the entry's seed, `params` the entry, and
 `properties` carrying `width`, `height` and `seed`). A clip run writes one
 MP4 per entry instead, with `kind = "video"` and `mime = "video/mp4"`. A
-`wan22-i2v-14b-rapido` draft writes `<name>-borrador.mp4` and adds
+`wan22-i2v-14b-fast` draft writes `<name>-borrador.mp4` and adds
 `draft = true` to its properties; every other record keeps `width`,
 `height` and `seed` alone. The runner prints one `<name>.png ok` or
 `<name>.mp4 ok` line per output, with no absolute path and no timing. An

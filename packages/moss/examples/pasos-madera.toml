@@ -1,4 +1,4 @@
 [inputs]
-descripcion = "Slow footsteps of one person walking on an old wooden floor, boards creaking under the weight, indoors"
-nombre = "pasos-madera"
-segundos = 6
+description = "Slow footsteps of one person walking on an old wooden floor, boards creaking under the weight, indoors"
+name = "pasos-madera"
+seconds = 6

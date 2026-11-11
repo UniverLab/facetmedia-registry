@@ -32,19 +32,19 @@ platforms = ["linux"]
 subject = "FreeCAD (the host application this package drives)"
 spdx = "GPL-2.0-or-later"
 
-[capabilities.plano]
+[capabilities.drawing]
 summary = "Workshop drawing of a 3D part via scripted FreeCAD TechDraw: a paginated PDF plus its SVG sheets"
 kind = "document"
 
-[capabilities.plano.inputs.guion]
+[capabilities.drawing.inputs.script]
 type = "path"
 required = true
-description = "FreeCAD script, run inside freecadcmd as <guion> <out_dir>/<name> <pieza>; it must write <name>-01.svg, <name>-02.svg, ... sheets, two digits from 01 with width and height in mm, resolved relative to the piece."
+description = "FreeCAD script, run inside freecadcmd as <script> <out_dir>/<name> <part>; it must write <name>-01.svg, <name>-02.svg, ... sheets, two digits from 01 with width and height in mm, resolved relative to the piece."
 
-[capabilities.plano.inputs.pieza]
+[capabilities.drawing.inputs.part]
 type = "path"
 required = true
 description = "Part file the script opens (STEP or a FreeCAD document), resolved relative to the piece."
 
-[capabilities.plano.preview]
+[capabilities.drawing.preview]
 viewer = "generic"

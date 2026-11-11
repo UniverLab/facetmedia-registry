@@ -105,15 +105,15 @@ def _semver_text(value: tuple[int, int, int]) -> str:
     return ".".join(str(part) for part in value)
 
 
-def _score(partitura: Path) -> dict[str, Any]:
+def _score(score_path: Path) -> dict[str, Any]:
     """The hand-written score, which must carry the ``[demo]`` table."""
     try:
-        data = tomllib.loads(partitura.read_text(encoding="utf-8"))
+        data = tomllib.loads(score_path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
-        raise ValueError(f"{partitura.name}: cannot read the demo score: {exc}") from exc
+        raise ValueError(f"{score_path.name}: cannot read the demo score: {exc}") from exc
     demo = data.get("demo")
     if not isinstance(demo, dict):
-        raise ValueError(f"{partitura.name}: the score has no [demo] table")
+        raise ValueError(f"{score_path.name}: the score has no [demo] table")
     return data
 
 
@@ -136,9 +136,9 @@ def _preview_name(stem: str) -> str:
     return cleaned or "demo"
 
 
-def _score_name(score: Mapping[str, Any], partitura: Path) -> str:
+def _score_name(score: Mapping[str, Any], score_path: Path) -> str:
     raw = _demo_table(score).get("name")
-    return _sanitize(raw) if isinstance(raw, str) and raw.strip() else _sanitize(partitura.stem)
+    return _sanitize(raw) if isinstance(raw, str) and raw.strip() else _sanitize(score_path.stem)
 
 
 def _fps(score: Mapping[str, Any]) -> int:
@@ -203,16 +203,16 @@ def _collect(score: Mapping[str, Any], work: Path, stem: str) -> tuple[Path, Pat
 @runner.verb("run")
 def run(req: Request) -> dict[str, Any]:
     params = dict(req.inputs)
-    partitura = Path(str(params["partitura"]))
-    score = _score(partitura)
+    score_path = Path(str(params["score"]))
+    score = _score(score_path)
     binary, version = _demo()
     out_dir = Path(os.path.abspath(req.out_dir))
     work = out_dir / WORK_DIRNAME
     work.mkdir(parents=True, exist_ok=True)
     recording = work / RECORDING_NAME
-    _execute([binary, "record", str(partitura), "-o", str(recording)], partitura.parent)
+    _execute([binary, "record", str(score_path), "-o", str(recording)], score_path.parent)
     _execute([binary, "export", "gif,svg", str(recording)], work)
-    stem = _score_name(score, partitura)
+    stem = _score_name(score, score_path)
     gif, svg = _collect(score, work, stem)
     _place(gif, out_dir)
     _place(svg, out_dir)
@@ -220,7 +220,7 @@ def run(req: Request) -> dict[str, Any]:
     width, height = _svg_size(out_dir / svg.name)
     fps = _fps(score)
     seed = _seed(score)
-    inputs = [str(partitura)]
+    inputs = [str(score_path)]
     gif_path = out_dir / gif.name
     svg_path = out_dir / svg.name
     gif_name = _preview_name(gif_path.stem)
@@ -336,7 +336,7 @@ def preview(req: Request) -> dict[str, Any]:
 
 def _param_score(params: Mapping[str, Any]) -> dict[str, Any]:
     """The score behind an asset, when the record's params still point at it."""
-    raw = params.get("partitura")
+    raw = params.get("score")
     if not isinstance(raw, str):
         return {}
     try:

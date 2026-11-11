@@ -228,17 +228,17 @@ echo "$2" >> "$WSLPATH_LOG"
 echo "$2"
 """
 
-GUION_LOG = """import json
+SCRIPT_LOG = """import json
 import os
 import sys
 from pathlib import Path
 
-Path(os.environ["GUION_LOG"]).write_text(json.dumps(sys.argv))
+Path(os.environ["SCRIPT_LOG"]).write_text(json.dumps(sys.argv))
 prefix = sys.argv[1]
 """
 
-GUION_ONE_SHEET = (
-    GUION_LOG
+SCRIPT_ONE_SHEET = (
+    SCRIPT_LOG
     + """Path(f"{prefix}-01.svg").write_text(
     '<svg xmlns="http://www.w3.org/2000/svg" width="420mm" height="297mm">'
     '<rect x="10" y="10" width="400" height="277"/></svg>',
@@ -247,8 +247,8 @@ GUION_ONE_SHEET = (
 """
 )
 
-GUION_TWO_SHEETS = (
-    GUION_LOG
+SCRIPT_TWO_SHEETS = (
+    SCRIPT_LOG
     + """Path(f"{prefix}-01.svg").write_text(
     '<svg xmlns="http://www.w3.org/2000/svg" width="420mm" height="297mm">'
     "<rect /></svg>",
@@ -262,10 +262,10 @@ Path(f"{prefix}-02.svg").write_text(
 """
 )
 
-GUION_NO_SHEET = GUION_LOG
+SCRIPT_NO_SHEET = SCRIPT_LOG
 
-GUION_GAP = (
-    GUION_LOG
+SCRIPT_GAP = (
+    SCRIPT_LOG
     + """Path(f"{prefix}-01.svg").write_text(
     '<svg xmlns="http://www.w3.org/2000/svg" width="420mm" height="297mm">'
     "<rect /></svg>",
@@ -279,8 +279,8 @@ Path(f"{prefix}-03.svg").write_text(
 """
 )
 
-GUION_NO_MM = (
-    GUION_LOG
+SCRIPT_NO_MM = (
+    SCRIPT_LOG
     + """Path(f"{prefix}-01.svg").write_text(
     '<svg xmlns="http://www.w3.org/2000/svg"><rect /></svg>',
     encoding="utf-8",
@@ -288,8 +288,8 @@ GUION_NO_MM = (
 """
 )
 
-GUION_BAD_SVG = (
-    GUION_LOG
+SCRIPT_BAD_SVG = (
+    SCRIPT_LOG
     + """Path(f"{prefix}-01.svg").write_text(
     '<svg xmlns="http://www.w3.org/2000/svg" width="420mm" height="297mm">'
     "INVALID</svg>",
@@ -298,7 +298,7 @@ GUION_BAD_SVG = (
 """
 )
 
-FAILING_GUION = 'raise RuntimeError("boom")\n'
+FAILING_SCRIPT = 'raise RuntimeError("boom")\n'
 
 
 def _stubs(tmp_path: Path) -> tuple[Path, Path]:
@@ -331,7 +331,7 @@ def _environment(tmp_path: Path, bin_dir: Path, freecad: Path, **extra: str) -> 
         "PATH": str(bin_dir),
         "STUB_FREECAD": str(freecad),
         "WSLPATH_LOG": str(tmp_path / "wslpath.log"),
-        "GUION_LOG": str(tmp_path / "guion.log"),
+        "SCRIPT_LOG": str(tmp_path / "script.log"),
     }
     env.pop("FACET_HOME", None)
     env.pop("PYTHONPATH", None)
@@ -340,12 +340,12 @@ def _environment(tmp_path: Path, bin_dir: Path, freecad: Path, **extra: str) -> 
     return env
 
 
-def _piece(tmp_path: Path, guion: str = GUION_ONE_SHEET) -> tuple[Path, Path, Path]:
+def _piece(tmp_path: Path, script_text: str = SCRIPT_ONE_SHEET) -> tuple[Path, Path, Path]:
     piece = tmp_path / "piece"
     piece.mkdir()
     script = piece / f"{PDF_NAME}.py"
-    script.write_text(guion, encoding="utf-8")
-    part = piece / "pieza.step"
+    script.write_text(script_text, encoding="utf-8")
+    part = piece / "part.step"
     part.write_bytes(b"STEP-stub")
     return piece, script, part
 
@@ -361,7 +361,7 @@ def _request(verb: str, out: Path, piece: Path, **fields: Any) -> dict[str, Any]
     request: dict[str, Any] = {
         "protocol": 1,
         "verb": verb,
-        "capability": "freecad.plano",
+        "capability": "freecad.drawing",
         "inputs": inputs,
         "out_dir": str(out),
         "piece_dir": str(piece),
@@ -400,16 +400,18 @@ def _call(
     return done, result
 
 
-def _run(tmp_path: Path, out: Path, piece: Path, env: dict[str, str], guion: str = GUION_ONE_SHEET):
-    inputs = {"guion": f"{PDF_NAME}.py", "pieza": "pieza.step"}
-    piece.joinpath(f"{PDF_NAME}.py").write_text(guion, encoding="utf-8")
+def _run(
+    tmp_path: Path, out: Path, piece: Path, env: dict[str, str], script_text: str = SCRIPT_ONE_SHEET
+):
+    inputs = {"script": f"{PDF_NAME}.py", "part": "part.step"}
+    piece.joinpath(f"{PDF_NAME}.py").write_text(script_text, encoding="utf-8")
     return _call(tmp_path, "run", _request("run", out, piece, inputs=inputs), env)
 
 
 def test_run_converts_the_arguments_and_returns_the_pdf_plus_its_sheet(
     tmp_path: Path,
 ) -> None:
-    """The lab's conversion, the guion's argv and the PDF-then-sheets assets."""
+    """The lab's conversion, the script's argv and the PDF-then-sheets assets."""
     bin_dir, freecad = _stubs(tmp_path)
     piece, script, part = _piece(tmp_path)
     out = _out(tmp_path)
@@ -419,7 +421,7 @@ def test_run_converts_the_arguments_and_returns_the_pdf_plus_its_sheet(
 
     assert done.returncode == 0, done.stdout + done.stderr
     assert result is not None
-    params = {"guion": str(script), "pieza": str(part)}
+    params = {"script": str(script), "part": str(part)}
     assert result["assets"] == [
         {
             "file": f"{PDF_NAME}.pdf",
@@ -449,10 +451,10 @@ def test_run_converts_the_arguments_and_returns_the_pdf_plus_its_sheet(
 
     converted = (tmp_path / "wslpath.log").read_text(encoding="utf-8").splitlines()
     assert any(line.endswith(f"{PDF_NAME}.py") for line in converted)
-    assert any(line.endswith("pieza.step") for line in converted)
+    assert any(line.endswith("part.step") for line in converted)
     assert any(line.endswith("out") for line in converted)
 
-    argv = json.loads((tmp_path / "guion.log").read_text(encoding="utf-8"))
+    argv = json.loads((tmp_path / "script.log").read_text(encoding="utf-8"))
     assert argv[0] == str(script)
     assert argv[1] == str(out / PDF_NAME)
     assert argv[2] == str(part)
@@ -467,7 +469,7 @@ def test_run_renders_two_sheets_into_a_two_page_pdf_and_two_sheet_assets(
     out = _out(tmp_path)
     env = _environment(tmp_path, bin_dir, freecad)
 
-    done, result = _run(tmp_path, out, piece, env, GUION_TWO_SHEETS)
+    done, result = _run(tmp_path, out, piece, env, SCRIPT_TWO_SHEETS)
 
     assert done.returncode == 0, done.stdout + done.stderr
     assert result is not None
@@ -494,17 +496,17 @@ def test_run_renders_two_sheets_into_a_two_page_pdf_and_two_sheet_assets(
 
 
 def test_run_without_any_sheet_names_the_missing_first_sheet(tmp_path: Path) -> None:
-    """A guion that writes no sheet fails before any rendering."""
+    """A script that writes no sheet fails before any rendering."""
     bin_dir, freecad = _stubs(tmp_path)
     piece, _script, _part = _piece(tmp_path)
     out = _out(tmp_path)
     env = _environment(tmp_path, bin_dir, freecad)
 
-    done, result = _run(tmp_path, out, piece, env, GUION_NO_SHEET)
+    done, result = _run(tmp_path, out, piece, env, SCRIPT_NO_SHEET)
 
     assert done.returncode != 0
     assert result is None
-    assert f"guion wrote no {PDF_NAME}-01.svg" in done.stdout + done.stderr
+    assert f"script wrote no {PDF_NAME}-01.svg" in done.stdout + done.stderr
 
 
 def test_run_with_a_numbering_gap_names_the_missing_sheet(tmp_path: Path) -> None:
@@ -514,7 +516,7 @@ def test_run_with_a_numbering_gap_names_the_missing_sheet(tmp_path: Path) -> Non
     out = _out(tmp_path)
     env = _environment(tmp_path, bin_dir, freecad)
 
-    done, result = _run(tmp_path, out, piece, env, GUION_GAP)
+    done, result = _run(tmp_path, out, piece, env, SCRIPT_GAP)
 
     assert done.returncode != 0
     assert result is None
@@ -528,7 +530,7 @@ def test_run_with_a_sheet_missing_its_mm_size_fails(tmp_path: Path) -> None:
     out = _out(tmp_path)
     env = _environment(tmp_path, bin_dir, freecad)
 
-    done, result = _run(tmp_path, out, piece, env, GUION_NO_MM)
+    done, result = _run(tmp_path, out, piece, env, SCRIPT_NO_MM)
 
     assert done.returncode != 0
     assert result is None
@@ -542,21 +544,21 @@ def test_run_with_a_sheet_qt_cannot_read_fails(tmp_path: Path) -> None:
     out = _out(tmp_path)
     env = _environment(tmp_path, bin_dir, freecad)
 
-    done, result = _run(tmp_path, out, piece, env, GUION_BAD_SVG)
+    done, result = _run(tmp_path, out, piece, env, SCRIPT_BAD_SVG)
 
     assert done.returncode != 0
     assert result is None
     assert "Qt cannot read this SVG" in done.stdout + done.stderr
 
 
-def test_run_surfaces_a_guion_failure_instead_of_a_swallowed_zero(tmp_path: Path) -> None:
+def test_run_surfaces_a_script_failure_instead_of_a_swallowed_zero(tmp_path: Path) -> None:
     """freecadcmd exits 0 on a raise; the wrapper's exit 1 must reach the launcher."""
     bin_dir, freecad = _stubs(tmp_path)
     piece, _script, _part = _piece(tmp_path)
     out = _out(tmp_path)
     env = _environment(tmp_path, bin_dir, freecad)
 
-    done, result = _run(tmp_path, out, piece, env, FAILING_GUION)
+    done, result = _run(tmp_path, out, piece, env, FAILING_SCRIPT)
 
     assert done.returncode != 0
     assert result is None
@@ -570,7 +572,7 @@ def test_verify_passes_the_pdf_and_its_sheets(tmp_path: Path) -> None:
     piece, _script, _part = _piece(tmp_path)
     out = _out(tmp_path)
     env = _environment(tmp_path, bin_dir, freecad)
-    _done, _result = _run(tmp_path, out, piece, env, GUION_TWO_SHEETS)
+    _done, _result = _run(tmp_path, out, piece, env, SCRIPT_TWO_SHEETS)
 
     assets = [str(out / f"{PDF_NAME}.pdf"), str(out / f"{PDF_NAME}-01.svg")]
     request = _request("verify", out, piece, assets=assets)
@@ -621,7 +623,7 @@ def test_preview_renders_the_pages_from_the_sibling_sheets(tmp_path: Path) -> No
     piece, _script, _part = _piece(tmp_path)
     out = _out(tmp_path)
     env = _environment(tmp_path, bin_dir, freecad)
-    _done, _result = _run(tmp_path, out, piece, env, GUION_TWO_SHEETS)
+    _done, _result = _run(tmp_path, out, piece, env, SCRIPT_TWO_SHEETS)
 
     request = _request("preview", out, piece, assets=[str(out / f"{PDF_NAME}.pdf")])
     done, result = _call(tmp_path, "preview", request, env)
@@ -684,10 +686,10 @@ def test_preview_writes_the_image_schema_for_a_sheet(tmp_path: Path) -> None:
     piece, _script, _part = _piece(tmp_path)
     out = _out(tmp_path)
     env = _environment(tmp_path, bin_dir, freecad)
-    _done, _result = _run(tmp_path, out, piece, env, GUION_ONE_SHEET)
+    _done, _result = _run(tmp_path, out, piece, env, SCRIPT_ONE_SHEET)
     sheet = out / f"{PDF_NAME}-01.svg"
 
-    inputs = {"guion": f"{PDF_NAME}.py", "pieza": "pieza.step"}
+    inputs = {"script": f"{PDF_NAME}.py", "part": "part.step"}
     request = _request("preview", out, piece, inputs=inputs, assets=[str(sheet)])
     done, result = _call(tmp_path, "preview", request, env)
 
@@ -701,7 +703,7 @@ def test_preview_writes_the_image_schema_for_a_sheet(tmp_path: Path) -> None:
     _assert_image_schema(data)
     assert data["summary"] == f"{PDF_NAME}-01.svg · page 01 · 420×297 mm"
     assert data["name"] == f"{PDF_NAME}-01"
-    assert data["prompt"] == f"{PDF_NAME}.py · pieza.step"
+    assert data["prompt"] == f"{PDF_NAME}.py · part.step"
     assert data["seed"] == 0
     assert (data["width"], data["height"]) == (2480, 1754)
 
@@ -714,7 +716,7 @@ def test_preview_names_the_second_sheet_and_falls_back_without_params(
     piece, _script, _part = _piece(tmp_path)
     out = _out(tmp_path)
     env = _environment(tmp_path, bin_dir, freecad)
-    _done, _result = _run(tmp_path, out, piece, env, GUION_TWO_SHEETS)
+    _done, _result = _run(tmp_path, out, piece, env, SCRIPT_TWO_SHEETS)
     sheet = out / f"{PDF_NAME}-02.svg"
 
     request = _request("preview", out, piece, assets=[str(sheet)])
@@ -795,34 +797,34 @@ def test_collect_sheets_reads_mm_sizes_and_rejects_a_ragged_run(tmp_path: Path) 
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
-    prefix = str(tmp_path / "plano")
-    (tmp_path / "plano-01.svg").write_text(
+    prefix = str(tmp_path / "drawing")
+    (tmp_path / "drawing-01.svg").write_text(
         '<svg width="420mm" height="297mm"><rect /></svg>', encoding="utf-8"
     )
-    (tmp_path / "plano-02.svg").write_text(
+    (tmp_path / "drawing-02.svg").write_text(
         '<svg width="297.0mm" height="210.0mm"><rect /></svg>', encoding="utf-8"
     )
-    sheets = module._collect_sheets(prefix, "plano")
+    sheets = module._collect_sheets(prefix, "drawing")
     assert [(sheet.width_mm, sheet.height_mm) for sheet in sheets] == [
         (420.0, 297.0),
         (297.0, 210.0),
     ]
 
-    (tmp_path / "plano-02.svg").unlink()
-    (tmp_path / "plano-03.svg").write_text(
+    (tmp_path / "drawing-02.svg").unlink()
+    (tmp_path / "drawing-03.svg").write_text(
         '<svg width="420mm" height="297mm"><rect /></svg>', encoding="utf-8"
     )
     try:
-        module._collect_sheets(prefix, "plano")
+        module._collect_sheets(prefix, "drawing")
     except RuntimeError as exc:
-        assert str(exc) == "sheet plano-02.svg is missing"
+        assert str(exc) == "sheet drawing-02.svg is missing"
     else:  # pragma: no cover
         raise AssertionError("a numbering gap must fail")
 
-    (tmp_path / "plano-03.svg").unlink()
-    (tmp_path / "plano-02.svg").write_text("<svg><rect /></svg>", encoding="utf-8")
+    (tmp_path / "drawing-03.svg").unlink()
+    (tmp_path / "drawing-02.svg").write_text("<svg><rect /></svg>", encoding="utf-8")
     try:
-        module._collect_sheets(prefix, "plano")
+        module._collect_sheets(prefix, "drawing")
     except RuntimeError as exc:
         assert "the sheet needs width and height in mm" in str(exc)
     else:  # pragma: no cover

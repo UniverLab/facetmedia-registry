@@ -1,7 +1,7 @@
-# Build banners: text as paths and the guion skeleton
+# Build banners: text as paths and the script skeleton
 
 Ported from the lab's banner script. Two recipes live here: outlining every
-word with opentype.js, and the minimal guion a piece runs to write its SVG.
+word with opentype.js, and the minimal script a piece runs to write its SVG.
 
 ## Why every word is a path
 
@@ -75,26 +75,26 @@ Then reference it inside the document:
 <image href="data:image/webp;base64,..." x="76" y="68" width="700" height="404"/>
 ```
 
-## The guion skeleton
+## The script skeleton
 
-The piece's `guion` is a CommonJS script: the runner calls
-`node guion datos`, so the data file path arrives as `argv[2]` and the
+The piece's `script` is a CommonJS script: the runner calls
+`node script data`, so the data file path arrives as `argv[2]` and the
 finished SVG goes to stdout — nothing else may be printed. Animations are
 CSS `@keyframes` inside the document; there is no `<script>` and no `<text>`.
 
 ```js
 #!/usr/bin/env node
-// guion — node guion datos > out.svg
+// script — node script data > out.svg
 const fs = require('fs');
 const path = require('path');
 const opentype = require('opentype.js');
 
-const datosPath = process.argv[2];
-if (!datosPath) {
-  console.error('usage: node guion <datos.json>');
+const dataPath = process.argv[2];
+if (!dataPath) {
+  console.error('usage: node script <data.json>');
   process.exit(1);
 }
-const datos = JSON.parse(fs.readFileSync(datosPath, 'utf8'));
+const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
 
 const font = opentype.parse(fs.readFileSync(path.join(__dirname, 'font.ttf')));
 
@@ -110,7 +110,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="340" v
     .drift { animation: drift 6s ease-in-out infinite alternate; }
   </style>
   <g class="drift">
-    <path d="${textPath(font, datos.titulo, 76, 200, 56)}" fill="#ecebe4"/>
+    <path d="${textPath(font, data.titulo, 76, 200, 56)}" fill="#ecebe4"/>
   </g>
 </svg>
 `;

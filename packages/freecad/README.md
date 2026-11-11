@@ -1,8 +1,8 @@
 # freecad
 
-Workshop drawings from your own 3D parts: `facet run freecad.plano
+Workshop drawings from your own 3D parts: `facet run freecad.drawing
 <piece>.toml` runs a FreeCAD script headless on the part and gives back
-`<guion>.pdf` plus its SVG sheets. It belongs to the **`cad`** facet and
+`<script>.pdf` plus its SVG sheets. It belongs to the **`cad`** facet and
 writes the **`document`** kind, so a person opens the PDF and an agent reads
 the pages from the preview file. The script draws SVG sheets; the runner
 turns them into the PDF with FreeCAD's own Qt and returns the sheets as
@@ -51,7 +51,7 @@ converts every slash-bearing argument with `wslpath -w` when the binary is a
 failure (`UtilAcceptVsock`). A real script failure surfaces as
 `runner_failed` with the tail of the output.
 
-`freecad.plano` runs the guion as `<guion> <out_dir>/<name> <pieza>`, the
+`freecad.drawing` runs the script as `<script> <out_dir>/<name> <part>`, the
 lab's output-prefix convention: the script must write its sheets as
 `<name>-01.svg`, `<name>-02.svg`, … beside it — consecutive two-digit numbers
 from 01, each sheet carrying `width` and `height` in millimetres on its
@@ -67,14 +67,14 @@ renders the page PNGs from those sheets into `preview/page-NN.png` at
 
 ```toml
 [inputs]
-guion = "plano-escuadra.py"
-pieza = "escuadra.step"
+script = "plano-escuadra.py"
+part = "escuadra.step"
 ```
 
-`guion` is a FreeCAD script that opens `pieza`, builds the TechDraw views
+`script` is a FreeCAD script that opens `part`, builds the TechDraw views
 with `TechDraw.projectToSVG` and writes one SVG sheet per page;
 `examples/plano-escuadra.py` draws the `escuadra.step` bracket on one A3
-landscape sheet and is the model to copy. `pieza` is the STEP or FreeCAD
+landscape sheet and is the model to copy. `part` is the STEP or FreeCAD
 document it opens. Both are resolved relative to the piece.
 
 ## When to use it

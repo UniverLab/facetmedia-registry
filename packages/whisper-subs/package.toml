@@ -26,23 +26,23 @@ platforms = ["linux"]
 subject = "whisper-subs"
 spdx = "MIT"
 
-[capabilities.subtitulos]
+[capabilities.subtitles]
 summary = "Convert a whisper sidecar's timed segments into a validated SRT or VTT subtitle file"
 kind = "text"
 
-[capabilities.subtitulos.inputs.origen]
+[capabilities.subtitles.inputs.source]
 type = "path"
 required = true
 description = "A whisper <name>.json sidecar with segments carrying start_s/end_s/text, resolved relative to the piece; its cues must run in order (touching boundaries allowed) and the subtitle file is written beside the piece."
 
-[capabilities.subtitulos.inputs.formato]
+[capabilities.subtitles.inputs.format]
 type = "enum"
 values = ["srt", "vtt"]
 default = "srt"
-description = "Subtitle format: srt (default) renders cues HH:MM:SS,mmm, vtt renders the WEBVTT header with cues HH:MM:SS.mmm; both outputs are <origen-stem>.<formato>."
+description = "Subtitle format: srt (default) renders cues HH:MM:SS,mmm, vtt renders the WEBVTT header with cues HH:MM:SS.mmm; both outputs are <source-stem>.<format>."
 
-[capabilities.subtitulos.verify]
+[capabilities.subtitles.verify]
 thresholds = { cues_min = 1 }
 
-[capabilities.subtitulos.preview]
+[capabilities.subtitles.preview]
 viewer = "generic"

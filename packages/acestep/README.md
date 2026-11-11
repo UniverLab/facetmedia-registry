@@ -36,7 +36,7 @@ and never comes out of this refusal.
 |-------|------|----------|-------|
 | `caption` | string | yes | English style caption; the runner refuses one asking for voice |
 | `name` | string | yes | `[a-z0-9][a-z0-9-]*`, writes `<name>.wav` |
-| `duracion` | number | yes | seconds of music, at most 30 |
+| `duration` | number | yes | seconds of music, at most 30 |
 
 ## Timings and verification
 
@@ -46,7 +46,7 @@ every 2 s until the job finishes, downloads the WAV and normalises it to
 sample peak stays at or below -1.0 dBFS. The record carries `duration_s`,
 `sample_rate_hz`, `lufs` and `peak_dbfs`.
 
-`verify` passes a bed when its duration is within **1.0 s** of `duracion` and
+`verify` passes a bed when its duration is within **1.0 s** of `duration` and
 its peak sits above **-40 dBFS** (silence never passes), reporting both under
 `verifier = "audiopreview"`. The preview (`<name>.wav.preview.json`) carries
 the waveform, the integrated and momentary loudness with `target_lufs =
@@ -102,7 +102,7 @@ dependencies include PyTorch (**BSD-3-Clause**) and soundfile
 [inputs]
 caption = "Lively, joyful Baroque chamber orchestra piece in the style of a Vivaldi allegro. Bright strings playing fast staccato and spiccato runs, harpsichord continuo, playful solo violin and flute melodies. Energetic, festive and elegant. Acoustic instruments only. No drums, no percussion, no bass beat, no synthesizers, no electronic sounds."
 name = "clasica-alegre"
-duracion = 30
+duration = 30
 ```
 
 Run it with `scripts/try-package.sh acestep acestep.bed

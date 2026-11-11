@@ -2,7 +2,7 @@
 
 The skill is the only place an agent learns the package, so these tests pin
 what a person reads: the front matter and the four headings the core requires
-in order, the capability id ``texforge.documento`` with every input named, and
+in order, the capability id ``texforge.document`` with every input named, and
 the person-installed binary rule. The manifest checks pin the public shape a
 pull and a `facet registry validate` rely on.
 """
@@ -75,8 +75,8 @@ def test_skill_front_matter_and_headings_order() -> None:
 
 def test_the_skill_names_the_capability_and_every_input() -> None:
     _, body = _front_matter()
-    assert "texforge.documento" in body
-    for name in MANIFEST["capabilities"]["documento"]["inputs"]:
+    assert "texforge.document" in body
+    for name in MANIFEST["capabilities"]["document"]["inputs"]:
         assert name in body, name
 
 
@@ -105,18 +105,18 @@ def test_the_host_hint_is_the_install_line() -> None:
 
 
 def test_the_capability_is_a_document_with_the_generic_viewer() -> None:
-    documento = MANIFEST["capabilities"]["documento"]
-    assert documento["kind"] == "document"
-    assert documento["preview"] == {"viewer": "generic"}
-    inputs = documento["inputs"]
-    assert set(inputs) == {"principal", "nombre", "autor"}
-    assert inputs["principal"]["type"] == "path"
-    assert inputs["principal"]["required"] is True
-    assert inputs["nombre"]["type"] == "string"
-    assert inputs["nombre"]["required"] is True
-    assert inputs["nombre"]["pattern"] == "^[a-z0-9][a-z0-9-]*$"
-    assert inputs["autor"]["type"] == "string"
-    assert inputs["autor"]["required"] is True
+    document = MANIFEST["capabilities"]["document"]
+    assert document["kind"] == "document"
+    assert document["preview"] == {"viewer": "generic"}
+    inputs = document["inputs"]
+    assert set(inputs) == {"main", "name", "author"}
+    assert inputs["main"]["type"] == "path"
+    assert inputs["main"]["required"] is True
+    assert inputs["name"]["type"] == "string"
+    assert inputs["name"]["required"] is True
+    assert inputs["name"]["pattern"] == "^[a-z0-9][a-z0-9-]*$"
+    assert inputs["author"]["type"] == "string"
+    assert inputs["author"]["required"] is True
 
 
 def test_the_readme_documents_the_staged_project_and_the_verify_rule() -> None:
@@ -168,12 +168,12 @@ def test_the_build_reference_carries_the_keys_and_the_invocations() -> None:
 
 
 def test_the_example_is_a_runnable_piece() -> None:
-    """The piece parses, stays inside ``texforge.documento`` and ships its source."""
+    """The piece parses, stays inside ``texforge.document`` and ships its source."""
     _, body = _front_matter()
     assert f"examples/{EXAMPLE}.toml" in body
     inputs = tomllib.loads((EXAMPLES / f"{EXAMPLE}.toml").read_text(encoding="utf-8"))["inputs"]
-    documento = MANIFEST["capabilities"]["documento"]["inputs"]
-    assert set(inputs) <= set(documento)
-    assert re.fullmatch(documento["nombre"]["pattern"], inputs["nombre"])
-    assert inputs["nombre"] == EXAMPLE
-    assert (EXAMPLES / inputs["principal"]).is_file()
+    document = MANIFEST["capabilities"]["document"]["inputs"]
+    assert set(inputs) <= set(document)
+    assert re.fullmatch(document["name"]["pattern"], inputs["name"])
+    assert inputs["name"] == EXAMPLE
+    assert (EXAMPLES / inputs["main"]).is_file()

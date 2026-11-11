@@ -1,4 +1,4 @@
-# The wrapper: running a guion inside freecadcmd
+# The wrapper: running a script inside freecadcmd
 
 Ported from the lab's `tools/freecad_run.py` and `tools/freecad.sh`. `freecadcmd`
 exits 0 and prints nothing when a script raises, so the package drives every
@@ -13,7 +13,7 @@ before the target script, and the script's own arguments after it:
 <freecadcmd> freecad_run.py --pass <script.py> [args...]
 ```
 
-The runner builds the launch line the same way, so the guion and the runner are
+The runner builds the launch line the same way, so the script and the runner are
 both run through the wrapper:
 
 ```text
@@ -29,7 +29,7 @@ one of its own options and stops at `unrecognised option '--result'`; after
 The wrapper sets `sys.argv = [script.py, args...]` and executes the target with
 `runpy.run_path(..., run_name="__main__")`. freecadcmd would otherwise supply
 the file's stem as `__name__`, so the wrapper calls `main` unconditionally: a
-guion's `if __name__ == "__main__":` block is true here.
+script's `if __name__ == "__main__":` block is true here.
 
 ## Failures
 
@@ -39,23 +39,23 @@ guion's `if __name__ == "__main__":` block is true here.
 - An integer `SystemExit` passes through unchanged; `None` becomes 0.
 - With no `--pass` and no script after it, the wrapper prints its usage line and
   exits 2.
-- Inside FreeCAD the runner re-raises a failure as `guion failed: ...` with the
+- Inside FreeCAD the runner re-raises a failure as `script failed: ...` with the
   traceback, so the asset is never recorded.
 
-## The guion contract
+## The script contract
 
-The guion's argv is `<guion> <out_dir>/<name> <pieza>`: the script itself, the
-output prefix, and the part file. `<name>` is the sanitized stem of the guion,
+The script's argv is `<script> <out_dir>/<name> <part>`: the script itself, the
+output prefix, and the part file. `<name>` is the sanitized stem of the script,
 so `plano-escuadra.py` names the output `plano-escuadra`. The script writes
 one SVG sheet per page at that prefix — `<name>-01.svg`, `<name>-02.svg`, …
 with consecutive two-digit numbers from 01, each sheet carrying `width` and
 `height` in millimetres on its `<svg>` tag — and the runner renders them into
 `<name>.pdf` with FreeCAD's bundled Qt and returns the PDF plus one image
 asset per sheet. `facet preview <name>.pdf` renders the page PNGs from those
-sheets. A script that writes no first sheet fails with `guion wrote no
+sheets. A script that writes no first sheet fails with `script wrote no
 <name>-01.svg`; a gap fails with `sheet <name>-NN.svg is missing`; a sheet
 without millimetre sizes fails with `<file>: the sheet needs width and height
-in mm`. Paths arrive runner-side and are resolved there: the guion and the
+in mm`. Paths arrive runner-side and are resolved there: the script and the
 part are resolved relative to the piece before launch.
 
 ## Host lookup and paths

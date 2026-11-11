@@ -3,7 +3,7 @@
 The runner is a subprocess of the host ``node`` started with an empty ``PATH``:
 the presenter build spawns nothing, so no browser, server or opener can start.
 The stub deck has three slides, a logo and a stylesheet background; the notes
-arrive out of order and must land on their slides in ``pagina`` order.
+arrive out of order and must land on their slides in ``page`` order.
 """
 
 from __future__ import annotations
@@ -44,9 +44,9 @@ DECK_HTML = """<!doctype html>
 """
 
 NOTAS = [
-    {"pagina": 3, "texto": "Third note"},
-    {"pagina": 1, "texto": "First note"},
-    {"pagina": 2, "texto": "Second note"},
+    {"page": 3, "text": "Third note"},
+    {"page": 1, "text": "First note"},
+    {"page": 2, "text": "Second note"},
 ]
 ORDERED = ["First note", "Second note", "Third note"]
 
@@ -61,8 +61,8 @@ def _piece(root: Path, html: str = DECK_HTML) -> tuple[Path, Path]:
     return piece, deck
 
 
-def _inputs(notas: list[dict[str, Any]] | None = None) -> dict[str, Any]:
-    return {"fuente": "slides.html", "notas": NOTAS if notas is None else notas}
+def _inputs(notes: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    return {"source": "slides.html", "notes": NOTAS if notes is None else notes}
 
 
 def _request(
@@ -101,17 +101,17 @@ def _invoke(
 
 
 def _run(
-    root: Path, out: Path, piece: Path, notas: list[dict[str, Any]] | None = None
+    root: Path, out: Path, piece: Path, notes: list[dict[str, Any]] | None = None
 ) -> tuple[subprocess.CompletedProcess[str], Any]:
-    request = _request("run", out, piece, inputs=_inputs(notas))
+    request = _request("run", out, piece, inputs=_inputs(notes))
     return _invoke(root, "run", request)
 
 
 def _verified(
-    root: Path, out: Path, piece: Path, notas: list[dict[str, Any]] | None = None
+    root: Path, out: Path, piece: Path, notes: list[dict[str, Any]] | None = None
 ) -> tuple[subprocess.CompletedProcess[str], Any]:
     assets = [str(out / "slides.present.html"), str(out / "slides.notes.md")]
-    request = _request("verify", out, piece, inputs=_inputs(notas), assets=assets)
+    request = _request("verify", out, piece, inputs=_inputs(notes), assets=assets)
     return _invoke(root, "verify", request)
 
 
@@ -161,27 +161,27 @@ def test_run_attaches_notes_to_their_slides_and_writes_both_files(tmp_path: Path
     assert _sections(companion) == ORDERED
 
 
-def test_run_refuses_a_duplicate_pagina(tmp_path: Path) -> None:
+def test_run_refuses_a_duplicate_page(tmp_path: Path) -> None:
     piece, _deck = _piece(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    notas = [{"pagina": 1, "texto": "A"}, {"pagina": 1, "texto": "B"}]
-    done, result = _run(tmp_path, out, piece, notas)
+    notes = [{"page": 1, "text": "A"}, {"page": 1, "text": "B"}]
+    done, result = _run(tmp_path, out, piece, notes)
     assert done.returncode != 0
     assert result is None
-    assert "pagina" in done.stderr
+    assert "page" in done.stderr
     assert not (out / "slides.present.html").exists()
 
 
-def test_run_refuses_a_pagina_beyond_the_deck(tmp_path: Path) -> None:
+def test_run_refuses_a_page_beyond_the_deck(tmp_path: Path) -> None:
     piece, _deck = _piece(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    notas = [{"pagina": 1, "texto": "A"}, {"pagina": 4, "texto": "D"}]
-    done, result = _run(tmp_path, out, piece, notas)
+    notes = [{"page": 1, "text": "A"}, {"page": 4, "text": "D"}]
+    done, result = _run(tmp_path, out, piece, notes)
     assert done.returncode != 0
     assert result is None
-    assert "pagina" in done.stderr
+    assert "page" in done.stderr
     assert "slides" in done.stderr
 
 
@@ -241,7 +241,7 @@ def test_verify_fails_when_the_notes_companion_is_tampered(tmp_path: Path) -> No
     done, result = _verified(tmp_path, out, piece)
     assert done.returncode != 0
     assert result is None
-    assert "notas.md" in done.stderr
+    assert "notes.md" in done.stderr
 
 
 def test_verify_fails_when_the_embedded_array_is_tampered(tmp_path: Path) -> None:
@@ -262,16 +262,16 @@ def test_verify_fails_when_the_embedded_array_is_tampered(tmp_path: Path) -> Non
     assert "__PZ_NOTES__" in done.stderr
 
 
-def test_verify_fails_on_duplicate_paginas(tmp_path: Path) -> None:
+def test_verify_fails_on_duplicate_pages(tmp_path: Path) -> None:
     piece, _deck = _piece(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     _done, _result = _run(tmp_path, out, piece)
-    notas = [{"pagina": 1, "texto": "A"}, {"pagina": 1, "texto": "B"}]
-    done, result = _verified(tmp_path, out, piece, notas)
+    notes = [{"page": 1, "text": "A"}, {"page": 1, "text": "B"}]
+    done, result = _verified(tmp_path, out, piece, notes)
     assert done.returncode != 0
     assert result is None
-    assert "pagina" in done.stderr
+    assert "page" in done.stderr
 
 
 def test_preview_writes_the_document_and_the_generic_text_files(tmp_path: Path) -> None:

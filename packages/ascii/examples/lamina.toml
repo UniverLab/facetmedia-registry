@@ -1,6 +1,6 @@
 [inputs]
 image = "lamina.png"
 width = 100
-mode = "forma"
+mode = "shape"
 invert = true
-name = "lamina-ascii"
+name = "plate-ascii"

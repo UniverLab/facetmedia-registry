@@ -1,4 +1,4 @@
 [inputs]
-descripcion = "Close-up sound of turning the pages of a paper book, crisp paper rustle, quiet room"
-nombre = "pagina-libro"
-segundos = 3
+description = "Close-up sound of turning the pages of a paper book, crisp paper rustle, quiet room"
+name = "pagina-libro"
+seconds = 3

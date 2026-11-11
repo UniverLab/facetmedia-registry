@@ -1,6 +1,6 @@
 # Prueba de eliminación de fondo
 
-Usa U2NetP en CPU para generar una imagen PNG con alfa y una vista sobre damero:
+Usa U2NetP en CPU para generar una imagen PNG con alfa y una vista sobre checkerboard:
 
 ```bash
 uv run remover.py

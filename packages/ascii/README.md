@@ -19,7 +19,7 @@ matching), checked by re-rendering:
 |-------|------|----------|---------|-------|
 | `image` | path | yes | — | PNG, JPEG or WebP |
 | `width` | integer | no | 80 | 16 to 400 columns |
-| `mode` | enum | no | `forma` | `densidad`, `trazo`, `braille`, `forma` |
+| `mode` | enum | no | `shape` | `density`, `stroke`, `braille`, `shape` |
 | `invert` | boolean | no | false | light ink on a dark source |
 | `color` | enum | no | `none` | `none` or `ansi` 24-bit foreground |
 | `name` | string | yes | — | `[a-z0-9][a-z0-9-]*` |
@@ -34,7 +34,7 @@ matching), checked by re-rendering:
 | `name` | string | yes | — | `[a-z0-9][a-z0-9-]*` |
 
 Rows sample at half the column density: each row covers twice the height
-of a column's width. `forma` renders each printable ASCII character in
+of a column's width. `shape` renders each printable ASCII character in
 Sometype Mono and picks, per cell, the glyph with the smallest squared
 difference to the cell, vectorised as one glyph-bitmap matrix against
 all cells. `run` writes `<name>.txt` always (plain), `<name>.ans` when
@@ -47,7 +47,7 @@ all cells. `run` writes `<name>.txt` always (plain), `<name>.ans` when
 
 `ascii.image` re-renders `<name>.txt` as the art it is — Sometype Mono
 glyphs for ASCII, decoded dot cells for braille, filled cells for
-`trazo`'s marks — downsamples both it and the source to the grid, and
+`stroke`'s marks — downsamples both it and the source to the grid, and
 reports the Pearson correlation as `similarity`. It passes at
 `similarity_min = 0.55` with every line exactly `columns` wide and the
 ink ratio between 0.02 and 0.98, reporting `similarity`, `ink_ratio`,
@@ -58,7 +58,7 @@ character exists, reporting `columns`, `rows`. The generic preview
 and for images the verification metrics:
 
 ```json
-{"fields": {"charset_size": 95, "columns": 100, "ink_ratio": 0.7192, "mode": "forma", "rows": 50, "similarity": 0.9625421776568691}, "kind": "text", "preview": 1, "summary": "100×50 · forma · similarity 0.96"}
+{"fields": {"charset_size": 95, "columns": 100, "ink_ratio": 0.7192, "mode": "shape", "rows": 50, "similarity": 0.9625421776568691}, "kind": "text", "preview": 1, "summary": "100×50 · shape · similarity 0.96"}
 ```
 
 ```json
@@ -72,7 +72,7 @@ and for images the verification metrics:
 - `mono_font` (quick): Sometype Mono exists with its manifest size and
   opens with Pillow.
 - `banner` (full): rendering `A` in `dos_rebel` gives non-empty lines.
-- `image` (full): an 8x8 gradient converts with `forma` to an 8-column grid.
+- `image` (full): an 8x8 gradient converts with `shape` to an 8-column grid.
 
 Every failing check names `facet pull ascii` as its fix.
 
@@ -110,20 +110,20 @@ params digest, the input files and the licence section):
 `examples/lamina.toml` converts a 512 px crop of one machine plate
 (`examples/lamina.png`, 165 KB) with shape matching on a dark source.
 Its `name` differs from the source's stem, so the rendered
-`lamina-ascii.png` lands beside the plate instead of over it.
+`plate-ascii.png` lands beside the plate instead of over it.
 
 ```toml
 [inputs]
 image = "lamina.png"
 width = 100
-mode = "forma"
+mode = "shape"
 invert = true
-name = "lamina-ascii"
+name = "plate-ascii"
 ```
 
-Its record (`lamina-ascii.txt.facet.json`, beside the asset; abridged here,
+Its record (`plate-ascii.txt.facet.json`, beside the asset; abridged here,
 with the same extra sections as the banner's record above):
 
 ```json
-{"bytes": 5050, "id": "sha256:87d18776d1f2000ed91520cad4c900e9385f3af04aefb10869f1ad0920d72896", "kind": "text", "mime": "text/plain", "name": "lamina-ascii", "properties": {"charset_size": 95, "columns": 100, "mode": "forma", "rows": 50}, "provenance": {"capability": "ascii.image", "params": {"color": "none", "image": "lamina.png", "invert": true, "mode": "forma", "name": "lamina-ascii", "width": 100}, "package": {"name": "ascii", "version": "0.1.0"}, "tool": {"name": "facet ascii (Pillow, NumPy, pyfiglet)", "version": "0.1.0"}}, "verification": {"metrics": {"columns": 100, "ink_ratio": 0.7192, "rows": 50, "similarity": 0.9625421776568691}, "status": "passed", "thresholds": {"similarity_min": 0.55}, "verifier": "ascii-rerender"}}
+{"bytes": 5050, "id": "sha256:87d18776d1f2000ed91520cad4c900e9385f3af04aefb10869f1ad0920d72896", "kind": "text", "mime": "text/plain", "name": "plate-ascii", "properties": {"charset_size": 95, "columns": 100, "mode": "shape", "rows": 50}, "provenance": {"capability": "ascii.image", "params": {"color": "none", "image": "lamina.png", "invert": true, "mode": "shape", "name": "plate-ascii", "width": 100}, "package": {"name": "ascii", "version": "0.1.0"}, "tool": {"name": "facet ascii (Pillow, NumPy, pyfiglet)", "version": "0.1.0"}}, "verification": {"metrics": {"columns": 100, "ink_ratio": 0.7192, "rows": 50, "similarity": 0.9625421776568691}, "status": "passed", "thresholds": {"similarity_min": 0.55}, "verifier": "ascii-rerender"}}
 ```

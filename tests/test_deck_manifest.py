@@ -131,24 +131,24 @@ def test_the_capability_is_the_document_kind_with_the_slide_inputs() -> None:
     assert capability["kind"] == "document"
     assert capability["preview"] == {"viewer": "generic"}
     inputs = capability["inputs"]
-    assert set(inputs) == {"fuente", "prompt", "seed"}
-    assert inputs["fuente"]["type"] == "path"
-    assert inputs["fuente"]["required"] is True
-    assert "@page" in inputs["fuente"]["description"]
+    assert set(inputs) == {"source", "prompt", "seed"}
+    assert inputs["source"]["type"] == "path"
+    assert inputs["source"]["required"] is True
+    assert "@page" in inputs["source"]["description"]
     assert inputs["prompt"]["type"] == "string"
     assert inputs["prompt"]["required"] is True
     assert inputs["seed"]["type"] == "integer"
     assert (inputs["seed"]["default"], inputs["seed"]["min"]) == (0, 0)
 
 
-def test_the_pagina_capability_is_the_document_kind_with_the_piece_inputs() -> None:
-    capability = MANIFEST["capabilities"]["pagina"]
+def test_the_page_capability_is_the_document_kind_with_the_piece_inputs() -> None:
+    capability = MANIFEST["capabilities"]["page"]
     assert capability["kind"] == "document"
     assert capability["preview"] == {"viewer": "generic"}
     inputs = capability["inputs"]
-    assert set(inputs) == {"fuente", "prompt", "seed"}
-    assert inputs["fuente"]["type"] == "path"
-    assert inputs["fuente"]["required"] is True
+    assert set(inputs) == {"source", "prompt", "seed"}
+    assert inputs["source"]["type"] == "path"
+    assert inputs["source"]["required"] is True
     assert inputs["prompt"]["type"] == "string"
     assert inputs["prompt"]["required"] is True
     assert inputs["seed"]["type"] == "integer"
@@ -161,24 +161,24 @@ def test_the_index_carries_the_package() -> None:
     assert names.count("deck") == 1
 
 
-def test_the_presenter_capability_orders_notes_by_pagina() -> None:
+def test_the_presenter_capability_orders_notes_by_page() -> None:
     capability = MANIFEST["capabilities"]["presenter"]
     assert capability["kind"] == "document"
     assert capability["preview"] == {"viewer": "generic"}
     inputs = capability["inputs"]
-    assert set(inputs) == {"fuente", "notas"}
-    assert inputs["fuente"]["type"] == "path"
-    assert inputs["fuente"]["required"] is True
-    assert inputs["notas"]["type"] == "array"
-    assert inputs["notas"]["required"] is True
-    assert inputs["notas"]["min_items"] == 1
-    items = inputs["notas"]["items"]
-    assert set(items) == {"pagina", "texto"}
-    assert items["pagina"]["type"] == "integer"
-    assert items["pagina"]["required"] is True
-    assert items["pagina"]["min"] == 1
-    assert items["texto"]["type"] == "string"
-    assert items["texto"]["required"] is True
+    assert set(inputs) == {"source", "notes"}
+    assert inputs["source"]["type"] == "path"
+    assert inputs["source"]["required"] is True
+    assert inputs["notes"]["type"] == "array"
+    assert inputs["notes"]["required"] is True
+    assert inputs["notes"]["min_items"] == 1
+    items = inputs["notes"]["items"]
+    assert set(items) == {"page", "text"}
+    assert items["page"]["type"] == "integer"
+    assert items["page"]["required"] is True
+    assert items["page"]["min"] == 1
+    assert items["text"]["type"] == "string"
+    assert items["text"]["required"] is True
 
 
 def test_the_presenter_files_ship_beside_the_runner() -> None:
@@ -207,7 +207,7 @@ def test_the_presenter_runner_reports_the_manifest_version() -> None:
 
 def test_the_skill_names_the_presenter_capability() -> None:
     assert "deck.slides" in SKILL
-    assert "deck.pagina" in SKILL
+    assert "deck.page" in SKILL
     assert "deck.presenter" in SKILL
 
 

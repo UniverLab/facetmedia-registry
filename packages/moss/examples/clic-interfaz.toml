@@ -1,4 +1,4 @@
 [inputs]
-descripcion = "A single soft, clean user interface click, short and subtle, like tapping a modern touchscreen button"
-nombre = "clic-interfaz"
-segundos = 1
+description = "A single soft, clean user interface click, short and subtle, like tapping a modern touchscreen button"
+name = "clic-interfaz"
+seconds = 1

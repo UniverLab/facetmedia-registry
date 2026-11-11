@@ -27,7 +27,7 @@ FLOW = json.loads((PACKAGE / "flows" / "z-image.json").read_text(encoding="utf-8
 FLOW_EDIT = json.loads((PACKAGE / "flows" / "qwen-image-edit.json").read_text(encoding="utf-8"))
 FLOW_WAN = json.loads((PACKAGE / "flows" / "wan22-i2v-14b.json").read_text(encoding="utf-8"))
 FLOW_RAPIDO = json.loads(
-    (PACKAGE / "flows" / "wan22-i2v-14b-rapido.json").read_text(encoding="utf-8")
+    (PACKAGE / "flows" / "wan22-i2v-14b-fast.json").read_text(encoding="utf-8")
 )
 CAPABILITY = MANIFEST["capabilities"]["still"]
 EDIT = MANIFEST["capabilities"]["edit"]
@@ -407,7 +407,7 @@ def test_the_clip_negative_is_an_optional_patternless_string() -> None:
     assert "pattern" not in negative
     assert "default" not in negative
     assert "default" in negative["description"]
-    assert "rapido" in negative["description"]
+    assert "fast" in negative["description"]
 
 
 def test_still_and_edit_have_no_negative() -> None:
@@ -475,7 +475,7 @@ def test_the_skill_teaches_the_24gb_card() -> None:
 def test_the_clip_workflow_is_the_14b_enum() -> None:
     workflow = CLIP["inputs"]["workflow"]
     assert workflow["type"] == "enum"
-    assert workflow["values"] == ["wan22-i2v-14b", "wan22-i2v-14b-rapido"]
+    assert workflow["values"] == ["wan22-i2v-14b", "wan22-i2v-14b-fast"]
     assert workflow["default"] == "wan22-i2v-14b"
     assert workflow["default"] in workflow["values"]
     assert "draft" in workflow["description"]
@@ -642,7 +642,7 @@ def test_the_skill_documents_the_flows_and_the_server() -> None:
         "z-image",
         "qwen-image-edit",
         "wan22-i2v-14b",
-        "wan22-i2v-14b-rapido",
+        "wan22-i2v-14b-fast",
     ):
         assert flow in text
     assert "--disable-pinned-memory" in text

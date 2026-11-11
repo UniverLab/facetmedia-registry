@@ -67,8 +67,8 @@ description = "Output width in columns."
 
 [capabilities.image.inputs.mode]
 type = "enum"
-values = ["densidad", "trazo", "braille", "forma"]
-default = "forma"
+values = ["density", "stroke", "braille", "shape"]
+default = "shape"
 description = "How source cells map to characters."
 
 [capabilities.image.inputs.invert]

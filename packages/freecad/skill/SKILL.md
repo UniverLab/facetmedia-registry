@@ -4,8 +4,8 @@ description: Draw workshop plans from a 3D part with scripted FreeCAD TechDraw, 
 ---
 # freecad
 
-`freecad.plano` runs the piece's FreeCAD script headless in `freecadcmd` on the
-`pieza` part and turns the SVG sheets it writes into a paginated PDF with
+`freecad.drawing` runs the piece's FreeCAD script headless in `freecadcmd` on the
+`part` part and turns the SVG sheets it writes into a paginated PDF with
 FreeCAD's own Qt, returning the PDF plus the sheets as assets: a person opens
 the PDF, an agent reads the PNG pages `facet preview` renders from the preview
 file.
@@ -23,14 +23,14 @@ file.
 
 ```toml
 [inputs]
-guion = "plano-escuadra.py"
-pieza = "escuadra.step"
+script = "plano-escuadra.py"
+part = "escuadra.step"
 ```
 
-`guion` is a FreeCAD Python script run as `<guion> <out_dir>/<name> <pieza>`,
-where `<name>` is the guion's stem; it must write `<name>-01.svg`,
+`script` is a FreeCAD Python script run as `<script> <out_dir>/<name> <part>`,
+where `<name>` is the script's stem; it must write `<name>-01.svg`,
 `<name>-02.svg`, … — consecutive two-digit numbers from 01, each sheet with
-`width` and `height` in millimetres on its `<svg>` tag. `pieza` is the part
+`width` and `height` in millimetres on its `<svg>` tag. `part` is the part
 file the script opens, both resolved relative to the piece. `run` renders the
 sheets into `<name>.pdf` with FreeCAD's bundled Qt and returns the PDF plus
 the sheets as assets. Copy `examples/plano-escuadra.py`, which draws the

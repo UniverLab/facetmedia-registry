@@ -17,7 +17,7 @@ byte-identical except `flux2-klein-img2img.json`, whose params open to
 | `flux2-klein-4b.json` | `still` | FLUX.2 klein 4B unet, Qwen clip, FLUX.2 VAE |
 | `flux2-klein-img2img.json` | `edit` | FLUX.2 klein 4B unet, Qwen clip, FLUX.2 VAE |
 | `wan22-i2v.json` | `clip` | Wan 2.2 TI2V 5B unet, UMT5 clip, Wan 2.2 VAE |
-| `wan22-i2v-rapido.json` | `clip` | Wan 2.2 TI2V 5B unet, UMT5 clip, Wan 2.2 VAE, FastWan LoRA |
+| `wan22-i2v-fast.json` | `clip` | Wan 2.2 TI2V 5B unet, UMT5 clip, Wan 2.2 VAE, FastWan LoRA |
 
 The unet, clip, vae and LoRA load by the filenames of the manifest models;
 the three still and edit flows share the one Qwen clip file (`qwen_3_4b_fp8_mixed.safetensors`,
@@ -40,7 +40,7 @@ adds `Wan2_2_5B_FastWanFullAttn_lora_rank_128_bf16.safetensors`.
   `$length`, `$steps`, `$cfg`, `$shift`, `$fps`, `$image`, `$name`. Params:
   width 1280, height 704, length 49, seed 0, steps 20, cfg 5, shift 8,
   fps 24, and Wan's own Chinese negative prompt as the default.
-- `wan22-i2v-rapido`: the same placeholders plus `$lora_strength`. Params:
+- `wan22-i2v-fast`: the same placeholders plus `$lora_strength`. Params:
   the same size, length and fps with steps 4, cfg 1 and `lora_strength` 1.0.
 
 `$prompt`, `$seed`, `$width`, `$height`, `$length` and `$name` come from the

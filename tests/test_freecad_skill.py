@@ -1,6 +1,6 @@
 """The freecad skill: front matter, the four headings, the capability and its reference.
 
-The skill must name ``freecad.plano`` with the guion/pieza shape, cite the
+The skill must name ``freecad.drawing`` with the script/part shape, cite the
 wrapper reference by path, and that reference must carry the wrapper contract
 the runner ports from the lab.
 """
@@ -44,11 +44,11 @@ def test_the_four_headings_appear_in_order() -> None:
     assert positions == sorted(positions)
 
 
-def test_the_body_names_the_capability_and_the_guion_pieza_shape() -> None:
+def test_the_body_names_the_capability_and_the_script_part_shape() -> None:
     body = _body()
-    assert "freecad.plano" in body
-    assert "guion" in body
-    assert "pieza" in body
+    assert "freecad.drawing" in body
+    assert "script" in body
+    assert "part" in body
 
 
 def test_the_skill_cites_the_wrapper_reference() -> None:

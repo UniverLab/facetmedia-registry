@@ -5,7 +5,7 @@ asserted as data: ``facet run`` validates pieces against these fields
 before the runner sees them, and the runner's own checks cover what the
 schema cannot express (the cues' order). The package is a stdlib-only
 CPU python-env — no models, no heavy requirements — the capability is
-``whisper-subs.subtitulos`` of kind ``text`` with the generic viewer
+``whisper-subs.subtitles`` of kind ``text`` with the generic viewer
 (the facet/kind split whisper set), and ``index.toml`` is the only way
 a package reaches the registry.
 """
@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "whisper-subs"
 MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
 INDEX = tomllib.loads((ROOT / "index.toml").read_text(encoding="utf-8"))
-CAPABILITY = MANIFEST["capabilities"]["subtitulos"]
+CAPABILITY = MANIFEST["capabilities"]["subtitles"]
 INPUTS = CAPABILITY["inputs"]
 
 
@@ -49,19 +49,19 @@ def test_the_pyproject_carries_no_dependencies_and_its_lock() -> None:
 def test_the_capability_is_text_with_the_generic_viewer() -> None:
     assert CAPABILITY["kind"] == "text"
     assert CAPABILITY["preview"] == {"viewer": "generic"}
-    assert MANIFEST["capabilities"].keys() == {"subtitulos"}
+    assert MANIFEST["capabilities"].keys() == {"subtitles"}
 
 
-def test_origen_is_a_required_path_relative_to_the_piece() -> None:
-    field = INPUTS["origen"]
+def test_source_is_a_required_path_relative_to_the_piece() -> None:
+    field = INPUTS["source"]
     assert field["type"] == "path"
     assert field["required"] is True
     assert "relative to the piece" in field["description"]
     assert field["description"].count("_") >= 1  # start_s, the critical key
 
 
-def test_formato_is_the_srt_vtt_enum_with_srt_as_its_manifest_default() -> None:
-    field = INPUTS["formato"]
+def test_format_is_the_srt_vtt_enum_with_srt_as_its_manifest_default() -> None:
+    field = INPUTS["format"]
     assert field["type"] == "enum"
     assert field["values"] == ["srt", "vtt"]
     assert field["default"] == "srt"

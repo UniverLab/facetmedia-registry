@@ -73,14 +73,14 @@ def _image_lines(req: Request, params: dict[str, Any]) -> tuple[list[str], Any]:
     """Render the piece's image in its mode; also returns the grey source."""
     grey = _source_grey(params, req.piece_dir)
     width = int(params.get("width", 80))
-    mode = str(params.get("mode", "forma"))
-    if mode == "densidad":
-        return art.to_densidad(grey, width), grey
-    if mode == "trazo":
-        return art.to_trazo(grey, width), grey
+    mode = str(params.get("mode", "shape"))
+    if mode == "density":
+        return art.to_density(grey, width), grey
+    if mode == "stroke":
+        return art.to_stroke(grey, width), grey
     if mode == "braille":
         return art.to_braille(grey, width), grey
-    return art.to_forma(grey, width, art.glyph_atlas(_mono_font(req))), grey
+    return art.to_shape(grey, width, art.glyph_atlas(_mono_font(req))), grey
 
 
 @runner.verb("run")
@@ -96,7 +96,7 @@ def run(req: Request) -> dict[str, Any]:
 def _run_image(req: Request, params: dict[str, Any]) -> dict[str, Any]:
     name = str(params["name"])
     width = int(params.get("width", 80))
-    mode = str(params.get("mode", "forma"))
+    mode = str(params.get("mode", "shape"))
     font_path = _mono_font(req)
     lines, grey = _image_lines(req, params)
     columns, rows = art.grid_shape(grey.shape[1], grey.shape[0], width)
@@ -294,7 +294,7 @@ def _read_lines(path: Path, params: dict[str, Any]) -> list[str]:
 
 
 def _preview_image(params: dict[str, Any], path: Path, req: Request) -> dict[str, Any]:
-    mode = str(params.get("mode", "forma"))
+    mode = str(params.get("mode", "shape"))
     lines = _read_lines(path, params)
     columns = max((len(line) for line in lines), default=0)
     fields: dict[str, Any] = {
@@ -446,7 +446,7 @@ def _doctor_full(req: Request, checks: list[dict[str, Any]], font_path: Path | N
         return
     try:
         gradient = numpy.tile(numpy.linspace(0.0, 1.0, DOCTOR_SIZE), (DOCTOR_SIZE, 1))
-        grid = art.to_forma(gradient, DOCTOR_SIZE, art.glyph_atlas(font_path))
+        grid = art.to_shape(gradient, DOCTOR_SIZE, art.glyph_atlas(font_path))
         ok = len(grid) > 0 and all(len(line) == DOCTOR_SIZE for line in grid)
         detail = (
             "an 8x8 gradient converts to an 8-column grid"

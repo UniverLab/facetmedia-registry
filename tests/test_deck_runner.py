@@ -8,7 +8,7 @@ answers the page count and the text check from ``DECK_STUB_PAGES`` and
 ``pdfinfo`` or ``pdftotext`` exists anywhere in the environment, which proves
 the print-media render with ``preferCSSPageSize``, the per-page screenshots,
 the pdf.js page count and text, the preview shape and the doctor checks
-without a browser, poppler or a downloaded tarball. The ``deck.pagina`` tests
+without a browser, poppler or a downloaded tarball. The ``deck.page`` tests
 prove the screen-media measured-height render and the three source/text checks
 the same way.
 """
@@ -141,27 +141,27 @@ html, body { margin: 0; }
 </body></html>
 """
 
-PAGINA_IMG = (
+PAGE_IMG = (
     '<figure><img src="chart.png" alt="chart">\n'
     "<figcaption>Ventas por trimestre</figcaption></figure>"
 )
-PAGINA_IMG_BARE = '<img src="chart.png" alt="chart">'
-PAGINA_FOOTER = '<footer class="sources">Fuentes: 1.200 casos, 0,9 %, 6,00 EUR</footer>'
+PAGE_IMG_BARE = '<img src="chart.png" alt="chart">'
+PAGE_FOOTER = '<footer class="sources">Fuentes: 1.200 casos, 0,9 %, 6,00 EUR</footer>'
 
-PAGINA_HTML = f"""<!doctype html>
+PAGE_HTML = f"""<!doctype html>
 <html><head><meta charset="utf-8"><style>
 html, body {{ margin: 0; }}
 footer {{ padding: 8px; }}
 </style></head><body>
 <h1>Infographic</h1>
-{PAGINA_IMG}
-{PAGINA_FOOTER}
+{PAGE_IMG}
+{PAGE_FOOTER}
 </body></html>
 """
 
-PAGINA_NO_FOOTER_HTML = PAGINA_HTML.replace(f"{PAGINA_FOOTER}\n", "")
-PAGINA_BARE_IMG_HTML = PAGINA_HTML.replace(PAGINA_IMG, PAGINA_IMG_BARE)
-PAGINA_TEXT = "1.200 casos · 0,9 % · 6,00 EUR"
+PAGE_NO_FOOTER_HTML = PAGE_HTML.replace(f"{PAGE_FOOTER}\n", "")
+PAGE_BARE_IMG_HTML = PAGE_HTML.replace(PAGE_IMG, PAGE_IMG_BARE)
+PAGE_TEXT = "1.200 casos · 0,9 % · 6,00 EUR"
 
 
 def _package(root: Path) -> str:
@@ -198,10 +198,10 @@ def _slide(root: Path) -> tuple[Path, Path]:
     return piece, html
 
 
-def _pagina(root: Path, html: str = PAGINA_HTML) -> tuple[Path, Path]:
+def _page_piece(root: Path, html: str = PAGE_HTML) -> tuple[Path, Path]:
     piece = root / "piece"
     piece.mkdir()
-    file = piece / "pagina.html"
+    file = piece / "page.html"
     file.write_text(html, encoding="utf-8")
     return piece, file
 
@@ -214,7 +214,7 @@ def _environment(
     pages: int = PAGE_COUNT,
     chrome: Path | None = None,
     path: str | None = None,
-    text: str = PAGINA_TEXT,
+    text: str = PAGE_TEXT,
 ) -> dict[str, str]:
     environment = {
         "FACET_NODE": str(NODE),
@@ -286,7 +286,7 @@ def _calls_with(calls: list[dict[str, Any]], key: str) -> list[Any]:
 
 
 def _inputs(seed: int = RUN_SEED) -> dict[str, Any]:
-    return {"fuente": "slides.html", "prompt": "brief", "seed": seed}
+    return {"source": "slides.html", "prompt": "brief", "seed": seed}
 
 
 def _run(
@@ -397,11 +397,11 @@ def test_run_refuses_a_missing_slide_html(tmp_path: Path) -> None:
     out = tmp_path / "out"
     out.mkdir()
     env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
-    inputs = {"fuente": "missing.html", "prompt": "brief", "seed": RUN_SEED}
+    inputs = {"source": "missing.html", "prompt": "brief", "seed": RUN_SEED}
     done, result = _invoke(tmp_path, "run", _request("run", out, piece, inputs=inputs), env)
     assert done.returncode != 0
     assert result is None
-    assert "fuente" in done.stderr
+    assert "source" in done.stderr
 
 
 def test_verify_passes_when_the_page_count_matches(tmp_path: Path) -> None:
@@ -585,28 +585,28 @@ def test_an_unknown_verb_is_refused(tmp_path: Path) -> None:
     assert "unknown verb" in done.stderr
 
 
-def _pagina_run(
+def _page_run(
     root: Path, out: Path, piece: Path, env: dict[str, str], *, seed: int = RUN_SEED
 ) -> tuple[subprocess.CompletedProcess[str], Any]:
-    inputs = {"fuente": "pagina.html", "prompt": "brief", "seed": seed}
-    request = _request("run", out, piece, capability="deck.pagina", inputs=inputs)
+    inputs = {"source": "page.html", "prompt": "brief", "seed": seed}
+    request = _request("run", out, piece, capability="deck.page", inputs=inputs)
     return _invoke(root, "run", request, env)
 
 
-def test_pagina_run_renders_a_one_page_pdf_through_the_screen_path(tmp_path: Path) -> None:
+def test_page_run_renders_a_one_page_pdf_through_the_screen_path(tmp_path: Path) -> None:
     node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
-    piece, html = _pagina(tmp_path)
+    piece, html = _page_piece(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     env = _environment(tmp_path, node_path, bin_dir, pages=1, chrome=chrome)
-    done, result = _pagina_run(tmp_path, out, piece, env)
+    done, result = _page_run(tmp_path, out, piece, env)
     assert done.returncode == 0, done.stderr
     assert result is not None
     asset = result["assets"][0]
     assert (asset["file"], asset["name"], asset["kind"], asset["mime"]) == (
-        "pagina.pdf",
-        "pagina",
+        "page.pdf",
+        "page",
         "document",
         "application/pdf",
     )
@@ -615,7 +615,7 @@ def test_pagina_run_renders_a_one_page_pdf_through_the_screen_path(tmp_path: Pat
     assert asset["params"]["prompt"] == "brief"
     assert asset["inputs"] == [str(html)]
     assert result["tool"] == {"name": "deck", "version": PLAYWRIGHT_VERSION}
-    assert (out / "pagina.pdf").is_file()
+    assert (out / "page.pdf").is_file()
     assert [path.name for path in out.glob("page-*.png")] == ["page-01.png"]
     calls = _calls(tmp_path)
     new_page = _call(calls, "newPage")["newPage"]
@@ -633,7 +633,7 @@ def test_pagina_run_renders_a_one_page_pdf_through_the_screen_path(tmp_path: Pat
     assert pdf["height"] == "902px"
     assert pdf["pageRanges"] == "1"
     assert "preferCSSPageSize" not in pdf
-    assert pdf["path"] == str(out / "pagina.pdf")
+    assert pdf["path"] == str(out / "page.pdf")
     assert _calls_with(calls, "setViewportSize") == [{"width": 1060, "height": 902}]
     shot = _call(calls, "screenshot")["screenshot"]
     assert shot["path"] == str(out / "page-1.png")
@@ -641,42 +641,42 @@ def test_pagina_run_renders_a_one_page_pdf_through_the_screen_path(tmp_path: Pat
     assert _call(calls, "close")["close"] is True
 
 
-def test_pagina_run_fails_runner_failed_without_a_sources_footer(tmp_path: Path) -> None:
+def test_page_run_fails_runner_failed_without_a_sources_footer(tmp_path: Path) -> None:
     node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
-    piece, _html = _pagina(tmp_path, PAGINA_NO_FOOTER_HTML)
+    piece, _html = _page_piece(tmp_path, PAGE_NO_FOOTER_HTML)
     out = tmp_path / "out"
     out.mkdir()
     env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
-    done, result = _pagina_run(tmp_path, out, piece, env)
+    done, result = _page_run(tmp_path, out, piece, env)
     assert done.returncode != 0
     assert result is None
     assert "footer-sources" in done.stderr
     assert not (tmp_path / "calls.log").exists()
 
 
-def test_pagina_run_fails_runner_failed_on_a_bare_image(tmp_path: Path) -> None:
+def test_page_run_fails_runner_failed_on_a_bare_image(tmp_path: Path) -> None:
     node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
-    piece, _html = _pagina(tmp_path, PAGINA_BARE_IMG_HTML)
+    piece, _html = _page_piece(tmp_path, PAGE_BARE_IMG_HTML)
     out = tmp_path / "out"
     out.mkdir()
     env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
-    done, result = _pagina_run(tmp_path, out, piece, env)
+    done, result = _page_run(tmp_path, out, piece, env)
     assert done.returncode != 0
     assert result is None
     assert "captioned-images" in done.stderr
     assert not (tmp_path / "calls.log").exists()
 
 
-def test_pagina_run_fails_runner_failed_on_an_english_number(tmp_path: Path) -> None:
+def test_page_run_fails_runner_failed_on_an_english_number(tmp_path: Path) -> None:
     node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
-    piece, _html = _pagina(tmp_path)
+    piece, _html = _page_piece(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     env = _environment(tmp_path, node_path, bin_dir, chrome=chrome, text="8.04 por ciento")
-    done, result = _pagina_run(tmp_path, out, piece, env)
+    done, result = _page_run(tmp_path, out, piece, env)
     assert done.returncode != 0
     assert result is None
     assert "spanish-numbers" in done.stderr

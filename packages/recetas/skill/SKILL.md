@@ -53,7 +53,7 @@ how to judge them.
    Verify: integrated loudness at -16 LUFS.
 5. `whisper.transcribe` → `guion.txt` + `guion.srt` + `guion.json`, from
    `voz-normalizada.wav`. Verify: confidence and no-speech share.
-6. `whisper-subs.subtitulos` → `guion.srt`, from `origen` `guion.json`.
+6. `whisper-subs.subtitles` → `guion.srt`, from `source` `guion.json`.
    Verify: at least one cue, monotonic and non-overlapping.
 7. `hyperframes.narrated` → `narrated.mp4`, with composition `narrated/`,
    voice `voz-normalizada.wav`, music `cama.wav` and subtitles `guion.srt`.
@@ -72,7 +72,7 @@ how to judge them.
    `people-blend` + `people` and `cars-blend` + `cars`. The people and
    cars are `blender.photo` INPUTS, never capabilities of their own. Verify:
    look at the PNG — pixel size and the people in frame.
-4. `deck.pagina` → `render-arq.pdf` + `page-01.png`, from
+4. `deck.page` → `render-arq.pdf` + `page-01.png`, from
    `render-arq.html`. Verify: one PDF page and its page-01 PNG.
 
 ### material-voz — voiced material with music

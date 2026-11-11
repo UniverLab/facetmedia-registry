@@ -26,10 +26,10 @@ rides beside it as an `image` asset. One capability, two assets.
 
 ```toml
 [inputs]
-partitura = "demo/demo.toml"
+score = "demo/demo.toml"
 ```
 
-`partitura` resolves relative to the piece and is the score the runner
+`score` resolves relative to the piece and is the score the runner
 executes. A minimal score:
 
 ```toml
@@ -77,7 +77,7 @@ does record first, then export: `demo export` plays back a `.rec`, it never
 executes the score. The runner's argv is:
 
 ```bash
-demo record <partitura> -o <out>/_demostage/demo.rec
+demo record <score> -o <out>/_demostage/demo.rec
 demo export gif,svg <out>/_demostage/demo.rec
 ```
 

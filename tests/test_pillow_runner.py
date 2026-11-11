@@ -3,7 +3,7 @@
 The runner is a subprocess of the host ``python`` with real Pillow. Its
 ``PYTHONPATH`` carries a stub ``facet_runner_sdk`` (the pull-time SDK
 surface), so the test proves the op chain, the per-op filenames, the
-jpeg alpha flatten, the hoja grid geometry, the image previews, the
+jpeg alpha flatten, the sheet grid geometry, the image previews, the
 verify verdicts and the doctor checks without any package environment.
 """
 
@@ -172,30 +172,30 @@ def _run(
     piece = _piece(tmp_path)
     out = tmp_path / f"out-{tag}"
     out.mkdir()
-    request = _request("run", out, piece, {"imagen": "foto.png", "operaciones": ops})
+    request = _request("run", out, piece, {"image": "foto.png", "operations": ops})
     done, result = _call(stub_dir, "run", request, tmp_path, tag)
     return done, result, out
 
 
 def test_run_applies_the_ops_in_order_with_per_op_files(tmp_path: Path) -> None:
     ops = [
-        {"operacion": "convertir", "formato": "webp"},
-        {"operacion": "redimensionar", "ancho": 4},
-        {"operacion": "hoja", "columnas": 2, "filas": 2},
+        {"op": "convert", "format": "webp"},
+        {"op": "resize", "width": 4},
+        {"op": "sheet", "columns": 2, "rows": 2},
     ]
     done, result, out = _run(tmp_path, ops)
     assert done.returncode == 0, done.stdout + done.stderr
     assert result is not None
-    names = ["foto-1-convertir.webp", "foto-2-redimensionar.webp", "foto-3-hoja.png"]
+    names = ["foto-1-convert.webp", "foto-2-resize.webp", "foto-3-sheet.png"]
     for name in names:
         assert (out / name).is_file(), name
-    with PIL.Image.open(out / "foto-1-convertir.webp") as image:
+    with PIL.Image.open(out / "foto-1-convert.webp") as image:
         assert image.mode == "RGBA"
         assert image.size == (WIDTH, HEIGHT)
-    with PIL.Image.open(out / "foto-2-redimensionar.webp") as image:
+    with PIL.Image.open(out / "foto-2-resize.webp") as image:
         assert image.mode == "RGBA"
         assert image.size == (4, 3)  # aspect preserved: 8x6 -> 4x3
-    with PIL.Image.open(out / "foto-3-hoja.png") as image:
+    with PIL.Image.open(out / "foto-3-sheet.png") as image:
         assert image.mode == "RGBA"
         # floor tiles 4x3 into 2x2 of 2x1, plus one 2px divider each axis.
         assert image.size == (6, 4)
@@ -212,10 +212,10 @@ def test_run_applies_the_ops_in_order_with_per_op_files(tmp_path: Path) -> None:
     assert result["tool"]["name"] == MANIFEST["tool_name"]
 
 
-def test_convertir_jpeg_flattens_alpha_onto_white(tmp_path: Path) -> None:
-    done, _result, out = _run(tmp_path, [{"operacion": "convertir", "formato": "jpeg"}])
+def test_convert_jpeg_flattens_alpha_onto_white(tmp_path: Path) -> None:
+    done, _result, out = _run(tmp_path, [{"op": "convert", "format": "jpeg"}])
     assert done.returncode == 0, done.stdout + done.stderr
-    path = out / "foto-1-convertir.jpg"
+    path = out / "foto-1-convert.jpg"
     assert path.is_file()
     with PIL.Image.open(path) as image:
         assert image.mode == "RGB"
@@ -225,102 +225,96 @@ def test_convertir_jpeg_flattens_alpha_onto_white(tmp_path: Path) -> None:
     assert all(channel > CHANNEL_HIGH for channel in white)
 
 
-def test_convertir_modo_rgba_png_keeps_the_alpha(tmp_path: Path) -> None:
-    done, _result, out = _run(
-        tmp_path, [{"operacion": "convertir", "formato": "png", "modo": "RGBA"}]
-    )
+def test_convert_mode_rgba_png_keeps_the_alpha(tmp_path: Path) -> None:
+    done, _result, out = _run(tmp_path, [{"op": "convert", "format": "png", "mode": "RGBA"}])
     assert done.returncode == 0, done.stdout + done.stderr
-    with PIL.Image.open(out / "foto-1-convertir.png") as image:
+    with PIL.Image.open(out / "foto-1-convert.png") as image:
         assert image.mode == "RGBA"
         assert image.getchannel("A").getextrema() == (0, 255)
 
 
-def test_redimensionar_exact_changes_the_aspect(tmp_path: Path) -> None:
-    done, _result, out = _run(tmp_path, [{"operacion": "redimensionar", "ancho": 6, "alto": 4}])
+def test_resize_exact_changes_the_aspect(tmp_path: Path) -> None:
+    done, _result, out = _run(tmp_path, [{"op": "resize", "width": 6, "height": 4}])
     assert done.returncode == 0, done.stdout + done.stderr
-    with PIL.Image.open(out / "foto-1-redimensionar.png") as image:
+    with PIL.Image.open(out / "foto-1-resize.png") as image:
         assert image.size == (6, 4)  # exact: 8x6 -> 6x4, aspect may change
 
 
-def test_redimensionar_one_dim_preserves_the_aspect(tmp_path: Path) -> None:
-    done, _result, out = _run(tmp_path, [{"operacion": "redimensionar", "alto": 3}])
+def test_resize_one_dim_preserves_the_aspect(tmp_path: Path) -> None:
+    done, _result, out = _run(tmp_path, [{"op": "resize", "height": 3}])
     assert done.returncode == 0, done.stdout + done.stderr
-    with PIL.Image.open(out / "foto-1-redimensionar.png") as image:
+    with PIL.Image.open(out / "foto-1-resize.png") as image:
         assert image.size == (4, 3)  # round(8 * 3 / 6) = 4 wide
 
 
-def test_convertir_without_formato_is_invalid_input(tmp_path: Path) -> None:
-    done, result, _out = _run(tmp_path, [{"operacion": "convertir"}])
+def test_convert_without_format_is_invalid_input(tmp_path: Path) -> None:
+    done, result, _out = _run(tmp_path, [{"op": "convert"}])
     assert done.returncode != 0
     assert result is None
-    assert "operaciones[1]: pillow convertir: falta formato" in done.stderr
+    assert "operations[1]: pillow convert: format is required" in done.stderr
 
 
-def test_convertir_rgba_with_jpeg_is_invalid_input(tmp_path: Path) -> None:
-    done, result, _out = _run(
-        tmp_path, [{"operacion": "convertir", "formato": "jpeg", "modo": "RGBA"}]
-    )
+def test_convert_rgba_with_jpeg_is_invalid_input(tmp_path: Path) -> None:
+    done, result, _out = _run(tmp_path, [{"op": "convert", "format": "jpeg", "mode": "RGBA"}])
     assert done.returncode != 0
     assert result is None
-    assert "pillow convertir: modo RGBA incompatible con formato jpeg" in done.stderr
-    assert "usa png o webp" in done.stderr
+    assert "pillow convert: mode RGBA is incompatible with jpeg" in done.stderr
+    assert "use png or webp" in done.stderr
 
 
-def test_redimensionar_without_dims_is_invalid_input(tmp_path: Path) -> None:
-    done, result, _out = _run(tmp_path, [{"operacion": "redimensionar"}])
+def test_resize_without_dims_is_invalid_input(tmp_path: Path) -> None:
+    done, result, _out = _run(tmp_path, [{"op": "resize"}])
     assert done.returncode != 0
     assert result is None
-    assert "operaciones[1]: pillow redimensionar: falta ancho o alto" in done.stderr
+    assert "operations[1]: pillow resize: width or height is required" in done.stderr
 
 
-def test_redimensionar_non_positive_dim_is_invalid_input(tmp_path: Path) -> None:
-    done, result, _out = _run(tmp_path, [{"operacion": "redimensionar", "ancho": 0}])
+def test_resize_non_positive_dim_is_invalid_input(tmp_path: Path) -> None:
+    done, result, _out = _run(tmp_path, [{"op": "resize", "width": 0}])
     assert done.returncode != 0
     assert result is None
-    assert "ancho debe ser un entero >= 1" in done.stderr
+    assert "width must be an integer >= 1" in done.stderr
 
 
-def test_hoja_without_filas_is_invalid_input(tmp_path: Path) -> None:
-    done, result, _out = _run(tmp_path, [{"operacion": "hoja", "columnas": 2}])
+def test_sheet_without_rows_is_invalid_input(tmp_path: Path) -> None:
+    done, result, _out = _run(tmp_path, [{"op": "sheet", "columns": 2}])
     assert done.returncode != 0
     assert result is None
-    assert "operaciones[1]: pillow hoja: faltan columnas o filas" in done.stderr
+    assert "operations[1]: pillow sheet: columns or rows is required" in done.stderr
 
 
-def test_hoja_grid_taller_than_the_image_is_invalid_input(tmp_path: Path) -> None:
-    done, result, _out = _run(
-        tmp_path, [{"operacion": "hoja", "columnas": 1, "filas": 9}], tag="run-tall"
-    )
+def test_sheet_grid_taller_than_the_image_is_invalid_input(tmp_path: Path) -> None:
+    done, result, _out = _run(tmp_path, [{"op": "sheet", "columns": 1, "rows": 9}], tag="run-tall")
     assert done.returncode != 0
     assert result is None
-    assert "operaciones[1]: pillow hoja" in done.stderr
-    assert "demasiado pequeña" in done.stderr
+    assert "operations[1]: pillow sheet" in done.stderr
+    assert "too small" in done.stderr
 
 
 def test_preview_writes_the_image_fields_per_asset(tmp_path: Path) -> None:
     ops = [
-        {"operacion": "convertir", "formato": "png"},
-        {"operacion": "hoja", "columnas": 2, "filas": 2},
+        {"op": "convert", "format": "png"},
+        {"op": "sheet", "columns": 2, "rows": 2},
     ]
     done, result, out = _run(tmp_path, ops, tag="preview-run")
     assert done.returncode == 0, done.stdout + done.stderr
     assert result is not None
     stub_dir = _stub_dir(tmp_path)
     piece = tmp_path / "piece"
-    assets = tuple(out / name for name in ("foto-1-convertir.png", "foto-2-hoja.png"))
-    request = _request("preview", out, piece, {"imagen": "foto.png"}, assets=assets)
+    assets = tuple(out / name for name in ("foto-1-convert.png", "foto-2-sheet.png"))
+    request = _request("preview", out, piece, {"image": "foto.png"}, assets=assets)
     done, preview = _call(stub_dir, "preview", request, tmp_path, "preview")
     assert done.returncode == 0, done.stdout + done.stderr
     assert preview is not None
     assert [entry["file"] for entry in preview["assets"]] == [
-        "foto-1-convertir.png",
-        "foto-2-hoja.png",
+        "foto-1-convert.png",
+        "foto-2-sheet.png",
     ]
-    first = json.loads((out / "foto-1-convertir.png.preview.json").read_text(encoding="utf-8"))
-    second = json.loads((out / "foto-2-hoja.png.preview.json").read_text(encoding="utf-8"))
+    first = json.loads((out / "foto-1-convert.png.preview.json").read_text(encoding="utf-8"))
+    second = json.loads((out / "foto-2-sheet.png.preview.json").read_text(encoding="utf-8"))
     for data, prompt, size in (
-        (first, "pillow convertir of foto", (WIDTH, HEIGHT)),
-        (second, "pillow hoja of foto", (10, 8)),
+        (first, "pillow convert of foto", (WIDTH, HEIGHT)),
+        (second, "pillow sheet of foto", (10, 8)),
     ):
         assert set(data) == PREVIEW_FIELDS
         assert data["preview"] == 1
@@ -331,11 +325,11 @@ def test_preview_writes_the_image_fields_per_asset(tmp_path: Path) -> None:
 
 
 def test_verify_accepts_the_run_outputs_and_rejects_a_bad_file(tmp_path: Path) -> None:
-    done, result, out = _run(tmp_path, [{"operacion": "convertir", "formato": "png"}])
+    done, result, out = _run(tmp_path, [{"op": "convert", "format": "png"}])
     assert done.returncode == 0, done.stdout + done.stderr
     assert result is not None
-    asset = out / "foto-1-convertir.png"
-    wrong = tmp_path / "wrong" / "foto-1-convertir.png"
+    asset = out / "foto-1-convert.png"
+    wrong = tmp_path / "wrong" / "foto-1-convert.png"
     wrong.parent.mkdir()
     PIL.Image.new("RGBA", (4, 4)).save(wrong)
     stub_dir = _stub_dir(tmp_path)
@@ -344,21 +338,21 @@ def test_verify_accepts_the_run_outputs_and_rejects_a_bad_file(tmp_path: Path) -
         "verify",
         out,
         piece,
-        {"imagen": "foto.png", "operaciones": [{"operacion": "convertir", "formato": "png"}]},
+        {"image": "foto.png", "operations": [{"op": "convert", "format": "png"}]},
         assets=(asset, wrong),
     )
     done, verdict = _call(stub_dir, "verify", request, tmp_path, "verify")
     assert done.returncode == 0, done.stdout + done.stderr
     assert verdict is not None
     good, bad = verdict["assets"]
-    assert good["file"] == "foto-1-convertir.png" and good["passed"] is True
+    assert good["file"] == "foto-1-convert.png" and good["passed"] is True
     assert good["verifier"] == "pillow"
     assert bad["passed"] is False
 
 
 def test_verify_accepts_the_webp_gray_round_trip(tmp_path: Path) -> None:
     """webp re-opens grayscale saved in it as RGB; verify takes the file's side."""
-    ops = [{"operacion": "convertir", "formato": "webp", "modo": "L"}]
+    ops = [{"op": "convert", "format": "webp", "mode": "L"}]
     done, result, out = _run(tmp_path, ops, tag="webp-l")
     assert done.returncode == 0, done.stdout + done.stderr
     assert result is not None
@@ -367,8 +361,8 @@ def test_verify_accepts_the_webp_gray_round_trip(tmp_path: Path) -> None:
         "verify",
         out,
         tmp_path / "piece",
-        {"imagen": "foto.png", "operaciones": ops},
-        assets=(out / "foto-1-convertir.webp",),
+        {"image": "foto.png", "operations": ops},
+        assets=(out / "foto-1-convert.webp",),
     )
     done, verdict = _call(stub_dir, "verify", request, tmp_path, "verify-l")
     assert done.returncode == 0, done.stdout + done.stderr

@@ -5,9 +5,9 @@
 //
 // facet stages this file with the package and runs it through the managed
 // node runtime (`{{node}} {{entry}} {{verb}} --input ... --result ...`).
-// The piece's `guion` owns the drawing; this script only resolves the pinned
-// npm tree the tarballs leave without node_modules links, runs the guion with
-// the `datos` path, refuses an SVG that is not self-contained and text as
+// The piece's `script` owns the drawing; this script only resolves the pinned
+// npm tree the tarballs leave without node_modules links, runs the script with
+// the `data` path, refuses an SVG that is not self-contained and text as
 // <text>, renders the 2x PNG with the pinned sharp, and writes the image
 // preview. It imports nothing but node builtins, so it runs before any
 // dependency is linked.
@@ -158,7 +158,7 @@ function linkPackage(packageDir, dependency, target) {
 // --- resolution: one directory whose children are the staged package names.
 //
 // NODE_PATH entries are read as node_modules roots, so the staged directories
-// are linked under one temp root; the guion and this runner both require
+// are linked under one temp root; the script and this runner both require
 // through it (opentype.js for the former, sharp for the latter).
 
 function moduleRoot() {
@@ -359,24 +359,24 @@ function baseName(file) {
   return slug(path.basename(String(file)).replace(/\.c?js$/i, ""));
 }
 
-// --- the bake: the guion draws, this validates what it drew.
+// --- the bake: the script draws, this validates what it drew.
 
-function bake(guion, datos, piece, modules) {
+function bake(script, data, piece, modules) {
   const node = process.env.FACET_NODE;
   if (!node) throw new Error("FACET_NODE is not set; run this runner through facet");
-  const done = spawnSync(node, [guion, datos], {
+  const done = spawnSync(node, [script, data], {
     cwd: piece,
     env: { ...process.env, NODE_PATH: modules },
     encoding: "utf8",
     maxBuffer: MAX_BUFFER,
   });
-  if (done.error) throw new Error(`cannot run the guion: ${done.error.message}`);
+  if (done.error) throw new Error(`cannot run the script: ${done.error.message}`);
   if (done.status !== 0) {
     const detail = `${done.stdout || ""}${done.stderr || ""}`.trim();
-    throw new Error(`guion exited ${done.status}: ${detail}`);
+    throw new Error(`script exited ${done.status}: ${detail}`);
   }
   if (!done.stdout || !done.stdout.trim()) {
-    throw new Error(`guion wrote no SVG to stdout`);
+    throw new Error(`script wrote no SVG to stdout`);
   }
   return done.stdout;
 }
@@ -418,14 +418,14 @@ async function run(request) {
   const outDir = path.resolve(request.out_dir);
   fs.mkdirSync(outDir, { recursive: true });
   const piece = pieceBase(request);
-  const guion = resolveInput(inputs.guion, piece, "guion");
-  const datos = resolveInput(inputs.datos, piece, "datos");
-  const name = baseName(guion);
+  const script = resolveInput(inputs.script, piece, "script");
+  const data = resolveInput(inputs.data, piece, "data");
+  const name = baseName(script);
   const svg = path.join(outDir, `${name}.svg`);
   const png = path.join(outDir, `${name}.png`);
   const modules = moduleRoot();
   try {
-    const text = bake(guion, datos, piece, modules);
+    const text = bake(script, data, piece, modules);
     validateSvg(text, `${name}.svg`);
     fs.writeFileSync(svg, text);
     await renderPng(modules, text, png);
@@ -443,7 +443,7 @@ async function run(request) {
         properties: {},
         params: inputs,
         seed: 0,
-        inputs: [guion, datos],
+        inputs: [script, data],
       },
       {
         file: `${name}.png`,
@@ -453,7 +453,7 @@ async function run(request) {
         properties: {},
         params: inputs,
         seed: 0,
-        inputs: [guion, datos],
+        inputs: [script, data],
       },
     ],
   };
@@ -524,10 +524,10 @@ function previewOf(asset, request) {
 }
 
 function previewPrompt(request, name) {
-  const guion = String(inputsOf(request).guion || "");
-  if (!guion) return `svganim · ${name}`.slice(0, MAX_SUMMARY);
+  const script = String(inputsOf(request).script || "");
+  if (!script) return `svganim · ${name}`.slice(0, MAX_SUMMARY);
   return path
-    .basename(guion)
+    .basename(script)
     .replace(/\.c?js$/i, "")
     .slice(0, MAX_SUMMARY);
 }

@@ -16,7 +16,7 @@ shipped with the pinned ComfyUI's `comfyui_workflow_templates_json` 0.11.78
 | `z-image.json` | `still` | Z-Image base unet, Qwen3 clip, Z-Image VAE |
 | `qwen-image-edit.json` | `edit` | Qwen-Image-Edit unet, Qwen2.5-VL clip, Qwen-Image VAE |
 | `wan22-i2v-14b.json` | `clip` | Wan 2.2 I2V 14B high- and low-noise unets, UMT5 clip, Wan 2.1 VAE |
-| `wan22-i2v-14b-rapido.json` | `clip` | The same, plus the high- and low-noise lightx2v LoRAs |
+| `wan22-i2v-14b-fast.json` | `clip` | The same, plus the high- and low-noise lightx2v LoRAs |
 
 The unet, clip, vae and LoRAs load by the filenames of the manifest models.
 
@@ -36,7 +36,7 @@ The unet, clip, vae and LoRAs load by the filenames of the manifest models.
   fps 24, and Wan's own Chinese negative prompt as the default. The
   high-noise stage samples steps 0–10, the low-noise stage steps 10 to the
   end; overriding `steps` keeps that split.
-- `wan22-i2v-14b-rapido`: the same placeholders plus `$lora_strength`.
+- `wan22-i2v-14b-fast`: the same placeholders plus `$lora_strength`.
   Params: the same size, length and fps with steps 4, cfg 1 and
   `lora_strength` 1.0; the high-noise stage samples steps 0–2, the low-noise
   stage steps 2 to the end.

@@ -42,9 +42,9 @@ DEFAULT_WORKFLOW = "z-image-turbo"
 #: The one flow an edit uses: reference-guided, no denoise strength.
 EDIT_FLOW = "flux2-klein-img2img"
 #: The flows a clip uses: Wan 2.2 TI2V 5B animating what is inside a still.
-CLIP_FLOW_NAMES = ("wan22-i2v", "wan22-i2v-rapido")
+CLIP_FLOW_NAMES = ("wan22-i2v", "wan22-i2v-fast")
 #: The half-time flow whose output is a draft, never a final render.
-DRAFT_FLOW = "wan22-i2v-rapido"
+DRAFT_FLOW = "wan22-i2v-fast"
 #: What a draft asset's name carries before its suffix: ``<name>-borrador.mp4``.
 DRAFT_SUFFIX = "borrador"
 STILL_CAPABILITY = "comfy.still"

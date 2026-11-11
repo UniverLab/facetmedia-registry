@@ -1,10 +1,10 @@
-# Micro videos a partir de imágenes generadas y aprobadas: la imagen es el primer cuadro.
+# Micro videos a partir de imágenes generadas y aprobadas: la image es el primer cuadro.
 # El prompt describe el movimiento, en inglés. 49 cuadros a 24 fps ≈ 2 s.
 # Uso: facet run comfy.clip packages/comfy/examples/clips.toml
 # Los tres aprobados (2026-10-14), ~7 minutos por clip con la GPU llena:
 # bosque-niebla.mp4 y taza-vapor.mp4 salen bien; el paneo de calle-acuarela.mp4
 # casi no se nota (un movimiento de cámara sutil sobre una pintura no registra;
-# para eso, un zoom o paneo con GSAP en HyperFrames sale en segundos).
+# para eso, un zoom o paneo con GSAP en HyperFrames sale en seconds).
 [inputs]
 workflow = "wan22-i2v"
 image = [

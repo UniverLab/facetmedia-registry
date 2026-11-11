@@ -30,52 +30,52 @@ spdx = "MIT-CMU"
 summary = "Convert a still between PNG, JPEG and WebP, resize it exact or aspect-preserving, or lay a contact sheet of it, one op per table applied in order"
 kind = "image"
 
-[capabilities.base.inputs.imagen]
+[capabilities.base.inputs.image]
 type = "path"
 required = true
-description = "Source image (PNG, JPEG, WebP or any Pillow-readable format), resolved relative to the piece file; every op applies to it in order and writes <imagen-stem>-<i>-<operacion>.<ext> beside the piece."
+description = "Source image (PNG, JPEG, WebP or any Pillow-readable format), resolved relative to the piece file; every op applies to it in order and writes <image-stem>-<i>-<op>.<ext> beside the piece."
 
-[capabilities.base.inputs.operaciones]
+[capabilities.base.inputs.operations]
 type = "array"
 min_items = 1
 required = true
-description = "One table per operation, applied in order in memory starting from imagen; each writes one file named <imagen-stem>-<i>-<operacion>.<ext> where i is the 1-based op position."
+description = "One table per operation, applied in order in memory starting from image; each writes one file named <image-stem>-<i>-<op>.<ext> where i is the 1-based op position."
 
-[capabilities.base.inputs.operaciones.items.operacion]
+[capabilities.base.inputs.operations.items.op]
 type = "enum"
-values = ["convertir", "redimensionar", "hoja"]
+values = ["convert", "resize", "sheet"]
 required = true
-description = "The operation: convertir re-encodes the format, redimensionar resizes, hoja lays a contact sheet."
+description = "The operation: convert re-encodes the format, resize resizes, sheet lays a contact sheet."
 
-[capabilities.base.inputs.operaciones.items.formato]
+[capabilities.base.inputs.operations.items.format]
 type = "enum"
 values = ["png", "jpeg", "webp"]
-description = "convertir only, required there: the output format; writes .png, .jpg or .webp."
+description = "convert only, required there: the output format; writes .png, .jpg or .webp."
 
-[capabilities.base.inputs.operaciones.items.modo]
+[capabilities.base.inputs.operations.items.mode]
 type = "enum"
 values = ["RGB", "RGBA", "L"]
-description = "convertir only: the output mode; jpeg output is always RGB, and RGBA with jpeg is rejected."
+description = "convert only: the output mode; jpeg output is always RGB, and RGBA with jpeg is rejected."
 
-[capabilities.base.inputs.operaciones.items.ancho]
+[capabilities.base.inputs.operations.items.width]
 type = "integer"
 min = 1
-description = "redimensionar only: target width; with alto it resizes exact (aspect may change), alone it preserves aspect."
+description = "resize only: target width; with height it resizes exact (aspect may change), alone it preserves aspect."
 
-[capabilities.base.inputs.operaciones.items.alto]
+[capabilities.base.inputs.operations.items.height]
 type = "integer"
 min = 1
-description = "redimensionar only: target height; at least one of ancho or alto is required."
+description = "resize only: target height; at least one of width or height is required."
 
-[capabilities.base.inputs.operaciones.items.columnas]
+[capabilities.base.inputs.operations.items.columns]
 type = "integer"
 min = 1
-description = "hoja only, required there: number of tile columns."
+description = "sheet only, required there: number of tile columns."
 
-[capabilities.base.inputs.operaciones.items.filas]
+[capabilities.base.inputs.operations.items.rows]
 type = "integer"
 min = 1
-description = "hoja only, required there: number of tile rows."
+description = "sheet only, required there: number of tile rows."
 
 [capabilities.base.preview]
 viewer = "image"

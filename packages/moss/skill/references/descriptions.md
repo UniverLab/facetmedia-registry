@@ -1,4 +1,4 @@
-# Descriptions and piece shapes for `moss.efecto`
+# Descriptions and piece shapes for `moss.sfx`
 
 One `.toml` is one effect. The description is the whole style control: it is
 English, and the pipeline appends `duration: <seconds>s` itself, so the
@@ -8,21 +8,21 @@ length never goes into the text.
 
 ```toml
 [inputs]
-descripcion = "English effect description, no duration in the text"
-nombre = "cafe-ambiente"
-segundos = 12
+description = "English effect description, no duration in the text"
+name = "cafe-ambiente"
+seconds = 12
 ```
 
-- `descripcion` — English, required. Describe the sound, not the duration:
+- `description` — English, required. Describe the sound, not the duration:
   the runner appends `duration: <seconds>s` itself.
-- `nombre` — required, matches `[a-z0-9][a-z0-9-]*`; the runner writes
-  `<nombre>.wav` at 48 kHz mono.
-- `segundos` — required, seconds of effect, at most 30; the pipeline always
+- `name` — required, matches `[a-z0-9][a-z0-9-]*`; the runner writes
+  `<name>.wav` at 48 kHz mono.
+- `seconds` — required, seconds of effect, at most 30; the pipeline always
   denoises 30 s and trims.
 - `target-lufs` — optional, defaults to -23.0 for beds under voice; pass a
   louder target (up to -10) for hits that must cut through.
 
-`moss.efecto` declares no seed input: the lab pieces carried one, but a
+`moss.sfx` declares no seed input: the lab pieces carried one, but a
 reproducible piece here is the description, the length and the loudness
 target.
 
@@ -33,9 +33,9 @@ Morning cafe ambience, approved by the person on 2026-10-13. Ships as
 
 ```toml
 [inputs]
-descripcion = "Ambience of a quiet cafe in the morning, indistinct distant chatter, cups and saucers clinking, an espresso machine hissing"
-nombre = "cafe-ambiente"
-segundos = 12
+description = "Ambience of a quiet cafe in the morning, indistinct distant chatter, cups and saucers clinking, an espresso machine hissing"
+name = "cafe-ambiente"
+seconds = 12
 ```
 
 The lab piece also carried seed; it is not an input here.
@@ -47,9 +47,9 @@ Ships as `examples/campana-notificacion.toml` and `.wav`.
 
 ```toml
 [inputs]
-descripcion = "A bright, pleasant notification chime, two short bell tones rising in pitch"
-nombre = "campana-notificacion"
-segundos = 2
+description = "A bright, pleasant notification chime, two short bell tones rising in pitch"
+name = "campana-notificacion"
+seconds = 2
 ```
 
 The lab piece also carried seed; it is not an input here.
@@ -61,9 +61,9 @@ A single soft UI click, approved by the person on 2026-10-13. Ships as
 
 ```toml
 [inputs]
-descripcion = "A single soft, clean user interface click, short and subtle, like tapping a modern touchscreen button"
-nombre = "clic-interfaz"
-segundos = 1
+description = "A single soft, clean user interface click, short and subtle, like tapping a modern touchscreen button"
+name = "clic-interfaz"
+seconds = 1
 ```
 
 The lab piece also carried seed; it is not an input here.
@@ -75,9 +75,9 @@ Ships as `examples/lluvia-ventana.toml` and `.wav`.
 
 ```toml
 [inputs]
-descripcion = "Gentle steady rain falling on a window pane at night, soft drops on glass, distant rolling thunder, calm ambience"
-nombre = "lluvia-ventana"
-segundos = 12
+description = "Gentle steady rain falling on a window pane at night, soft drops on glass, distant rolling thunder, calm ambience"
+name = "lluvia-ventana"
+seconds = 12
 ```
 
 The lab piece also carried seed; it is not an input here.
@@ -90,9 +90,9 @@ omitted `seconds`, so it took the lab default of 3. Ships as
 
 ```toml
 [inputs]
-descripcion = "Close-up sound of turning the pages of a paper book, crisp paper rustle, quiet room"
-nombre = "pagina-libro"
-segundos = 3
+description = "Close-up sound of turning the pages of a paper book, crisp paper rustle, quiet room"
+name = "pagina-libro"
+seconds = 3
 ```
 
 The lab piece also carried seed; it is not an input here.
@@ -104,9 +104,9 @@ Slow footsteps on old boards, approved by the person on 2026-10-13. Ships as
 
 ```toml
 [inputs]
-descripcion = "Slow footsteps of one person walking on an old wooden floor, boards creaking under the weight, indoors"
-nombre = "pasos-madera"
-segundos = 6
+description = "Slow footsteps of one person walking on an old wooden floor, boards creaking under the weight, indoors"
+name = "pasos-madera"
+seconds = 6
 ```
 
 The lab piece also carried seed; it is not an input here.
@@ -118,9 +118,9 @@ A fast cinematic whoosh, approved by the person on 2026-10-13. Ships as
 
 ```toml
 [inputs]
-descripcion = "A fast cinematic whoosh transition, a swish of air passing quickly from left to right, clean, no music"
-nombre = "whoosh-transicion"
-segundos = 2
+description = "A fast cinematic whoosh transition, a swish of air passing quickly from left to right, clean, no music"
+name = "whoosh-transicion"
+seconds = 2
 ```
 
 The lab piece also carried seed; it is not an input here.

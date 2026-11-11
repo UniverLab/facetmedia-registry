@@ -184,12 +184,12 @@ def test_the_capability_is_the_image_kind_with_two_path_inputs() -> None:
     assert capability["kind"] == "image"
     assert capability["preview"] == {"viewer": "image"}
     inputs = capability["inputs"]
-    assert set(inputs) == {"guion", "datos"}
-    for name in ("guion", "datos"):
+    assert set(inputs) == {"script", "data"}
+    for name in ("script", "data"):
         assert inputs[name]["type"] == "path", name
         assert inputs[name]["required"] is True, name
-    assert "Node script" in inputs["guion"]["description"]
-    assert "argv[2]" in inputs["datos"]["description"]
+    assert "Node script" in inputs["script"]["description"]
+    assert "argv[2]" in inputs["data"]["description"]
 
 
 def test_the_index_carries_the_package() -> None:
@@ -206,8 +206,8 @@ def test_the_readme_documents_the_contract_and_the_escalation() -> None:
         "density: 144",
         "runner_failed",
         "HyperFrames",
-        "guion",
-        "datos",
+        "script",
+        "data",
         "NODE_PATH",
     ):
         assert token in READ, token

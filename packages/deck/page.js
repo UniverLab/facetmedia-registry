@@ -1,6 +1,6 @@
 "use strict";
 
-// The deck.pagina helpers: one-page pieces (infographics, posters) laid out
+// The deck.page helpers: one-page pieces (infographics, posters) laid out
 // from HTML + CSS + SVG and exported through the lab's default render path —
 // screen media, the content's measured height, and `page.pdf` with an explicit
 // width/height and `pageRanges: "1"`. The slides runner keeps its own print
@@ -69,7 +69,7 @@ function checkFooterSources(html) {
     match = OPEN_TAG_RE.exec(html);
   }
   throw new Error(
-    "pagina footer-sources: the piece needs a <footer> or a footer/fuentes/sources element with text",
+    "page footer-sources: the piece needs a <footer> or a footer/fuentes/sources element with text",
   );
 }
 
@@ -92,13 +92,13 @@ function checkCaptionedImages(html) {
     const figure = figures.find((item) => match.index > item.start && match.index < item.end);
     if (!figure) {
       throw new Error(
-        `pagina captioned-images: an <img> at offset ${match.index} is not inside a <figure>`,
+        `page captioned-images: an <img> at offset ${match.index} is not inside a <figure>`,
       );
     }
     const caption = FIGCAPTION_RE.exec(figure.block);
     if (!caption || !visibleText(caption[1])) {
       throw new Error(
-        "pagina captioned-images: the <figure> holding an <img> needs a non-empty <figcaption>",
+        "page captioned-images: the <figure> holding an <img> needs a non-empty <figcaption>",
       );
     }
     match = IMG_RE.exec(html);
@@ -191,7 +191,7 @@ async function checkText(pdfPath) {
   for (const run of numberRuns(text)) {
     if (ENGLISH_DECIMAL_RE.test(run) || ENGLISH_THOUSANDS_RE.test(run)) {
       throw new Error(
-        `pagina spanish-numbers: run "${run}" reads as an English decimal or thousands mark`,
+        `page spanish-numbers: run "${run}" reads as an English decimal or thousands mark`,
       );
     }
   }

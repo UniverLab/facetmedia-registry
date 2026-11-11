@@ -5,7 +5,7 @@ environment at pull). ``run`` refuses a caption that asks for voice, POSTs
 ``/release_task`` with an instrumental request, polls ``/query_result`` until
 the server reports the job done, downloads the WAV from ``/v1/audio`` and
 normalises it to -16 LUFS; ``verify`` measures each WAV's duration against
-the piece's ``duracion`` and its peak against silence; ``preview`` writes the
+the piece's ``duration`` and its peak against silence; ``preview`` writes the
 audio preview file; ``doctor`` checks the machine (an NVIDIA GPU, its VRAM
 readable, no other model holding the GPU) plus the package (imports, the
 pinned checkout, its checkpoints) at ``quick`` depth, and the server at
@@ -50,7 +50,7 @@ TARGET_LUFS = -16.0
 VERIFIER = "audiopreview"
 #: A bed whose peak sits at or below this is silence, not music (manifest threshold).
 PEAK_DBFS_MIN = -40.0
-#: The duration a WAV may miss ``duracion`` by (manifest threshold).
+#: The duration a WAV may miss ``duration`` by (manifest threshold).
 DURATION_TOLERANCE_S = 1.0
 #: The caption words that ask for sung music; the lab discards it forever.
 VOICE_WORDS = re.compile(
@@ -227,7 +227,7 @@ def _asset(
         "kind": "audio",
         "mime": "audio/wav",
         "properties": properties,
-        "params": {"caption": caption, "name": name, "duracion": duration},
+        "params": {"caption": caption, "name": name, "duration": duration},
         "seed": None,
         "inputs": [],
     }
@@ -240,7 +240,7 @@ def run(req: Request) -> dict[str, Any]:
     params = dict(req.inputs)
     caption = str(params["caption"])
     name = str(params["name"])
-    duration = float(params["duracion"])
+    duration = float(params["duration"])
     _require_instrumental(caption)
     audio = _audio()
     path = req.out_dir / f"{name}.wav"
@@ -293,7 +293,7 @@ def _verify_one(audio: Any, path: Path, expected: float) -> dict[str, Any]:
 @runner.verb("verify")
 def verify(req: Request) -> dict[str, Any]:
     audio = _audio()
-    expected = float(dict(req.inputs)["duracion"])
+    expected = float(dict(req.inputs)["duration"])
     return {"assets": [_verify_one(audio, path, expected) for path in req.assets]}
 
 

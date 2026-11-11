@@ -11,7 +11,7 @@ set in a piece.
 [inputs]
 caption = "English style caption, acoustic instruments, ending in the no-drums line"
 name = "clasica-alegre"
-duracion = 30
+duration = 30
 ```
 
 - `caption` — English, required. Ask for acoustic instruments and end with
@@ -19,7 +19,7 @@ duracion = 30
   a voice is refused by the runner: this package is instrumental only.
 - `name` — required, matches `[a-z0-9][a-z0-9-]*`; the runner renames the
   randomly-named server output to `<name>.wav`.
-- `duracion` — required, seconds of music, at most 30.
+- `duration` — required, seconds of music, at most 30.
 
 ## Approved: `clasica-alegre`
 
@@ -30,7 +30,7 @@ Major key, joyful and lively; approved by the person as a background bed on
 [inputs]
 caption = "Lively, joyful Baroque chamber orchestra piece in the style of a Vivaldi allegro. Bright strings playing fast staccato and spiccato runs, harpsichord continuo, playful solo violin and flute melodies. Energetic, festive and elegant. Acoustic instruments only. No drums, no percussion, no bass beat, no synthesizers, no electronic sounds."
 name = "clasica-alegre"
-duracion = 30
+duration = 30
 ```
 
 The lab's piece also carried `bpm = 132`, `keyscale = "G major"`,
@@ -46,7 +46,7 @@ Minor key, melancholic; approved by the person as a background bed on
 [inputs]
 caption = "Melancholic classical piece for solo piano and string quartet, Romantic era style. Slow tempo, expressive legato violin melody over gentle piano arpeggios and sustained cello notes. Intimate, sorrowful, reflective. Acoustic instruments only. No drums, no percussion, no bass beat, no synthesizers, no electronic sounds."
 name = "clasica-melancolica"
-duracion = 30
+duration = 30
 ```
 
 The lab's piece also carried `bpm = 66`, `keyscale = "D minor"`,

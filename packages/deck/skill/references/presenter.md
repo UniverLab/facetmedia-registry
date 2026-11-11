@@ -6,15 +6,15 @@
 
 ## `<base>.notes.md`
 
-One speaker note per slide, in `pagina` order, separated by a line holding only
-`---`. The section count must equal the `notas` count; `verify` enforces count
+One speaker note per slide, in `page` order, separated by a line holding only
+`---`. The section count must equal the `notes` count; `verify` enforces count
 and order.
 
 ```markdown
 Bienvenida: qué vamos a ver y por qué importa.
 
 ---
-El resultado principal; la cifra sale del DATA y el pie lleva su fuente.
+The main result; the figure comes from DATA and the footer carries its source.
 
 ---
 Cierre y preguntas.

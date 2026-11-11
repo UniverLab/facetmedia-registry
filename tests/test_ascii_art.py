@@ -1,11 +1,11 @@
 """Tests for the ascii package's pure helpers (no facet needed).
 
 Every mode converts a synthetic 64x64 image (a black disc on white) to
-the expected grid size with a disc-shaped ink pattern; ``forma``
+the expected grid size with a disc-shaped ink pattern; ``shape``
 minimises the per-cell bitmap error by construction, so its shape error
-beats ``densidad``'s and its re-render similarity clears the manifest's
+beats ``density``'s and its re-render similarity clears the manifest's
 0.55 floor. Verify's re-render must stay meaningful for every mode:
-``braille`` decodes to dot cells and ``trazo``'s marks fill their cells,
+``braille`` decodes to dot cells and ``stroke``'s marks fill their cells,
 so neither re-renders to a blank grid. The ``canopy`` banner in
 ``dos_rebel`` equals the lab's wordmark fixture byte for byte.
 """
@@ -44,24 +44,24 @@ def is_ink(char: str) -> bool:
 
 
 class TestModes(unittest.TestCase):
-    def test_densidad_grid_and_disc(self) -> None:
-        lines = art.to_densidad(disc(), WIDTH)
+    def test_density_grid_and_disc(self) -> None:
+        lines = art.to_density(disc(), WIDTH)
         self.assertEqual((len(lines[0]), len(lines)), (16, 8))
         self.assertTrue(is_ink(lines[4][7]))
         for corner in (lines[0][0], lines[0][15], lines[7][0], lines[7][15]):
             self.assertFalse(is_ink(corner))
 
-    def test_trazo_grid_and_disc(self) -> None:
-        lines = art.to_trazo(disc(), WIDTH)
+    def test_stroke_grid_and_disc(self) -> None:
+        lines = art.to_stroke(disc(), WIDTH)
         self.assertEqual((len(lines[0]), len(lines)), (16, 8))
         self.assertTrue(is_ink(lines[4][7]))
         for corner in (lines[0][0], lines[0][15], lines[7][0], lines[7][15]):
             self.assertFalse(is_ink(corner))
 
-    def test_trazo_vertical_edge_is_vertical_stroke(self) -> None:
+    def test_stroke_vertical_edge_is_vertical_stroke(self) -> None:
         grey = np.zeros((64, 64), dtype=np.float64)
         grey[:, 32:] = 1.0
-        lines = art.to_trazo(grey, WIDTH)
+        lines = art.to_stroke(grey, WIDTH)
         strokes = [line[7] for line in lines[1:-1]]
         self.assertEqual(set(strokes), {"│"})
 
@@ -72,25 +72,25 @@ class TestModes(unittest.TestCase):
         for corner in (lines[0][0], lines[0][15], lines[7][0], lines[7][15]):
             self.assertFalse(is_ink(corner))
 
-    def test_forma_grid_and_disc(self) -> None:
+    def test_shape_grid_and_disc(self) -> None:
         atlas = art.glyph_atlas(FONT)
-        lines = art.to_forma(disc(), WIDTH, atlas)
+        lines = art.to_shape(disc(), WIDTH, atlas)
         self.assertEqual((len(lines[0]), len(lines)), (16, 8))
         self.assertTrue(is_ink(lines[4][7]))
         for corner in (lines[0][0], lines[0][15], lines[7][0], lines[7][15]):
             self.assertFalse(is_ink(corner))
 
-    def test_forma_beats_densidad_shape_error(self) -> None:
+    def test_shape_beats_density_shape_error(self) -> None:
         grey = disc()
         atlas = art.glyph_atlas(FONT)
-        forma_err = art.shape_error(grey, WIDTH, atlas, art.to_forma(grey, WIDTH, atlas))
-        dense_err = art.shape_error(grey, WIDTH, atlas, art.to_densidad(grey, WIDTH))
-        self.assertLess(forma_err, dense_err)
+        shape_err = art.shape_error(grey, WIDTH, atlas, art.to_shape(grey, WIDTH, atlas))
+        dense_err = art.shape_error(grey, WIDTH, atlas, art.to_density(grey, WIDTH))
+        self.assertLess(shape_err, dense_err)
 
-    def test_forma_similarity_clears_floor(self) -> None:
+    def test_shape_similarity_clears_floor(self) -> None:
         grey = disc()
         atlas = art.glyph_atlas(FONT)
-        lines = art.to_forma(grey, WIDTH, atlas)
+        lines = art.to_shape(grey, WIDTH, atlas)
         re_rendered = art.render_text_bitmap(lines, atlas)
         similarity = art.pearson(
             art.downsample_to_grid(grey, WIDTH, 8),
@@ -102,10 +102,10 @@ class TestModes(unittest.TestCase):
         grey = disc()
         atlas = art.glyph_atlas(FONT)
         outputs = [
-            art.to_densidad(grey, WIDTH),
-            art.to_trazo(grey, WIDTH),
+            art.to_density(grey, WIDTH),
+            art.to_stroke(grey, WIDTH),
             art.to_braille(grey, WIDTH),
-            art.to_forma(grey, WIDTH, atlas),
+            art.to_shape(grey, WIDTH, atlas),
         ]
         for lines in outputs:
             self.assertGreater(art.render_text_bitmap(lines, atlas).std(), 0.0)

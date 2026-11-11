@@ -1,7 +1,7 @@
 # whisper-subs
 
 Validated SRT and VTT subtitles from a whisper JSON sidecar: `facet run
-whisper-subs.subtitulos` converts the timed segments whisper already wrote
+whisper-subs.subtitles` converts the timed segments whisper already wrote
 into the missing `.vtt` export or a normalized `.srt` rewrite, and checks
 both for monotonic non-overlapping times. No model, no transcription, nothing
 heavy — the whole package is stdlib, like the registry's other tool-free
@@ -12,12 +12,12 @@ does not cover.
 
 | Field | Type | Required | Default | Notes |
 |-------|------|----------|---------|-------|
-| `origen` | path | yes | — | a whisper `<name>.json` sidecar with `segments` carrying `start_s`, `end_s` and `text`, resolved relative to the piece |
-| `formato` | enum | no | `srt` | `srt` or `vtt` |
+| `source` | path | yes | — | a whisper `<name>.json` sidecar with `segments` carrying `start_s`, `end_s` and `text`, resolved relative to the piece |
+| `format` | enum | no | `srt` | `srt` or `vtt` |
 
 ## The sidecar contract
 
-`origen` is a JSON object whose `segments` is a non-empty list, one object
+`source` is a JSON object whose `segments` is a non-empty list, one object
 per cue:
 
 ```json
@@ -44,9 +44,9 @@ validated in order:
 One run writes one asset named after the sidecar's stem, beside the piece
 (`--out` overrides the directory):
 
-- `<origen-stem>.srt` — SubRip: a numbered cue per segment, timestamps
+- `<source-stem>.srt` — SubRip: a numbered cue per segment, timestamps
   `HH:MM:SS,mmm`, blank line between cues, `application/x-subrip`.
-- `<origen-stem>.vtt` — WebVTT: the `WEBVTT` header line, unnumbered cues
+- `<source-stem>.vtt` — WebVTT: the `WEBVTT` header line, unnumbered cues
   with timestamps `HH:MM:SS.mmm`, `text/vtt`.
 
 `verify` re-parses the file and reports `cues`, `duration_s` (the last cue's
@@ -55,7 +55,7 @@ it passes only when there is at least one cue, every cue starts at or after
 the previous one ends, and the file opens in its format's header shape. The
 monotonic order was already enforced by the runner before the bytes were
 written, so a passing verdict repeats a checked fact, not a hope. `preview`
-writes the generic viewer's fields (`cues`, `duration_s`, `formato`) with a
+writes the generic viewer's fields (`cues`, `duration_s`, `format`) with a
 summary like `2 cues · 2.2 s · srt`.
 
 ## The extraction-first workflow for video sources
@@ -66,7 +66,7 @@ A video cannot be subtitled from the video file itself — whisper hears audio:
    format).
 2. `whisper.transcribe` the audio offline: it writes `<name>.txt`,
    `<name>.srt` and `<name>.json` (the sidecar) into the piece directory.
-3. `whisper-subs.subtitulos` converts that sidecar: pick `srt` for a
+3. `whisper-subs.subtitles` converts that sidecar: pick `srt` for a
    normalized rewrite of whisper's SRT or `vtt` for the export whisper does
    not write.
 
@@ -74,6 +74,6 @@ A video cannot be subtitled from the video file itself — whisper hears audio:
 
 `hyperframes.narrated` assembles a narrated piece from voice clips, a music
 bed and whisper subtitles, and declares its `subtitles` input as SubRip
-written offline: give it the converted `<origen-stem>.srt`, not the `.vtt`.
+written offline: give it the converted `<source-stem>.srt`, not the `.vtt`.
 The converted file has been validated for monotonic, non-overlapping cue
 times — so the burn-in parser downstream only ever sees a well-ordered track.

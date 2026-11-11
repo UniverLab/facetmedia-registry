@@ -43,7 +43,7 @@ CAPTION = (
     "no synthesizers."
 )
 NAME = "cama-clasica"
-DURACION = 30.0
+DURATION = 30.0
 RATE_HZ = 16000
 TARGET_LUFS = -16.0
 DURATION_TOLERANCE_S = 1.0
@@ -387,7 +387,7 @@ def _launch(checkout: Path, port: int, log: Path, wav: Path) -> subprocess.Popen
         "PATH": str(venv_bin) + os.pathsep + os.environ["PATH"],
         "STUB_LOG": str(log),
         "STUB_WAV": str(wav),
-        "STUB_SECONDS": str(int(DURACION)),
+        "STUB_SECONDS": str(int(DURATION)),
     }
     return subprocess.Popen(
         argv,
@@ -500,7 +500,7 @@ def _run_cycle(tmp_path: Path) -> tuple[dict[str, Any], str, Path, Path]:
     process = _launch(checkout, port, log, wav)
     try:
         assert _wait_healthy(url), "the stub ACE-Step never became healthy"
-        inputs = {"caption": CAPTION, "name": NAME, "duracion": DURACION}
+        inputs = {"caption": CAPTION, "name": NAME, "duration": DURATION}
         request = _request("run", out, tmp_path, inputs)
         result, printed = _call(
             stub_dir, "run", request, tmp_path, _environment(stub_dir, home, url)
@@ -516,10 +516,10 @@ def test_the_cycle_composes_normalises_and_records(tmp_path: Path) -> None:
     asset = result["assets"][0]
     assert asset["file"] == f"{NAME}.wav"
     assert (asset["kind"], asset["mime"]) == ("audio", "audio/wav")
-    assert asset["params"] == {"caption": CAPTION, "name": NAME, "duracion": DURACION}
+    assert asset["params"] == {"caption": CAPTION, "name": NAME, "duration": DURATION}
     properties = asset["properties"]
     assert properties["sample_rate_hz"] == RATE_HZ
-    assert abs(properties["duration_s"] - DURACION) <= DURATION_TOLERANCE_S
+    assert abs(properties["duration_s"] - DURATION) <= DURATION_TOLERANCE_S
     assert properties["peak_dbfs"] <= -1.0
     assert properties["peak_dbfs"] > PEAK_DBFS_MIN
     assert properties["lufs"] == TARGET_LUFS
@@ -533,7 +533,7 @@ def test_the_cycle_composes_normalises_and_records(tmp_path: Path) -> None:
     body = release[0]
     assert body["prompt"] == CAPTION
     assert body["lyrics"] == "[Instrumental]"
-    assert body["audio_duration"] == DURACION
+    assert body["audio_duration"] == DURATION
     assert body["audio_format"] == "wav"
     assert body["model"] == "acestep-v15-turbo"
     assert body["task_type"] == "text2music"
@@ -547,7 +547,7 @@ def test_verify_and_preview_read_the_written_bed(tmp_path: Path) -> None:
     stub_dir = tmp_path / "stub"
     home = tmp_path / "home"
     env = _environment(stub_dir, home, "http://127.0.0.1:1")
-    inputs = {"caption": CAPTION, "name": NAME, "duracion": DURACION}
+    inputs = {"caption": CAPTION, "name": NAME, "duration": DURATION}
     clip = out / f"{NAME}.wav"
 
     verdict, _ = _call(
@@ -568,7 +568,7 @@ def test_verify_and_preview_read_the_written_bed(tmp_path: Path) -> None:
     wrong, _ = _call(
         stub_dir,
         "verify",
-        _request("verify", out, tmp_path, {**inputs, "duracion": 5.0}, (clip,)),
+        _request("verify", out, tmp_path, {**inputs, "duration": 5.0}, (clip,)),
         tmp_path,
         env,
     )
@@ -607,7 +607,7 @@ def test_a_voice_caption_is_refused_before_the_server(tmp_path: Path) -> None:
             "run",
             out,
             tmp_path,
-            {"caption": VOICE_CAPTION, "name": NAME, "duracion": DURACION},
+            {"caption": VOICE_CAPTION, "name": NAME, "duration": DURATION},
         )
         input_path = tmp_path / "refused-request.json"
         result_path = tmp_path / "refused-result.json"

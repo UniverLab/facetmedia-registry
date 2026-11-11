@@ -11,7 +11,7 @@ to print media and lets the `@page` rule decide the PDF pages, then screenshots
 one clipped region per page from the same Chromium run; page counts and text
 come from the bundled pdf.js, never from a host tool.
 
-`deck.pagina` turns one piece of HTML — an infographic or a poster — into a
+`deck.page` turns one piece of HTML — an infographic or a poster — into a
 single-page PDF and its page PNG. The runner renders it with screen media and
 the content's measured height, then checks the piece's footer, its numbers and
 its image captions before exporting.
@@ -35,7 +35,7 @@ A complete approved one-page piece — HTML, PDF and PNG — is in
 - **Presenter** (`deck.presenter`) when the same deck has to be spoken, not
   just read: one note per slide, a speaker view with the next slide and the
   note, and a single self-contained file with its images inlined.
-- **One-page piece** (`deck.pagina`) when the deliverable is an infographic or
+- **One-page piece** (`deck.page`) when the deliverable is an infographic or
   a poster: one page whose height the content decides, not a deck of slides.
   It is the same HTML + CSS + SVG as a slide, without `@page` and without
   breaks. Start from `examples/modelos-de-lenguaje.html`.
@@ -61,19 +61,19 @@ A complete approved one-page piece — HTML, PDF and PNG — is in
 
 ```toml
 [inputs]
-fuente = "slides.html"
+source = "slides.html"
 prompt = "A five-slide tour of the release"
 seed = 0
 ```
 
-`deck.slides` takes `fuente` (the slide HTML, resolved relative to the piece),
-`prompt` (the brief the deck was authored from) and `seed`. `fuente` carries one
+`deck.slides` takes `source` (the slide HTML, resolved relative to the piece),
+`prompt` (the brief the deck was authored from) and `seed`. `source` carries one
 `@page` rule for the slide size, for example `@page { size: 1280px 720px; margin:
 0; }`, and one page break per slide (`.slide { break-after: page; }`, with the
 last slide left without a break). Keep it self-contained: local fonts, images
 and stylesheet, no remote URL.
 
-`deck.pagina` takes the same `fuente`, `prompt` and `seed` inputs, but `fuente`
+`deck.page` takes the same `source`, `prompt` and `seed` inputs, but `source`
 is a one-page piece rather than a deck: no `@page` rule and no page breaks. The
 runner measures the content height in screen media and exports exactly one PDF
 page plus `page-01.png`. Before exporting it refuses the piece when it lacks a
@@ -85,13 +85,13 @@ like `8.04` or `40,300` (`spanish-numbers`); each failure stops the run with
 
 ```toml
 [inputs]
-fuente = "slides.html"
-notas = [{ pagina = 1, texto = "Welcome" }, { pagina = 2, texto = "The result" }]
+source = "slides.html"
+notes = [{ page = 1, text = "Welcome" }, { page = 2, text = "The result" }]
 ```
 
-`deck.presenter` takes the same `fuente` and one `notas` table per slide, with
-`pagina` (1-based slide number, distinct) and `texto` (the speaker note). It
-orders the tables by `pagina`, inlines the local image refs beside the deck,
+`deck.presenter` takes the same `source` and one `notes` table per slide, with
+`page` (1-based slide number, distinct) and `text` (the speaker note). It
+orders the tables by `page`, inlines the local image refs beside the deck,
 and writes two outputs: `<base>.present.html` (the deck plus speaker
 view and notes) and `<base>.notes.md` (the `---` separated companion). The
 presenter files ship beside the runner under `presenter/`. The exact file
@@ -121,7 +121,7 @@ through the content. Copy the snippets from `references/page.md`.
 
 **Export, review, and repeat — never call a piece done unexported and unseen.**
 
-1. Export with `deck.slides`, `deck.pagina` or `deck.presenter`. A deck or
+1. Export with `deck.slides`, `deck.page` or `deck.presenter`. A deck or
    one-page run writes `<base>.pdf` and one `page-NN.png` per page beside the
    asset; a presenter run writes `<base>.present.html` and `<base>.notes.md`.
 2. Open the PNG (or a screenshot) and check for overlaps, clipped text,
@@ -141,8 +141,8 @@ with the `page_count` the record holds; a mismatch stops the check with
 `page_count` and `pages`, and a person's preview opens the PDF itself.
 
 `deck.presenter`'s `verify` checks the `__PZ_NOTES__` array length against the
-`notas` count, the `---` sections in `notas.md` against the same count and
-order, and that every `pagina` is distinct and inside the deck; each failure
+`notes` count, the `---` sections in `notes.md` against the same count and
+order, and that every `page` is distinct and inside the deck; each failure
 stops the check with `runner_failed` naming the check.
 
 ## Pitfalls
@@ -152,10 +152,10 @@ stops the check with `runner_failed` naming the check.
 - A missing page break merges two slides onto one PDF page and the page count
   drops.
 - A one-page piece that declares `@page` is measured as a deck and loses its
-  single measured page; leave `@page` out of `deck.pagina`.
+  single measured page; leave `@page` out of `deck.page`.
 - A `DATA` block copied into the drawing code, or a figure written from memory,
   is the usual source of a wrong number. Gather first and keep one block.
-- English-style numbers (`8.04`, `40,300`) fail `deck.pagina` with
+- English-style numbers (`8.04`, `40,300`) fail `deck.page` with
   `runner_failed`; format with `toLocaleString('es')`.
 - The page PNGs are `page-01.png`, `page-02.png`, ...; they are clipped
   screenshots of the rendered pages inside the same headless Chromium run —

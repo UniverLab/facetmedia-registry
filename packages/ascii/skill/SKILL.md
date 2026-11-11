@@ -30,9 +30,9 @@ Image to ASCII with shape matching (`examples/lamina.toml`):
 [inputs]
 image = "lamina.png"
 width = 100
-mode = "forma"
+mode = "shape"
 invert = true
-name = "lamina-ascii"
+name = "plate-ascii"
 ```
 
 Run it with `--out build/`: without it the rendered `<name>.png` lands
@@ -45,12 +45,12 @@ in the piece's directory and overwrites the source plate.
 ## Judging the result
 
 `ascii.image` re-renders the `.txt` as the art it is (glyphs for ASCII,
-dot cells for braille, filled cells for `trazo`'s marks), downsamples
+dot cells for braille, filled cells for `stroke`'s marks), downsamples
 both it and the source to the grid, and reports the Pearson correlation
 as `similarity`. It passes at `similarity_min = 0.55` with every line
 exactly `columns` wide and the ink ratio between 0.02 and 0.98. When it
-fails, change the mode before anything else: `forma` for shapes,
-`trazo` for line art, `braille` for fine detail, `densidad` for photos.
+fails, change the mode before anything else: `shape` for shapes,
+`stroke` for line art, `braille` for fine detail, `density` for photos.
 `ascii.banner` passes when re-running pyfiglet gives the same bytes,
 no line is wider than `width`, and one non-space character exists.
 Read `columns`, `rows`, `similarity`, and `ink_ratio` from the generic

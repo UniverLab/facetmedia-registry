@@ -2,8 +2,8 @@
 
 The skill is the only place an agent learns the package, so these tests
 pin what a person reads: the front matter and the four headings the core
-requires in order, the capability id ``pillow.base``, the formato/modo
-enums and the jpeg-flatten rule, the resize rules, and the hoja
+requires in order, the capability id ``pillow.base``, the format/mode
+enums and the jpeg-flatten rule, the resize rules, and the sheet
 tile-and-divider layout for review boards.
 """
 
@@ -46,11 +46,11 @@ def test_the_four_headings_appear_in_order() -> None:
 def test_the_body_names_the_capability_and_the_ops() -> None:
     body = _body()
     assert "pillow.base" in body
-    for op in ("convertir", "redimensionar", "hoja"):
+    for op in ("convert", "resize", "sheet"):
         assert op in body, op
 
 
-def test_the_skill_teaches_the_formato_modo_and_jpeg_rule() -> None:
+def test_the_skill_teaches_the_format_mode_and_jpeg_rule() -> None:
     body = _body()
     for token in ("png", "jpeg", "webp", "RGB", "RGBA", "L"):
         assert token in body, token
@@ -58,7 +58,7 @@ def test_the_skill_teaches_the_formato_modo_and_jpeg_rule() -> None:
     assert "white" in body  # the alpha flatten onto white
 
 
-def test_the_skill_teaches_the_resize_and_hoja_rules() -> None:
+def test_the_skill_teaches_the_resize_and_sheet_rules() -> None:
     body = _body()
     assert "Lanczos" in body
     assert "aspect" in body

@@ -27,25 +27,25 @@ host_hint = "curl -fsSL https://raw.githubusercontent.com/UniverLab/texforge/mai
 subject = "texforge"
 spdx = "Apache-2.0"
 
-[capabilities.documento]
+[capabilities.document]
 summary = "Long LaTeX document: a verified PDF with per-page PNGs, built by the person-installed texforge binary"
 kind = "document"
 
-[capabilities.documento.inputs.principal]
+[capabilities.document.inputs.main]
 type = "path"
 required = true
 description = "Main .tex file, resolved relative to the piece; its sibling sources beside it are staged with it."
 
-[capabilities.documento.inputs.nombre]
+[capabilities.document.inputs.name]
 type = "string"
 required = true
 pattern = "^[a-z0-9][a-z0-9-]*$"
-description = "Asset base name: writes <nombre>.pdf and its per-page preview PNGs."
+description = "Asset base name: writes <name>.pdf and its per-page preview PNGs."
 
-[capabilities.documento.inputs.autor]
+[capabilities.document.inputs.author]
 type = "string"
 required = true
 description = "Document author, written to [document].author in the staged project.toml."
 
-[capabilities.documento.preview]
+[capabilities.document.preview]
 viewer = "generic"

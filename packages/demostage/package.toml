@@ -31,7 +31,7 @@ spdx = "MIT"
 summary = "Terminal demo gif and animated SVG from a hand-written demo.toml score, recorded in the demo binary's own PTY with no caller terminal"
 kind = "video"
 
-[capabilities.demo.inputs.partitura]
+[capabilities.demo.inputs.score]
 type = "path"
 required = true
 description = "Hand-written demo.toml score authored in the piece, never captured, resolved relative to the piece; demo record executes it in its own PTY and demo export renders the gif and svg."

@@ -314,13 +314,13 @@ description = "Clip length in frames at 24 fps: 49 is about 2 s, 121 about 5 s (
 [capabilities.clip.inputs.image.items.negative]
 type = "string"
 required = false
-description = "Custom negative prompt for the clip. Omitting it keeps the flow default (Wan's official Chinese negative). The wan22-i2v-14b-rapido flow runs at cfg 1 and ignores the negative."
+description = "Custom negative prompt for the clip. Omitting it keeps the flow default (Wan's official Chinese negative). The wan22-i2v-14b-fast flow runs at cfg 1 and ignores the negative."
 
 [capabilities.clip.inputs.workflow]
 type = "enum"
-values = ["wan22-i2v-14b", "wan22-i2v-14b-rapido"]
+values = ["wan22-i2v-14b", "wan22-i2v-14b-fast"]
 default = "wan22-i2v-14b"
-description = "Clip flow: wan22-i2v-14b animates what is inside the image; wan22-i2v-14b-rapido is a draft-only variant that drifts."
+description = "Clip flow: wan22-i2v-14b animates what is inside the image; wan22-i2v-14b-fast is a draft-only variant that drifts."
 
 [capabilities.clip.preview]
 viewer = "video"

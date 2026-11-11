@@ -6,12 +6,12 @@ description: Long LaTeX documents built to a verified PDF with real pagination, 
 
 Build a long, real document — a report, an article or a thesis — from
 LaTeX with the person-installed `texforge` binary. One capability,
-`texforge.documento`, writing the `document` kind as `<nombre>.pdf` plus
+`texforge.document`, writing the `document` kind as `<name>.pdf` plus
 one PNG per page.
 
 ## When to use
 
-- `texforge.documento` for a document that needs real pagination: many
+- `texforge.document` for a document that needs real pagination: many
   pages, footnotes, an index, a bibliography, cross-references and
   mathematics. Chrome pagination cannot give those.
 - Pieces of one visual page — a poster, an infographic, a slide — stay in
@@ -22,20 +22,20 @@ one PNG per page.
 
 ## Pieces
 
-One document per piece: the main `.tex` file in `principal`, resolved
-relative to the piece, with its sibling sources beside it; a `nombre`
-matching `[a-z0-9][a-z0-9-]*`; and `autor` for the document author.
+One document per piece: the main `.tex` file in `main`, resolved
+relative to the piece, with its sibling sources beside it; a `name`
+matching `[a-z0-9][a-z0-9-]*`; and `author` for the document author.
 
 ```toml
 [inputs]
-principal = "tesis/main.tex"
-nombre = "tesis"
-autor = "Ada Lovelace"
+main = "tesis/main.tex"
+name = "tesis"
+author = "Ada Lovelace"
 ```
 
 The runner copies the main file and its sibling sources into a scratch
 build directory and writes the `project.toml` itself (`[document] title =
-nombre, author = autor, template = "general"`, `[build] entry` = the main
+name, author = author, template = "general"`, `[build] entry` = the main
 file's name, plus `bibliography` when a `.bib` sits beside the piece). It
 never runs the interactive `texforge init`. The real keys and the exact
 invocations are in [references/build.md](references/build.md). A runnable

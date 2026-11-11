@@ -80,12 +80,12 @@ spdx = "Apache-2.0"
 summary = "Bake a self-contained animated SVG from a Node script and its data, with every label drawn as a path"
 kind = "image"
 
-[capabilities.bake.inputs.guion]
+[capabilities.bake.inputs.script]
 type = "path"
 required = true
 description = "Node script (CommonJS) that reads the data file path as argv[2] and writes the finished SVG to stdout, resolved relative to the piece; it bakes the CSS @keyframes and converts every label to a <path> with opentype.js."
 
-[capabilities.bake.inputs.datos]
+[capabilities.bake.inputs.data]
 type = "path"
 required = true
 description = "Data file the script reads (JSON, TOML or plain text), passed to the script as argv[2] and resolved relative to the piece."

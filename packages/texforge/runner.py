@@ -30,7 +30,7 @@ from facet_runner_sdk import Request, Runner
 runner = Runner()
 
 #: The one capability this package serves.
-CAPABILITY = "texforge.documento"
+CAPABILITY = "texforge.document"
 #: The template texforge embeds; it is offline, so no network is ever needed.
 TEMPLATE = "general"
 #: The minimum ``texforge`` the runner drives, as a semver tuple.
@@ -84,22 +84,22 @@ def _required(inputs: dict[str, Any], key: str) -> str:
 def _params(inputs: dict[str, Any]) -> dict[str, str]:
     """The document's fields, with the manifest's name pattern enforced."""
     params = {
-        "principal": _required(inputs, "principal"),
-        "nombre": _required(inputs, "nombre"),
-        "autor": _required(inputs, "autor"),
+        "main": _required(inputs, "main"),
+        "name": _required(inputs, "name"),
+        "author": _required(inputs, "author"),
     }
-    if not NAME_RE.fullmatch(params["nombre"]):
-        raise ValueError(f"nombre: {params['nombre']!r} must match {NAME_RE.pattern}")
+    if not NAME_RE.fullmatch(params["name"]):
+        raise ValueError(f"name: {params['name']!r} must match {NAME_RE.pattern}")
     return params
 
 
-def _principal(req: Request, params: dict[str, str]) -> Path:
+def _main(req: Request, params: dict[str, str]) -> Path:
     """The main .tex file, resolved relative to the piece."""
-    raw = Path(params["principal"])
-    principal = raw if raw.is_absolute() else req.piece_dir / raw
-    if not principal.is_file():
-        raise ValueError(f"principal: {params['principal']} is not a file beside the piece")
-    return principal
+    raw = Path(params["main"])
+    main = raw if raw.is_absolute() else req.piece_dir / raw
+    if not main.is_file():
+        raise ValueError(f"main: {params['main']} is not a file beside the piece")
+    return main
 
 
 def _sanitize(title: str) -> str:
@@ -128,9 +128,9 @@ def _is_out_dir(entry: Path, out_dir: Path) -> bool:
 
 
 def _copy_sources(source: Path, stage: Path, out_dir: Path) -> None:
-    """Copy the principal's sibling sources into the scratch stage.
+    """Copy the main's sibling sources into the scratch stage.
 
-    When the principal sits beside the piece file, the core places the output
+    When the main sits beside the piece file, the core places the output
     dir inside the piece (``.facet-tmp-*``); copying it would copy the runner's
     own files — and, before the stage moved out of ``out_dir``, the stage into
     itself — so it is skipped.
@@ -149,8 +149,8 @@ def _write_project(stage: Path, params: dict[str, str], entry: str, bib: str | N
     """Write the project.toml texforge reads, instead of running ``init``."""
     lines = [
         "[document]",
-        f"title = {_toml_string(params['nombre'])}",
-        f"author = {_toml_string(params['autor'])}",
+        f"title = {_toml_string(params['name'])}",
+        f"author = {_toml_string(params['author'])}",
         f"template = {_toml_string(TEMPLATE)}",
         "",
         "[build]",
@@ -164,13 +164,13 @@ def _write_project(stage: Path, params: dict[str, str], entry: str, bib: str | N
 @contextmanager
 def _staged(req: Request, params: dict[str, str]) -> Iterator[tuple[Path, str]]:
     """Stage the piece's sources and project.toml in a scratch dir, then clean up."""
-    principal = _principal(req, params)
-    source = principal.parent
+    main = _main(req, params)
+    source = main.parent
     with tempfile.TemporaryDirectory(prefix="texforge-stage-") as folder:
         stage = Path(folder)
         _copy_sources(source, stage, req.out_dir)
-        _write_project(stage, params, principal.name, _bib_name(source))
-        yield stage, principal.name
+        _write_project(stage, params, main.name, _bib_name(source))
+        yield stage, main.name
 
 
 def _run_tool(args: Sequence[str], cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -206,17 +206,17 @@ def _require_ok(done: subprocess.CompletedProcess[str], what: str) -> None:
         )
 
 
-def _built_pdf(stage: Path, nombre: str) -> Path:
+def _built_pdf(stage: Path, name: str) -> Path:
     """The PDF texforge wrote: it names the build after the sanitized title."""
-    path = stage / f"{_sanitize(nombre)}.pdf"
+    path = stage / f"{_sanitize(name)}.pdf"
     if not path.is_file():
         raise RuntimeError(f"texforge build wrote no {path.name} in the stage")
     return path
 
 
-def _place_pdf(asset: Path, stage: Path, nombre: str) -> None:
+def _place_pdf(asset: Path, stage: Path, name: str) -> None:
     """Put the built PDF where ``texforge pdf`` and ``preview`` look for it."""
-    shutil.copy2(asset, stage / f"{_sanitize(nombre)}.pdf")
+    shutil.copy2(asset, stage / f"{_sanitize(name)}.pdf")
 
 
 def _parse_pages(text: str) -> int | None:
@@ -243,13 +243,13 @@ def _asset(params: dict[str, str], path: Path) -> dict[str, Any]:
     """The run's document record for the built PDF."""
     return {
         "file": path.name,
-        "name": params["nombre"],
+        "name": params["name"],
         "kind": "document",
         "mime": "application/pdf",
         "properties": {},
         "params": dict(params),
         "seed": None,
-        "inputs": [params["principal"]],
+        "inputs": [params["main"]],
     }
 
 
@@ -258,10 +258,10 @@ def run(req: Request) -> dict[str, Any]:
     if req.capability != CAPABILITY:
         raise ValueError(f"unknown capability: {req.capability}")
     params = _params(dict(req.inputs))
-    target = req.out_dir / f"{params['nombre']}.pdf"
+    target = req.out_dir / f"{params['name']}.pdf"
     with _staged(req, params) as (stage, _entry):
         _require_ok(_run_tool(["build"], stage), "texforge build")
-        shutil.copy2(_built_pdf(stage, params["nombre"]), target)
+        shutil.copy2(_built_pdf(stage, params["name"]), target)
     return {"tool": _tool(), "assets": [_asset(params, target)]}
 
 
@@ -283,7 +283,7 @@ def _verdict(path: Path, page_count: int, warnings: int, exit_code: int) -> dict
 def _verify_one(req: Request, params: dict[str, str], path: Path) -> dict[str, Any]:
     """Lint, then count pages; a broken ref/cite or no page is a runner failure."""
     with _staged(req, params) as (stage, _entry):
-        _place_pdf(path, stage, params["nombre"])
+        _place_pdf(path, stage, params["name"])
         _require_ok(_run_tool(["check"], stage), "texforge check")
         info = _run_tool(["pdf", "info"], stage)
         _require_ok(info, "texforge pdf info")
@@ -322,8 +322,8 @@ def _preview_staged(params: dict[str, str], asset: Path) -> Iterator[Path]:
     """
     with tempfile.TemporaryDirectory(prefix="texforge-preview-") as folder:
         stage = Path(folder)
-        _write_project(stage, params, Path(params["principal"]).name, None)
-        _place_pdf(asset, stage, params["nombre"])
+        _write_project(stage, params, Path(params["main"]).name, None)
+        _place_pdf(asset, stage, params["name"])
         yield stage
 
 

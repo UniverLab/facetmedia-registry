@@ -1,8 +1,8 @@
-# Img2img con FLUX.2 klein: itera una imagen aprobada por instrucción.
+# Img2img con FLUX.2 klein: itera una image aprobada por instrucción.
 # Uso: facet run comfy.edit packages/comfy/examples/img2img.toml
 # El flujo sube la referencia una vez y guía cada entrada con ReferenceLatent.
 # Produjo iteracion-grabado.png desde flux2-klein-4b/ilustracion-editorial.png
-# en 22,7 s a 1344 × 768. Conserva personaje y encuadre y cambia la imagen a
+# en 22,7 s a 1344 × 768. Conserva personaje y encuadre y cambia la image a
 # un grabado azul/crema. El grano y las líneas son ásperos, acordes al estilo
 # pedido. Sin fuerza de denoise: si hace falta controlar cuánto se conserva en
 # una transformación gradual, hay que sumar un flujo latent img2img con denoise

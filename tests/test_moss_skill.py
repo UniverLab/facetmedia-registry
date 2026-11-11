@@ -2,7 +2,7 @@
 
 The skill is the only place an agent learns the package, so these tests pin
 what a person reads: the front matter and the four headings the core requires
-in order, the capability id ``moss.efecto`` with every input named, the seven
+in order, the capability id ``moss.sfx`` with every input named, the seven
 approved examples with their WAVs, and the descriptions reference the skill
 cites.
 """
@@ -74,8 +74,8 @@ def test_skill_front_matter_and_headings_order() -> None:
 
 def test_the_skill_names_the_capability_and_the_inputs() -> None:
     _, body = _front_matter()
-    assert "moss.efecto" in body
-    for name in MANIFEST["capabilities"]["efecto"]["inputs"]:
+    assert "moss.sfx" in body
+    for name in MANIFEST["capabilities"]["sfx"]["inputs"]:
         assert name in body, name
 
 
@@ -87,19 +87,19 @@ def test_the_skill_cites_the_approved_examples() -> None:
 
 
 def test_the_examples_are_runnable_effect_pieces() -> None:
-    """Each example parses, stays inside ``moss.efecto`` and ships its WAV."""
-    efecto_inputs = MANIFEST["capabilities"]["efecto"]["inputs"]
-    name_pattern = efecto_inputs["nombre"]["pattern"]
-    max_segundos = efecto_inputs["segundos"]["max"]
+    """Each example parses, stays inside ``moss.sfx`` and ships its WAV."""
+    sfx_inputs = MANIFEST["capabilities"]["sfx"]["inputs"]
+    name_pattern = sfx_inputs["name"]["pattern"]
+    max_seconds = sfx_inputs["seconds"]["max"]
     for piece in APPROVED:
         inputs = _piece(piece)
-        assert set(inputs) <= set(efecto_inputs), piece
+        assert set(inputs) <= set(sfx_inputs), piece
         assert "seed" not in inputs, piece
-        assert inputs["nombre"] == piece, piece
-        assert re.fullmatch(name_pattern, inputs["nombre"]), piece
-        assert inputs["segundos"] == SEGUNDOS[piece], piece
-        assert inputs["segundos"] <= max_segundos, piece
-        assert str(inputs["descripcion"]).strip(), piece
+        assert inputs["name"] == piece, piece
+        assert re.fullmatch(name_pattern, inputs["name"]), piece
+        assert inputs["seconds"] == SEGUNDOS[piece], piece
+        assert inputs["seconds"] <= max_seconds, piece
+        assert str(inputs["description"]).strip(), piece
         wav = EXAMPLES / f"{piece}.wav"
         assert wav.is_file(), piece
         assert wav.stat().st_size > 0, piece
@@ -120,4 +120,4 @@ def test_the_descriptions_reference_ports_every_prompt() -> None:
     """The reference keeps each lab prompt verbatim, exactly once."""
     text = (REFERENCES / "descriptions.md").read_text(encoding="utf-8")
     for piece in APPROVED:
-        assert text.count(str(_piece(piece)["descripcion"])) == 1, piece
+        assert text.count(str(_piece(piece)["description"])) == 1, piece

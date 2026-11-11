@@ -72,7 +72,7 @@ required = true
 pattern = "^[a-z0-9][a-z0-9-]*$"
 description = "Asset base name: writes <name>.wav."
 
-[capabilities.bed.inputs.duracion]
+[capabilities.bed.inputs.duration]
 type = "number"
 required = true
 max = 30

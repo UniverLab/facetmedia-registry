@@ -340,7 +340,7 @@ def _run_cycle(
     out.mkdir()
     result = _call(
         "run",
-        _request("run", out, piece_dir, {"partitura": str(score)}),
+        _request("run", out, piece_dir, {"score": str(score)}),
         tmp_path,
         env,
     )
@@ -386,7 +386,7 @@ def test_a_relative_out_dir_lands_the_gif_svg_and_recording(tmp_path: Path) -> N
     piece_dir, score = _piece(tmp_path)
     out = tmp_path / "rel-out"
     out.mkdir()
-    request = _request("run", Path("rel-out"), piece_dir, {"partitura": str(score)})
+    request = _request("run", Path("rel-out"), piece_dir, {"score": str(score)})
     _call("run", request, tmp_path, env, tag="-relative", cwd=tmp_path)
 
     assert (out / f"{NAME}.gif").is_file()
@@ -407,7 +407,7 @@ def test_a_failing_record_fails_the_run(tmp_path: Path) -> None:
     out.mkdir()
     done, result_path = _invoke(
         "run",
-        _request("run", out, piece_dir, {"partitura": str(score)}),
+        _request("run", out, piece_dir, {"score": str(score)}),
         tmp_path,
         env,
     )
@@ -422,7 +422,7 @@ def test_verify_reads_the_gif_and_svg_back(tmp_path: Path) -> None:
     assets = tuple(out / asset["file"] for asset in result["assets"])
     verdict = _call(
         "verify",
-        _request("verify", out, out, {"partitura": str(_score)}, assets),
+        _request("verify", out, out, {"score": str(_score)}, assets),
         tmp_path,
         env,
         tag="-verify",
@@ -452,7 +452,7 @@ def _assert_schema(data: Mapping[str, Any], schema: Mapping[str, Any]) -> None:
 
 def test_preview_writes_the_video_and_image_schemas(tmp_path: Path) -> None:
     result, score, _entries, env, out = _run_cycle(tmp_path)
-    inputs = {"partitura": str(score)}
+    inputs = {"score": str(score)}
     gif = out / result["assets"][0]["file"]
     svg = out / result["assets"][1]["file"]
 
@@ -552,7 +552,7 @@ def test_the_skill_front_matter_and_headings() -> None:
 def test_the_skill_teaches_the_headless_loop_and_the_dsl() -> None:
     _meta, body = _front_matter()
     assert "demostage.demo" in body
-    assert "partitura" in body
+    assert "score" in body
     for action in ("focus", "type", "keypress", "wait_for_stdout", "terminate"):
         assert action in body, action
     assert body.index("record") < body.index("export")
@@ -592,10 +592,10 @@ def test_the_capability_takes_a_score_and_previews_video() -> None:
     assert capability["kind"] == "video"
     assert capability["preview"] == {"viewer": "video"}
     inputs = capability["inputs"]
-    assert set(inputs) == {"partitura"}
-    assert inputs["partitura"]["type"] == "path"
-    assert inputs["partitura"]["required"] is True
-    assert "hand-written" in inputs["partitura"]["description"].lower()
+    assert set(inputs) == {"score"}
+    assert inputs["score"]["type"] == "path"
+    assert inputs["score"]["required"] is True
+    assert "hand-written" in inputs["score"]["description"].lower()
     assert MANIFEST["licenses"] == [{"subject": "demostage", "spdx": "MIT"}]
 
 

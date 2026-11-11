@@ -2,8 +2,8 @@
 
 Written on the runner SDK (``facet_runner_sdk``, copied into every
 environment). Four verbs: ``run`` cuts the background out of the piece's
-``foto`` with rembg's U2NetP on ``CPUExecutionProvider`` and writes the
-alpha PNG plus a checkerboard ``-damero`` PNG for edge review, ``verify``
+``photo`` with rembg's U2NetP on ``CPUExecutionProvider`` and writes the
+alpha PNG plus a checkerboard ``-checkerboard`` PNG for edge review, ``verify``
 re-opens both PNGs with Pillow, ``preview`` writes the image preview
 file of each, ``doctor`` checks the imports and the weights' sha256.
 
@@ -40,14 +40,14 @@ MODEL_ID = "u2netp"
 MODEL_NAME = "u2netp"
 #: CPU only: the manifest declares gpu = false and the lab measured this.
 PROVIDERS = ["CPUExecutionProvider"]
-#: The checkerboard tile of the ``-damero`` review image, as in the lab.
+#: The checkerboard tile of the ``-checkerboard`` review image, as in the lab.
 CHECKER_TILE = 32
 CHECKER_FILL = "#d8dde2"
 PULL_FIX = "facet pull rembg"
 #: The cutout is deterministic given the weights; the seed labels the record.
 SEED = 0
 #: Clean paper: the mask threshold, the filter sizes and the paper sampling.
-PAPEL_THRESHOLD = 40
+PAPER_THRESHOLD = 40
 MAXFILTER = 15
 BLUR = 6
 BORDER_ROWS = 30
@@ -74,33 +74,33 @@ def _tool() -> dict[str, str]:
 
 
 def _capability(req: Request) -> str:
-    """The bare capability name (cutout or papel) this request asked for."""
+    """The bare capability name (cutout or paper) this request asked for."""
     return req.capability.rsplit(".", 1)[-1]
 
 
-def _foto(params: dict[str, Any], req: Request) -> Path:
+def _photo(params: dict[str, Any], req: Request) -> Path:
     """The piece's photo, resolved against the piece directory."""
-    raw = params.get("foto")
+    raw = params.get("photo")
     if not raw:
-        raise ValueError("the piece has no foto")
+        raise ValueError("the piece has no photo")
     path = Path(str(raw))
     if not path.is_absolute():
         path = req.piece_dir / path
     if not path.is_file():
-        raise ValueError(f"{path}: no such foto")
+        raise ValueError(f"{path}: no such photo")
     return path
 
 
-def _lamina(params: dict[str, Any], req: Request) -> Path:
+def _plate(params: dict[str, Any], req: Request) -> Path:
     """The piece's plate, resolved against the piece directory."""
-    raw = params.get("lamina")
+    raw = params.get("plate")
     if not raw:
-        raise ValueError("the piece has no lamina")
+        raise ValueError("the piece has no plate")
     path = Path(str(raw))
     if not path.is_absolute():
         path = req.piece_dir / path
     if not path.is_file():
-        raise ValueError(f"{path}: no such lamina")
+        raise ValueError(f"{path}: no such plate")
     return path
 
 
@@ -116,7 +116,7 @@ def _session(req: Request) -> Any:
     return rembg.new_session(MODEL_NAME, providers=list(PROVIDERS))
 
 
-def _damero(cutout: Image.Image) -> Image.Image:
+def _checkerboard(cutout: Image.Image) -> Image.Image:
     """The cutout over a white/checkerboard, for judging edges by eye."""
     checker = Image.new("RGB", cutout.size, "white")
     draw = ImageDraw.Draw(checker)
@@ -152,11 +152,11 @@ def _paper_color(rgb: np.ndarray) -> np.ndarray:
     return np.median(border, axis=0)
 
 
-def _papel_mask(mask: Image.Image) -> Image.Image:
+def _paper_mask(mask: Image.Image) -> Image.Image:
     """The plate silhouette: threshold 40, MaxFilter 15, GaussianBlur 6."""
     return (
         mask.convert("L")
-        .point(lambda value: 255 if value > PAPEL_THRESHOLD else 0)
+        .point(lambda value: 255 if value > PAPER_THRESHOLD else 0)
         .filter(ImageFilter.MaxFilter(MAXFILTER))
         .filter(ImageFilter.GaussianBlur(BLUR))
     )
@@ -173,91 +173,93 @@ def _clean_paper(image: Image.Image, mask: Image.Image) -> Image.Image:
     return Image.fromarray((rgb * alpha + clean * (1 - alpha)).astype(np.uint8))
 
 
-def _asset(foto: Path, path: Path, params: dict[str, Any], damero: bool = False) -> dict[str, Any]:
-    """One output record: both PNGs share the foto's stem as their name."""
+def _asset(
+    photo: Path, path: Path, params: dict[str, Any], checkerboard: bool = False
+) -> dict[str, Any]:
+    """One output record: both PNGs share the photo's stem as their name."""
     width, height = _size(path)
     properties: dict[str, Any] = {"width": width, "height": height}
-    if damero:
-        properties["damero"] = True
+    if checkerboard:
+        properties["checkerboard"] = True
     return {
         "file": path.name,
-        "name": _asset_name(foto.stem),
+        "name": _asset_name(photo.stem),
         "kind": "image",
         "mime": "image/png",
         "properties": properties,
-        "params": {"foto": str(params["foto"])},
+        "params": {"photo": str(params["photo"])},
         "seed": SEED,
-        "inputs": [str(params["foto"])],
+        "inputs": [str(params["photo"])],
     }
 
 
-def _papel_asset(lamina: Path, path: Path, params: dict[str, Any]) -> dict[str, Any]:
-    """The clean-paper output record, named after the lamina's stem."""
+def _paper_asset(plate: Path, path: Path, params: dict[str, Any]) -> dict[str, Any]:
+    """The clean-paper output record, named after the plate's stem."""
     width, height = _size(path)
     return {
         "file": path.name,
-        "name": _asset_name(lamina.stem),
+        "name": _asset_name(plate.stem),
         "kind": "image",
         "mime": "image/png",
         "properties": {"width": width, "height": height},
-        "params": {"lamina": str(params["lamina"])},
+        "params": {"plate": str(params["plate"])},
         "seed": SEED,
-        "inputs": [str(params["lamina"])],
+        "inputs": [str(params["plate"])],
     }
 
 
 def _run_cutout(req: Request) -> dict[str, Any]:
     params = dict(req.inputs)
-    foto = _foto(params, req)
+    photo = _photo(params, req)
     rembg = importlib.import_module("rembg")
-    cutout = rembg.remove(Image.open(foto).convert("RGBA"), session=_session(req))
-    stem = foto.stem
+    cutout = rembg.remove(Image.open(photo).convert("RGBA"), session=_session(req))
+    stem = photo.stem
     cutout_path = req.out_dir / f"{stem}.png"
-    damero_path = req.out_dir / f"{stem}-damero.png"
+    checkerboard_path = req.out_dir / f"{stem}-checkerboard.png"
     cutout.save(cutout_path)
-    _damero(cutout).save(damero_path)
+    _checkerboard(cutout).save(checkerboard_path)
     assets = [
-        _asset(foto, cutout_path, params),
-        _asset(foto, damero_path, params, damero=True),
+        _asset(photo, cutout_path, params),
+        _asset(photo, checkerboard_path, params, checkerboard=True),
     ]
     return {"tool": _tool(), "assets": assets}
 
 
-def _run_papel(req: Request) -> dict[str, Any]:
+def _run_paper(req: Request) -> dict[str, Any]:
     params = dict(req.inputs)
-    lamina = _lamina(params, req)
+    plate = _plate(params, req)
     rembg = importlib.import_module("rembg")
-    image = Image.open(lamina).convert("RGB")
+    image = Image.open(plate).convert("RGB")
     mask = rembg.remove(image, session=_session(req), only_mask=True)
-    clean = _clean_paper(image, _papel_mask(mask))
-    path = req.out_dir / f"{lamina.stem}-papel.png"
+    clean = _clean_paper(image, _paper_mask(mask))
+    path = req.out_dir / f"{plate.stem}-paper.png"
     clean.save(path)
-    return {"tool": _tool(), "assets": [_papel_asset(lamina, path, params)]}
+    return {"tool": _tool(), "assets": [_paper_asset(plate, path, params)]}
 
 
 @runner.verb("run")
 def run(req: Request) -> dict[str, Any]:
-    if _capability(req) == "papel":
-        return _run_papel(req)
+    if _capability(req) == "paper":
+        return _run_paper(req)
     return _run_cutout(req)
 
 
 def _expected_mode(req: Request, path: Path) -> str:
-    """RGBA for the cutout, RGB for its ``-damero`` sibling and for clean paper.
+    """RGBA for the cutout, RGB for its ``-checkerboard`` sibling and for clean paper.
 
-    The piece's ``foto`` names both files exactly; without it the ``-damero``
+    The piece's ``photo`` names both files exactly; without it the ``-checkerboard``
     suffix is the fallback.
     """
-    if _capability(req) == "papel":
+    if _capability(req) == "paper":
         return "RGB"
-    foto = dict(req.inputs).get("foto")
-    if foto:
-        stem = Path(str(foto)).stem
-        if path.name == f"{stem}-damero.png":
+    photo = dict(req.inputs).get("photo")
+    if photo:
+        stem = Path(str(photo)).stem
+        if path.name == f"{stem}-checkerboard.png":
             return "RGB"
         if path.name == f"{stem}.png":
             return "RGBA"
-    return "RGB" if path.name.endswith("-damero.png") else "RGBA"
+    return "RGB" if path.name.endswith("-checkerboard.png") else "RGBA"
 
 
 def _verify_asset(req: Request, path: Path) -> dict[str, Any]:
@@ -310,12 +312,12 @@ def _preview_data(path: Path, name: str, prompt: str) -> dict[str, Any]:
 
 def _preview_source(req: Request, params: dict[str, Any]) -> tuple[str, str]:
     """The input's stem and the prompt that labels the record."""
-    if _capability(req) == "papel":
-        lamina = params.get("lamina")
-        stem = Path(str(lamina)).stem if lamina else ""
-        return stem, f"papel limpio de {stem}" if stem else "papel limpio"
-    foto = params.get("foto")
-    stem = Path(str(foto)).stem if foto else ""
+    if _capability(req) == "paper":
+        plate = params.get("plate")
+        stem = Path(str(plate)).stem if plate else ""
+        return stem, f"clean paper of {stem}" if stem else "clean paper"
+    photo = params.get("photo")
+    stem = Path(str(photo)).stem if photo else ""
     return stem, f"cutout of {stem}" if stem else "cutout"
 
 

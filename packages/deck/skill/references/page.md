@@ -39,7 +39,7 @@ trailing blank page.
 
 ## One-page pieces: no @page
 
-A poster or infographic sets **no** `@page` and no page breaks. `deck.pagina`
+A poster or infographic sets **no** `@page` and no page breaks. `deck.page`
 renders it in screen media and measures the content's height, then exports
 exactly one page at that height.
 
@@ -49,7 +49,7 @@ body {
   margin: 0;
 }
 
-.pieza {
+.piece {
   width: 1060px; /* the render's --width */
   padding: 48px;
 }

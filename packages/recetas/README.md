@@ -20,8 +20,8 @@ when you need one asset.
 
 | Recipe | What it builds | Steps |
 |--------|----------------|-------|
-| `video-explicativo` | A narrated explainer video: voice, music bed, normalize and mix, transcript, subtitles, HyperFrames composition | `voicestudio.speak` · `acestep.bed` · `ffmpeg.normalize` · `ffmpeg.mix` · `whisper.transcribe` · `whisper-subs.subtitulos` · `hyperframes.narrated` |
-| `render-arq` | An architectural render with people: a CAD solid, Poly Haven assets, a daylight photo with people and cars, a one-page deck | `cad.solid` · `blender.assets` · `blender.photo` · `deck.pagina` |
+| `video-explicativo` | A narrated explainer video: voice, music bed, normalize and mix, transcript, subtitles, HyperFrames composition | `voicestudio.speak` · `acestep.bed` · `ffmpeg.normalize` · `ffmpeg.mix` · `whisper.transcribe` · `whisper-subs.subtitles` · `hyperframes.narrated` |
+| `render-arq` | An architectural render with people: a CAD solid, Poly Haven assets, a daylight photo with people and cars, a one-page deck | `cad.solid` · `blender.assets` · `blender.photo` · `deck.page` |
 | `material-voz` | Voiced material with music: narration, a music bed, a slide deck | `kokoro.speak` · `acestep.bed` · `deck.slides` |
 | `demo-herramienta` | A tool demo: a recorded terminal demo and a slide deck | `demostage.demo` · `deck.slides` |
 

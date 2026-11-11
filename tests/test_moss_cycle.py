@@ -393,7 +393,7 @@ def _request(
     return {
         "protocol": 1,
         "verb": verb,
-        "capability": "moss.efecto",
+        "capability": "moss.sfx",
         "depth": depth,
         "inputs": dict(inputs),
         "out_dir": str(out),
@@ -435,9 +435,9 @@ def _call(
 
 def _inputs(**overrides: object) -> dict[str, object]:
     inputs: dict[str, object] = {
-        "descripcion": DESCRIPCION,
-        "segundos": SEGUNDOS,
-        "nombre": NAME,
+        "description": DESCRIPCION,
+        "seconds": SEGUNDOS,
+        "name": NAME,
     }
     inputs.update(overrides)
     return inputs
@@ -487,9 +487,9 @@ def test_the_cycle_generates_normalises_and_records(tmp_path: Path) -> None:
     assert asset["file"] == f"{NAME}.wav"
     assert (asset["kind"], asset["mime"]) == ("audio", "audio/wav")
     assert asset["params"] == {
-        "descripcion": DESCRIPCION,
-        "segundos": SEGUNDOS,
-        "nombre": NAME,
+        "description": DESCRIPCION,
+        "seconds": SEGUNDOS,
+        "name": NAME,
         "target-lufs": TARGET_LUFS,
     }
     properties = asset["properties"]
@@ -786,21 +786,21 @@ def test_the_manifest_declares_the_staged_in_process_package() -> None:
 
 
 def test_the_capability_inputs_and_thresholds() -> None:
-    efecto = MANIFEST["capabilities"]["efecto"]
-    assert efecto["kind"] == "audio"
-    assert efecto["preview"]["viewer"] == "audio"
-    inputs = efecto["inputs"]
-    assert set(inputs) == {"descripcion", "segundos", "nombre", "target-lufs"}
-    assert inputs["descripcion"]["type"] == "string"
-    assert inputs["descripcion"]["required"] is True
-    assert inputs["segundos"]["type"] == "number"
-    assert inputs["segundos"]["required"] is True
-    assert inputs["segundos"]["max"] == MAX_SEGUNDOS
-    assert inputs["nombre"]["pattern"] == "^[a-z0-9][a-z0-9-]*$"
+    sfx = MANIFEST["capabilities"]["sfx"]
+    assert sfx["kind"] == "audio"
+    assert sfx["preview"]["viewer"] == "audio"
+    inputs = sfx["inputs"]
+    assert set(inputs) == {"description", "seconds", "name", "target-lufs"}
+    assert inputs["description"]["type"] == "string"
+    assert inputs["description"]["required"] is True
+    assert inputs["seconds"]["type"] == "number"
+    assert inputs["seconds"]["required"] is True
+    assert inputs["seconds"]["max"] == MAX_SEGUNDOS
+    assert inputs["name"]["pattern"] == "^[a-z0-9][a-z0-9-]*$"
     assert inputs["target-lufs"]["default"] == DEFAULT_TARGET_LUFS
     assert inputs["target-lufs"]["min"] == TARGET_MIN_LUFS
     assert inputs["target-lufs"]["max"] == TARGET_MAX_LUFS
-    assert efecto["verify"]["thresholds"] == {"lufs_tol": LUFS_TOL}
+    assert sfx["verify"]["thresholds"] == {"lufs_tol": LUFS_TOL}
 
 
 def test_the_skill_has_the_front_matter_and_four_headings() -> None:
@@ -816,6 +816,6 @@ def test_the_skill_has_the_front_matter_and_four_headings() -> None:
     required = ["## When to use", "## Pieces", "## Judging the result", "## Pitfalls"]
     positions = [body.index(heading) for heading in required]
     assert positions == sorted(positions)
-    assert "moss.efecto" in body
-    for name in ("descripcion", "segundos", "nombre", "target-lufs"):
+    assert "moss.sfx" in body
+    for name in ("description", "seconds", "name", "target-lufs"):
         assert name in body, name

@@ -2,8 +2,8 @@
 
 Long LaTeX documents — reports, articles and theses — built with the
 person-installed [`texforge`](https://github.com/UniverLab/texforge)
-binary (**Apache-2.0**). One capability, `texforge.documento`, writing the
-`document` kind as `<nombre>.pdf` plus one PNG per page. texforge gives
+binary (**Apache-2.0**). One capability, `texforge.document`, writing the
+`document` kind as `<name>.pdf` plus one PNG per page. texforge gives
 real pagination, footnotes, an index, a bibliography and mathematics,
 which Chrome pagination cannot.
 
@@ -24,19 +24,19 @@ anything older than **0.10.0** fails `doctor` the same way.
 
 ```toml
 [inputs]
-principal = "tesis/main.tex"
-nombre = "tesis"
-autor = "Ada Lovelace"
+main = "tesis/main.tex"
+name = "tesis"
+author = "Ada Lovelace"
 ```
 
-`principal` is the main `.tex` file, resolved relative to the piece; its
-sibling sources beside it are staged with it. `nombre` is the asset base
-name (`[a-z0-9][a-z0-9-]*`), writing `<nombre>.pdf`. `autor` is the
+`main` is the main `.tex` file, resolved relative to the piece; its
+sibling sources beside it are staged with it. `name` is the asset base
+name (`[a-z0-9][a-z0-9-]*`), writing `<name>.pdf`. `author` is the
 document author.
 
 ## The staged project.toml rule
 
-The runner copies the principal's directory into a scratch build
+The runner copies the main file's directory into a scratch build
 directory and writes the `project.toml` texforge reads — it never runs the
 interactive `texforge init`. The keys are texforge's real ones:
 
@@ -73,7 +73,7 @@ cannot come out of the runner.
 
 `preview` runs `texforge preview`, the pure-Rust rasterizer (no poppler,
 no new host dependency), into `preview/page-NN.png`, and writes
-`<nombre>.pdf.preview.json` in the core document shape:
+`<name>.pdf.preview.json` in the core document shape:
 
 ```json
 {"preview": 1, "kind": "document", "summary": "tesis.pdf · 12 pages", "page_count": 12, "pages": ["preview/page-01.png", "preview/page-02.png"]}

@@ -29,8 +29,8 @@
           "verify": "Confidence and no-speech share."
         },
         {
-          "capability": "whisper-subs.subtitulos",
-          "handoff": "guion.srt (origen guion.json, formato srt)",
+          "capability": "whisper-subs.subtitles",
+          "handoff": "guion.srt (source guion.json, format srt)",
           "verify": "At least one cue, monotonic and non-overlapping."
         },
         {
@@ -59,8 +59,8 @@
           "verify": "Look at the PNG."
         },
         {
-          "capability": "deck.pagina",
-          "handoff": "render-arq.pdf + page-01.png (fuente render-arq.html)",
+          "capability": "deck.page",
+          "handoff": "render-arq.pdf + page-01.png (source render-arq.html)",
           "verify": "One PDF page and its page-01 PNG."
         }
       ]
@@ -80,7 +80,7 @@
         },
         {
           "capability": "deck.slides",
-          "handoff": "material-voz.pdf + page-01.png (fuente material-voz.html)",
+          "handoff": "material-voz.pdf + page-01.png (source material-voz.html)",
           "verify": "The page count and the page-01 PNG."
         }
       ]
@@ -90,12 +90,12 @@
       "steps": [
         {
           "capability": "demostage.demo",
-          "handoff": "demo.gif + demo.svg (partitura demo.toml)",
+          "handoff": "demo.gif + demo.svg (score demo.toml)",
           "verify": "The gif probe and the svg size."
         },
         {
           "capability": "deck.slides",
-          "handoff": "demo-herramienta.pdf + page-01.png (fuente demo-herramienta.html)",
+          "handoff": "demo-herramienta.pdf + page-01.png (source demo-herramienta.html)",
           "verify": "The page count and the page-01 PNG."
         }
       ]

@@ -29,10 +29,10 @@ CHAINS = {
         "ffmpeg.normalize",
         "ffmpeg.mix",
         "whisper.transcribe",
-        "whisper-subs.subtitulos",
+        "whisper-subs.subtitles",
         "hyperframes.narrated",
     ],
-    "render-arq": ["cad.solid", "blender.assets", "blender.photo", "deck.pagina"],
+    "render-arq": ["cad.solid", "blender.assets", "blender.photo", "deck.page"],
     "material-voz": ["kokoro.speak", "acestep.bed", "deck.slides"],
     "demo-herramienta": ["demostage.demo", "deck.slides"],
 }

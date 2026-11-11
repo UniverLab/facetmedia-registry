@@ -192,7 +192,7 @@ def _environment(
 
 
 def _piece(tmp_path: Path, with_bib: bool = True) -> Path:
-    """A piece dir whose ``doc/`` holds the principal and its sibling sources."""
+    """A piece dir whose ``doc/`` holds the main and its sibling sources."""
     piece_dir = tmp_path / "piece"
     doc = piece_dir / "doc"
     (doc / "figures").mkdir(parents=True)
@@ -204,7 +204,7 @@ def _piece(tmp_path: Path, with_bib: bool = True) -> Path:
         (doc / "refs.bib").write_text("@article{key, title={A}}\n", encoding="utf-8")
     (doc / "figures" / "fig.png").write_bytes(b"\x89PNG\r\n\x1a\n")
     (piece_dir / "tesis.toml").write_text(
-        f'[inputs]\nprincipal = "{PRINCIPAL}"\nnombre = "{NAME}"\nautor = "{AUTHOR}"\n',
+        f'[inputs]\nmain = "{PRINCIPAL}"\nname = "{NAME}"\nauthor = "{AUTHOR}"\n',
         encoding="utf-8",
     )
     return piece_dir
@@ -221,7 +221,7 @@ def _request(
     return {
         "protocol": 1,
         "verb": verb,
-        "capability": "texforge.documento",
+        "capability": "texforge.document",
         "depth": depth,
         "inputs": dict(inputs),
         "out_dir": str(out),
@@ -272,7 +272,7 @@ def _call(
 
 
 def _inputs(**overrides: object) -> dict[str, object]:
-    inputs: dict[str, object] = {"principal": PRINCIPAL, "nombre": NAME, "autor": AUTHOR}
+    inputs: dict[str, object] = {"main": PRINCIPAL, "name": NAME, "author": AUTHOR}
     inputs.update(overrides)
     return inputs
 
@@ -302,7 +302,7 @@ def test_run_stages_the_sources_and_writes_the_real_project(tmp_path: Path) -> N
     assert asset["file"] == f"{NAME}.pdf"
     assert asset["name"] == NAME
     assert (asset["kind"], asset["mime"]) == ("document", "application/pdf")
-    assert asset["params"] == {"principal": PRINCIPAL, "nombre": NAME, "autor": AUTHOR}
+    assert asset["params"] == {"main": PRINCIPAL, "name": NAME, "author": AUTHOR}
     assert (out / f"{NAME}.pdf").is_file()
     assert result["tool"] == {"name": "texforge", "version": "0.1.0"}
     assert not any(path.name.startswith("_stage_") for path in out.iterdir())
@@ -322,10 +322,10 @@ def test_run_stages_the_sources_and_writes_the_real_project(tmp_path: Path) -> N
     assert all(entry["argv"][0] != "init" for entry in entries)
 
 
-def test_run_stages_a_principal_at_the_piece_root(tmp_path: Path) -> None:
+def test_run_stages_a_main_at_the_piece_root(tmp_path: Path) -> None:
     """The core stages inside the piece (``.facet-tmp-*``); never copy that dir.
 
-    A principal beside the piece file is the common layout. The runner's own
+    A main beside the piece file is the common layout. The runner's own
     out dir then sits inside the source tree, and copying it would recurse
     into the stage until the path blows up.
     """
@@ -338,7 +338,7 @@ def test_run_stages_a_principal_at_the_piece_root(tmp_path: Path) -> None:
     )
     (piece_dir / "refs.bib").write_text("@article{key, title={A}}\n", encoding="utf-8")
     (piece_dir / "tesis.toml").write_text(
-        f'[inputs]\nprincipal = "main.tex"\nnombre = "{NAME}"\nautor = "{AUTHOR}"\n',
+        f'[inputs]\nmain = "main.tex"\nname = "{NAME}"\nauthor = "{AUTHOR}"\n',
         encoding="utf-8",
     )
     out = piece_dir / ".facet-tmp-run"
@@ -346,7 +346,7 @@ def test_run_stages_a_principal_at_the_piece_root(tmp_path: Path) -> None:
     (out / "request.json").write_text("{}", encoding="utf-8")
     env = _environment(stub_dir, bin_dir)
 
-    inputs = {"principal": "main.tex", "nombre": NAME, "autor": AUTHOR}
+    inputs = {"main": "main.tex", "name": NAME, "author": AUTHOR}
     result, _ = _call("run", _request("run", out, piece_dir, inputs), tmp_path, env)
     assert result["assets"][0]["file"] == f"{NAME}.pdf"
     assert (out / f"{NAME}.pdf").is_file()

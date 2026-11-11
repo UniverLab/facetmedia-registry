@@ -23,7 +23,7 @@ pixel size and by probing the MP4.
 - `comfy.clip` to animate what is inside a still — fog advancing, steam
   rising, water rippling. `wan22-i2v` is movement-only: the prompt describes
   what moves inside the frame, never a camera move over a flat image. About
-  7 minutes per two-second clip. `wan22-i2v-rapido` is the draft variant,
+  7 minutes per two-second clip. `wan22-i2v-fast` is the draft variant,
   about half the time, and it drifts.
 - A camera move over a still — a zoom, a pan, a slow push — belongs to
   HyperFrames with GSAP first: seconds instead of minutes, reproducible
@@ -47,7 +47,7 @@ image = [
 `width` defaults to 1344 and `height` to 768, each between 64 and 2048 and a
 multiple of 64; say both per entry to change the shape. `workflow` picks the
 still flow (`"z-image-turbo"` or `"flux2-klein-4b"`) or the clip flow
-(`"wan22-i2v"` or `"wan22-i2v-rapido"`); an edit has no `workflow` input —
+(`"wan22-i2v"` or `"wan22-i2v-fast"`); an edit has no `workflow` input —
 it always uses `flux2-klein-img2img`. The flow's own parameters (`steps = 8`,
 `shift = 3` on z-image-turbo; `steps = 4` on klein) come from
 `flows/<name>.json`, not from the piece. Each entry writes `<name>.png` —
@@ -76,7 +76,7 @@ each graph's placeholders, params and uploads.
 | `flux2-klein-4b` | `still` | palette, composition and empty space, ~6 s |
 | `flux2-klein-img2img` | `edit` | editing a reference image by instruction, ~23 s |
 | `wan22-i2v` | `clip` | movement inside a still: fog, steam, ~7 min per 2 s |
-| `wan22-i2v-rapido` | `clip` | motion drafts in half the time |
+| `wan22-i2v-fast` | `clip` | motion drafts in half the time |
 
 For clips, `length` is frames at 24 fps and must be `4n+1` — 49 ≈ 2 s,
 121 ≈ 5 s — because the Wan latent keeps one frame plus groups of four. A
@@ -101,7 +101,7 @@ without it, and it changes nothing for the still flows.
 
 ## Drafts
 
-`workflow = "wan22-i2v-rapido"` runs the same Wan graph with FastWan's
+`workflow = "wan22-i2v-fast"` runs the same Wan graph with FastWan's
 `Wan2_2_5B_FastWanFullAttn_lora_rank_128_bf16.safetensors` LoRA, four steps
 and a CFG of 1, so a clip takes about half the time. It is a **draft**:
 halfway through it drifts from the input image — the light and the

@@ -28,7 +28,7 @@ lab — they ship marked as not yet run on a 24 GB GPU. On an 8 GB card, use
 - `comfy-xl.clip` to animate what is inside a still — fog advancing, steam
   rising, water rippling. `wan22-i2v-14b` is movement-only: the prompt
   describes what moves inside the frame, never a camera move over a flat
-  image. About 7 minutes per two-second clip. `wan22-i2v-14b-rapido` is the
+  image. About 7 minutes per two-second clip. `wan22-i2v-14b-fast` is the
   draft variant, about half the time, and it drifts.
 - A camera move over a still — a zoom, a pan, a slow push — belongs to
   HyperFrames with GSAP first: seconds instead of minutes, reproducible
@@ -52,7 +52,7 @@ image = [
 `width` defaults to 1344 and `height` to 768, each between 64 and 2048 and a
 multiple of 64; say both per entry to change the shape. `workflow` picks
 the still flow (`"z-image"`) or the clip flow (`"wan22-i2v-14b"` or
-`"wan22-i2v-14b-rapido"`); an edit has no `workflow` input — it always
+`"wan22-i2v-14b-fast"`); an edit has no `workflow` input — it always
 uses `qwen-image-edit`. The flow's own parameters (`steps = 25`, `cfg = 4`,
 `shift = 3` on z-image) come from `flows/<name>.json`, not from the piece.
 Each entry writes `<name>.png` — or `<name>.mp4` for a clip — beside the
@@ -79,7 +79,7 @@ each graph's placeholders, params and uploads.
 | `z-image` | `still` | photographic realism at full precision, ~1 min |
 | `qwen-image-edit` | `edit` | editing a reference image by instruction |
 | `wan22-i2v-14b` | `clip` | movement inside a still: fog, steam, ~7 min per 2 s |
-| `wan22-i2v-14b-rapido` | `clip` | motion drafts in half the time |
+| `wan22-i2v-14b-fast` | `clip` | motion drafts in half the time |
 
 For clips, `length` is frames at 24 fps and must be `4n+1` — 49 ≈ 2 s,
 121 ≈ 5 s — because the Wan latent keeps one frame plus groups of four. A
@@ -101,7 +101,7 @@ and health details; `references/seeds.md` the seed behavior.
 
 ## Drafts
 
-`workflow = "wan22-i2v-14b-rapido"` runs the same two-stage Wan graph with
+`workflow = "wan22-i2v-14b-fast"` runs the same two-stage Wan graph with
 the two lightx2v 4-step LoRAs (`wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise`
 and `..._low_noise`), four steps and a CFG of 1, so a clip takes about half
 the time. It is a **draft**: halfway through it drifts from the input image

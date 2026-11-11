@@ -1,4 +1,4 @@
 [inputs]
-descripcion = "Gentle steady rain falling on a window pane at night, soft drops on glass, distant rolling thunder, calm ambience"
-nombre = "lluvia-ventana"
-segundos = 12
+description = "Gentle steady rain falling on a window pane at night, soft drops on glass, distant rolling thunder, calm ambience"
+name = "lluvia-ventana"
+seconds = 12

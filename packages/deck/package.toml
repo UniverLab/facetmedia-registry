@@ -56,7 +56,7 @@ spdx = "Apache-2.0"
 summary = "Author slides as HTML with a CSS @page size and one page break per slide, exported to a paginated PDF plus one PNG per page"
 kind = "document"
 
-[capabilities.slides.inputs.fuente]
+[capabilities.slides.inputs.source]
 type = "path"
 required = true
 description = "Slide HTML carrying an @page size and one page break per slide, resolved relative to the piece."
@@ -75,51 +75,51 @@ description = "Recorded seed; the paginated export is deterministic, so it label
 [capabilities.slides.preview]
 viewer = "generic"
 
-[capabilities.pagina]
+[capabilities.page]
 summary = "Lay out a one-page infographic or poster from HTML + CSS + SVG, exported to a one-page PDF plus its page PNG through the pinned Chromium's screen-media measured-height render"
 kind = "document"
 
-[capabilities.pagina.inputs.fuente]
+[capabilities.page.inputs.source]
 type = "path"
 required = true
 description = "One-page piece HTML (infographic or poster) with a sources footer and captioned images, resolved relative to the piece."
 
-[capabilities.pagina.inputs.prompt]
+[capabilities.page.inputs.prompt]
 type = "string"
 required = true
 description = "The brief the piece was authored from; recorded and carried into the document preview."
 
-[capabilities.pagina.inputs.seed]
+[capabilities.page.inputs.seed]
 type = "integer"
 default = 0
 min = 0
 description = "Recorded seed; the one-page export is deterministic, so it labels the record."
 
-[capabilities.pagina.preview]
+[capabilities.page.preview]
 viewer = "generic"
 
 [capabilities.presenter]
 summary = "Attach one speaker note per slide and build a self-contained presenter file with speaker view and notes from the same deck"
 kind = "document"
 
-[capabilities.presenter.inputs.fuente]
+[capabilities.presenter.inputs.source]
 type = "path"
 required = true
 description = "Deck HTML with one `<section class=\"slide\">` per slide, resolved relative to the piece; local images and stylesheet refs are inlined as data URIs."
 
-[capabilities.presenter.inputs.notas]
+[capabilities.presenter.inputs.notes]
 type = "array"
 required = true
 min_items = 1
-description = "One speaker note table per slide; the runner orders them by pagina and materializes the `---` separated notes companion."
+description = "One speaker note table per slide; the runner orders them by page and materializes the `---` separated notes companion."
 
-[capabilities.presenter.inputs.notas.items.pagina]
+[capabilities.presenter.inputs.notes.items.page]
 type = "integer"
 required = true
 min = 1
-description = "1-based slide number the note belongs to; every pagina must be distinct and inside the deck."
+description = "1-based slide number the note belongs to; every page must be distinct and inside the deck."
 
-[capabilities.presenter.inputs.notas.items.texto]
+[capabilities.presenter.inputs.notes.items.text]
 type = "string"
 required = true
 description = "Speaker note shown for that slide in the presenter view."

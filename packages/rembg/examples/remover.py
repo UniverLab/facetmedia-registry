@@ -20,7 +20,7 @@ session = new_session("u2netp", providers=["CPUExecutionProvider"])
 cutout = remove(Image.open(source).convert("RGBA"), session=session)
 cutout.save(output)
 
-# Vista sobre damero para inspeccionar bordes sin alterar el PNG con alfa.
+# Vista sobre checkerboard para inspeccionar bordes sin alterar el PNG con alfa.
 checker = Image.new("RGB", cutout.size, "white")
 draw = ImageDraw.Draw(checker)
 tile = 32
@@ -29,7 +29,7 @@ for y in range(0, checker.height, tile):
         if (x // tile + y // tile) % 2:
             draw.rectangle((x, y, x + tile - 1, y + tile - 1), fill="#d8dde2")
 checker.paste(cutout, mask=cutout.getchannel("A"))
-checker.save(HERE / "vista-damero.png")
+checker.save(HERE / "vista-checkerboard.png")
 
 alpha = cutout.getchannel("A")
 report = {
@@ -41,7 +41,7 @@ report = {
     "transparent_pixels_percent": round(100 * sum(1 for p in alpha.getdata() if p < 250) / (cutout.width * cutout.height), 2),
     "elapsed_seconds": round(time.monotonic() - started, 2),
     "output": output.name,
-    "preview": "vista-damero.png",
+    "preview": "vista-checkerboard.png",
 }
 (HERE / "medicion.json").write_text(json.dumps(report, indent=2) + "\n")
 print(json.dumps(report, indent=2))

@@ -2,7 +2,7 @@
 
 Described sound effects with
 [OpenMOSS/MOSS-SoundEffect-v2.0](https://huggingface.co/OpenMOSS-Team/MOSS-SoundEffect-v2.0)
-(**Apache-2.0**). One capability, `moss.efecto`, writing 48 kHz mono WAVs.
+(**Apache-2.0**). One capability, `moss.sfx`, writing 48 kHz mono WAVs.
 
 ## The code comes from a pinned source checkout
 

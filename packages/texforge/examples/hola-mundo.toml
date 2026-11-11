@@ -1,4 +1,4 @@
 [inputs]
-principal = "hola-mundo.tex"
-nombre = "hola-mundo"
-autor = "Ada Lovelace"
+main = "hola-mundo.tex"
+name = "hola-mundo"
+author = "Ada Lovelace"

@@ -1,11 +1,11 @@
 """The pillow package runner: base image ops on CPU.
 
 Written on the runner SDK (``facet_runner_sdk``, copied into every
-environment). Four verbs: ``run`` opens the piece's ``imagen`` and applies
-each table of ``operaciones`` in order in memory — ``convertir``
-re-encodes between png/jpeg/webp with an optional mode, ``redimensionar``
-resizes exact or aspect-preserving, ``hoja`` lays a contact sheet with
-2 px white dividers — writing one ``<imagen-stem>-<i>-<operacion>.<ext>``
+environment). Four verbs: ``run`` opens the piece's ``image`` and applies
+each table of ``operations`` in order in memory — ``convert``
+re-encodes between png/jpeg/webp with an optional mode, ``resize``
+resizes exact or aspect-preserving, ``sheet`` lays a contact sheet with
+2 px white dividers — writing one ``<image-stem>-<i>-<op>.<ext>``
 file per op, ``verify`` re-opens the assets and compares suffix, mode and
 size against a fresh in-memory pass, ``preview`` writes the image kind's
 fields per asset, and ``doctor`` checks the Pillow import and version.
@@ -35,8 +35,8 @@ SEED = 0
 #: The version the package pins in pyproject.toml; doctor proves it.
 PILLOW_VERSION = "13.0.0"
 CONVERT_EXT = {"png": ".png", "jpeg": ".jpg", "webp": ".webp"}
-MODOS = {"RGB", "RGBA", "L"}
-OPS = ("convertir", "redimensionar", "hoja")
+MODES = {"RGB", "RGBA", "L"}
+OPS = ("convert", "resize", "sheet")
 MIME = {
     ".png": "image/png",
     ".jpg": "image/jpeg",
@@ -47,8 +47,8 @@ MIME = {
 _FILE_FORMAT = {".png": "PNG", ".jpg": "JPEG", ".webp": "WEBP", ".jpeg": "JPEG"}
 #: The contact sheet's white gap between tiles; no outer border.
 DIVIDER = 2
-_OP_NAME = re.compile(r"-(\d+)-(convertir|redimensionar|hoja)\.[a-z0-9]+$", re.IGNORECASE)
-_OP_SUFFIX = re.compile(r"-\d+-(?:convertir|redimensionar|hoja)$", re.IGNORECASE)
+_OP_NAME = re.compile(r"-(\d+)-(convert|resize|sheet)\.[a-z0-9]+$", re.IGNORECASE)
+_OP_SUFFIX = re.compile(r"-\d+-(?:convert|resize|sheet)$", re.IGNORECASE)
 _BAD_NAME = re.compile(r"[^a-z0-9-]+")
 
 
@@ -71,31 +71,31 @@ def _tool() -> dict[str, str]:
     return {"name": str(manifest["tool_name"]), "version": str(manifest["version"])}
 
 
-def _imagen(params: dict[str, Any], req: Request) -> Path:
+def _image_path(params: dict[str, Any], req: Request) -> Path:
     """The piece's source image, resolved against the piece directory."""
-    raw = params.get("imagen")
+    raw = params.get("image")
     if not raw:
-        raise ValueError("the piece has no imagen")
+        raise ValueError("the piece has no image")
     path = Path(str(raw))
     if not path.is_absolute():
         path = req.piece_dir / path
     if not path.is_file():
-        raise ValueError(f"{path}: no such imagen")
+        raise ValueError(f"{path}: no such image")
     return path
 
 
 def _ops(params: dict[str, Any]) -> list[dict[str, Any]]:
-    """The operation tables, each naming a known ``operacion``."""
-    raw = params.get("operaciones")
+    """The operation tables, each naming a known ``op``."""
+    raw = params.get("operations")
     if not isinstance(raw, list) or not raw:
-        raise ValueError("the piece has no operaciones")
+        raise ValueError("the piece has no operations")
     ops: list[dict[str, Any]] = []
     for position, item in enumerate(raw, start=1):
         if not isinstance(item, dict):
-            raise ValueError(f"operaciones[{position}]: not an operation table")
-        opname = item.get("operacion")
+            raise ValueError(f"operations[{position}]: not an operation table")
+        opname = item.get("op")
         if opname not in OPS:
-            raise ValueError(f"operaciones[{position}]: pillow: operacion desconocida {opname!r}")
+            raise ValueError(f"operations[{position}]: pillow: unknown op {opname!r}")
         ops.append(item)
     return ops
 
@@ -106,7 +106,7 @@ def _positive_int(op: dict[str, Any], key: str, index: int, opname: str) -> int 
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
-        raise ValueError(f"operaciones[{index}]: pillow {opname}: {key} debe ser un entero >= 1")
+        raise ValueError(f"operations[{index}]: pillow {opname}: {key} must be an integer >= 1")
     return value
 
 
@@ -125,68 +125,67 @@ def _jpeg_rgb(image: Image.Image, *, flatten: bool) -> Image.Image:
     return image.convert("RGB")
 
 
-def _convertir(image: Image.Image, op: dict[str, Any], index: int) -> tuple[Image.Image, str]:
+def _convert(image: Image.Image, op: dict[str, Any], index: int) -> tuple[Image.Image, str]:
     """Re-encode between png/jpeg/webp with an optional mode."""
-    formato = op.get("formato")
-    if formato is None:
-        raise ValueError(f"operaciones[{index}]: pillow convertir: falta formato")
-    if formato not in CONVERT_EXT:
-        raise ValueError(f"operaciones[{index}]: pillow convertir: formato desconocido {formato!r}")
-    modo = op.get("modo")
-    if modo is not None and modo not in MODOS:
-        raise ValueError(f"operaciones[{index}]: pillow convertir: modo desconocido {modo!r}")
-    if modo == "RGBA" and formato == "jpeg":
+    out_format = op.get("format")
+    if out_format is None:
+        raise ValueError(f"operations[{index}]: pillow convert: format is required")
+    if out_format not in CONVERT_EXT:
+        raise ValueError(f"operations[{index}]: pillow convert: unknown format {out_format!r}")
+    mode = op.get("mode")
+    if mode is not None and mode not in MODES:
+        raise ValueError(f"operations[{index}]: pillow convert: unknown mode {mode!r}")
+    if mode == "RGBA" and out_format == "jpeg":
         raise ValueError(
-            f"operaciones[{index}]: pillow convertir: modo RGBA incompatible con formato jpeg, "
-            "usa png o webp"
+            f"operations[{index}]: pillow convert: mode RGBA is incompatible with jpeg, "
+            "use png or webp"
         )
-    out = image.convert(str(modo)) if modo else image
-    if formato == "jpeg":
-        out = _jpeg_rgb(out, flatten=modo is None)
-    return out, CONVERT_EXT[str(formato)]
+    out = image.convert(str(mode)) if mode else image
+    if out_format == "jpeg":
+        out = _jpeg_rgb(out, flatten=mode is None)
+    return out, CONVERT_EXT[str(out_format)]
 
 
-def _redimensionar(image: Image.Image, op: dict[str, Any], index: int) -> Image.Image:
+def _resize(image: Image.Image, op: dict[str, Any], index: int) -> Image.Image:
     """Resize exact with both dims, aspect-preserving with one, Lanczos."""
-    ancho = _positive_int(op, "ancho", index, "redimensionar")
-    alto = _positive_int(op, "alto", index, "redimensionar")
-    if ancho is None and alto is None:
-        raise ValueError(f"operaciones[{index}]: pillow redimensionar: falta ancho o alto")
-    width, height = image.size
-    if ancho is None:
-        assert alto is not None
-        size = (max(1, round(width * alto / height)), alto)
-    elif alto is None:
-        size = (ancho, max(1, round(height * ancho / width)))
+    width = _positive_int(op, "width", index, "resize")
+    height = _positive_int(op, "height", index, "resize")
+    if width is None and height is None:
+        raise ValueError(f"operations[{index}]: pillow resize: width or height is required")
+    source_width, source_height = image.size
+    if width is None:
+        assert height is not None
+        size = (max(1, round(source_width * height / source_height)), height)
+    elif height is None:
+        size = (width, max(1, round(source_height * width / source_width)))
     else:
-        size = (ancho, alto)
+        size = (width, height)
     return image.resize(size, Image.Resampling.LANCZOS)
 
 
-def _hoja(image: Image.Image, op: dict[str, Any], index: int) -> tuple[Image.Image, str]:
+def _sheet(image: Image.Image, op: dict[str, Any], index: int) -> tuple[Image.Image, str]:
     """Tile the image into a row-major sheet with 2 px white dividers."""
-    columnas = _positive_int(op, "columnas", index, "hoja")
-    filas = _positive_int(op, "filas", index, "hoja")
-    if columnas is None or filas is None:
-        raise ValueError(f"operaciones[{index}]: pillow hoja: faltan columnas o filas")
-    tile_w = image.width // columnas
-    tile_h = image.height // filas
+    columns = _positive_int(op, "columns", index, "sheet")
+    rows = _positive_int(op, "rows", index, "sheet")
+    if columns is None or rows is None:
+        raise ValueError(f"operations[{index}]: pillow sheet: columns or rows is required")
+    tile_w = image.width // columns
+    tile_h = image.height // rows
     if tile_w < 1 or tile_h < 1:
         raise ValueError(
-            f"operaciones[{index}]: pillow hoja: la imagen es demasiado pequeña "
-            f"para {columnas}x{filas} tiles"
+            f"operations[{index}]: pillow sheet: the image is too small for {columns}x{rows} tiles"
         )
     alpha = _has_alpha(image)
     sheet = Image.new(
         "RGBA" if alpha else "RGB",
         (
-            columnas * tile_w + (columnas - 1) * DIVIDER,
-            filas * tile_h + (filas - 1) * DIVIDER,
+            columns * tile_w + (columns - 1) * DIVIDER,
+            rows * tile_h + (rows - 1) * DIVIDER,
         ),
         (255, 255, 255, 255) if alpha else "white",
     )
-    for row in range(filas):
-        for col in range(columnas):
+    for row in range(rows):
+        for col in range(columns):
             tile = image.crop((col * tile_w, row * tile_h, (col + 1) * tile_w, (row + 1) * tile_h))
             if alpha:
                 tile = tile.convert("RGBA")
@@ -202,28 +201,28 @@ def _apply_op(
     image: Image.Image, op: dict[str, Any], index: int, ext: str
 ) -> tuple[Image.Image, str]:
     """One op on the in-memory image; returns the image and its output ext."""
-    opname = str(op["operacion"])
-    if opname == "convertir":
-        return _convertir(image, op, index)
-    if opname == "redimensionar":
-        return _redimensionar(image, op, index), ext
-    return _hoja(image, op, index)
+    opname = str(op["op"])
+    if opname == "convert":
+        return _convert(image, op, index)
+    if opname == "resize":
+        return _resize(image, op, index), ext
+    return _sheet(image, op, index)
 
 
 def _apply_ops(req: Request) -> tuple[Path, list[Produced]]:
-    """Open ``imagen`` and run every op in order, collecting the outputs."""
+    """Open ``image`` and run every op in order, collecting the outputs."""
     params = dict(req.inputs)
-    imagen = _imagen(params, req)
+    source_path = _image_path(params, req)
     ops = _ops(params)
-    ext = imagen.suffix.lower() if imagen.suffix.lower() in MIME else ".png"
-    with Image.open(imagen) as source:
+    ext = source_path.suffix.lower() if source_path.suffix.lower() in MIME else ".png"
+    with Image.open(source_path) as source:
         current = source.copy()
     produced: list[Produced] = []
     for index, op in enumerate(ops, start=1):
         current, ext = _apply_op(current, op, index, ext)
-        opname = str(op["operacion"])
-        produced.append(Produced(f"{imagen.stem}-{index}-{opname}{ext}", current, ext))
-    return imagen, produced
+        opname = str(op["op"])
+        produced.append(Produced(f"{source_path.stem}-{index}-{opname}{ext}", current, ext))
+    return source_path, produced
 
 
 def _asset(item: Produced, path: Path, params: dict[str, Any]) -> dict[str, Any]:
@@ -235,9 +234,9 @@ def _asset(item: Produced, path: Path, params: dict[str, Any]) -> dict[str, Any]
         "kind": "image",
         "mime": MIME.get(path.suffix.lower(), "image/png"),
         "properties": {"width": width, "height": height},
-        "params": {"imagen": str(params.get("imagen", ""))},
+        "params": {"image": str(params.get("image", ""))},
         "seed": SEED,
-        "inputs": [str(params.get("imagen", ""))],
+        "inputs": [str(params.get("image", ""))],
     }
 
 
@@ -249,7 +248,7 @@ def _asset_name(stem: str) -> str:
 
 @runner.verb("run")
 def run(req: Request) -> dict[str, Any]:
-    _imagen_path, produced = _apply_ops(req)
+    _image_source, produced = _apply_ops(req)
     params = dict(req.inputs)
     assets = []
     for item in produced:
@@ -262,7 +261,7 @@ def run(req: Request) -> dict[str, Any]:
 def _expected(req: Request) -> dict[str, Produced]:
     """The outputs a fresh pass predicts, by filename; empty on bad input."""
     try:
-        _imagen_path, produced = _apply_ops(req)
+        _image_source, produced = _apply_ops(req)
     except (OSError, ValueError, KeyError):
         return {}
     return {item.filename: item for item in produced}
@@ -345,17 +344,17 @@ def _preview_data(path: Path, name: str, prompt: str) -> dict[str, Any]:
 
 
 def _source_stem(params: dict[str, Any]) -> str:
-    """The imagen's stem, or empty when the request carries no imagen."""
-    raw = params.get("imagen")
+    """The image's stem, or empty when the request carries no image."""
+    raw = params.get("image")
     return Path(str(raw)).stem if raw else ""
 
 
 def _prompt(path: Path, stem: str) -> str:
-    """``pillow <operacion> of <stem>`` parsed back from the asset name."""
+    """``pillow <op> of <stem>`` parsed back from the asset name."""
     if not stem:
         stem = _OP_SUFFIX.sub("", path.name.rsplit(".", 1)[0])
     match = _OP_NAME.search(path.name)
-    op = match.group(2) if match else "operacion"
+    op = match.group(2) if match else "op"
     return f"pillow {op} of {stem}" if stem else f"pillow {op}"
 
 

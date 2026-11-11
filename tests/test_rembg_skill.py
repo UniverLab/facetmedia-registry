@@ -2,8 +2,8 @@
 
 The skill is the only place an agent learns the package, so these tests pin
 what a person reads: the front matter and the four headings the core requires
-in order, the capability ids ``rembg.cutout`` and ``rembg.papel`` with the
-damero and ``facet pull rembg``, the lamina_web exclusion, the lab's measured
+in order, the capability ids ``rembg.cutout`` and ``rembg.paper`` with the
+checkerboard and ``facet pull rembg``, the lamina_web exclusion, the lab's measured
 run, the licence attributions, and the approved examples the skill cites.
 """
 
@@ -20,7 +20,7 @@ HEADINGS = ("## When to use", "## Pieces", "## Judging the result", "## Pitfalls
 DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
 #: The lab pieces that ship, each cited in the skill body.
-EXAMPLE_FILES = ("remover.py", "medicion.json", "vista-damero.png", "README.md")
+EXAMPLE_FILES = ("remover.py", "medicion.json", "vista-checkerboard.png", "README.md")
 #: The lab run recorded in ``medicion.json``; the skill states the same numbers.
 LAB_SIZE = [1344, 768]
 LAB_SECONDS = 1.48
@@ -51,11 +51,11 @@ def test_the_four_headings_appear_in_order() -> None:
     assert positions == sorted(positions)
 
 
-def test_the_body_names_the_capability_and_the_damero() -> None:
+def test_the_body_names_the_capability_and_the_checkerboard() -> None:
     body = _body()
     assert "rembg.cutout" in body
-    assert "rembg.papel" in body
-    assert "damero" in body
+    assert "rembg.paper" in body
+    assert "checkerboard" in body
     assert "facet pull rembg" in body
 
 
@@ -94,4 +94,4 @@ def test_the_example_record_carries_the_ported_measurements() -> None:
     assert record["size"] == LAB_SIZE
     assert record["elapsed_seconds"] == LAB_SECONDS
     assert record["transparent_pixels_percent"] == LAB_TRANSPARENT
-    assert record["preview"] == "vista-damero.png"
+    assert record["preview"] == "vista-checkerboard.png"

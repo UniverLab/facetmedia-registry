@@ -3,10 +3,10 @@
 Four modes turn a greyscale source into text rows sampled at half the
 column density (each row covers twice the height of a column's width):
 
-- ``densidad`` maps brightness through a dark-to-light ramp;
-- ``trazo`` maps Sobel edges to stroke directions, flat areas to dots;
+- ``density`` maps brightness through a dark-to-light ramp;
+- ``stroke`` maps Sobel edges to stroke directions, flat areas to dots;
 - ``braille`` thresholds each cell's 2x4 sub-blocks into a braille cell;
-- ``forma`` picks, per cell, the Sometype Mono glyph whose rendered
+- ``shape`` picks, per cell, the Sometype Mono glyph whose rendered
   bitmap has the smallest mean squared difference to the cell.
 """
 
@@ -19,12 +19,12 @@ import numpy as np
 import pyfiglet
 from PIL import Image, ImageDraw, ImageFont
 
-#: Dark-to-light ramp for ``densidad`` (index 0 is the darkest ink).
+#: Dark-to-light ramp for ``density`` (index 0 is the darkest ink).
 RAMP = "@%#*+=-:. "
 #: Braille dot bit per (row, column) inside a 4x2 cell; base is U+2800.
 BRAILLE_BITS = ((0x01, 0x08), (0x02, 0x10), (0x04, 0x20), (0x40, 0x80))
 BRAILLE_BASE = 0x2800
-#: Stroke characters for ``trazo`` by edge direction bin: the stroke runs
+#: Stroke characters for ``stroke`` by edge direction bin: the stroke runs
 #: perpendicular to the gradient, so a vertical edge gets ``│``.
 STROKES = ("─", "╲", "│", "╱")
 #: Half a direction bin in degrees: a stroke rounds to the nearest 45°.
@@ -33,15 +33,15 @@ STROKE_OFFSET = 22.5
 STROKE_STEP = 45.0
 #: Rows sample at half the column density: each cell is twice as tall.
 ASPECT = 0.5
-#: Below this Sobel magnitude a trazo cell is flat (dot or blank).
-TRAZO_FLAT = 0.10
-#: At or above this magnitude a trazo edge gets a stroke, else a dot.
-TRAZO_STRONG = 0.25
+#: Below this Sobel magnitude a stroke cell is flat (dot or blank).
+STROKE_FLAT = 0.10
+#: At or above this magnitude a stroke edge gets a stroke, else a dot.
+STROKE_STRONG = 0.25
 #: Mid grey: darker than this is ink, lighter is paper.
 MID_GREY = 0.5
 #: Pixel size the Sometype Mono atlas and the PNG render use.
 FONT_SIZE = 32
-#: Printable ASCII, the only characters the ``forma`` atlas holds.
+#: Printable ASCII, the only characters the ``shape`` atlas holds.
 GLYPHS = [chr(code) for code in range(0x20, 0x7F)]
 #: Display names for the banner fonts.
 FONT_NAMES = {
@@ -82,7 +82,7 @@ def sample_color(rgb: np.ndarray, width: int) -> np.ndarray:
     return np.asarray(small, dtype=np.uint8)
 
 
-def to_densidad(grey: np.ndarray, width: int) -> list[str]:
+def to_density(grey: np.ndarray, width: int) -> list[str]:
     """Map each grid cell's brightness through :data:`RAMP`."""
     grid = sample_grid(grey, width)
     n = len(RAMP)
@@ -101,7 +101,7 @@ def stroke_index(dy: float, dx: float) -> int:
     return int((degrees + STROKE_OFFSET) // STROKE_STEP) % len(STROKES)
 
 
-def to_trazo(grey: np.ndarray, width: int) -> list[str]:
+def to_stroke(grey: np.ndarray, width: int) -> list[str]:
     """Map Sobel edges to stroke directions, flat cells to dots or blanks."""
     grid = sample_grid(grey, width)
     dy, dx = np.gradient(grid)
@@ -110,11 +110,11 @@ def to_trazo(grey: np.ndarray, width: int) -> list[str]:
     for r in range(grid.shape[0]):
         row: list[str] = []
         for c in range(grid.shape[1]):
-            if magnitude[r, c] < TRAZO_FLAT:
+            if magnitude[r, c] < STROKE_FLAT:
                 row.append("·" if grid[r, c] < MID_GREY else " ")
                 continue
             stroke = STROKES[stroke_index(dy[r, c], dx[r, c])]
-            row.append(stroke if magnitude[r, c] >= TRAZO_STRONG else "·")
+            row.append(stroke if magnitude[r, c] >= STROKE_STRONG else "·")
         lines.append("".join(row))
     return lines
 
@@ -132,7 +132,7 @@ def to_braille(grey: np.ndarray, width: int) -> list[str]:
 
 
 class Atlas(NamedTuple):
-    """The ``forma`` glyph atlas: characters and their ink bitmaps."""
+    """The ``shape`` glyph atlas: characters and their ink bitmaps."""
 
     chars: list[str]
     maps: np.ndarray  # float (n_chars, cell_h, cell_w), 1 is ink
@@ -168,7 +168,7 @@ def cell_inks(grey: np.ndarray, width: int, atlas: Atlas) -> np.ndarray:
     return 1.0 - cells.reshape(rows, atlas.cell_h, columns, atlas.cell_w).transpose(0, 2, 1, 3)
 
 
-def to_forma(grey: np.ndarray, width: int, atlas: Atlas) -> list[str]:
+def to_shape(grey: np.ndarray, width: int, atlas: Atlas) -> list[str]:
     """Pick per cell the atlas glyph with the smallest squared difference.
 
     One matrix of glyph bitmaps against all cells: a single matmul gives
@@ -186,7 +186,7 @@ def to_forma(grey: np.ndarray, width: int, atlas: Atlas) -> list[str]:
 
 
 def shape_error(grey: np.ndarray, width: int, atlas: Atlas, lines: list[str]) -> float:
-    """Mean per-cell bitmap squared error of rendered lines (``forma`` wins)."""
+    """Mean per-cell bitmap squared error of rendered lines (``shape`` wins)."""
     inks = cell_inks(grey, width, atlas)
     rows, columns = inks.shape[0], inks.shape[1]
     table = {char: atlas.maps[i] for i, char in enumerate(atlas.chars)}
@@ -200,7 +200,7 @@ def shape_error(grey: np.ndarray, width: int, atlas: Atlas, lines: list[str]) ->
     return total / max(1, rows * columns)
 
 
-#: The ``trazo`` marks: they fill their cell when the art is re-rendered.
+#: The ``stroke`` marks: they fill their cell when the art is re-rendered.
 STROKE_CHARS = frozenset("─╲│╱·")
 
 
@@ -227,9 +227,9 @@ def cell_bitmap(
 ) -> np.ndarray:
     """One character's ink cell: an atlas glyph, braille dots, a stroke, blank.
 
-    Every mode the package emits is re-renderable: ``densidad`` and
-    ``forma`` are printable ASCII, ``braille`` decodes to its dot bits,
-    and ``trazo``'s marks fill their cell.
+    Every mode the package emits is re-renderable: ``density`` and
+    ``shape`` are printable ASCII, ``braille`` decodes to its dot bits,
+    and ``stroke``'s marks fill their cell.
     """
     glyph = glyphs.get(char)
     if glyph is not None:
@@ -301,9 +301,9 @@ def apply_ansi(lines: list[str], colors: np.ndarray) -> list[str]:
 
 def charset_size(mode: str) -> int:
     """How many distinct characters a mode can emit."""
-    if mode == "densidad":
+    if mode == "density":
         return len(RAMP)
-    if mode == "trazo":
+    if mode == "stroke":
         return 2 + len(STROKES)
     if mode == "braille":
         return 256

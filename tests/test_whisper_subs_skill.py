@@ -2,7 +2,7 @@
 
 The skill is the only place an agent learns the package, so these tests pin
 what a person reads: the front matter and the four headings the core requires
-in order, the capability id ``whisper-subs.subtitulos`` with the srt/vtt
+in order, the capability id ``whisper-subs.subtitles`` with the srt/vtt
 tokens, the extraction-first workflow through the packages that exist in this
 registry (ffmpeg.convert and whisper.transcribe), the handoff to
 ``hyperframes.narrated`` — which reads whisper SRT — and that no references
@@ -47,7 +47,7 @@ def test_the_four_headings_appear_in_order() -> None:
 
 def test_the_body_names_the_capability_and_both_formats() -> None:
     body = _body()
-    assert "whisper-subs.subtitulos" in body
+    assert "whisper-subs.subtitles" in body
     assert "srt" in body and "vtt" in body
     assert "WEBVTT" in body
     assert "00:00:01,500" in body and "00:00:01.500" in body

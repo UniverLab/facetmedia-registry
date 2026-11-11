@@ -4,7 +4,7 @@ The runner is a subprocess of the host ``python`` — the package is stdlib
 only, so there is nothing to pull. Its ``PYTHONPATH`` carries a stub
 ``facet_runner_sdk`` (the pull-time SDK surface), so the test proves the
 ``.srt`` and ``.vtt`` byte shapes from a stub sidecar, the
-``<origen-stem>.<formato>`` filename, the plain ``ValueError``s that facet
+``<source-stem>.<format>`` filename, the plain ``ValueError``s that facet
 reports as ``runner_failed`` (exit 1, naming the 1-based cue), the verify
 verdicts, the generic previews and the doctor checks without any real
 transcription.
@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "whisper-subs"
 MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
 RUNNER = PACKAGE / "runner.py"
-PREVIEW_FIELDS = {"preview", "kind", "summary", "cues", "duration_s", "formato"}
+PREVIEW_FIELDS = {"preview", "kind", "summary", "cues", "duration_s", "format"}
 
 #: The stub sidecar cue count and the last cue end, in seconds.
 CUE_COUNT = 2
@@ -120,7 +120,7 @@ def _request(
     return {
         "protocol": 1,
         "verb": verb,
-        "capability": "whisper-subs.subtitulos",
+        "capability": "whisper-subs.subtitles",
         "depth": depth,
         "inputs": inputs,
         "out_dir": str(out_dir),
@@ -173,7 +173,7 @@ def _run(
     piece = _piece(tmp_path, SIDECAR if sidecar is None else sidecar)
     out = tmp_path / f"out-{tag}"
     out.mkdir()
-    request = _request("run", out, piece, inputs or {"origen": "laboratorio.json"})
+    request = _request("run", out, piece, inputs or {"source": "laboratorio.json"})
     done, result = _call(stub_dir, "run", request, tmp_path, tag)
     return done, result, piece, out
 
@@ -190,16 +190,16 @@ def test_run_writes_the_srt_beside_the_piece_from_the_stem(tmp_path: Path) -> No
     assert asset["name"] == "laboratorio"
     assert asset["kind"] == "text"
     assert asset["mime"] == "application/x-subrip"
-    assert asset["properties"] == {"cues": CUE_COUNT, "duration_s": DURATION_S, "formato": "srt"}
+    assert asset["properties"] == {"cues": CUE_COUNT, "duration_s": DURATION_S, "format": "srt"}
     assert asset["seed"] is None
     assert asset["inputs"] == ["laboratorio.json"]
-    assert asset["params"] == {"origen": "laboratorio.json", "formato": "srt"}
+    assert asset["params"] == {"source": "laboratorio.json", "format": "srt"}
     assert result["tool"]["name"] == MANIFEST["tool_name"]
 
 
 def test_run_writes_the_vtt_with_the_header_and_dot_times(tmp_path: Path) -> None:
     done, result, _piece, out = _run(
-        tmp_path, inputs={"origen": "laboratorio.json", "formato": "vtt"}, tag="vtt"
+        tmp_path, inputs={"source": "laboratorio.json", "format": "vtt"}, tag="vtt"
     )
     assert done.returncode == 0, done.stdout + done.stderr
     assert result is not None
@@ -208,10 +208,10 @@ def test_run_writes_the_vtt_with_the_header_and_dot_times(tmp_path: Path) -> Non
     assert path.read_text(encoding="utf-8") == EXPECTED_VTT
     asset = result["assets"][0]
     assert asset["mime"] == "text/vtt"
-    assert asset["properties"] == {"cues": CUE_COUNT, "duration_s": DURATION_S, "formato": "vtt"}
+    assert asset["properties"] == {"cues": CUE_COUNT, "duration_s": DURATION_S, "format": "vtt"}
 
 
-def test_run_fails_a_missing_origen_as_a_plain_error(tmp_path: Path) -> None:
+def test_run_fails_a_missing_source_as_a_plain_error(tmp_path: Path) -> None:
     stub_dir = _stub_dir(tmp_path)
     piece = _piece(tmp_path, SIDECAR)
     out = tmp_path / "out-missing"
@@ -219,13 +219,13 @@ def test_run_fails_a_missing_origen_as_a_plain_error(tmp_path: Path) -> None:
     done, result = _call(
         stub_dir,
         "run",
-        _request("run", out, piece, {"origen": "otro.json"}),
+        _request("run", out, piece, {"source": "otro.json"}),
         tmp_path,
         "missing",
     )
     assert done.returncode != 0
     assert result is None
-    assert "no such origen" in done.stderr
+    assert "no such source" in done.stderr
 
 
 def test_run_fails_an_overlap_naming_the_second_cue(tmp_path: Path) -> None:
@@ -268,7 +268,7 @@ def test_verify_passes_the_run_outputs_and_rejects_a_broken_file(tmp_path: Path)
         "verify",
         out,
         tmp_path / "piece",
-        {"origen": "laboratorio.json"},
+        {"source": "laboratorio.json"},
         assets=(out / "laboratorio.srt", out / "laboratorio.vtt", broken),
     )
     done, verdict = _call(stub_dir, "verify", request, tmp_path, "verify")
@@ -321,8 +321,8 @@ def test_verify_rejects_an_overlapping_file_and_a_missing_header(tmp_path: Path)
 
 def test_preview_writes_the_generic_fields_per_asset(tmp_path: Path) -> None:
     for tag, inputs, name in (
-        ("srt", {"origen": "laboratorio.json"}, "laboratorio.srt"),
-        ("vtt", {"origen": "laboratorio.json", "formato": "vtt"}, "laboratorio.vtt"),
+        ("srt", {"source": "laboratorio.json"}, "laboratorio.srt"),
+        ("vtt", {"source": "laboratorio.json", "format": "vtt"}, "laboratorio.vtt"),
     ):
         done, _result, _piece, out = _run(tmp_path, inputs=inputs, tag=f"preview-{tag}")
         assert done.returncode == 0, done.stdout + done.stderr
@@ -343,8 +343,8 @@ def test_preview_writes_the_generic_fields_per_asset(tmp_path: Path) -> None:
         assert set(data) == {"preview", "kind", "summary", "fields"}
         assert data["preview"] == 1
         assert data["kind"] == "text"
-        assert set(data["fields"]) == {"cues", "duration_s", "formato"}
-        assert data["fields"] == {"cues": CUE_COUNT, "duration_s": DURATION_S, "formato": tag}
+        assert set(data["fields"]) == {"cues", "duration_s", "format"}
+        assert data["fields"] == {"cues": CUE_COUNT, "duration_s": DURATION_S, "format": tag}
         assert data["summary"] == "2 cues \u00b7 3.2 s \u00b7 " + tag
 
 
@@ -386,6 +386,6 @@ def test_doctor_full_builds_both_formats_and_cleans_up(tmp_path: Path) -> None:
     assert full.returncode == 0, full.stdout + full.stderr
     assert full_result is not None
     checks = {check["name"]: check for check in full_result["checks"]}
-    assert checks["subtitulos"]["ok"] is True, checks["subtitulos"]
+    assert checks["subtitles"]["ok"] is True, checks["subtitles"]
     # The doctor leaves nothing in the out dir: build, check, remove.
     assert not list(out.iterdir())

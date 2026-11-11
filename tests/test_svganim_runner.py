@@ -2,10 +2,10 @@
 
 The runner is a subprocess of the host ``node``. Its ``FACET_NODE_PATH``
 points at fixture package directories carrying only ``package.json`` and an
-``index.js``: a fake ``opentype.js`` the guion requires, and a stub ``sharp``
-that records the arguments and writes a 1280x720 PNG. That proves the guion
-runs with the datos path, the SVG guards fail before anything is written, the
-PNG comes from sharp at 2x, and the image preview carries the guion basename —
+``index.js``: a fake ``opentype.js`` the script requires, and a stub ``sharp``
+that records the arguments and writes a 1280x720 PNG. That proves the script
+runs with the data path, the SVG guards fail before anything is written, the
+PNG comes from sharp at 2x, and the image preview carries the script basename —
 without downloading a tarball or a browser.
 """
 
@@ -77,22 +77,22 @@ module.exports = function sharp(input, options) {
 };
 """
 
-GUION = """
+SCRIPT = """
 const fs = require("node:fs");
 const opentype = require("opentype.js");
 
-const datos = fs.readFileSync(process.argv[2], "utf8").trim();
+const data = fs.readFileSync(process.argv[2], "utf8").trim();
 process.stdout.write(
   '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720"' +
     ' viewBox="0 0 1280 720">' +
     '<style>@keyframes subir{from{opacity:0}to{opacity:1}}</style>' +
     `<path d="M0 0h10v10z" data-opentype="${opentype.version}"/>` +
-    `<desc>${datos}</desc>` +
+    `<desc>${data}</desc>` +
     "</svg>",
 );
 """
 
-TEXT_GUION = """
+TEXT_SCRIPT = """
 const fs = require("node:fs");
 require("opentype.js");
 
@@ -105,7 +105,7 @@ process.stdout.write(
 );
 """
 
-NO_KEYFRAMES_GUION = """
+NO_KEYFRAMES_SCRIPT = """
 const fs = require("node:fs");
 
 fs.readFileSync(process.argv[2], "utf8");
@@ -115,7 +115,7 @@ process.stdout.write(
 );
 """
 
-SCRIPT_GUION = """
+SCRIPT_WITH_TAG = """
 const fs = require("node:fs");
 
 fs.readFileSync(process.argv[2], "utf8");
@@ -160,12 +160,12 @@ def _dirs(packages: dict[str, Path]) -> list[Path]:
 
 
 def _piece(
-    root: Path, guion: str = GUION, name: str = "banner-navidad.cjs"
+    root: Path, script_body: str = SCRIPT, name: str = "banner-navidad.cjs"
 ) -> tuple[Path, Path, Path]:
     piece = root / "piece"
     piece.mkdir(exist_ok=True)
     script = piece / name
-    script.write_text(guion, encoding="utf-8")
+    script.write_text(script_body, encoding="utf-8")
     data = piece / "banner-navidad.json"
     data.write_text('{"titulo": "Feliz Navidad"}', encoding="utf-8")
     return piece, script, data
@@ -236,7 +236,7 @@ def test_run_bakes_the_svg_injects_the_data_and_renders_the_png(tmp_path: Path) 
     done, result = _invoke(
         tmp_path,
         "run",
-        _request("run", out, piece, guion="banner-navidad.cjs", datos="banner-navidad.json"),
+        _request("run", out, piece, script="banner-navidad.cjs", data="banner-navidad.json"),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode == 0, done.stderr
@@ -264,13 +264,13 @@ def test_run_bakes_the_svg_injects_the_data_and_renders_the_png(tmp_path: Path) 
 
 def test_a_text_element_fails_naming_the_opentype_rule(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
-    piece, _script, _data = _piece(tmp_path, TEXT_GUION, "texto-crudo.cjs")
+    piece, _script, _data = _piece(tmp_path, TEXT_SCRIPT, "texto-crudo.cjs")
     out = tmp_path / "out"
     out.mkdir()
     done, result = _invoke(
         tmp_path,
         "run",
-        _request("run", out, piece, guion="texto-crudo.cjs", datos="banner-navidad.json"),
+        _request("run", out, piece, script="texto-crudo.cjs", data="banner-navidad.json"),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode == 1
@@ -283,23 +283,23 @@ def test_a_text_element_fails_naming_the_opentype_rule(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("guion", "name", "trap"),
+    ("script_body", "name", "trap"),
     [
-        (NO_KEYFRAMES_GUION, "sin-keyframes.cjs", "@keyframes"),
-        (SCRIPT_GUION, "con-script.cjs", "<script>"),
+        (NO_KEYFRAMES_SCRIPT, "sin-keyframes.cjs", "@keyframes"),
+        (SCRIPT_WITH_TAG, "con-script.cjs", "<script>"),
     ],
 )
 def test_an_unsafe_svg_fails_before_anything_is_written(
-    tmp_path: Path, guion: str, name: str, trap: str
+    tmp_path: Path, script_body: str, name: str, trap: str
 ) -> None:
     packages = _fixture(tmp_path)
-    piece, _script, _data = _piece(tmp_path, guion, name)
+    piece, _script, _data = _piece(tmp_path, script_body, name)
     out = tmp_path / "out"
     out.mkdir()
     done, result = _invoke(
         tmp_path,
         "run",
-        _request("run", out, piece, guion=name, datos="banner-navidad.json"),
+        _request("run", out, piece, script=name, data="banner-navidad.json"),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode == 1
@@ -309,7 +309,7 @@ def test_an_unsafe_svg_fails_before_anything_is_written(
     assert _sharp_calls(tmp_path) == []
 
 
-def test_a_missing_datos_file_fails_before_the_guion_runs(tmp_path: Path) -> None:
+def test_a_missing_data_file_fails_before_the_script_runs(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
     piece, _script, _data = _piece(tmp_path)
     out = tmp_path / "out"
@@ -317,12 +317,12 @@ def test_a_missing_datos_file_fails_before_the_guion_runs(tmp_path: Path) -> Non
     done, result = _invoke(
         tmp_path,
         "run",
-        _request("run", out, piece, guion="banner-navidad.cjs", datos="falta.json"),
+        _request("run", out, piece, script="banner-navidad.cjs", data="falta.json"),
         _environment(tmp_path, _dirs(packages)),
     )
     assert done.returncode == 1
     assert result is None
-    assert "datos" in done.stderr
+    assert "data" in done.stderr
     assert "not found" in done.stderr
     assert _sharp_calls(tmp_path) == []
 
@@ -339,7 +339,7 @@ def test_verify_accepts_svg_and_png_and_rejects_a_bad_file(tmp_path: Path) -> No
     bad = out / "notes.txt"
     bad.write_text("not an image\n", encoding="utf-8")
     request = _request(
-        "verify", out, piece, guion="banner-navidad.cjs", datos="banner-navidad.json"
+        "verify", out, piece, script="banner-navidad.cjs", data="banner-navidad.json"
     )
     request["assets"] = [str(svg), str(png), str(bad)]
     done, result = _invoke(tmp_path, "verify", request, _environment(tmp_path, _dirs(packages)))
@@ -359,7 +359,7 @@ def test_verify_rejects_an_svg_that_carries_text(tmp_path: Path) -> None:
     svg = out / "texto.svg"
     svg.write_text(GOOD_SVG.replace('<path d="M0 0h10v10z"/>', '<text x="1">x</text>'), "utf-8")
     request = _request(
-        "verify", out, piece, guion="banner-navidad.cjs", datos="banner-navidad.json"
+        "verify", out, piece, script="banner-navidad.cjs", data="banner-navidad.json"
     )
     request["assets"] = [str(svg)]
     done, result = _invoke(tmp_path, "verify", request, _environment(tmp_path, _dirs(packages)))
@@ -369,7 +369,7 @@ def test_verify_rejects_an_svg_that_carries_text(tmp_path: Path) -> None:
     assert "<text>" in verdict["metrics"]["error"]
 
 
-def test_preview_writes_the_image_fields_from_the_guion_basename(tmp_path: Path) -> None:
+def test_preview_writes_the_image_fields_from_the_script_basename(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
     piece, _script, _data = _piece(tmp_path)
     out = tmp_path / "out"
@@ -379,7 +379,7 @@ def test_preview_writes_the_image_fields_from_the_guion_basename(tmp_path: Path)
     svg = out / "banner-navidad.svg"
     svg.write_text(GOOD_SVG, encoding="utf-8")
     request = _request(
-        "preview", out, piece, guion="banner-navidad.cjs", datos="banner-navidad.json"
+        "preview", out, piece, script="banner-navidad.cjs", data="banner-navidad.json"
     )
     request["assets"] = [str(png), str(svg)]
     done, result = _invoke(tmp_path, "preview", request, _environment(tmp_path, _dirs(packages)))

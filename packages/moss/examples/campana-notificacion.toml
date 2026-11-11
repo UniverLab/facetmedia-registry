@@ -1,4 +1,4 @@
 [inputs]
-descripcion = "A bright, pleasant notification chime, two short bell tones rising in pitch"
-nombre = "campana-notificacion"
-segundos = 2
+description = "A bright, pleasant notification chime, two short bell tones rising in pitch"
+name = "campana-notificacion"
+seconds = 2

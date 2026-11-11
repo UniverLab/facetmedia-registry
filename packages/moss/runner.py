@@ -48,7 +48,7 @@ os.environ.setdefault("TORCHDYNAMO_DISABLE", "1")
 runner = Runner()
 
 #: The one capability this package serves.
-CAPABILITY = "moss.efecto"
+CAPABILITY = "moss.sfx"
 #: The manifest model id and the pipeline's HF repo id.
 MODEL = "moss-soundeffect-v2"
 MODEL_REPO = "OpenMOSS-Team/MOSS-SoundEffect-v2.0"
@@ -113,9 +113,9 @@ def _audio() -> Any:
 def _params(inputs: dict[str, Any]) -> dict[str, Any]:
     """The effect's fields with the manifest defaults resolved."""
     return {
-        "descripcion": str(inputs["descripcion"]),
-        "segundos": float(inputs["segundos"]),
-        "nombre": str(inputs["nombre"]),
+        "description": str(inputs["description"]),
+        "seconds": float(inputs["seconds"]),
+        "name": str(inputs["name"]),
         "target-lufs": float(inputs.get("target-lufs", TARGET_LUFS)),
     }
 
@@ -130,7 +130,7 @@ def _check_memory() -> None:
     torch = importlib.import_module("torch")
     if not torch.cuda.is_available():
         raise RuntimeError(
-            "memory rule: moss.efecto needs an NVIDIA GPU — the model loads on "
+            "memory rule: moss.sfx needs an NVIDIA GPU — the model loads on "
             "CPU and only the active stage moves to the card; there is no CPU path"
         )
     _free, total = torch.cuda.mem_get_info()
@@ -201,12 +201,12 @@ def _samples(audio: Any) -> Any:
 
 
 def _effect(pipe: Any, params: dict[str, Any], out_dir: Path) -> dict[str, Any]:
-    """One effect: generate 30 s, the pipeline trims to ``segundos``, normalise."""
+    """One effect: generate 30 s, the pipeline trims to ``seconds``, normalise."""
     audio = _audio()
     started = time.monotonic()
     generated = pipe(
-        prompt=params["descripcion"],
-        seconds=params["segundos"],
+        prompt=params["description"],
+        seconds=params["seconds"],
         seed=SEED,
         num_inference_steps=INFERENCE_STEPS,
         cfg_scale=CFG_SCALE,
@@ -215,7 +215,7 @@ def _effect(pipe: Any, params: dict[str, Any], out_dir: Path) -> dict[str, Any]:
     )
     rate = int(pipe.sample_rate)
     samples = audio.normalize(_samples(generated), rate, params["target-lufs"])
-    path = out_dir / f"{params['nombre']}.wav"
+    path = out_dir / f"{params['name']}.wav"
     audio.write_wav(path, samples, rate)
     properties = {
         "duration_s": round(audio.duration_s(samples, rate), 3),
@@ -231,7 +231,7 @@ def _effect(pipe: Any, params: dict[str, Any], out_dir: Path) -> dict[str, Any]:
     )
     return {
         "file": path.name,
-        "name": params["nombre"],
+        "name": params["name"],
         "kind": "audio",
         "mime": "audio/wav",
         "properties": properties,
@@ -246,9 +246,9 @@ def run(req: Request) -> dict[str, Any]:
     if req.capability != CAPABILITY:
         raise ValueError(f"unknown capability: {req.capability}")
     params = _params(dict(req.inputs))
-    segundos = params["segundos"]
-    if not 0.0 < segundos <= SECONDS_MAX:
-        raise ValueError(f"segundos must be in (0, {SECONDS_MAX:.0f}], got {segundos}")
+    seconds = params["seconds"]
+    if not 0.0 < seconds <= SECONDS_MAX:
+        raise ValueError(f"seconds must be in (0, {SECONDS_MAX:.0f}], got {seconds}")
     _check_memory()
     pipe = _load_pipeline(req)
     return {"tool": _tool(), "assets": [_effect(pipe, params, req.out_dir)]}
@@ -257,7 +257,7 @@ def run(req: Request) -> dict[str, Any]:
 @runner.verb("verify")
 def verify(req: Request) -> dict[str, Any]:
     params = _params(dict(req.inputs))
-    clips = {params["nombre"]: params}
+    clips = {params["name"]: params}
     audio = _audio()
     entries = []
     for path in req.assets:
@@ -267,7 +267,7 @@ def verify(req: Request) -> dict[str, Any]:
 
 
 def _clip_for(clips: dict[str, dict[str, Any]], path: Path) -> dict[str, Any]:
-    """The effect that produced this asset; the stem is its ``nombre``."""
+    """The effect that produced this asset; the stem is its ``name``."""
     clip = clips.get(path.stem)
     if clip is None:
         raise ValueError(f"{path.name}: no effect named {path.stem!r} in the piece")
@@ -338,7 +338,7 @@ def _preview_data(audio: Any, path: Path, target_lufs: float) -> dict[str, Any]:
 @runner.verb("preview")
 def preview(req: Request) -> dict[str, Any]:
     params = _params(dict(req.inputs))
-    clips = {params["nombre"]: params}
+    clips = {params["name"]: params}
     audio = _audio()
     entries: list[dict[str, Any]] = []
     for path in req.assets:

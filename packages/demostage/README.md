@@ -12,7 +12,7 @@ A facet runner has no terminal on stdin/stdout, so the run never captures a
 live session. It performs exactly two steps, in this order:
 
 ```bash
-demo record <partitura> -o <out>/_demostage/demo.rec   # allocates its own PTY
+demo record <score> -o <out>/_demostage/demo.rec   # allocates its own PTY
 demo export gif,svg <out>/_demostage/demo.rec          # plays the .rec back
 ```
 
@@ -32,7 +32,7 @@ below.
 `demo capture` records an interactive session and normalizes it to a score. It
 reads stdin from an interactive terminal, and a facet runner has none, so the
 capability deliberately offers no capture path. The capability takes a
-hand-written score (`partitura`) instead; the demo CLI's own contract for that
+hand-written score (`score`) instead; the demo CLI's own contract for that
 is "You can skip capture and author `demo.toml` by hand, then `record` +
 `export`."
 
@@ -55,10 +55,10 @@ cache. When the binary is missing or older, `doctor` reports the check as
 
 ```toml
 [inputs]
-partitura = "demo/demo.toml"
+score = "demo/demo.toml"
 ```
 
-`partitura` is resolved relative to the piece and is the score the runner
+`score` is resolved relative to the piece and is the score the runner
 executes. A score declares the demo name, the export directory, the typing
 seed, the layout (width, height, fps, font) and a timeline:
 

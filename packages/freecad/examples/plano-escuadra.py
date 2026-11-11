@@ -1,6 +1,6 @@
 """Workshop drawing of the escuadra bracket: three views on one A3 sheet.
 
-Runs inside freecadcmd as ``plano-escuadra.py <out_dir>/<name> <pieza>`` and
+Runs inside freecadcmd as ``plano-escuadra.py <out_dir>/<name> <part>`` and
 writes ``<prefix>-01.svg``: front, top and right views of the part projected
 with ``TechDraw.projectToSVG``, laid out from each view's projected bounds at the largest drafting scale
 that fits, on one
@@ -48,14 +48,14 @@ def _fit_scale(sizes: list[tuple[float, float]], cell_w: float, cell_h: float) -
 
 def main() -> None:
     if len(sys.argv) != 3:
-        raise SystemExit(f"usage: {sys.argv[0]} <out_dir>/<name> <pieza>")
-    prefix, pieza = sys.argv[1], sys.argv[2]
+        raise SystemExit(f"usage: {sys.argv[0]} <out_dir>/<name> <part>")
+    prefix, part = sys.argv[1], sys.argv[2]
 
     import FreeCAD
     import Part
     import TechDraw
 
-    shape = Part.read(pieza)
+    shape = Part.read(part)
     area_x0 = FRAME_MM + GAP_MM
     area_y0 = FRAME_MM + GAP_MM
     area_w = SHEET_WIDTH_MM - 2 * (FRAME_MM + GAP_MM)
@@ -69,7 +69,7 @@ def main() -> None:
         # projection is (x, -y) in the SVG fragment, which flips y itself.
         bounds = TechDraw.project(shape, vector)[0].BoundBox
         if bounds.XLength <= 0 or bounds.YLength <= 0:
-            raise SystemExit(f"cannot lay out the part {pieza}: the {label} view is empty")
+            raise SystemExit(f"cannot lay out the part {part}: the {label} view is empty")
         views.append((label, TechDraw.projectToSVG(shape, vector), bounds))
     scale = _fit_scale([(b.XLength, b.YLength) for _, _, b in views], cell_w, area_h)
 
@@ -85,7 +85,7 @@ def main() -> None:
             f"<!-- {label} -->{fragment}</g>"
         )
 
-    title = f"{Path(pieza).name} · {_scale_label(scale)}"
+    title = f"{Path(part).name} · {_scale_label(scale)}"
     sheet = (
         f'<svg xmlns="http://www.w3.org/2000/svg"'
         f' width="{SHEET_WIDTH_MM:g}mm" height="{SHEET_HEIGHT_MM:g}mm"'

@@ -24,17 +24,17 @@ sung music forever.
 
 ## Pieces
 
-One bed per piece: a `caption`, a `name` and a `duracion` in seconds.
+One bed per piece: a `caption`, a `name` and a `duration` in seconds.
 
 ```toml
 [inputs]
 caption = "Lively, joyful Baroque chamber orchestra piece in the style of a Vivaldi allegro. Bright strings playing fast staccato and spiccato runs, harpsichord continuo, playful solo violin and flute melodies. Energetic, festive and elegant. Acoustic instruments only. No drums, no percussion, no bass beat, no synthesizers, no electronic sounds."
 name = "clasica-alegre"
-duracion = 30
+duration = 30
 ```
 
 `name` matches `[a-z0-9][a-z0-9-]*` and writes `<name>.wav` beside the piece.
-`duracion` is at most 30.
+`duration` is at most 30.
 
 Both approved pieces ship as examples, each with its WAV:
 `examples/clasica-alegre.toml` (major, Vivaldi-style allegro) and
@@ -45,7 +45,7 @@ Their captions, and the piece shape above, are in
 ## Judging the result
 
 `verify` opens the WAV and passes when its duration is within 1 s of
-`duracion` and its peak sits above -40 dBFS, reporting both. The run
+`duration` and its peak sits above -40 dBFS, reporting both. The run
 normalises the bed to -16 LUFS and records `duration_s`, `sample_rate_hz`,
 `lufs` and `peak_dbfs`; the preview serves the waveform and loudness in the
 audio viewer.

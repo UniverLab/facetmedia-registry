@@ -25,7 +25,7 @@ Output names come from the input's base name in the input's own directory:
 screenshots each PDF page inside the same headless Chromium run — the page
 count comes from the bundled pdf.js and the `@page` size (or the laid-out
 scroll height over the page count) sets each clip — into `page-01.png`,
-`page-02.png`, …; `deck.pagina` writes a single `page-01.png`. A placed PDF
+`page-02.png`, …; `deck.page` writes a single `page-01.png`. A placed PDF
 with no source HTML is rasterized the same way through `pdfgrab.html`, which
 renders it with pdf.js inside a fresh headless Chromium run.
 

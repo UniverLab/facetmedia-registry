@@ -18,13 +18,13 @@ shipping one.
   same browser through `pdfgrab.html`.
 - **The pinned Chromium.** `facet pull deck` installs it once (~200 MB, shared
   by the three packages); the runner reads it from `FACET_BROWSER` — no host
-  lookup, no download. Every raster — the per-page PNGs, the `deck.pagina`
+  lookup, no download. Every raster — the per-page PNGs, the `deck.page`
   text check and the placed-PDF preview — comes from this Chromium or from the
   bundled pdf.js, never from a host tool install.
 
 ## The deck format
 
-A deck is one HTML file named by `fuente`. It owns its geometry:
+A deck is one HTML file named by `source`. It owns its geometry:
 
 ```css
 @page { size: 1280px 720px; margin: 0; }
@@ -67,9 +67,9 @@ mismatch. The verifier it reports is `chromium-pdfjs`.
 
 ## One-page pieces
 
-`deck.pagina` exports a one-page piece — an infographic or a poster written as
+`deck.page` exports a one-page piece — an infographic or a poster written as
 HTML + CSS + SVG — to a single-page PDF plus its `page-01.png`. It takes the
-same `fuente`, `prompt` and `seed` inputs as `deck.slides`, but `fuente` is the
+same `source`, `prompt` and `seed` inputs as `deck.slides`, but `source` is the
 piece itself: no `@page` rule, no page breaks.
 
 The render is the lab's default path, not the slides print path: the runner
@@ -104,16 +104,16 @@ the checks above are the whole contract.
 ## The presenter runner
 
 `deck.presenter` builds the speaking copy of the same deck: one source, speaker
-view and notes attached per slide. It takes the same `fuente` and a `notas`
-array of `{ pagina, texto }` tables — one per slide, `pagina` a distinct 1-based
-slide number — orders them by `pagina`, and writes two assets:
+view and notes attached per slide. It takes the same `source` and a `notes`
+array of `{ page, text }` tables — one per slide, `page` a distinct 1-based
+slide number — orders them by `page`, and writes two assets:
 
 - **`<name>.present.html`** — the deck with local resources inlined as data
   URIs, plus the presenter CSS, `window.__PZ_NOTES__` and the presenter script
   injected before `</body>`. Kind `document`, mime `text/html`, properties
   `{ slides, notes }`.
 - **`<name>.notes.md`** — the materialized companion, one non-empty `---`
-  separated section per note in `pagina` order. Kind `text`, the generic
+  separated section per note in `page` order. Kind `text`, the generic
   viewer, properties `{ slides, notes }`.
 
 A missing local image ref throws `runner_failed` naming the ref; a missing

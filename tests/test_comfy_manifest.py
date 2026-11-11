@@ -381,7 +381,7 @@ def test_the_clip_negative_is_an_optional_patternless_string() -> None:
     assert "pattern" not in negative
     assert "default" not in negative
     assert "default" in negative["description"]
-    assert "rapido" in negative["description"]
+    assert "fast" in negative["description"]
 
 
 def test_still_and_edit_have_no_negative() -> None:
@@ -468,7 +468,7 @@ def test_the_skill_plate_example_validates() -> None:
 def test_the_clip_workflow_is_the_wan_enum() -> None:
     workflow = CLIP["inputs"]["workflow"]
     assert workflow["type"] == "enum"
-    assert workflow["values"] == ["wan22-i2v", "wan22-i2v-rapido"]
+    assert workflow["values"] == ["wan22-i2v", "wan22-i2v-fast"]
     assert workflow["default"] == "wan22-i2v"
     assert workflow["default"] in workflow["values"]
     assert "draft" in workflow["description"]
@@ -602,7 +602,7 @@ def test_the_skill_documents_the_flows_and_the_server() -> None:
         "flux2-klein-4b",
         "flux2-klein-img2img",
         "wan22-i2v",
-        "wan22-i2v-rapido",
+        "wan22-i2v-fast",
     ):
         assert flow in text
     assert "--disable-pinned-memory" in text

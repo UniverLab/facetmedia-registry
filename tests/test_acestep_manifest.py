@@ -4,7 +4,7 @@ The registry suite runs without the core, so these checks read the manifest as
 data: the ``[engine.server]`` a facet starts, the two checkpoints the server
 fetches, and the closed set of inputs facet validates a piece against. The
 approved allegro piece is the regression test that the input names and the
-``duracion`` bound are real.
+``duration`` bound are real.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ EXAMPLE = PACKAGE / "examples" / "clasica-alegre.toml"
 #: The requirements and the cap the manifest declares.
 RAM_GB = 16
 DISK_GB = 24
-MAX_DURACION = 30
+MAX_DURATION = 30
 DURATION_TOLERANCE_S = 1.0
 PEAK_DBFS_MIN = -40.0
 SERVER_TIMEOUT_S = 600
@@ -86,16 +86,16 @@ def test_the_two_models_are_backend_owned_and_mit() -> None:
             assert key not in model, key
 
 
-def test_the_bed_inputs_are_caption_name_and_duracion() -> None:
-    assert set(INPUTS) == {"caption", "name", "duracion"}
+def test_the_bed_inputs_are_caption_name_and_duration() -> None:
+    assert set(INPUTS) == {"caption", "name", "duration"}
     assert INPUTS["caption"]["type"] == "string"
     assert INPUTS["caption"]["required"] is True
     assert INPUTS["name"]["type"] == "string"
     assert INPUTS["name"]["required"] is True
     assert INPUTS["name"]["pattern"] == "^[a-z0-9][a-z0-9-]*$"
-    assert INPUTS["duracion"]["type"] == "number"
-    assert INPUTS["duracion"]["required"] is True
-    assert INPUTS["duracion"]["max"] == MAX_DURACION
+    assert INPUTS["duration"]["type"] == "number"
+    assert INPUTS["duration"]["required"] is True
+    assert INPUTS["duration"]["max"] == MAX_DURATION
 
 
 def test_the_bed_verifies_duration_and_peak() -> None:
@@ -109,7 +109,7 @@ def test_the_example_piece_is_runnable() -> None:
     data = tomllib.loads(EXAMPLE.read_text(encoding="utf-8"))
     inputs = data["inputs"]
     assert set(inputs) <= set(INPUTS)
-    assert set(inputs) == {"caption", "name", "duracion"}
+    assert set(inputs) == {"caption", "name", "duration"}
     assert re.fullmatch(INPUTS["name"]["pattern"], inputs["name"])
-    assert inputs["duracion"] == MAX_DURACION
+    assert inputs["duration"] == MAX_DURATION
     assert "No drums, no percussion, no bass beat, no synthesizers" in inputs["caption"]

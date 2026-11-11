@@ -21,10 +21,11 @@ entry = "main.tex"
 bibliography = "refs.bib"
 ```
 
-- `[document]` has exactly `title`, `author` and `template`. `title` is the
-  piece's `nombre`, `author` is `autor`, and `template` is always `general`.
+- `[document]` has exactly `title`, `author` and `template`. `title` comes
+  from the piece's `name`, `author` from its `author`, and `template` is always
+  `general`.
 - `[build]` has `entry`, the main file's own name as it sits in the stage —
-  `main.tex` above, or `hola-mundo.tex` when `principal` names that file.
+  `main.tex` above, or `hola-mundo.tex` when `main` names that file.
 - `bibliography` is written only when a `.bib` file sits beside the piece; with
   no `.bib` beside it the key is absent and no bibliography is read.
 - `texforge init` never runs: it is interactive and would overwrite the file
@@ -49,7 +50,7 @@ texforge preview --out <dir>
 ```
 
 - `texforge build` compiles the staged project from `[build] entry`; the runner
-  allows it 900 s. It names the PDF after the sanitized title, so `nombre`
+  allows it 900 s. It names the PDF after the sanitized title, so `name`
   decides the file: `tesis` gives `tesis.pdf`.
 - `texforge check` is the linter, and `verify` gates on it: a broken `\ref`, a
   missing `\cite` or a missing `\input` is an error and fails the run.

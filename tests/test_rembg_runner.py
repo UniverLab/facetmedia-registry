@@ -5,7 +5,7 @@ carries a stub ``facet_runner_sdk`` (the pull-time SDK surface) and a stub
 ``rembg`` module whose ``new_session`` records the model name, providers
 and ``U2NET_HOME``, and whose ``remove`` returns a deterministic RGBA
 image — the right half fully transparent — so the test can prove the
-alpha PNG and the checkerboard ``-damero`` beside it, the image previews,
+alpha PNG and the checkerboard ``-checkerboard`` beside it, the image previews,
 the verify verdicts and the doctor's weights check, all without onnxruntime
 or the real 4.6 MB weights.
 """
@@ -157,7 +157,7 @@ def _model_file(home: Path, content: bytes | None = None) -> Path:
 
 
 def _piece(tmp_path: Path) -> Path:
-    """The piece dir with a small RGB foto for the cutout."""
+    """The piece dir with a small RGB photo for the cutout."""
     piece = tmp_path / "piece"
     piece.mkdir()
     gradient = PIL.Image.new("RGB", (WIDTH, HEIGHT))
@@ -169,16 +169,16 @@ def _piece(tmp_path: Path) -> Path:
     return piece
 
 
-def _papel_piece(tmp_path: Path) -> Path:
+def _paper_piece(tmp_path: Path) -> Path:
     """A wide plate: flat paper P on the right, an object O in the left half."""
-    piece = tmp_path / "papel-piece"
+    piece = tmp_path / "paper-piece"
     piece.mkdir()
     plate = PIL.Image.new("RGB", (LAMINA_WIDTH, LAMINA_HEIGHT), PAPER)
     pixels = plate.load()
     for y in range(10, 54):
         for x in range(10, 100):
             pixels[x, y] = OBJECT
-    plate.save(piece / "lamina.png")
+    plate.save(piece / "plate.png")
     return piece
 
 
@@ -192,7 +192,7 @@ def _request(
     capability: str = "rembg.cutout",
 ) -> dict[str, object]:
     if inputs is None:
-        inputs = {"foto": "entrada.png"}
+        inputs = {"photo": "entrada.png"}
     return {
         "protocol": 1,
         "verb": verb,
@@ -244,7 +244,7 @@ def _environment(stub_dir: Path, tmp_path: Path) -> dict[str, str]:
     }
 
 
-def test_run_writes_the_alpha_png_and_the_damero(tmp_path: Path) -> None:
+def test_run_writes_the_alpha_png_and_the_checkerboard(tmp_path: Path) -> None:
     stub_dir = _stub_modules(tmp_path)
     home = tmp_path / "home"
     weights = _model_file(home)
@@ -258,13 +258,13 @@ def test_run_writes_the_alpha_png_and_the_damero(tmp_path: Path) -> None:
     assert done.returncode == 0, done.stdout + done.stderr
     assert result is not None
     cutout = out / "entrada.png"
-    damero = out / "entrada-damero.png"
-    assert cutout.is_file() and damero.is_file()
+    checkerboard = out / "entrada-checkerboard.png"
+    assert cutout.is_file() and checkerboard.is_file()
     with PIL.Image.open(cutout) as image:
         assert image.mode == "RGBA"
         assert image.size == (WIDTH, HEIGHT)
         assert image.getchannel("A").getextrema() == (0, 255)
-    with PIL.Image.open(damero) as image:
+    with PIL.Image.open(checkerboard) as image:
         assert image.mode == "RGB"
         assert image.size == (WIDTH, HEIGHT)
         # The transparent right half shows only checker colours; the opaque
@@ -278,11 +278,11 @@ def test_run_writes_the_alpha_png_and_the_damero(tmp_path: Path) -> None:
     assert session["providers"] == ["CPUExecutionProvider"]
     assert session["u2net_home"] == str(weights.parent)
     assets = result["assets"]
-    assert [asset["file"] for asset in assets] == ["entrada.png", "entrada-damero.png"]
+    assert [asset["file"] for asset in assets] == ["entrada.png", "entrada-checkerboard.png"]
     assert all(asset["kind"] == "image" for asset in assets)
     assert all(asset["name"] == "entrada" for asset in assets)
     assert all(asset["seed"] == 0 for asset in assets)
-    assert assets[1]["properties"]["damero"] is True
+    assert assets[1]["properties"]["checkerboard"] is True
     assert result["tool"]["name"] == MANIFEST["tool_name"]
 
 
@@ -294,23 +294,23 @@ def test_preview_writes_the_image_fields_for_both_assets(tmp_path: Path) -> None
     out = tmp_path / "out"
     out.mkdir()
     PIL.Image.new("RGBA", (WIDTH, HEIGHT)).save(out / "entrada.png")
-    PIL.Image.new("RGB", (WIDTH, HEIGHT)).save(out / "entrada-damero.png")
+    PIL.Image.new("RGB", (WIDTH, HEIGHT)).save(out / "entrada-checkerboard.png")
     env = _environment(stub_dir, tmp_path)
     request = _request(
         "preview",
         out,
         piece,
         {"u2netp": weights},
-        assets=(out / "entrada.png", out / "entrada-damero.png"),
+        assets=(out / "entrada.png", out / "entrada-checkerboard.png"),
     )
     done, result = _call(stub_dir, "preview", request, tmp_path, env)
     assert done.returncode == 0, done.stdout + done.stderr
     assert result is not None
     assert [entry["file"] for entry in result["assets"]] == [
         "entrada.png",
-        "entrada-damero.png",
+        "entrada-checkerboard.png",
     ]
-    for name in ("entrada.png", "entrada-damero.png"):
+    for name in ("entrada.png", "entrada-checkerboard.png"):
         data = json.loads((out / f"{name}.preview.json").read_text(encoding="utf-8"))
         assert set(data) == PREVIEW_FIELDS
         assert data["preview"] == 1
@@ -329,7 +329,7 @@ def test_verify_accepts_the_pair_and_rejects_a_bad_file(tmp_path: Path) -> None:
     out = tmp_path / "out"
     out.mkdir()
     PIL.Image.new("RGBA", (WIDTH, HEIGHT)).save(out / "entrada.png")
-    PIL.Image.new("RGB", (WIDTH, HEIGHT)).save(out / "entrada-damero.png")
+    PIL.Image.new("RGB", (WIDTH, HEIGHT)).save(out / "entrada-checkerboard.png")
     rgb_as_cutout = tmp_path / "wrong" / "entrada.png"
     rgb_as_cutout.parent.mkdir()
     PIL.Image.new("RGB", (WIDTH, HEIGHT)).save(rgb_as_cutout)
@@ -341,16 +341,16 @@ def test_verify_accepts_the_pair_and_rejects_a_bad_file(tmp_path: Path) -> None:
         out,
         piece,
         {"u2netp": weights},
-        assets=(out / "entrada.png", out / "entrada-damero.png", rgb_as_cutout, notes),
+        assets=(out / "entrada.png", out / "entrada-checkerboard.png", rgb_as_cutout, notes),
     )
     done, result = _call(stub_dir, "verify", request, tmp_path, env)
     assert done.returncode == 0, done.stdout + done.stderr
     assert result is not None
-    cutout, damero, wrong_mode, bad = result["assets"]
+    cutout, checkerboard, wrong_mode, bad = result["assets"]
     assert cutout["file"] == "entrada.png" and cutout["passed"] is True
     assert cutout["metrics"]["mode"] == "RGBA"
-    assert damero["file"] == "entrada-damero.png" and damero["passed"] is True
-    assert damero["metrics"]["mode"] == "RGB"
+    assert checkerboard["file"] == "entrada-checkerboard.png" and checkerboard["passed"] is True
+    assert checkerboard["metrics"]["mode"] == "RGB"
     assert wrong_mode["file"] == "entrada.png" and wrong_mode["passed"] is False
     assert wrong_mode["metrics"]["mode"] == "RGB"
     assert bad["file"] == "notes.txt" and bad["passed"] is False
@@ -427,12 +427,12 @@ def test_doctor_fails_a_same_size_weights_with_the_wrong_hash(tmp_path: Path) ->
     assert weights_check["fix"] == "facet pull rembg"
 
 
-def test_run_papel_writes_one_rgb_asset_on_flat_paper(tmp_path: Path) -> None:
+def test_run_paper_writes_one_rgb_asset_on_flat_paper(tmp_path: Path) -> None:
     """Papel keeps the object's pixels and replaces everything else with paper."""
     stub_dir = _stub_modules(tmp_path)
     home = tmp_path / "home"
     weights = _model_file(home)
-    piece = _papel_piece(tmp_path)
+    piece = _paper_piece(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     env = _environment(stub_dir, tmp_path)
@@ -441,15 +441,15 @@ def test_run_papel_writes_one_rgb_asset_on_flat_paper(tmp_path: Path) -> None:
         out,
         piece,
         {"u2netp": weights},
-        inputs={"lamina": "lamina.png"},
-        capability="rembg.papel",
+        inputs={"plate": "plate.png"},
+        capability="rembg.paper",
     )
     done, result = _call(stub_dir, "run", request, tmp_path, env)
     assert done.returncode == 0, done.stdout + done.stderr
     assert result is not None
-    path = out / "lamina-papel.png"
+    path = out / "plate-paper.png"
     assert path.is_file()
-    assert not (out / "lamina-damero.png").exists()
+    assert not (out / "plate-checkerboard.png").exists()
     with PIL.Image.open(path) as image:
         assert image.mode == "RGB"
         assert image.size == (LAMINA_WIDTH, LAMINA_HEIGHT)
@@ -459,24 +459,24 @@ def test_run_papel_writes_one_rgb_asset_on_flat_paper(tmp_path: Path) -> None:
     session = json.loads((tmp_path / "session.json").read_text(encoding="utf-8"))
     assert session["name"] == "u2netp"
     assets = result["assets"]
-    assert [asset["file"] for asset in assets] == ["lamina-papel.png"]
-    assert assets[0]["name"] == "lamina"
+    assert [asset["file"] for asset in assets] == ["plate-paper.png"]
+    assert assets[0]["name"] == "plate"
     assert assets[0]["kind"] == "image"
     assert assets[0]["seed"] == 0
-    assert "damero" not in assets[0]["properties"]
+    assert "checkerboard" not in assets[0]["properties"]
 
 
-def test_verify_papel_expects_rgb_and_rejects_rgba(tmp_path: Path) -> None:
-    """Without the papel branch the RGBA fallback would reject every output."""
+def test_verify_paper_expects_rgb_and_rejects_rgba(tmp_path: Path) -> None:
+    """Without the paper branch the RGBA fallback would reject every output."""
     stub_dir = _stub_modules(tmp_path)
     home = tmp_path / "home"
     weights = _model_file(home)
-    piece = _papel_piece(tmp_path)
+    piece = _paper_piece(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    good = out / "lamina-papel.png"
+    good = out / "plate-paper.png"
     PIL.Image.new("RGB", (LAMINA_WIDTH, LAMINA_HEIGHT), PAPER).save(good)
-    stale = tmp_path / "stale" / "lamina-papel.png"
+    stale = tmp_path / "stale" / "plate-paper.png"
     stale.parent.mkdir()
     PIL.Image.new("RGBA", (LAMINA_WIDTH, LAMINA_HEIGHT), (*PAPER, 255)).save(stale)
     env = _environment(stub_dir, tmp_path)
@@ -486,8 +486,8 @@ def test_verify_papel_expects_rgb_and_rejects_rgba(tmp_path: Path) -> None:
         piece,
         {"u2netp": weights},
         assets=(good, stale),
-        inputs={"lamina": "lamina.png"},
-        capability="rembg.papel",
+        inputs={"plate": "plate.png"},
+        capability="rembg.paper",
     )
     done, result = _call(stub_dir, "verify", request, tmp_path, env)
     assert done.returncode == 0, done.stdout + done.stderr
@@ -499,14 +499,14 @@ def test_verify_papel_expects_rgb_and_rejects_rgba(tmp_path: Path) -> None:
     assert rgba["metrics"]["mode"] == "RGBA"
 
 
-def test_preview_papel_writes_the_image_fields(tmp_path: Path) -> None:
+def test_preview_paper_writes_the_image_fields(tmp_path: Path) -> None:
     stub_dir = _stub_modules(tmp_path)
     home = tmp_path / "home"
     weights = _model_file(home)
-    piece = _papel_piece(tmp_path)
+    piece = _paper_piece(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    asset = out / "lamina-papel.png"
+    asset = out / "plate-paper.png"
     PIL.Image.new("RGB", (LAMINA_WIDTH, LAMINA_HEIGHT), PAPER).save(asset)
     env = _environment(stub_dir, tmp_path)
     request = _request(
@@ -515,16 +515,16 @@ def test_preview_papel_writes_the_image_fields(tmp_path: Path) -> None:
         piece,
         {"u2netp": weights},
         assets=(asset,),
-        inputs={"lamina": "lamina.png"},
-        capability="rembg.papel",
+        inputs={"plate": "plate.png"},
+        capability="rembg.paper",
     )
     done, result = _call(stub_dir, "preview", request, tmp_path, env)
     assert done.returncode == 0, done.stdout + done.stderr
     assert result is not None
-    assert [entry["file"] for entry in result["assets"]] == ["lamina-papel.png"]
-    data = json.loads((out / "lamina-papel.png.preview.json").read_text(encoding="utf-8"))
+    assert [entry["file"] for entry in result["assets"]] == ["plate-paper.png"]
+    data = json.loads((out / "plate-paper.png.preview.json").read_text(encoding="utf-8"))
     assert set(data) == PREVIEW_FIELDS
-    assert data["prompt"] == "papel limpio de lamina"
-    assert data["name"] == "lamina"
+    assert data["prompt"] == "clean paper of plate"
+    assert data["name"] == "plate"
     assert data["seed"] == 0
     assert (data["width"], data["height"]) == (LAMINA_WIDTH, LAMINA_HEIGHT)

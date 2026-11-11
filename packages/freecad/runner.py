@@ -3,8 +3,8 @@
 facet drives a ``host-app`` package through the host binary: it launches
 ``freecadcmd freecad_run.py --pass runner.py <verb> --input <request>
 --result <result>``, so this entry runs inside FreeCAD's Python and its four
-verbs use what FreeCAD ships. ``run`` executes the piece's ``guion`` with
-``sys.argv`` set to ``[guion, <out_dir>/<name>, pieza]`` (the lab's output
+verbs use what FreeCAD ships. ``run`` executes the piece's ``script`` with
+``sys.argv`` set to ``[script, <out_dir>/<name>, part]`` (the lab's output
 prefix convention), requires the ``<name>-NN.svg`` sheets it writes, renders
 them into ``<name>.pdf`` with FreeCAD's bundled PySide6 (``QSvgRenderer``
 into ``QPdfWriter``) and returns the PDF plus one image asset per sheet, in
@@ -43,7 +43,7 @@ APP = "freecad"
 CONFIG_KEY = "freecad.path"
 ENV = "FREECAD_EXE"
 MIN_VERSION = "1.1.4"
-CAPABILITY = "freecad.plano"
+CAPABILITY = "freecad.drawing"
 #: What the doctor calls the fix a missing host application needs.
 FIX = f"facet config set {CONFIG_KEY} /path/to/{APP}"
 NOT_FOUND = (
@@ -150,21 +150,21 @@ def _freecad() -> Any:
         return None
 
 
-# --- freecad.plano: the guion, its PDF and its pages.
+# --- freecad.drawing: the script, its PDF and its pages.
 
 
 def _run(request: dict[str, Any]) -> dict[str, Any]:
-    """Execute the guion on the part and report the drawing it wrote."""
+    """Execute the script on the part and report the drawing it wrote."""
     params = dict(request.get("inputs") or {})
     piece_dir = str(request.get("piece_dir") or "")
-    guion = _resolve(_required(params, "guion"), piece_dir)
-    pieza = _resolve(_required(params, "pieza"), piece_dir)
-    name = _asset_name(guion)
+    script = _resolve(_required(params, "script"), piece_dir)
+    part = _resolve(_required(params, "part"), piece_dir)
+    name = _asset_name(script)
     windows = _on_windows()
     out_dir = _host_path(str(request["out_dir"]), windows)
     prefix = posixpath.join(out_dir, name)
     _clear_sheets(prefix)
-    _execute(_host_path(guion, windows), prefix, _host_path(pieza, windows))
+    _execute(_host_path(script, windows), prefix, _host_path(part, windows))
     pdf = Path(f"{prefix}.pdf")
     sheets = _collect_sheets(prefix, name)
     _write_pdf(sheets, pdf)
@@ -177,11 +177,11 @@ def _run(request: dict[str, Any]) -> dict[str, Any]:
             "properties": {"page_count": len(sheets)},
             "params": params,
             "seed": None,
-            "inputs": [guion, pieza],
+            "inputs": [script, part],
         }
     ]
     assets.extend(
-        _sheet_asset(sheet, number, params, guion, pieza)
+        _sheet_asset(sheet, number, params, script, part)
         for number, sheet in enumerate(sheets, start=1)
     )
     return {"tool": _tool(), "assets": assets}
@@ -211,25 +211,25 @@ def _resolve(value: str, piece_dir: str) -> str:
     return posixpath.join(piece_dir, value)
 
 
-def _asset_name(guion: str) -> str:
+def _asset_name(script: str) -> str:
     """``dibujo.py`` -> ``dibujo``: the asset base name, sanitized."""
-    base = guion.replace("\\", "/")
+    base = script.replace("\\", "/")
     stem = posixpath.splitext(posixpath.basename(base))[0].lower()
     safe = UNSAFE_NAME.sub("-", stem).strip("-")
-    return safe or "plano"
+    return safe or "drawing"
 
 
-def _execute(guion: str, prefix: str, pieza: str) -> None:
-    """Run the guion with the lab's argv and surface any failure loudly."""
-    sys.argv = [guion, prefix, pieza]
+def _execute(script: str, prefix: str, part: str) -> None:
+    """Run the script with the lab's argv and surface any failure loudly."""
+    sys.argv = [script, prefix, part]
     try:
-        runpy.run_path(guion, run_name="__main__")
+        runpy.run_path(script, run_name="__main__")
     except SystemExit as exit_request:
         code = exit_request.code
         if code not in (None, 0):
-            raise RuntimeError(f"guion exited {code}") from None
+            raise RuntimeError(f"script exited {code}") from None
     except BaseException:
-        raise RuntimeError(f"guion failed:\n{traceback.format_exc()}") from None
+        raise RuntimeError(f"script failed:\n{traceback.format_exc()}") from None
 
 
 def _tool() -> dict[str, str]:
@@ -239,7 +239,7 @@ def _tool() -> dict[str, str]:
 
 
 def _sheet_asset(
-    sheet: Sheet, number: int, params: dict[str, Any], guion: str, pieza: str
+    sheet: Sheet, number: int, params: dict[str, Any], script: str, part: str
 ) -> dict[str, Any]:
     """One sheet as a run asset: an image in page order with its mm size."""
     return {
@@ -250,11 +250,11 @@ def _sheet_asset(
         "properties": {"page": number, "width_mm": sheet.width_mm, "height_mm": sheet.height_mm},
         "params": params,
         "seed": None,
-        "inputs": [guion, pieza],
+        "inputs": [script, part],
     }
 
 
-# --- the sheets: the guion's SVGs, rendered with FreeCAD's own Qt.
+# --- the sheets: the script's SVGs, rendered with FreeCAD's own Qt.
 
 
 #: The Qt application the sheet renderer needs; held for the process's life.
@@ -262,7 +262,7 @@ _QT_APP: list[Any] = []
 
 
 class Sheet(NamedTuple):
-    """One guion sheet: its file and its size in millimetres."""
+    """One script sheet: its file and its size in millimetres."""
 
     path: Path
     width_mm: float
@@ -280,10 +280,10 @@ def _clear_sheets(prefix: str) -> None:
 
 
 def _collect_sheets(prefix: str, name: str) -> list[Sheet]:
-    """The guion's ``<prefix>-NN.svg`` sheets, consecutive from 01."""
+    """The script's ``<prefix>-NN.svg`` sheets, consecutive from 01."""
     first = Path(f"{prefix}-01.svg")
     if not first.is_file():
-        raise RuntimeError(f"guion wrote no {name}-01.svg")
+        raise RuntimeError(f"script wrote no {name}-01.svg")
     sheets: list[Sheet] = []
     number = 1
     while True:
@@ -461,12 +461,12 @@ def _sheet_page(asset: Path) -> int:
 
 
 def _sheet_prompt(request: dict[str, Any], filename: str) -> str:
-    """The guion and part that drew the sheet, or the sheet itself when unknown."""
+    """The script and part that drew the sheet, or the sheet itself when unknown."""
     inputs = request.get("inputs") or {}
-    guion = inputs.get("guion")
-    pieza = inputs.get("pieza")
-    if isinstance(guion, str) and guion.strip() and isinstance(pieza, str) and pieza.strip():
-        return f"{_basename(guion)} · {_basename(pieza)}"
+    script = inputs.get("script")
+    part = inputs.get("part")
+    if isinstance(script, str) and script.strip() and isinstance(part, str) and part.strip():
+        return f"{_basename(script)} · {_basename(part)}"
     return f"freecad sheet {filename}"
 
 
@@ -672,7 +672,7 @@ def _converted_request(binary: str, input_path: Path) -> Path:
     request = json.loads(input_path.read_text(encoding="utf-8"))
     inputs = dict(request.get("inputs") or {})
     piece_dir = str(request.get("piece_dir") or "")
-    for key in ("guion", "pieza"):
+    for key in ("script", "part"):
         value = inputs.get(key)
         if isinstance(value, str) and value:
             resolved = _resolve(value, piece_dir)

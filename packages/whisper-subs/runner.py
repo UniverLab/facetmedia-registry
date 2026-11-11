@@ -1,10 +1,10 @@
 """The whisper-subs package runner: validated subtitles from a sidecar.
 
 Four verbs on the runner SDK (``facet_runner_sdk``, copied into the
-environment at pull): ``run`` reads the piece's ``origen`` — a whisper
+environment at pull): ``run`` reads the piece's ``source`` — a whisper
 ``<name>.json`` sidecar whose ``segments`` carry ``start_s``, ``end_s``
 and ``text`` — validates the cues in order and writes
-``<origen-stem>.srt`` (comma times) or ``.vtt`` (``WEBVTT``, dot times)
+``<source-stem>.srt`` (comma times) or ``.vtt`` (``WEBVTT``, dot times)
 beside the piece; ``verify`` re-parses the written file and judges cue
 count, duration, monotonic order and header; ``preview`` writes the
 generic viewer's fields; ``doctor`` checks the package files and the
@@ -30,7 +30,7 @@ from facet_runner_sdk import Request, Runner
 
 runner = Runner()
 
-#: The formats the manifest's ``formato`` enum allows, with their mimes.
+#: The formats the manifest's ``format`` enum allows, with their mimes.
 FORMATS = ("srt", "vtt")
 MIME = {"srt": "application/x-subrip", "vtt": "text/vtt"}
 #: The manifest's verify threshold, repeated so run never drifts from it.
@@ -56,28 +56,28 @@ def _tool() -> dict[str, str]:
     return {"name": str(manifest["tool_name"]), "version": str(manifest["version"])}
 
 
-def _origen(params: dict[str, Any], req: Request) -> Path:
+def _source_path(params: dict[str, Any], req: Request) -> Path:
     """The piece's whisper sidecar, resolved against the piece directory."""
-    raw = params.get("origen")
+    raw = params.get("source")
     if not raw:
-        raise ValueError("the piece has no origen")
+        raise ValueError("the piece has no source")
     path = Path(str(raw))
     if not path.is_absolute():
         path = req.piece_dir / path
     if not path.is_file():
-        raise ValueError(f"{raw}: no such origen")
+        raise ValueError(f"{raw}: no such source")
     return path
 
 
-def _formato(params: dict[str, Any]) -> str:
+def _format_param(params: dict[str, Any]) -> str:
     """The output format, defaulted to ``srt`` the way the manifest does."""
-    formato = str(params.get("formato", "srt"))
-    if formato not in FORMATS:
-        raise ValueError(f"formato desconocido {formato!r}: usa srt o vtt")
-    return formato
+    out_format = str(params.get("format", "srt"))
+    if out_format not in FORMATS:
+        raise ValueError(f"unknown format {out_format!r}: use srt or vtt")
+    return out_format
 
 
-def _formato_of(path: Path) -> str:
+def _format_of(path: Path) -> str:
     """The format an asset file carries, named by its suffix."""
     return path.suffix.lower().removeprefix(".")
 
@@ -85,26 +85,26 @@ def _formato_of(path: Path) -> str:
 def _asset_name(stem: str) -> str:
     """A stem folded into the record's ``[a-z0-9][a-z0-9-]*`` name shape."""
     name = re.sub(r"[^a-z0-9-]+", "-", stem.lower()).strip("-")
-    return name or "subtitulos"
+    return name or "subtitles"
 
 
 def _asset(
-    origen: Path, formato: str, path: Path, cues: Sequence[formats.Cue], params: dict[str, Any]
+    source: Path, out_format: str, path: Path, cues: Sequence[formats.Cue], params: dict[str, Any]
 ) -> dict[str, Any]:
     """One subtitle record: text kind, the monotonically checked timings."""
     return {
         "file": path.name,
-        "name": _asset_name(origen.stem),
+        "name": _asset_name(source.stem),
         "kind": "text",
-        "mime": MIME[formato],
+        "mime": MIME[out_format],
         "properties": {
             "cues": len(cues),
             "duration_s": round(cues[-1].end_s, 3),
-            "formato": formato,
+            "format": out_format,
         },
-        "params": {"origen": str(params.get("origen", "")), "formato": formato},
+        "params": {"source": str(params.get("source", "")), "format": out_format},
         "seed": None,
-        "inputs": [str(params.get("origen", ""))],
+        "inputs": [str(params.get("source", ""))],
     }
 
 
@@ -112,14 +112,14 @@ def _asset(
 def run(req: Request) -> dict[str, Any]:
     """Validate the sidecar and write the subtitle file beside the piece."""
     params = dict(req.inputs)
-    origen = _origen(params, req)
-    formato = _formato(params)
-    cues = formats.read_sidecar(origen)
+    source = _source_path(params, req)
+    out_format = _format_param(params)
+    cues = formats.read_sidecar(source)
     formats.validate_cues(cues)
-    body = formats.to_vtt(cues) if formato == "vtt" else formats.to_srt(cues)
-    path = req.out_dir / f"{origen.stem}.{formato}"
+    body = formats.to_vtt(cues) if out_format == "vtt" else formats.to_srt(cues)
+    path = req.out_dir / f"{source.stem}.{out_format}"
     path.write_text(body, encoding="utf-8")
-    return {"tool": _tool(), "assets": [_asset(origen, formato, path, cues, params)]}
+    return {"tool": _tool(), "assets": [_asset(source, out_format, path, cues, params)]}
 
 
 def _verdict(file: str, passed: bool, metrics: dict[str, Any]) -> dict[str, Any]:
@@ -133,7 +133,7 @@ def _verdict(file: str, passed: bool, metrics: dict[str, Any]) -> dict[str, Any]
     }
 
 
-def _subtitle_metrics(text: str, formato: str) -> dict[str, Any]:
+def _subtitle_metrics(text: str, out_format: str) -> dict[str, Any]:
     """What verify reports: the cues, the last end, the order, the header."""
     timings = formats.parse_timings(text)
     return {
@@ -142,7 +142,7 @@ def _subtitle_metrics(text: str, formato: str) -> dict[str, Any]:
         if timings
         else 0.0,
         "monotonic": _monotonic(timings),
-        "header": _header_ok(text, formato),
+        "header": _header_ok(text, out_format),
     }
 
 
@@ -153,9 +153,9 @@ def _monotonic(timings: Sequence[tuple[int, int]]) -> bool:
     )
 
 
-def _header_ok(text: str, formato: str) -> bool:
+def _header_ok(text: str, out_format: str) -> bool:
     """SRT opens on cue ``1``; VTT opens on the ``WEBVTT`` header line."""
-    if formato == "vtt":
+    if out_format == "vtt":
         return text.startswith("WEBVTT")
     first = text.splitlines()[0].strip() if text else ""
     return first == "1"
@@ -167,7 +167,7 @@ def _verify_asset(path: Path) -> dict[str, Any]:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
         return _verdict(path.name, False, {"error": str(exc), "cues": 0, "monotonic": False})
-    metrics = _subtitle_metrics(text, _formato_of(path))
+    metrics = _subtitle_metrics(text, _format_of(path))
     passed = metrics["cues"] >= CUES_MIN and metrics["monotonic"] and metrics["header"]
     return _verdict(path.name, passed, metrics)
 
@@ -179,14 +179,14 @@ def verify(req: Request) -> dict[str, Any]:
 
 def _preview_data(path: Path) -> dict[str, Any]:
     """The generic preview: cue count, last cue's end, the format."""
-    formato = _formato_of(path)
-    metrics = _subtitle_metrics(path.read_text(encoding="utf-8"), formato)
+    out_format = _format_of(path)
+    metrics = _subtitle_metrics(path.read_text(encoding="utf-8"), out_format)
     fields = {
         "cues": metrics["cues"],
         "duration_s": metrics["duration_s"],
-        "formato": formato,
+        "format": out_format,
     }
-    summary = f"{fields['cues']} cues \u00b7 {fields['duration_s']:.1f} s \u00b7 {formato}"
+    summary = f"{fields['cues']} cues \u00b7 {fields['duration_s']:.1f} s \u00b7 {out_format}"
     return {"preview": 1, "kind": "text", "summary": summary, "fields": fields}
 
 
@@ -236,9 +236,9 @@ def _doctor_bytes_ok(srt_text: str, vtt_text: str) -> None:
         raise ValueError(f"the .vtt build is wrong: {vtt_text!r}")
 
 
-def _doctor_subtitulos(req: Request) -> dict[str, Any]:
+def _doctor_subtitles(req: Request) -> dict[str, Any]:
     """Full depth: the stub sidecar builds both formats in the out dir."""
-    sidecar = req.out_dir / "doctor.origen.json"
+    sidecar = req.out_dir / "doctor.source.json"
     srt = req.out_dir / "doctor.srt"
     vtt = req.out_dir / "doctor.vtt"
     try:
@@ -251,12 +251,12 @@ def _doctor_subtitulos(req: Request) -> dict[str, Any]:
         }
         _doctor_bytes_ok(string_by_file[srt], string_by_file[vtt])
     except (OSError, ValueError) as exc:
-        return _check("subtitulos", False, str(exc), "facet pull whisper-subs")
+        return _check("subtitles", False, str(exc), "facet pull whisper-subs")
     finally:
         sidecar.unlink(missing_ok=True)
         srt.unlink(missing_ok=True)
         vtt.unlink(missing_ok=True)
-    return _check("subtitulos", True, "2 cues \u2192 doctor.srt + doctor.vtt beside the piece")
+    return _check("subtitles", True, "2 cues \u2192 doctor.srt + doctor.vtt beside the piece")
 
 
 @runner.verb("doctor")
@@ -264,7 +264,7 @@ def doctor(req: Request) -> dict[str, Any]:
     """Quick: the files and the timestamp formats. Full: also the build."""
     checks = [_doctor_files(), _doctor_formats()]
     if req.depth == "full":
-        checks.append(_doctor_subtitulos(req))
+        checks.append(_doctor_subtitles(req))
     return {"checks": checks}
 
 

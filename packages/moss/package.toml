@@ -69,36 +69,36 @@ commercial_use = true
 requires_acceptance = false
 terms_url = "https://huggingface.co/OpenMOSS-Team/MOSS-SoundEffect-v2.0"
 
-[capabilities.efecto]
+[capabilities.sfx]
 summary = "Sound effect from an English description, about 40 s per effect whatever its length, at most 30 s."
 kind = "audio"
 
-[capabilities.efecto.inputs.descripcion]
+[capabilities.sfx.inputs.description]
 type = "string"
 required = true
 description = "English effect description; the model appends 'duration: <seconds>s' itself."
 
-[capabilities.efecto.inputs.segundos]
+[capabilities.sfx.inputs.seconds]
 type = "number"
 required = true
 max = 30
 description = "Seconds of effect, up to 30; the pipeline always denoises 30 s and trims."
 
-[capabilities.efecto.inputs.nombre]
+[capabilities.sfx.inputs.name]
 type = "string"
 required = true
 pattern = "^[a-z0-9][a-z0-9-]*$"
 description = "Asset base name: writes <name>.wav at 48 kHz mono."
 
-[capabilities.efecto.inputs.target-lufs]
+[capabilities.sfx.inputs.target-lufs]
 type = "number"
 default = -23.0
 min = -30
 max = -10
 description = "Normalisation target in LUFS; -23 suits beds under voice, pass a louder target for hits."
 
-[capabilities.efecto.verify]
+[capabilities.sfx.verify]
 thresholds = { lufs_tol = 1.0 }
 
-[capabilities.efecto.preview]
+[capabilities.sfx.preview]
 viewer = "audio"

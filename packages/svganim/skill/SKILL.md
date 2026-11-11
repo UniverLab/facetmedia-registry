@@ -21,21 +21,21 @@ description: Bake a self-contained animated SVG from a Node script and its data,
 
 ```toml
 [inputs]
-guion = "banner-navidad.cjs"
-datos = "banner-navidad.json"
+script = "banner-navidad.cjs"
+data = "banner-navidad.json"
 ```
 
-`guion` is a CommonJS script run as `node guion datos`; it reads the data
-file path from `argv[2]` and writes the finished SVG to stdout. `datos` is
+`script` is a CommonJS script run as `node script data`; it reads the data
+file path from `argv[2]` and writes the finished SVG to stdout. `data` is
 that data file, resolved relative to the piece. `run` writes
-`<guion>.svg` and a 2x `<guion>.png` beside each other in the output
+`<script>.svg` and a 2x `<script>.png` beside each other in the output
 directory.
 
 ## Judging the result
 
 `verify` re-reads the baked SVG and passes only a well-formed document with
 CSS `@keyframes`, no `<script>`, and no `<text>` element; the PNG must carry
-a valid signature. `preview` writes the image kind's fields with the guion
+a valid signature. `preview` writes the image kind's fields with the script
 basename as the prompt and seed 0. A person then looks at the PNG: a `<text>`
 that slipped through, a clipped label or a missing frame is caught by eye.
 
@@ -43,7 +43,7 @@ that slipped through, a clipped label or a missing frame is caught by eye.
 
 - **Text as paths.** A `<text>` element fails `runner_failed`, exit 1 —
   convert every label with `opentype.js` before writing the SVG; the
-  `parse`/`getPath`/`toPathData` recipe and the minimal guion skeleton are
+  `parse`/`getPath`/`toPathData` recipe and the minimal script skeleton are
   in `references/build-banners.md`.
 - **No JavaScript.** A `<script>` is refused: GitHub strips it, so animate
   with `@keyframes` inside the document.

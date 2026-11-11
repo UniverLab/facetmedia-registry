@@ -70,7 +70,7 @@ CLIP_SHIFT = 8
 CLIP_LENGTH = 49
 CLIP_FPS = 24
 #: The draft clip flow: FastWan's LoRA, four steps and no CFG.
-RAPIDO_FLOW = "wan22-i2v-rapido"
+RAPIDO_FLOW = "wan22-i2v-fast"
 RAPIDO_STEPS = 4
 RAPIDO_CFG = 1
 RAPIDO_STRENGTH = 1.0
@@ -225,7 +225,7 @@ try:
     spec.loader.exec_module(module)
 except SystemExit:
     pass
-print(module._flow_name("comfy.clip", {"workflow": "wan22-i2v-rapido"}))
+print(module._flow_name("comfy.clip", {"workflow": "wan22-i2v-fast"}))
 """
 
 

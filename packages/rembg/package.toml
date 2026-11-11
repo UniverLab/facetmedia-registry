@@ -57,22 +57,22 @@ terms_url = "https://github.com/xuebinqin/U-2-Net"
 summary = "Background removal from a photo with rembg's U2NetP on CPU, writing the alpha PNG and a checkerboard preview for edge review"
 kind = "image"
 
-[capabilities.cutout.inputs.foto]
+[capabilities.cutout.inputs.photo]
 type = "path"
 required = true
-description = "Photo to cut out (PNG, JPEG or WebP), resolved relative to the piece file; writes <foto-stem>.png with alpha and <foto-stem>-damero.png over a checkerboard."
+description = "Photo to cut out (PNG, JPEG or WebP), resolved relative to the piece file; writes <photo-stem>.png with alpha and <photo-stem>-checkerboard.png over a checkerboard."
 
 [capabilities.cutout.preview]
 viewer = "image"
 
-[capabilities.papel]
+[capabilities.paper]
 summary = "Clean paper for a plate: the object keeps its original pixels while everything outside its rembg U2NetP silhouette becomes even paper with grain"
 kind = "image"
 
-[capabilities.papel.inputs.lamina]
+[capabilities.paper.inputs.plate]
 type = "path"
 required = true
-description = "Plate photo to clean (PNG, JPEG or WebP), resolved relative to the piece file; writes <lamina-stem>-papel.png as even paper with grain behind the object."
+description = "Plate photo to clean (PNG, JPEG or WebP), resolved relative to the piece file; writes <plate-stem>-paper.png as even paper with grain behind the object."
 
-[capabilities.papel.preview]
+[capabilities.paper.preview]
 viewer = "image"

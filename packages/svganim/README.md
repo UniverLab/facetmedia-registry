@@ -2,7 +2,7 @@
 
 Bake a self-contained animated SVG from a Node script and its data, then
 render the agent PNG from that same SVG. `svganim.bake` is the package's only
-capability: the piece's `guion` owns the drawing, `opentype.js` turns every
+capability: the piece's `script` owns the drawing, `opentype.js` turns every
 label into a `<path>`, and CSS `@keyframes` carries the motion — no
 JavaScript, so the file plays inside an `<img>` on GitHub and embeds unchanged
 in HyperFrames.
@@ -25,22 +25,22 @@ in HyperFrames.
 
 ## The script shape
 
-`guion` is a CommonJS script run as `node guion datos` with the piece
+`script` is a CommonJS script run as `node script data` with the piece
 directory as its working directory:
 
 ```js
 const fs = require("node:fs");
 const opentype = require("opentype.js");
 
-const datos = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+const data = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
 // ... draw with opentype.js, write <path> elements and @keyframes ...
 process.stdout.write(svg);
 ```
 
 It reads the data file path from `argv[2]` — never a hard-coded path — and
-writes the whole SVG document to stdout. `datos` is that file, resolved
+writes the whole SVG document to stdout. `data` is that file, resolved
 relative to the piece; `run` passes its absolute path as `argv[2]`. The SVG
-goes to `<guion>.svg` in the output directory.
+goes to `<script>.svg` in the output directory.
 
 ## Text as paths
 
@@ -75,14 +75,14 @@ dividers, one reveal. Send the piece to `hyperframes` instead when:
 
 ## The verbs
 
-- `run` resolves `guion` and `datos` relative to the piece, runs the script,
+- `run` resolves `script` and `data` relative to the piece, runs the script,
   validates the SVG, writes `<name>.svg`, renders `<name>.png` with sharp, and
   reports both as image assets.
 - `verify` re-applies the SVG guards (well-formed, `@keyframes`, no
   `<script>`, no `<text>`) and checks the PNG signature.
 - `preview` writes `<asset>.preview.json` in the image kind's shape, with the
-  guion basename as the prompt and seed 0 — the bake is deterministic given
-  `datos`, so the seed labels the record.
+  script basename as the prompt and seed 0 — the bake is deterministic given
+  `data`, so the seed labels the record.
 - `doctor` reports the extracted `opentype.js` and `sharp` packages; a
   missing one names the fix: run through facet so the pinned npm tarballs
   land under the facet home.
@@ -91,5 +91,5 @@ dividers, one reveal. Send the piece to `hyperframes` instead when:
 
 - **`FACET_NODE` and `FACET_NODE_PATH`** are set by facet; the runner refuses
   to run outside it.
-- **`NODE_PATH`** is set by the runner for the guion, through the temporary
+- **`NODE_PATH`** is set by the runner for the script, through the temporary
   module root holding the staged packages.

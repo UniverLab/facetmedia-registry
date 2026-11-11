@@ -15,14 +15,14 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
-const pagina = require("./pagina.js");
+const onePage = require("./page.js");
 const raster = require("./raster.js");
 
 const PLAYWRIGHT = "playwright-core";
 const BROWSER_VAR = "FACET_BROWSER";
 const BROWSER_FIX = "facet pull deck";
 const BROWSER_MISSING = `${BROWSER_VAR} is not set or not executable; run ${BROWSER_FIX}`;
-const PAGINA = "deck.pagina";
+const PAGE = "deck.page";
 const MIN_NODE_MAJOR = 22;
 const MAX_SUMMARY = 160;
 const VIEWPORT = { width: 1060, height: 800 };
@@ -102,7 +102,7 @@ async function dispatch(verb, request) {
   const presenter = String(request.capability || "") === PRESENTER;
   if (verb === "run") {
     if (presenter) return runPresenter(request);
-    return String(request.capability || "") === PAGINA ? runPagina(request) : runSlides(request);
+    return String(request.capability || "") === PAGE ? runPage(request) : runSlides(request);
   }
   if (verb === "verify") return presenter ? verifyPresenter(request) : verify(request);
   if (verb === "preview") return presenter ? previewPresenter(request) : preview(request);
@@ -153,21 +153,21 @@ function slug(text) {
 }
 
 function deckName(inputs) {
-  const fuente = inputs.fuente ? String(inputs.fuente) : "";
-  return slug(path.basename(fuente, path.extname(fuente)));
+  const source = inputs.source ? String(inputs.source) : "";
+  return slug(path.basename(source, path.extname(source)));
 }
 
 function slideFile(request) {
-  const fuente = inputsOf(request).fuente;
-  if (!fuente) throw new Error("fuente is required");
-  const file = resolveInput(fuente, pieceBase(request));
+  const source = inputsOf(request).source;
+  if (!source) throw new Error("source is required");
+  const file = resolveInput(source, pieceBase(request));
   let stat = null;
   try {
     stat = fs.statSync(file);
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
-  if (stat === null || !stat.isFile()) throw new Error(`fuente: ${file} is not a file`);
+  if (stat === null || !stat.isFile()) throw new Error(`source: ${file} is not a file`);
   return file;
 }
 
@@ -338,22 +338,22 @@ async function runSlides(request) {
   };
 }
 
-// --- deck.pagina: one-page pieces through the lab's default render path.
+// --- deck.page: one-page pieces through the lab's default render path.
 
-async function runPagina(request) {
+async function runPage(request) {
   const inputs = inputsOf(request);
   const outDir = path.resolve(request.out_dir);
   fs.mkdirSync(outDir, { recursive: true });
   const source = slideFile(request);
-  pagina.checkSource(fs.readFileSync(source, "utf8"));
+  onePage.checkSource(fs.readFileSync(source, "utf8"));
   const chrome = findChrome();
   if (!chrome) throw new Error(BROWSER_MISSING);
   const name = deckName(inputs);
   const pdf = path.join(outDir, `${name}.pdf`);
   clearPages(outDir);
-  await pagina.renderPdf(source, pdf, chrome, outDir);
+  await onePage.renderPdf(source, pdf, chrome, outDir);
   try {
-    await pagina.checkText(pdf);
+    await onePage.checkText(pdf);
   } catch (error) {
     clearPages(outDir);
     throw error;
@@ -449,32 +449,32 @@ function countSlides(html) {
 }
 
 function noteOf(item, index, seen, maxPage) {
-  const label = `notas[${index}]`;
+  const label = `notes[${index}]`;
   if (item === null || typeof item !== "object" || Array.isArray(item)) {
-    throw new Error(`${label}: expected a { pagina, texto } table`);
+    throw new Error(`${label}: expected a { page, text } table`);
   }
-  const pagina = item.pagina;
-  if (!Number.isInteger(pagina) || pagina < 1) {
-    throw new Error(`${label}.pagina: must be an integer >= 1`);
+  const page = item.page;
+  if (!Number.isInteger(page) || page < 1) {
+    throw new Error(`${label}.page: must be an integer >= 1`);
   }
-  if (seen.has(pagina)) throw new Error(`${label}.pagina: ${pagina} is repeated`);
-  if (maxPage !== undefined && pagina > maxPage) {
-    throw new Error(`${label}.pagina: ${pagina} is beyond the deck's ${maxPage} slides`);
+  if (seen.has(page)) throw new Error(`${label}.page: ${page} is repeated`);
+  if (maxPage !== undefined && page > maxPage) {
+    throw new Error(`${label}.page: ${page} is beyond the deck's ${maxPage} slides`);
   }
-  seen.add(pagina);
-  const texto = typeof item.texto === "string" ? item.texto.trim() : "";
-  if (!texto) throw new Error(`${label}.texto: must be a non-empty string`);
-  return { pagina, texto };
+  seen.add(page);
+  const text = typeof item.text === "string" ? item.text.trim() : "";
+  if (!text) throw new Error(`${label}.text: must be a non-empty string`);
+  return { page, text };
 }
 
 function normalizeNotes(inputs, maxPage) {
-  const raw = inputs.notas;
+  const raw = inputs.notes;
   if (!Array.isArray(raw) || raw.length === 0) {
-    throw new Error("notas: one table per slide is required");
+    throw new Error("notes: one table per slide is required");
   }
   const seen = new Set();
   const notes = raw.map((item, index) => noteOf(item, index, seen, maxPage));
-  notes.sort((left, right) => left.pagina - right.pagina);
+  notes.sort((left, right) => left.page - right.page);
   return notes;
 }
 
@@ -515,13 +515,13 @@ function inlineResources(html, dir) {
 function injectPresenter(html, notes) {
   const css = fs.readFileSync(path.join(PRESENTER_DIR, "runner.css"), "utf8");
   const js = fs.readFileSync(path.join(PRESENTER_DIR, "runner.js"), "utf8");
-  const data = JSON.stringify(notes.map((note) => note.texto)).replace(/</g, "\\u003c");
+  const data = JSON.stringify(notes.map((note) => note.text)).replace(/</g, "\\u003c");
   const inject = `<style>${css}</style>\n<script>window.__PZ_NOTES__=${data};</script>\n<script>${js}</script>\n`;
   return html.includes("</body>") ? html.replace("</body>", `${inject}</body>`) : html + inject;
 }
 
 function materializeNotes(notes) {
-  return `${notes.map((note) => note.texto).join("\n---\n")}\n`;
+  return `${notes.map((note) => note.text).join("\n---\n")}\n`;
 }
 
 function presenterAsset(file, name, kind, mime, properties, params, source) {
@@ -605,7 +605,7 @@ function embeddedNotes(html) {
 function noteSections(text) {
   const sections = text.split(NOTES_SEPARATOR_RE).map((section) => section.trim());
   for (let index = 0; index < sections.length; index += 1) {
-    if (!sections[index]) throw new Error(`notas.md: section ${index + 1} is empty`);
+    if (!sections[index]) throw new Error(`notes.md: section ${index + 1} is empty`);
   }
   return sections;
 }
@@ -613,18 +613,18 @@ function noteSections(text) {
 function checkEmbeddedNotes(html, expected) {
   const embedded = embeddedNotes(html);
   if (embedded.length !== expected) {
-    throw new Error(`__PZ_NOTES__: ${embedded.length} notes embedded but notas has ${expected}`);
+    throw new Error(`__PZ_NOTES__: ${embedded.length} notes embedded but notes has ${expected}`);
   }
 }
 
 function checkNotesFile(file, notes) {
   const sections = noteSections(readText(file));
   if (sections.length !== notes.length) {
-    throw new Error(`notas.md: ${sections.length} sections but notas has ${notes.length}`);
+    throw new Error(`notes.md: ${sections.length} sections but notes has ${notes.length}`);
   }
   for (let index = 0; index < notes.length; index += 1) {
-    if (sections[index] !== notes[index].texto) {
-      throw new Error(`notas.md: section ${index + 1} does not match pagina ${notes[index].pagina}`);
+    if (sections[index] !== notes[index].text) {
+      throw new Error(`notes.md: section ${index + 1} does not match page ${notes[index].page}`);
     }
   }
 }

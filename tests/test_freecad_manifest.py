@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "freecad"
 MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
 INDEX = tomllib.loads((ROOT / "index.toml").read_text(encoding="utf-8"))
-CAPABILITY = MANIFEST["capabilities"]["plano"]
+CAPABILITY = MANIFEST["capabilities"]["drawing"]
 INPUTS = CAPABILITY["inputs"]
 READ = (PACKAGE / "README.md").read_text(encoding="utf-8")
 SKILL = (PACKAGE / "skill" / "SKILL.md").read_text(encoding="utf-8")
@@ -126,17 +126,17 @@ def test_the_capability_is_the_document_kind_with_the_generic_viewer() -> None:
     """No document schema exists, so the generic viewer is the contract."""
     assert CAPABILITY["kind"] == "document"
     assert CAPABILITY["preview"] == {"viewer": "generic"}
-    assert MANIFEST["capabilities"].keys() == {"plano"}
+    assert MANIFEST["capabilities"].keys() == {"drawing"}
 
 
 def test_the_inputs_are_the_script_and_the_part_as_required_paths() -> None:
-    assert set(INPUTS) == {"guion", "pieza"}
-    for name in ("guion", "pieza"):
+    assert set(INPUTS) == {"script", "part"}
+    for name in ("script", "part"):
         assert INPUTS[name]["type"] == "path", name
         assert INPUTS[name]["required"] is True, name
         assert "relative to the piece" in INPUTS[name]["description"], name
-    assert "-01.svg" in INPUTS["guion"]["description"]
-    assert "STEP" in INPUTS["pieza"]["description"]
+    assert "-01.svg" in INPUTS["script"]["description"]
+    assert "STEP" in INPUTS["part"]["description"]
 
 
 def test_the_skill_validates_in_the_core_format() -> None:
@@ -153,7 +153,7 @@ def test_the_skill_validates_in_the_core_format() -> None:
     body = rest[0]
     positions = [body.index(heading) for heading in HEADINGS]
     assert positions == sorted(positions)
-    assert "freecad.plano" in body
+    assert "freecad.drawing" in body
 
 
 def test_the_readme_documents_the_host_contract_the_wrapper_and_the_rule() -> None:

@@ -40,7 +40,7 @@
   function show() {
     if (isPresenter) {
       fillFrame(pv.cframe, cur); fillFrame(pv.nframe, cur + 1); fitFrames();
-      pv.notes.textContent = NOTES[cur] || 'Sin notas para esta diapositiva.';
+      pv.notes.textContent = NOTES[cur] || 'No notes for this slide.';
       pv.bar.textContent = (cur + 1) + ' / ' + slides.length + '   ·   ← → navegar   ·   R reiniciar reloj   ·   B negro';
     } else {
       slides.forEach((s, i) => {
@@ -59,7 +59,7 @@
   window.addEventListener('message', e => { if (e.data && typeof e.data.pz === 'number') { if (!isPresenter && e.source && !partner) partner = e.source; go(e.data.pz, true); } });
   ch && (ch.onmessage = e => { if (e.data && typeof e.data.pz === 'number') go(e.data.pz, true); });
 
-  // ---------- ajuste a la ventana (modo principal) ----------
+  // ---------- fitting to the window (main mode) ----------
   function fit() {
     const s = Math.min(innerWidth / W, innerHeight / H);
     root.style.setProperty('--pz-s', s); root.style.setProperty('--pz-x', ((innerWidth - W * s) / 2) + 'px'); root.style.setProperty('--pz-y', ((innerHeight - H * s) / 2) + 'px');

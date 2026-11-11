@@ -78,7 +78,7 @@ def test_the_examples_are_runnable_bed_pieces() -> None:
     """Each example parses, stays inside ``acestep.bed`` and ships its WAV."""
     bed_inputs = MANIFEST["capabilities"]["bed"]["inputs"]
     name_pattern = bed_inputs["name"]["pattern"]
-    max_duracion = bed_inputs["duracion"]["max"]
+    max_duration = bed_inputs["duration"]["max"]
     for piece in APPROVED:
         data = tomllib.loads((EXAMPLES / f"{piece}.toml").read_text(encoding="utf-8"))
         inputs = data["inputs"]
@@ -88,7 +88,7 @@ def test_the_examples_are_runnable_bed_pieces() -> None:
         assert "no electronic sounds" in caption, piece
         assert re.fullmatch(name_pattern, inputs["name"]), piece
         assert inputs["name"] == piece, piece
-        assert 0 < inputs["duracion"] <= max_duracion, piece
+        assert 0 < inputs["duration"] <= max_duration, piece
         wav = EXAMPLES / f"{piece}.wav"
         assert wav.is_file(), piece
         assert wav.stat().st_size > 0, piece
