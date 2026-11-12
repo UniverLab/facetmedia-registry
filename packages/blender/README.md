@@ -136,20 +136,23 @@ prefix and builds the approved daylight look from `DATA`: a sun at azimuth 210°
 and elevation 32°, a sky texture washing from the same direction at strength
 0.2, `AgX - Medium High Contrast`, and an orthographic camera at azimuth -40°
 and elevation 48° with the scale fitted to the whole model. Glass is Principled
-with transmission 1.0, roughness 0.02, IOR 1.45 **and
-`surface_render_method = "BLENDED"`**, so Eevee and Cycles both draw it
-see-through instead of as an opaque black panel.
+with **alpha 0.2**, roughness 0.02 **and `surface_render_method = "BLENDED"`**:
+see-through by transparency, which Eevee and Cycles both draw. Refraction
+(transmission 1.0) renders as an opaque dark panel in Eevee without ray-traced
+transmission, so the examples do not use it.
 
 ### `examples/product/` — one metal part in a studio
 
-`product.toml` (`blender.scene`, Cycles at 1200x1200, exposure -0.2) and
+`product.toml` (`blender.scene`, Cycles at 1200x1200, exposure 0) and
 `product.py`, over `part.stl` (a 10x20x30 mm box from `cad.solid`). The script
 imports the STL, scales it from millimetres to metres, measures its bounding box
 and frames it from that radius at a 50 mm lens. The metal is fully metallic
-brushed aluminium; it has something to reflect because the world is a light grey
-(0.62, 0.63, 0.65) and two large square area lights act as softboxes around the
-part. A small fixed lamp in a black world is exactly what renders as a black box
-with a blown top, so do not go back to one.
+satin aluminium (roughness 0.22). What makes it read as metal is contrast: a
+near-black world, a dark glossy floor, and three square area lights (a key
+softbox, a fill and a rim strip) whose reflections run across the faces. A
+bright, even world turns the metal into flat grey plastic; a small lamp in a
+black world gives a black box with a blown top. Energies are a few watts:
+a part a few centimetres across under 30 W burns to white.
 
 ### `examples/tour/` — the study on a camera orbit
 

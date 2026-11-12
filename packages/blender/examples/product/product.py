@@ -23,28 +23,38 @@ DATA = {
     "model": "part.stl",
     "scale": 0.001,
     "look": "AgX - Medium High Contrast",
-    "world": {"color": (0.62, 0.63, 0.65), "strength": 1.0},
-    "metal": {"color": (0.75, 0.76, 0.78), "metallic": 1.0, "roughness": 0.38},
-    "floor": {"size": 1.2, "color": (0.32, 0.33, 0.35), "roughness": 0.35, "drop": 0.0005},
+    # A dark world: the metal shows the softboxes against it, which is what
+    # reads as metal. A bright, even world turns brushed metal into grey plastic.
+    "world": {"color": (0.02, 0.02, 0.025), "strength": 1.0},
+    "metal": {"color": (0.80, 0.81, 0.83), "metallic": 1.0, "roughness": 0.22},
+    "floor": {"size": 1.2, "color": (0.12, 0.12, 0.13), "roughness": 0.3, "drop": 0.0005},
     "lights": [
         {
-            "name": "softbox-llave",
-            "azimuth": -35.0,
-            "elevation": 55.0,
-            "size": 0.6,
-            "energy": 6.0,
-            "distance": 0.5,
-        },
-        {
-            "name": "softbox-relleno",
-            "azimuth": 145.0,
-            "elevation": 25.0,
-            "size": 0.4,
-            "energy": 2.5,
+            "name": "softbox-key",
+            "azimuth": -60.0,
+            "elevation": 40.0,
+            "size": 0.5,
+            "energy": 2.8,
             "distance": 0.45,
         },
+        {
+            "name": "softbox-fill",
+            "azimuth": 30.0,
+            "elevation": 20.0,
+            "size": 0.4,
+            "energy": 1.0,
+            "distance": 0.45,
+        },
+        {
+            "name": "strip-rim",
+            "azimuth": 150.0,
+            "elevation": 35.0,
+            "size": 0.3,
+            "energy": 2.5,
+            "distance": 0.4,
+        },
     ],
-    "camera": {"azimuth": -35.0, "elevation": 30.0, "lens": 50.0, "fill": 0.6, "sensor": 36.0},
+    "camera": {"azimuth": -35.0, "elevation": 25.0, "lens": 50.0, "fill": 0.6, "sensor": 36.0},
 }
 
 
@@ -140,9 +150,7 @@ def softboxes(scene, lights, centre):
         block.energy = light["energy"]
         obj = bpy.data.objects.new(light["name"], block)
         scene.collection.objects.link(obj)
-        obj.location = offset(
-            centre, light["azimuth"], light["elevation"], light["distance"]
-        )
+        obj.location = offset(centre, light["azimuth"], light["elevation"], light["distance"])
         aim(obj, light["azimuth"], light["elevation"])
 
 

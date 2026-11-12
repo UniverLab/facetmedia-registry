@@ -31,8 +31,9 @@ DATA = {
         "vidrio": {
             "color": (0.85, 0.93, 1.0),
             "roughness": 0.02,
-            "transmission": 1.0,
-            "ior": 1.45,
+            # See-through by alpha, not refraction: Eevee draws refraction
+            # without ray-traced transmission as a dark panel. Cycles agrees.
+            "alpha": 0.2,
             "blended": True,
         },
         "cama": {"color": (0.23, 0.33, 0.52), "roughness": 0.85},
@@ -108,6 +109,7 @@ def material(recipe):
     inputs["Base Color"].default_value = (*recipe["color"], 1.0)
     inputs["Roughness"].default_value = recipe["roughness"]
     inputs["Transmission Weight"].default_value = recipe.get("transmission", 0.0)
+    inputs["Alpha"].default_value = recipe.get("alpha", 1.0)
     if recipe.get("ior"):
         inputs["IOR"].default_value = recipe["ior"]
     if recipe.get("blended"):

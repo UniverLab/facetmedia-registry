@@ -30,7 +30,7 @@ and that exact command when it is missing or older than 5.2.
   one `DATA` dict at the top, so you change values, not code:
   - `examples/study-photo/` — the daylight architectural photo of the study
     (`study-photo.toml`, `study_photo.py`, `estudio.glb`).
-  - `examples/product/` — one metal part under two softboxes in a light grey
+  - `examples/product/` — one metal part under three softboxes in a dark
     studio (`product.toml`, `product.py`, `part.stl`).
   - `examples/tour/` — the study on a camera orbit, in Eevee
     (`tour.toml`, `tour.py`).
@@ -129,12 +129,13 @@ was meant to. Aesthetics are yours, never the verifier's.
 - **The script, not facet, decides the light.** Do not look for an `exposure`
   default that fixes a dark frame: set the sun, the lamps and the world in
   `DATA`, and use `exposure` in the TOML only as a final trim.
-- **Glass needs Eevee told.** A Principled material with transmission 1.0 is
-  still drawn as an opaque black panel in Eevee unless the material sets
-  `surface_render_method = "BLENDED"`; both study examples do.
-- **A metal in a black world renders as a black box.** Give it something to
-  reflect: large area lights (softboxes) and a light grey world, as
-  `examples/product/` does.
+- **Glass by alpha, not refraction.** Transmission 1.0 renders as an opaque
+  dark panel in Eevee. Give the glass alpha below 1 (0.2 in the examples) and
+  `surface_render_method = "BLENDED"`; Cycles draws it the same way.
+- **Metal reads by contrast.** A metal reflects its surroundings: in a black
+  world with one small lamp it is a black box, in a bright even world it is grey
+  plastic. A dark world with a few softboxes whose reflections cross the faces
+  reads as metal, as `examples/product/` does. Small parts need only a few watts.
 - **glTF is millimetres and Y-up.** Scale the imported roots by `0.001`; a
   model exported in metres comes out a thousand times too small. Never STEP:
   Blender does not open it without an extra plugin.

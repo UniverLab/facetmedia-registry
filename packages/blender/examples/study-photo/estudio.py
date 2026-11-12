@@ -100,7 +100,6 @@ estudio.add(mesa, name="mesa", color=cq.Color(0.45, 0.3, 0.18))
 estudio.add(sillas, name="sillas", color=cq.Color(0.92, 0.42, 0.2))
 
 
-
 def matte(glb: Path) -> None:
     """Make every material dielectric and rough.
 

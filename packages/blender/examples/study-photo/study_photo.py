@@ -23,15 +23,16 @@ DATA = {
     "look": "AgX - Medium High Contrast",
     "sky": {"strength": 0.2},
     "sun": {"azimuth": 210.0, "elevation": 32.0, "strength": 3.0, "angle": 2.0},
-    "floor": {"size": 60.0, "drop": 0.001, "color": (0.80, 0.80, 0.78), "roughness": 0.95},
+    "floor": {"size": 60.0, "drop": 0.001, "color": (0.62, 0.62, 0.60), "roughness": 0.95},
     "materials": {
         "muros": {"color": (0.92, 0.91, 0.88), "roughness": 0.9},
         "piso": {"color": (0.50, 0.34, 0.21), "roughness": 0.45},
         "vidrio": {
             "color": (0.85, 0.93, 1.0),
             "roughness": 0.02,
-            "transmission": 1.0,
-            "ior": 1.45,
+            # See-through by alpha, not refraction: Eevee draws refraction
+            # without ray-traced transmission as a dark panel. Cycles agrees.
+            "alpha": 0.2,
             "blended": True,
         },
         "cama": {"color": (0.23, 0.33, 0.52), "roughness": 0.85},
@@ -116,6 +117,7 @@ def material(recipe):
     inputs["Base Color"].default_value = (*recipe["color"], 1.0)
     inputs["Roughness"].default_value = recipe["roughness"]
     inputs["Transmission Weight"].default_value = recipe.get("transmission", 0.0)
+    inputs["Alpha"].default_value = recipe.get("alpha", 1.0)
     if recipe.get("ior"):
         inputs["IOR"].default_value = recipe["ior"]
     if recipe.get("blended"):
@@ -143,9 +145,7 @@ def dress(scene, recipes):
 def floor(scene, data, centre, lowest_z):
     """An outside plane just under the model, so the sun casts a shadow."""
     drop = lowest_z - data["drop"]
-    bpy.ops.mesh.primitive_plane_add(
-        size=data["size"], location=(centre[0], centre[1], drop)
-    )
+    bpy.ops.mesh.primitive_plane_add(size=data["size"], location=(centre[0], centre[1], drop))
     bpy.context.active_object.name = "suelo"
     block = material(data)
     bpy.context.active_object.data.materials.append(block)
