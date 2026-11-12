@@ -39,7 +39,8 @@ The fields below are what `facet describe comfy.still --json` reports.
 | `image[].sampler` | string | no | flow default | sampler name; the flow's own is `res_multistep` on z-image-turbo and `euler` on flux2-klein-4b |
 | `image[].scheduler` | string | no | flow default | scheduler name; the flow's own is `simple`, and flux2-klein-4b has none, so setting it there fails |
 | `image[].shift` | number | no | flow default | model sampling shift, at least 0; the flow's own is 3, and flux2-klein-4b has none, so setting it there fails |
-| `workflow` | enum | no | `"z-image-turbo"` | `"z-image-turbo"` or `"flux2-klein-4b"`; picks the still flow |
+| `workflow` | enum | no | — | `"z-image-turbo"` or `"flux2-klein-4b"`; picks the still flow, omitting it uses `"z-image-turbo"` |
+| `flow` | path | no | — | own flow file beside the piece; exclusive with `workflow` |
 
 ```toml
 [inputs]
@@ -83,7 +84,8 @@ The entries take the same name, prompt, seed, width and height as `still`,
 plus the img2img flow's steps, cfg and sampler — not the scheduler or shift,
 which `flux2-klein-img2img` does not carry — so `verify` and `preview` work
 unchanged; there is no `workflow` input, because an edit
-always uses `flux2-klein-img2img`. The reference is uploaded once per run and
+always uses `flux2-klein-img2img`, but it takes `flow`, an own flow file
+beside the piece. The reference is uploaded once per run and
 guides every entry; a second reference image is a second piece.
 
 ```toml
@@ -133,7 +135,8 @@ The fields below are what `facet describe comfy.clip --json` reports.
 | `image[].scheduler` | string | no | flow default | scheduler name; the flow's own is `simple` |
 | `image[].shift` | number | no | flow default | model sampling shift, at least 0; the flow's own is 8 |
 | `image[].negative` | string | no | flow default | what to keep out of the clip; omitting it keeps Wan's official Chinese negative, and `wan22-i2v-fast` at cfg 1 ignores it |
-| `workflow` | enum | no | `"wan22-i2v"` | `"wan22-i2v"`, or `"wan22-i2v-fast"` for a draft-only clip |
+| `workflow` | enum | no | — | `"wan22-i2v"`, or `"wan22-i2v-fast"` for a draft-only clip; omitting it uses `"wan22-i2v"` |
+| `flow` | path | no | — | own flow file beside the piece; exclusive with `workflow` |
 
 The length must be `4n+1` frames — 49, 121 — because the Wan latent keeps one
 frame plus groups of four. The schema cannot express that, so piece validation
@@ -241,6 +244,36 @@ ComfyUI looks — the unet into `models/diffusion_models/`, the clip into
 `models/text_encoders/`, the vae into `models/vae/` and the FastWan LoRA into
 `models/loras/` — as symlinks, refreshed on every run. The link target is
 the file `facet pull` downloaded under `models/direct`; nothing is copied.
+
+## Your own flow
+
+A still, an edit or a clip can run the piece's own flow file instead of a
+package flow: `flow = "flujo-propio.json"` in `[inputs]`, a path to a JSON
+file resolved relative to the piece. The file has the package shape —
+`about`, `params` with the defaults, and `graph`, the ComfyUI API graph
+whose inputs written as `"$key"` are filled from the params, then the
+entry. An edit or clip flow lists `uploads`: without `"image"` there the
+reference or the first frame never reaches the server, so a custom edit or
+clip flow keeps `"uploads": ["image"]`. `flow` and `workflow` are mutually
+exclusive: giving both fails before the server starts.
+
+The starting point is a package flow: copy one from `packages/comfy/flows/`
+and change its knobs. `examples/flujo-propio.toml` runs such a copy of
+`z-image-turbo` with steps raised from 8 to 10. With `flow` the run behaves
+exactly as with a package flow — the same entries, the same `$image`
+upload, the same downloads, the same verify and preview — and the record's
+params carry the flow file's path and its sha256.
+
+Models stay facet's: every string input of the graph that names a model
+file (any input whose name ends in `_name` on a loader node — `unet_name`,
+`clip_name`, `vae_name`, `ckpt_name`, `lora_name`) must be one of the files
+the manifest pins. Anything else fails before the server starts, with an
+error naming the file and listing the allowed ones; that keeps facet's
+license tracking true. A graph node class ComfyUI does not know fails with
+ComfyUI's own error, surfaced in the runner error — facet installs no
+custom nodes. VRAM is the author's responsibility: an 8 GB card runs the
+package flows, and a custom flow that loads more or wider graphs is on the
+author to fit.
 
 ## Assets
 

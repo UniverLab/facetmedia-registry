@@ -144,6 +144,26 @@ def _flow_name(capability: str, inputs: dict[str, Any]) -> str:
     return workflow
 
 
+def _load_flow(req: Request, inputs: dict[str, Any]) -> tuple[dict[str, Any], bool, dict[str, str]]:
+    """The flow to run: the piece's own file, or one of the package's.
+
+    ``flow`` and ``workflow`` are mutually exclusive; a custom flow is never
+    a draft, and its record carries the file's path and sha256.
+    """
+    raw = inputs.get("flow")
+    if raw is not None and inputs.get("workflow") is not None:
+        raise ValueError("give either flow or workflow, not both")
+    if raw is not None:
+        path = comfyclient.flow_path(req)
+        return (
+            comfyclient.custom_flow(path),
+            False,
+            {"flow": str(path), "flow_sha256": comfyclient.flow_digest(path)},
+        )
+    name = _flow_name(req.capability, inputs)
+    return comfyclient.flow(PACKAGE_DIR / "flows", name), name == DRAFT_FLOW, {}
+
+
 def _source_path(flow: dict[str, Any], inputs: dict[str, Any]) -> Path | None:
     """The piece's reference image, when the flow uploads one."""
     uploads = flow.get("uploads")
@@ -185,17 +205,18 @@ def run(req: Request) -> dict[str, Any]:
         raise ValueError("the piece has no image entries")
     video = req.capability == CLIP_CAPABILITY
     manifest = comfyclient.manifest(PACKAGE_DIR)
-    flow_name = _flow_name(req.capability, inputs)
-    flow = comfyclient.flow(PACKAGE_DIR / "flows", flow_name)
-    draft = flow_name == DRAFT_FLOW
+    flow, draft, meta = _load_flow(req, inputs)
+    planned = [comfyclient.values(flow, entry) for entry in entries]
+    allowed = comfyclient.model_files(manifest)
+    for entry_values in planned:
+        comfyclient.check_models(flow["graph"], entry_values, allowed)
     source = None if video else _source_path(flow, inputs)
     comfyclient.link_models(req, comfyclient.checkout(manifest, PULL_FIX), MODEL_DIRS)
     uploaded = comfyclient.upload(source) if source is not None else ""
     if source is not None:
         print(f"{source.name} uploaded as {uploaded}", flush=True)
     assets: list[dict[str, Any]] = []
-    for entry in entries:
-        entry_values = comfyclient.values(flow, entry)
+    for entry, entry_values in zip(entries, planned, strict=True):
         if video:
             uploaded = _upload_entry(req, entry)
         if source is not None or video:
@@ -204,7 +225,7 @@ def run(req: Request) -> dict[str, Any]:
         found = comfyclient.images(comfyclient.history(comfyclient.submit(graph)))
         for path in _save(found, str(entry["name"]), req.out_dir, draft):
             print(f"{path.name} ok", flush=True)
-            assets.append(_asset(entry_values, path, video, draft))
+            assets.append(_asset({**entry_values, **meta}, path, video, draft))
     return {"tool": comfyclient.tool(manifest), "assets": assets}
 
 

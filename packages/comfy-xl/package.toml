@@ -233,8 +233,12 @@ description = "Model sampling shift, overriding the flow's own. Omitting it keep
 [capabilities.still.inputs.workflow]
 type = "enum"
 values = ["z-image"]
-default = "z-image"
-description = "Still flow: z-image is the Z-Image base model at full precision."
+description = "Still flow: z-image is the Z-Image base model at full precision. Omitting it uses z-image."
+
+[capabilities.still.inputs.flow]
+type = "path"
+required = false
+description = "Own flow beside the piece: the package shape (about, params with defaults, graph with $key placeholders; edit and clip flows need uploads). Copy a package flow from packages/comfy-xl/flows/ and change its knobs. Exclusive with workflow; every model file it loads must be one of facet's pinned models."
 
 [capabilities.still.preview]
 viewer = "image"
@@ -312,6 +316,11 @@ type = "number"
 required = false
 min = 0
 description = "Model sampling shift, overriding the flow's own. Omitting it keeps the flow default (3.1)."
+
+[capabilities.edit.inputs.flow]
+type = "path"
+required = false
+description = "Own flow beside the piece: the package shape (about, params with defaults, graph with $key placeholders; the edit flow needs uploads). Copy packages/comfy-xl/flows/qwen-image-edit.json and change its knobs. Every model file it loads must be one of facet's pinned models."
 
 [capabilities.edit.preview]
 viewer = "image"
@@ -403,8 +412,12 @@ description = "Model sampling shift, overriding the flow's own. Omitting it keep
 [capabilities.clip.inputs.workflow]
 type = "enum"
 values = ["wan22-i2v-14b", "wan22-i2v-14b-fast"]
-default = "wan22-i2v-14b"
-description = "Clip flow: wan22-i2v-14b animates what is inside the image; wan22-i2v-14b-fast is a draft-only variant that drifts."
+description = "Clip flow: wan22-i2v-14b animates what is inside the image; wan22-i2v-14b-fast is a draft-only variant that drifts. Omitting it uses wan22-i2v-14b."
+
+[capabilities.clip.inputs.flow]
+type = "path"
+required = false
+description = "Own flow beside the piece: the package shape (about, params with defaults, graph with $key placeholders; the clip flow needs uploads). Copy a package flow from packages/comfy-xl/flows/ and change its knobs. Exclusive with workflow; every model file it loads must be one of facet's pinned models."
 
 [capabilities.clip.preview]
 viewer = "video"

@@ -41,7 +41,8 @@ The fields below are what `facet describe comfy-xl.still --json` reports.
 | `image[].sampler` | string | no | flow default | sampler name; the flow's own is `res_multistep` |
 | `image[].scheduler` | string | no | flow default | scheduler name; the flow's own is `simple` |
 | `image[].shift` | number | no | flow default | model sampling shift, at least 0; the flow's own is 3 |
-| `workflow` | enum | no | `"z-image"` | `"z-image"`; the one still flow |
+| `workflow` | enum | no | — | `"z-image"`; the one still flow, used when omitted |
+| `flow` | path | no | — | own flow file beside the piece; exclusive with `workflow` |
 
 ```toml
 [inputs]
@@ -82,7 +83,8 @@ The fields below are what `facet describe comfy-xl.edit --json` reports.
 The entries take the same name, prompt, seed, width, height and sampling
 knobs as `still`, so `verify`
 and `preview` work unchanged; there is no `workflow` input, because an edit
-always uses `qwen-image-edit`. The reference is scaled to the entry's
+always uses `qwen-image-edit`, but it takes `flow`, an own flow file
+beside the piece. The reference is scaled to the entry's
 `width`/`height` before it is encoded as the edit latent, uploaded once per
 run and guides every entry; a second reference image is a second piece.
 
@@ -118,7 +120,8 @@ The fields below are what `facet describe comfy-xl.clip --json` reports.
 | `image[].scheduler` | string | no | flow default | scheduler name; the flow's own is `simple` |
 | `image[].shift` | number | no | flow default | model sampling shift, at least 0; the flow's own is 8 |
 | `image[].negative` | string | no | flow default | what to keep out of the clip; omitting it keeps Wan's official Chinese negative, and `wan22-i2v-14b-fast` at cfg 1 ignores it |
-| `workflow` | enum | no | `"wan22-i2v-14b"` | `"wan22-i2v-14b"`, or `"wan22-i2v-14b-fast"` for a draft-only clip |
+| `workflow` | enum | no | — | `"wan22-i2v-14b"`, or `"wan22-i2v-14b-fast"` for a draft-only clip; omitting it uses `"wan22-i2v-14b"` |
+| `flow` | path | no | — | own flow file beside the piece; exclusive with `workflow` |
 
 The length must be `4n+1` frames — 49, 121 — because the Wan latent keeps one
 frame plus groups of four. The schema cannot express that, so piece validation
@@ -213,6 +216,37 @@ ComfyUI looks — the unet into `models/diffusion_models/`, the clip into
 `models/text_encoders/`, the vae into `models/vae/` and each lightx2v LoRA
 into `models/loras/` — as symlinks, refreshed on every run. The link target
 is the file `facet pull` downloaded under `models/direct`; nothing is copied.
+
+## Your own flow
+
+A still, an edit or a clip can run the piece's own flow file instead of a
+package flow: `flow = "flujo-propio.json"` in `[inputs]`, a path to a JSON
+file resolved relative to the piece. The file has the package shape —
+`about`, `params` with the defaults, and `graph`, the ComfyUI API graph
+whose inputs written as `"$key"` are filled from the params, then the
+entry. An edit or clip flow lists `uploads`: without `"image"` there the
+reference or the first frame never reaches the server, so a custom edit or
+clip flow keeps `"uploads": ["image"]`. `flow` and `workflow` are mutually
+exclusive: giving both fails before the server starts.
+
+The starting point is a package flow: copy one from
+`packages/comfy-xl/flows/` and change its knobs.
+`examples/flujo-propio.toml` runs such a copy of `z-image` with steps raised
+from 25 to 30. With `flow` the run behaves exactly as with a package flow —
+the same entries, the same `$image` upload, the same downloads, the same
+verify and preview — and the record's params carry the flow file's path
+and its sha256.
+
+Models stay facet's: every string input of the graph that names a model
+file (any input whose name ends in `_name` on a loader node — `unet_name`,
+`clip_name`, `vae_name`, `ckpt_name`, `lora_name`) must be one of the files
+the manifest pins. Anything else fails before the server starts, with an
+error naming the file and listing the allowed ones; that keeps facet's
+license tracking true. A graph node class ComfyUI does not know fails with
+ComfyUI's own error, surfaced in the runner error — facet installs no
+custom nodes. VRAM is the author's responsibility: a 24 GB card runs the
+package flows, and a custom flow that loads more or wider graphs is on the
+author to fit.
 
 ## Assets
 

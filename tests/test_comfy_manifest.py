@@ -354,12 +354,22 @@ def test_the_image_input_is_closed_with_its_sizes_and_knobs() -> None:
     _assert_knob_fields(ITEMS, tuple(KNOB_FIELDS))
 
 
-def test_the_workflow_input_is_an_enum_with_a_default() -> None:
+def test_the_workflow_input_is_an_enum_without_a_default() -> None:
     workflow = CAPABILITY["inputs"]["workflow"]
     assert workflow["type"] == "enum"
     assert workflow["values"] == ["z-image-turbo", "flux2-klein-4b"]
-    assert workflow["default"] == "z-image-turbo"
-    assert workflow["default"] in workflow["values"]
+    assert "default" not in workflow
+    assert "z-image-turbo" in workflow["description"]
+
+
+def test_every_capability_takes_an_optional_flow() -> None:
+    assert set(CAPABILITY["inputs"]) == {"image", "workflow", "flow"}
+    for capability in (CAPABILITY, EDIT, CLIP):
+        flow = capability["inputs"]["flow"]
+        assert flow["type"] == "path"
+        assert flow["required"] is False
+    assert "Exclusive with workflow" in CAPABILITY["inputs"]["flow"]["description"]
+    assert "Exclusive with workflow" in CLIP["inputs"]["flow"]["description"]
 
 
 def test_the_edit_capability_is_an_image_from_a_reference() -> None:
@@ -367,7 +377,7 @@ def test_the_edit_capability_is_an_image_from_a_reference() -> None:
     assert EDIT["preview"]["viewer"] == "image"
     assert EDIT_SOURCE["type"] == "path"
     assert EDIT_SOURCE["required"] is True
-    assert set(EDIT["inputs"]) == {"source", "image"}
+    assert set(EDIT["inputs"]) == {"source", "image", "flow"}
 
 
 def test_the_edit_entries_have_the_still_shape_and_defaults() -> None:
@@ -431,7 +441,7 @@ def test_the_edit_flow_loads_the_klein_models() -> None:
 def test_the_clip_capability_is_a_video_from_a_first_frame() -> None:
     assert CLIP["kind"] == "video"
     assert CLIP["preview"]["viewer"] == "video"
-    assert set(CLIP["inputs"]) == {"image", "workflow"}
+    assert set(CLIP["inputs"]) == {"image", "workflow", "flow"}
     image = CLIP["inputs"]["image"]
     assert image["type"] == "array"
     assert image["required"] is True
@@ -558,8 +568,8 @@ def test_the_clip_workflow_is_the_wan_enum() -> None:
     workflow = CLIP["inputs"]["workflow"]
     assert workflow["type"] == "enum"
     assert workflow["values"] == ["wan22-i2v", "wan22-i2v-fast"]
-    assert workflow["default"] == "wan22-i2v"
-    assert workflow["default"] in workflow["values"]
+    assert "default" not in workflow
+    assert "wan22-i2v" in workflow["description"]
     assert "draft" in workflow["description"]
 
 
@@ -778,7 +788,16 @@ EXAMPLE_FILES = (
     "examples/taza-vapor.mp4",
     "examples/calle-acuarela.mp4",
     "examples/bosque-niebla-rapido.mp4",
+    "examples/flujo-propio.json",
+    "examples/flujo-propio.toml",
 )
+
+
+def test_the_skill_teaches_your_own_flow() -> None:
+    text = (PACKAGE / "skill" / "SKILL.md").read_text(encoding="utf-8")
+    assert "Your own flow" in text
+    assert "uploads" in text
+    assert "VRAM" in text
 
 
 def test_the_skill_references_and_examples_exist() -> None:

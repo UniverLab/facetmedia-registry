@@ -7,9 +7,11 @@ captures the joined URL; the video probe is stubbed to fixed metrics.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import io
 import json
+import tomllib
 import urllib.request
 from pathlib import Path
 
@@ -402,6 +404,122 @@ def test_doctor_checkout_needs_main_py(tmp_path: Path, monkeypatch: pytest.Monke
     target.mkdir(parents=True)
     (target / "main.py").write_text("x", encoding="utf-8")
     assert comfyclient.doctor_checkout(manifest, "pull it")["ok"] is True
+
+
+def _package_manifest(package: str) -> dict[str, object]:
+    return tomllib.loads((ROOT / "packages" / package / "package.toml").read_text())
+
+
+def _allowed(package: str) -> list[str]:
+    manifest = _package_manifest(package)
+    models = manifest["models"]
+    assert isinstance(models, list)
+    return comfyclient.model_files(manifest)
+
+
+def _filled(flow: dict[str, object]) -> dict[str, object]:
+    params = flow.get("params")
+    base = dict(params) if isinstance(params, dict) else {}
+    graph = flow.get("graph")
+    assert isinstance(graph, dict)
+    return {**base, **{key: f"<{key}>" for key in comfyclient.placeholders(graph)}}
+
+
+def test_model_files_lists_the_manifest_basenames_deduped() -> None:
+    manifest = {
+        "models": [
+            {"id": "a", "path": "dir-one/first.safetensors"},
+            {"id": "b", "path": "dir-two/first.safetensors"},
+            {"id": "c", "path": "dir-one/second.safetensors"},
+        ]
+    }
+    assert comfyclient.model_files(manifest) == ["first.safetensors", "second.safetensors"]
+
+
+def test_model_inputs_skips_the_sampler_name() -> None:
+    graph = {
+        "unet": {"inputs": {"unet_name": "model.safetensors"}},
+        "sampler": {"inputs": {"sampler_name": "euler"}},
+    }
+    assert comfyclient.model_inputs(graph) == [("unet_name", "model.safetensors")]
+
+
+def test_check_models_accepts_every_shipped_flow() -> None:
+    for package in ("comfy", "comfy-xl"):
+        allowed = _allowed(package)
+        for name in (ROOT / "packages" / package / "flows").glob("*.json"):
+            flow = json.loads(name.read_text())
+            comfyclient.check_models(flow["graph"], _filled(flow), allowed)
+
+
+def test_check_models_resolves_a_placeholder() -> None:
+    allowed = ["model.safetensors", "other.safetensors"]
+    graph = {"unet": {"inputs": {"unet_name": "$unet"}}}
+    comfyclient.check_models(graph, {"unet": "model.safetensors"}, allowed)
+    with pytest.raises(ValueError, match="ajeno.safetensors"):
+        comfyclient.check_models(graph, {"unet": "ajeno.safetensors"}, allowed)
+
+
+def test_check_models_rejects_a_foreign_file_and_lists_the_allowed() -> None:
+    allowed = ["first.safetensors", "second.safetensors"]
+    graph = {"unet": {"inputs": {"unet_name": "ajeno.safetensors"}}}
+    with pytest.raises(ValueError) as caught:
+        comfyclient.check_models(graph, {}, allowed)
+    message = str(caught.value)
+    assert "ajeno.safetensors" in message
+    assert "first.safetensors, second.safetensors" in message
+
+
+def test_check_models_rejects_a_non_string_model() -> None:
+    graph = {"lora": {"inputs": {"lora_name": ["lora", 0]}}}
+    with pytest.raises(ValueError, match="lora_name"):
+        comfyclient.check_models(graph, {}, ["model.safetensors"])
+
+
+def test_custom_flow_reads_the_package_shape(tmp_path: Path) -> None:
+    path = tmp_path / "own.json"
+    path.write_text('{"about": "own", "params": {"steps": 3}, "graph": {}}', encoding="utf-8")
+    assert comfyclient.custom_flow(path)["params"] == {"steps": 3}
+
+
+def test_custom_flow_without_params_reads(tmp_path: Path) -> None:
+    path = tmp_path / "own.json"
+    path.write_text('{"graph": {}}', encoding="utf-8")
+    assert comfyclient.custom_flow(path)["graph"] == {}
+
+
+@pytest.mark.parametrize(
+    "body",
+    ["[1, 2]", '{"params": {}}', '{"graph": [], "params": {}}', '{"graph": {}, "params": []}'],
+)
+def test_custom_flow_rejects_a_non_dict_shape(tmp_path: Path, body: str) -> None:
+    path = tmp_path / "own.json"
+    path.write_text(body, encoding="utf-8")
+    with pytest.raises(ValueError, match="flow"):
+        comfyclient.custom_flow(path)
+
+
+def test_custom_flow_rejects_a_missing_file(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="cannot read"):
+        comfyclient.custom_flow(tmp_path / "missing.json")
+
+
+def test_flow_digest_is_the_sha256(tmp_path: Path) -> None:
+    path = tmp_path / "own.json"
+    path.write_bytes(b"{}")
+    assert comfyclient.flow_digest(path) == hashlib.sha256(b"{}").hexdigest()
+
+
+class _FlowReq:
+    def __init__(self, piece_dir: Path, flow: str):
+        self.piece_dir = piece_dir
+        self.inputs = {"flow": flow}
+
+
+def test_flow_path_resolves_relative_to_the_piece(tmp_path: Path) -> None:
+    assert comfyclient.flow_path(_FlowReq(tmp_path, "own.json")) == tmp_path / "own.json"
+    absolute = tmp_path / "own.json"
+    assert comfyclient.flow_path(_FlowReq(tmp_path, str(absolute))) == absolute
 
 
 def test_doctor_server_reports_the_probe(monkeypatch: pytest.MonkeyPatch) -> None:

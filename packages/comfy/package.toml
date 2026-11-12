@@ -212,8 +212,12 @@ description = "Model sampling shift, overriding the flow's own. Omitting it keep
 [capabilities.still.inputs.workflow]
 type = "enum"
 values = ["z-image-turbo", "flux2-klein-4b"]
-default = "z-image-turbo"
-description = "Still flow: z-image-turbo for photographic realism, flux2-klein-4b for palette, composition and empty space."
+description = "Still flow: z-image-turbo for photographic realism, flux2-klein-4b for palette, composition and empty space. Omitting it uses z-image-turbo."
+
+[capabilities.still.inputs.flow]
+type = "path"
+required = false
+description = "Own flow beside the piece: the package shape (about, params with defaults, graph with $key placeholders; edit and clip flows need uploads). Copy a package flow from packages/comfy/flows/ and change its knobs. Exclusive with workflow; every model file it loads must be one of facet's pinned models."
 
 [capabilities.still.preview]
 viewer = "image"
@@ -280,6 +284,11 @@ description = "Classifier-free guidance, overriding the flow's own. Omitting it 
 type = "string"
 required = false
 description = "Sampler name, overriding the flow's own. Omitting it keeps the flow default (euler)."
+
+[capabilities.edit.inputs.flow]
+type = "path"
+required = false
+description = "Own flow beside the piece: the package shape (about, params with defaults, graph with $key placeholders; the edit flow needs uploads). Copy packages/comfy/flows/flux2-klein-img2img.json and change its knobs. Every model file it loads must be one of facet's pinned models."
 
 [capabilities.edit.preview]
 viewer = "image"
@@ -371,8 +380,12 @@ description = "Model sampling shift, overriding the flow's own. Omitting it keep
 [capabilities.clip.inputs.workflow]
 type = "enum"
 values = ["wan22-i2v", "wan22-i2v-fast"]
-default = "wan22-i2v"
-description = "Clip flow: wan22-i2v animates what is inside the image; wan22-i2v-fast is a draft-only variant that drifts."
+description = "Clip flow: wan22-i2v animates what is inside the image; wan22-i2v-fast is a draft-only variant that drifts. Omitting it uses wan22-i2v."
+
+[capabilities.clip.inputs.flow]
+type = "path"
+required = false
+description = "Own flow beside the piece: the package shape (about, params with defaults, graph with $key placeholders; the clip flow needs uploads). Copy a package flow from packages/comfy/flows/ and change its knobs. Exclusive with workflow; every model file it loads must be one of facet's pinned models."
 
 [capabilities.clip.preview]
 viewer = "video"

@@ -12,6 +12,7 @@ Requires: imageio-ffmpeg
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -89,6 +90,81 @@ def link_models(req: Any, checkout: Path, model_dirs: dict[str, str]) -> None:
 def flow(flows_dir: Path, name: str) -> dict[str, Any]:
     """The API graph of ``name``, shipped beside the runner as ``flows/<name>.json``."""
     return json.loads((flows_dir / f"{name}.json").read_text(encoding="utf-8"))
+
+
+#: A loader input carries a model file, except the sampler picked by name.
+MODEL_NAME_SUFFIX = "_name"
+MODEL_NAME_EXCEPTIONS = frozenset({"sampler_name"})
+
+
+def flow_path(req: Any) -> Path:
+    """The piece's own flow file, resolved relative to the piece."""
+    raw = req.inputs.get("flow")
+    path = Path(str(raw))
+    return path if path.is_absolute() else req.piece_dir / path
+
+
+def custom_flow(path: Path) -> dict[str, Any]:
+    """The piece's own flow file: the package shape (about/params/graph)."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise ValueError(f"{path}: cannot read the flow: {exc}") from None
+    if not isinstance(data, dict) or not isinstance(data.get("graph"), dict):
+        raise ValueError(f"{path}: the flow needs a dict graph")
+    params = data.get("params", {})
+    if not isinstance(params, dict):
+        raise ValueError(f"{path}: the flow params need a dict")
+    return data
+
+
+def flow_digest(path: Path) -> str:
+    """The sha256 of the flow file, for the record's provenance."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def model_files(manifest: dict[str, Any]) -> list[str]:
+    """The basenames of the manifest's model files, the only ones a flow may load."""
+    models = manifest.get("models")
+    names = {
+        Path(str(model["path"])).name
+        for model in models
+        if isinstance(models, list) and isinstance(model, dict) and "path" in model
+    }
+    return sorted(names)
+
+
+def model_inputs(graph: dict[str, Any]) -> list[tuple[str, Any]]:
+    """Every ``(key, value)`` the graph loads a model file through."""
+    found: list[tuple[str, Any]] = []
+    for body in graph.values():
+        inputs = body.get("inputs") if isinstance(body, dict) else None
+        if not isinstance(inputs, dict):
+            continue
+        for key, value in inputs.items():
+            if key.endswith(MODEL_NAME_SUFFIX) and key not in MODEL_NAME_EXCEPTIONS:
+                found.append((key, value))
+    return found
+
+
+def check_models(graph: dict[str, Any], filled: dict[str, Any], allowed: list[str]) -> None:
+    """Every model file the graph loads is one of facet's pinned files.
+
+    A ``"$key"`` placeholder resolves through the filled values first; facet
+    installs no custom nodes or models, so anything else fails before the
+    server starts.
+    """
+    names = sorted(set(allowed))
+    for key, raw in model_inputs(graph):
+        if isinstance(raw, str) and raw.startswith("$"):
+            name = raw[1:]
+            if name not in filled:
+                raise ValueError(f"the flow needs {name}, which the piece does not give")
+            value = filled[name]
+        else:
+            value = raw
+        if not isinstance(value, str) or value not in names:
+            raise ValueError(f"{key}: {value!r} is not a facet model; allowed: {', '.join(names)}")
 
 
 def values(flow: dict[str, Any], entry: dict[str, Any]) -> dict[str, Any]:

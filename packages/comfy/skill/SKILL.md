@@ -46,14 +46,16 @@ image = [
 
 `width` defaults to 1344 and `height` to 768, each between 64 and 2048 and a
 multiple of 64; say both per entry to change the shape. `workflow` picks the
-still flow (`"z-image-turbo"` or `"flux2-klein-4b"`) or the clip flow
-(`"wan22-i2v"` or `"wan22-i2v-fast"`); an edit has no `workflow` input —
-it always uses `flux2-klein-img2img`. An entry may also set `steps`, `cfg`,
-`sampler`, `scheduler` and `shift`; each defaults to the flow's own value —
-the Flows section lists every flow's defaults — so a piece that sets none
-renders exactly as before. Each entry writes `<name>.png` —
-or `<name>.mp4` for a clip — beside the piece file, so `--out build/` keeps
-generated assets away from sources.
+still flow (`"z-image-turbo"` or `"flux2-klein-4b"`, omitting it uses
+`"z-image-turbo"`) or the clip flow (`"wan22-i2v"` or `"wan22-i2v-fast"`,
+omitting it uses `"wan22-i2v"`); an edit has no `workflow` input —
+it always uses `flux2-klein-img2img`. Any of the three takes `flow` instead:
+a path to the piece's own flow file, exclusive with `workflow`. An entry
+may also set `steps`, `cfg`, `sampler`, `scheduler` and `shift`; each
+defaults to the flow's own value — the Flows section lists every flow's
+defaults — so a piece that sets none renders exactly as before. Each entry
+writes `<name>.png` — or `<name>.mp4` for a clip — beside the piece file,
+so `--out build/` keeps generated assets away from sources.
 
 The prompt is English and carries the manifest's guard: a whole word such
 as `text`, `label`, `chart`, `title`, `logo` or `sign` fails piece
@@ -113,6 +115,21 @@ is package-wide, not per-flow: the Wan flow peaked at 18 of 19 GB of RAM
 without it, and it changes nothing for the still flows.
 `references/server.md` has the full launch and health details;
 `references/seeds.md` the seed behavior.
+
+## Your own flow
+
+A still, an edit or a clip can run the piece's own flow file instead of a
+package flow: `flow = "flujo-propio.json"` in `[inputs]`, resolved relative
+to the piece. The file has the package shape — `about`, `params` with the
+defaults, and `graph` with `"$key"` placeholders — and an edit or clip flow
+keeps `"uploads": ["image"]`, or the reference never reaches the server.
+Copy a package flow from `packages/comfy/flows/`; `examples/flujo-propio.toml`
+runs such a copy of `z-image-turbo` with steps 10. `flow` and `workflow`
+together fail before the server starts. Every model file the graph names
+(any `*_name` loader input) must be one of the manifest's pinned files, or
+the run fails naming it and listing the allowed ones. Unknown node classes
+fail with ComfyUI's own error; facet installs no custom nodes. VRAM is the
+author's: an 8 GB card runs the package flows.
 
 ## Drafts
 

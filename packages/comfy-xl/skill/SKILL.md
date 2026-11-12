@@ -51,12 +51,14 @@ image = [
 
 `width` defaults to 1344 and `height` to 768, each between 64 and 2048 and a
 multiple of 64; say both per entry to change the shape. `workflow` picks
-the still flow (`"z-image"`) or the clip flow (`"wan22-i2v-14b"` or
-`"wan22-i2v-14b-fast"`); an edit has no `workflow` input — it always
-uses `qwen-image-edit`. An entry may also set `steps`, `cfg`, `sampler`,
-`scheduler` and `shift`; each defaults to the flow's own value — the Flows
-section lists every flow's defaults — so a piece that sets none renders
-exactly as before.
+the still flow (`"z-image"`, used when omitted) or the clip flow
+(`"wan22-i2v-14b"` or `"wan22-i2v-14b-fast"`, omitting it uses
+`"wan22-i2v-14b"`); an edit has no `workflow` input — it always
+uses `qwen-image-edit`. Any of the three takes `flow` instead: a path to
+the piece's own flow file, exclusive with `workflow`. An entry may also
+set `steps`, `cfg`, `sampler`, `scheduler` and `shift`; each defaults to
+the flow's own value — the Flows section lists every flow's defaults — so
+a piece that sets none renders exactly as before.
 Each entry writes `<name>.png` — or `<name>.mp4` for a clip — beside the
 piece file, so `--out build/` keeps generated assets away from sources.
 
@@ -111,6 +113,21 @@ python main.py --listen 127.0.0.1 --port <port> --disable-pinned-memory
 and the runner reaches it through `FACET_SERVER_URL`. `--disable-pinned-memory`
 is package-wide, not per-flow. `references/server.md` has the full launch
 and health details; `references/seeds.md` the seed behavior.
+
+## Your own flow
+
+A still, an edit or a clip can run the piece's own flow file instead of a
+package flow: `flow = "flujo-propio.json"` in `[inputs]`, resolved relative
+to the piece. The file has the package shape — `about`, `params` with the
+defaults, and `graph` with `"$key"` placeholders — and an edit or clip flow
+keeps `"uploads": ["image"]`, or the reference never reaches the server.
+Copy a package flow from `packages/comfy-xl/flows/`; `examples/flujo-propio.toml`
+runs such a copy of `z-image` with steps 30. `flow` and `workflow`
+together fail before the server starts. Every model file the graph names
+(any `*_name` loader input) must be one of the manifest's pinned files, or
+the run fails naming it and listing the allowed ones. Unknown node classes
+fail with ComfyUI's own error; facet installs no custom nodes. VRAM is the
+author's: a 24 GB card runs the package flows.
 
 ## Drafts
 

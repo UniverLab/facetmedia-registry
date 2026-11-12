@@ -14,6 +14,7 @@ reached.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import socket
@@ -1118,3 +1119,87 @@ def _assert_verify_and_preview(
     assert data["name"] == "foto-producto"
     assert data["prompt"] == PROMPT
     assert (data["seed"], data["width"], data["height"]) == (SEED, WIDTH, HEIGHT)
+
+
+def _custom_flow(tmp_path: Path, unet_name: str | None = None) -> Path:
+    """A copy of the default still flow with one knob changed, beside the piece."""
+    data = json.loads((PACKAGE / "flows" / "z-image-turbo.json").read_text(encoding="utf-8"))
+    data["params"]["steps"] = OVERRIDE_STEPS
+    if unet_name is not None:
+        data["graph"]["unet"]["inputs"]["unet_name"] = unet_name
+    path = tmp_path / "flujo-propio.json"
+    path.write_text(json.dumps(data), encoding="utf-8")
+    return path
+
+
+def test_a_flow_and_a_workflow_together_fail_before_anything_runs(tmp_path: Path) -> None:
+    stub_dir = _stub_sdk(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    flow = _custom_flow(tmp_path)
+    request = _request(
+        "run", out, tmp_path, {}, inputs={"flow": flow.name, "workflow": "z-image-turbo"}
+    )
+    done = _call_failing(stub_dir, request, tmp_path, "flow-both")
+    assert done.returncode != 0
+    assert "give either flow or workflow, not both" in done.stderr
+    assert not (tmp_path / "flow-both-result.json").exists()
+
+
+def test_a_foreign_model_file_fails_before_anything_runs(tmp_path: Path) -> None:
+    stub_dir = _stub_sdk(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    flow = _custom_flow(tmp_path, unet_name="ajeno.safetensors")
+    request = _request("run", out, tmp_path, {}, inputs={"flow": flow.name})
+    done = _call_failing(stub_dir, request, tmp_path, "flow-foreign")
+    assert done.returncode != 0
+    assert "ajeno.safetensors" in done.stderr
+    for relative in MODEL_PATHS.values():
+        assert Path(relative).name in done.stderr
+    assert not (tmp_path / "flow-foreign-result.json").exists()
+
+
+def test_a_custom_flow_runs_like_the_package_flow(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    models = _model_files(home)
+    graph_file = tmp_path / "graph.json"
+    upload_file = tmp_path / "upload.bin"
+    stub_dir = _stub_sdk(tmp_path)
+    checkout = _clone(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    flow = _custom_flow(tmp_path)
+    port = _free_port()
+    url = f"http://127.0.0.1:{port}"
+    process = _launch(checkout, graph_file, upload_file, port)
+    try:
+        assert _wait_healthy(f"{url}/system_stats"), "the stub ComfyUI never became healthy"
+        env = _environment(stub_dir, home, url)
+        request = _request("run", out, tmp_path, models, inputs={"flow": flow.name})
+        result, printed = _call(stub_dir, "run", request, tmp_path, env)
+        assert "foto-producto.png ok" in printed
+        asset = result["assets"][0]
+        assert asset["file"] == "foto-producto.png"
+        assert asset["properties"] == {"width": WIDTH, "height": HEIGHT, "seed": SEED}
+        assert asset["params"] == {
+            "width": WIDTH,
+            "height": HEIGHT,
+            "seed": SEED,
+            "steps": OVERRIDE_STEPS,
+            "shift": SHIFT,
+            "cfg": TURBO_CFG,
+            "sampler": TURBO_SAMPLER,
+            "scheduler": TURBO_SCHEDULER,
+            "name": "foto-producto",
+            "prompt": PROMPT,
+            "flow": str(flow),
+            "flow_sha256": hashlib.sha256(flow.read_bytes()).hexdigest(),
+        }
+        _assert_links(checkout, models)
+        graph = json.loads(graph_file.read_text(encoding="utf-8"))["prompt"]
+        assert graph["sampler"]["inputs"]["steps"] == OVERRIDE_STEPS
+        assert "$" not in json.dumps(graph)
+    finally:
+        process.terminate()
+        process.wait(timeout=10)
