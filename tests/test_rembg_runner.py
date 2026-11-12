@@ -169,11 +169,11 @@ def _piece(tmp_path: Path) -> Path:
     return piece
 
 
-def _paper_piece(tmp_path: Path) -> Path:
-    """A wide plate: flat paper P on the right, an object O in the left half."""
+def _paper_piece(tmp_path: Path, width: int = LAMINA_WIDTH) -> Path:
+    """A plate: flat paper P on the right, an object O in the left half."""
     piece = tmp_path / "paper-piece"
     piece.mkdir()
-    plate = PIL.Image.new("RGB", (LAMINA_WIDTH, LAMINA_HEIGHT), PAPER)
+    plate = PIL.Image.new("RGB", (width, LAMINA_HEIGHT), PAPER)
     pixels = plate.load()
     for y in range(10, 54):
         for x in range(10, 100):
@@ -293,8 +293,12 @@ def test_preview_writes_the_image_fields_for_both_assets(tmp_path: Path) -> None
     piece = _piece(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    PIL.Image.new("RGBA", (WIDTH, HEIGHT)).save(out / "entrada.png")
-    PIL.Image.new("RGB", (WIDTH, HEIGHT)).save(out / "entrada-checkerboard.png")
+    cutout_image = PIL.Image.new("RGBA", (WIDTH, HEIGHT))
+    cutout_image.putpixel((1, 1), (20, 120, 60, 255))
+    cutout_image.save(out / "entrada.png")
+    view = PIL.Image.new("RGB", (WIDTH, HEIGHT))
+    view.putpixel((1, 1), (20, 120, 60))
+    view.save(out / "entrada-checkerboard.png")
     env = _environment(stub_dir, tmp_path)
     request = _request(
         "preview",
@@ -328,8 +332,12 @@ def test_verify_accepts_the_pair_and_rejects_a_bad_file(tmp_path: Path) -> None:
     piece = _piece(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
-    PIL.Image.new("RGBA", (WIDTH, HEIGHT)).save(out / "entrada.png")
-    PIL.Image.new("RGB", (WIDTH, HEIGHT)).save(out / "entrada-checkerboard.png")
+    cutout_image = PIL.Image.new("RGBA", (WIDTH, HEIGHT))
+    cutout_image.putpixel((1, 1), (20, 120, 60, 255))
+    cutout_image.save(out / "entrada.png")
+    view = PIL.Image.new("RGB", (WIDTH, HEIGHT))
+    view.putpixel((1, 1), (20, 120, 60))
+    view.save(out / "entrada-checkerboard.png")
     rgb_as_cutout = tmp_path / "wrong" / "entrada.png"
     rgb_as_cutout.parent.mkdir()
     PIL.Image.new("RGB", (WIDTH, HEIGHT)).save(rgb_as_cutout)
@@ -466,6 +474,60 @@ def test_run_paper_writes_one_rgb_asset_on_flat_paper(tmp_path: Path) -> None:
     assert "checkerboard" not in assets[0]["properties"]
 
 
+def test_run_paper_on_a_plate_narrower_than_the_border_inset_is_not_black(
+    tmp_path: Path,
+) -> None:
+    """A 128 px plate once sliced an empty border and wrote an all-black image."""
+    stub_dir = _stub_modules(tmp_path)
+    home = tmp_path / "home"
+    weights = _model_file(home)
+    piece = _paper_piece(tmp_path, width=128)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(stub_dir, tmp_path)
+    request = _request(
+        "run",
+        out,
+        piece,
+        {"u2netp": weights},
+        inputs={"plate": "plate.png"},
+        capability="rembg.paper",
+    )
+    done, _result = _call(stub_dir, "run", request, tmp_path, env)
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "Mean of empty slice" not in done.stderr
+    with PIL.Image.open(out / "plate-paper.png") as image:
+        paper = image.getpixel((120, 30))
+    assert all(abs(got - want) <= PAPER_TOLERANCE for got, want in zip(paper, PAPER, strict=True))
+
+
+def test_verify_rejects_a_flat_image(tmp_path: Path) -> None:
+    """An all-black paper must not verify: a uniform image is never a real plate."""
+    stub_dir = _stub_modules(tmp_path)
+    home = tmp_path / "home"
+    weights = _model_file(home)
+    piece = _paper_piece(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    black = out / "plate-paper.png"
+    PIL.Image.new("RGB", (LAMINA_WIDTH, LAMINA_HEIGHT), (0, 0, 0)).save(black)
+    env = _environment(stub_dir, tmp_path)
+    request = _request(
+        "verify",
+        out,
+        piece,
+        {"u2netp": weights},
+        assets=(black,),
+        inputs={"plate": "plate.png"},
+        capability="rembg.paper",
+    )
+    done, result = _call(stub_dir, "verify", request, tmp_path, env)
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert result is not None
+    assert result["assets"][0]["passed"] is False
+    assert result["assets"][0]["metrics"]["flat"] is True
+
+
 def test_verify_paper_expects_rgb_and_rejects_rgba(tmp_path: Path) -> None:
     """Without the paper branch the RGBA fallback would reject every output."""
     stub_dir = _stub_modules(tmp_path)
@@ -475,7 +537,9 @@ def test_verify_paper_expects_rgb_and_rejects_rgba(tmp_path: Path) -> None:
     out = tmp_path / "out"
     out.mkdir()
     good = out / "plate-paper.png"
-    PIL.Image.new("RGB", (LAMINA_WIDTH, LAMINA_HEIGHT), PAPER).save(good)
+    paper_image = PIL.Image.new("RGB", (LAMINA_WIDTH, LAMINA_HEIGHT), PAPER)
+    paper_image.putpixel((20, 20), OBJECT)
+    paper_image.save(good)
     stale = tmp_path / "stale" / "plate-paper.png"
     stale.parent.mkdir()
     PIL.Image.new("RGBA", (LAMINA_WIDTH, LAMINA_HEIGHT), (*PAPER, 255)).save(stale)

@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import importlib.metadata
+import importlib.util
 import json
 import os
 import re
@@ -142,11 +143,19 @@ def _size(path: Path) -> tuple[int, int]:
 
 
 def _paper_color(rgb: np.ndarray) -> np.ndarray:
-    """The border median: 30 rows top and bottom, 300 px in from each side."""
+    """The border median: 30 rows top and bottom, 300 px in from each side.
+
+    A plate smaller than the scan the numbers were tuned on keeps the same
+    shape at its own scale (a tenth of the height, a quarter of the width),
+    so the border is never empty and the paper never comes out black.
+    """
+    height, width = rgb.shape[:2]
+    rows = max(1, min(BORDER_ROWS, height // 10))
+    inset = min(BORDER_INSET, width // 4)
     border = np.concatenate(
         [
-            rgb[:BORDER_ROWS, BORDER_INSET:-BORDER_INSET].reshape(-1, 3),
-            rgb[-BORDER_ROWS:, BORDER_INSET:-BORDER_INSET].reshape(-1, 3),
+            rgb[:rows, inset : width - inset].reshape(-1, 3),
+            rgb[height - rows :, inset : width - inset].reshape(-1, 3),
         ]
     )
     return np.median(border, axis=0)
@@ -262,6 +271,12 @@ def _expected_mode(req: Request, path: Path) -> str:
     return "RGB" if path.name.endswith("-checkerboard.png") else "RGBA"
 
 
+def _is_flat(extrema: Any) -> bool:
+    """Every band holds one value: a uniform image, never a real cutout or paper."""
+    bands = extrema if isinstance(extrema[0], tuple) else (extrema,)
+    return all(low == high for low, high in bands)
+
+
 def _verify_asset(req: Request, path: Path) -> dict[str, Any]:
     """The PNG opens, is a PNG, and carries the mode its role demands."""
     expected = _expected_mode(req, path)
@@ -280,11 +295,14 @@ def _verify_asset(req: Request, path: Path) -> dict[str, Any]:
             "thresholds": thresholds,
             "verifier": "pillow",
         }
-    passed = path.suffix == ".png" and mode == expected
+    with Image.open(path) as image:
+        flat = _is_flat(image.getextrema())
+    thresholds["flat"] = False
+    passed = path.suffix == ".png" and mode == expected and not flat
     return {
         "file": path.name,
         "passed": passed,
-        "metrics": {"mode": mode, "width": width, "height": height},
+        "metrics": {"mode": mode, "width": width, "height": height, "flat": flat},
         "thresholds": thresholds,
         "verifier": "pillow",
     }
@@ -349,12 +367,22 @@ def _version(distribution: str) -> str:
         return "unknown"
 
 
-def _doctor_imports() -> dict[str, Any]:
-    """rembg, onnxruntime and Pillow import, each with its version."""
+def _doctor_imports(depth: str = "quick") -> dict[str, Any]:
+    """rembg, onnxruntime and Pillow, each with its version.
+
+    The quick depth only finds each module and reads its installed version:
+    importing onnxruntime and rembg cold overruns the 10 s quick budget. The
+    full depth imports them, so a module present but broken still fails.
+    """
     found: list[str] = []
     broken: list[str] = []
     for module_name, distribution in DOCTOR_IMPORTS:
         try:
+            if depth != "full":
+                if importlib.util.find_spec(module_name) is None:
+                    raise ModuleNotFoundError(f"No module named {module_name!r}")
+                found.append(f"{module_name} {_version(distribution)}")
+                continue
             module = importlib.import_module(module_name)
             found.append(f"{module_name} {getattr(module, '__version__', _version(distribution))}")
         except Exception as exc:  # catch-all: one broken import must not hide the rest
@@ -412,7 +440,7 @@ def _doctor_weights(req: Request) -> dict[str, Any]:
 
 @runner.verb("doctor")
 def doctor(req: Request) -> dict[str, Any]:
-    return {"checks": [_doctor_imports(), _doctor_weights(req)]}
+    return {"checks": [_doctor_imports(req.depth), _doctor_weights(req)]}
 
 
 runner.main()
