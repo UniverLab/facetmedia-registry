@@ -22,7 +22,7 @@ the core:
 
 | Facet | Package | What it does |
 |-------|---------|--------------|
-| audio | acestep | Instrumental beds from an English caption with ACE-Step 1.5, at most 30 s per piece, checked by duration and peak |
+| audio | acestep | Instrumental beds from an English caption with ACE-Step 1.5, at most 30 s per piece, reproducible from a seed with optional tempo, key, metre, steps and guidance over the server's defaults, checked by duration and peak |
 | audio | ffmpeg | Normalise, mix and convert audio clips with FFmpeg, with loudness and duration verified |
 | audio | moss | Described sound effects from an English description with MOSS-SoundEffect v2 on a staged CPU/GPU memory path, at most 30 s per effect, normalised to a loudness target (default -23 LUFS) and checked by integrated loudness |
 | cad | cad | 3D parts and 2D plans from CadQuery or ezdxf scripts, plus the glTF the script writes for blender, checked by volume, bounding box and DXF audit |
