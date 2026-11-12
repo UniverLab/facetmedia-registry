@@ -248,7 +248,7 @@ the file `facet pull` downloaded under `models/direct`; nothing is copied.
 ## Your own flow
 
 A still, an edit or a clip can run the piece's own flow file instead of a
-package flow: `flow = "flujo-propio.json"` in `[inputs]`, a path to a JSON
+package flow: `flow = "own-flow.json"` in `[inputs]`, a path to a JSON
 file resolved relative to the piece. The file has the package shape —
 `about`, `params` with the defaults, and `graph`, the ComfyUI API graph
 whose inputs written as `"$key"` are filled from the params, then the
@@ -258,7 +258,7 @@ clip flow keeps `"uploads": ["image"]`. `flow` and `workflow` are mutually
 exclusive: giving both fails before the server starts.
 
 The starting point is a package flow: copy one from `packages/comfy/flows/`
-and change its knobs. `examples/flujo-propio.toml` runs such a copy of
+and change its knobs. `examples/own-flow.toml` runs such a copy of
 `z-image-turbo` with steps raised from 8 to 10. With `flow` the run behaves
 exactly as with a package flow — the same entries, the same `$image`
 upload, the same downloads, the same verify and preview — and the record's

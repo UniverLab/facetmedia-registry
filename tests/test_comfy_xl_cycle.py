@@ -857,7 +857,7 @@ def _custom_flow(tmp_path: Path, unet_name: str | None = None) -> Path:
     data["params"]["steps"] = STILL_OVERRIDE_STEPS
     if unet_name is not None:
         data["graph"]["unet"]["inputs"]["unet_name"] = unet_name
-    path = tmp_path / "flujo-propio.json"
+    path = tmp_path / "own-flow.json"
     path.write_text(json.dumps(data), encoding="utf-8")
     return path
 

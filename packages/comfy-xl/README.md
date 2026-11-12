@@ -220,7 +220,7 @@ is the file `facet pull` downloaded under `models/direct`; nothing is copied.
 ## Your own flow
 
 A still, an edit or a clip can run the piece's own flow file instead of a
-package flow: `flow = "flujo-propio.json"` in `[inputs]`, a path to a JSON
+package flow: `flow = "own-flow.json"` in `[inputs]`, a path to a JSON
 file resolved relative to the piece. The file has the package shape —
 `about`, `params` with the defaults, and `graph`, the ComfyUI API graph
 whose inputs written as `"$key"` are filled from the params, then the
@@ -231,7 +231,7 @@ exclusive: giving both fails before the server starts.
 
 The starting point is a package flow: copy one from
 `packages/comfy-xl/flows/` and change its knobs.
-`examples/flujo-propio.toml` runs such a copy of `z-image` with steps raised
+`examples/own-flow.toml` runs such a copy of `z-image` with steps raised
 from 25 to 30. With `flow` the run behaves exactly as with a package flow —
 the same entries, the same `$image` upload, the same downloads, the same
 verify and preview — and the record's params carry the flow file's path

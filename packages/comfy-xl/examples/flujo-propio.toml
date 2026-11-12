@@ -1,8 +1,0 @@
-# Still with your own flow: a copy of the z-image package flow with
-# steps raised from 25 to 30 (see flujo-propio.json next to this piece).
-# Usage: facet run comfy-xl.still packages/comfy-xl/examples/flujo-propio.toml
-[inputs]
-flow = "flujo-propio.json"
-image = [
-  { name = "taza-propia", seed = 21, width = 1344, height = 768, prompt = "Studio product photograph of a handmade matte ceramic coffee cup on a raw concrete surface, soft window light from the left, shallow depth of field, 85mm lens, steam rising" },
-]

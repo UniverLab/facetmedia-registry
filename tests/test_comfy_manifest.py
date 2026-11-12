@@ -788,8 +788,8 @@ EXAMPLE_FILES = (
     "examples/taza-vapor.mp4",
     "examples/calle-acuarela.mp4",
     "examples/bosque-niebla-rapido.mp4",
-    "examples/flujo-propio.json",
-    "examples/flujo-propio.toml",
+    "examples/own-flow.json",
+    "examples/own-flow.toml",
 )
 
 

@@ -119,11 +119,11 @@ without it, and it changes nothing for the still flows.
 ## Your own flow
 
 A still, an edit or a clip can run the piece's own flow file instead of a
-package flow: `flow = "flujo-propio.json"` in `[inputs]`, resolved relative
+package flow: `flow = "own-flow.json"` in `[inputs]`, resolved relative
 to the piece. The file has the package shape — `about`, `params` with the
 defaults, and `graph` with `"$key"` placeholders — and an edit or clip flow
 keeps `"uploads": ["image"]`, or the reference never reaches the server.
-Copy a package flow from `packages/comfy/flows/`; `examples/flujo-propio.toml`
+Copy a package flow from `packages/comfy/flows/`; `examples/own-flow.toml`
 runs such a copy of `z-image-turbo` with steps 10. `flow` and `workflow`
 together fail before the server starts. Every model file the graph names
 (any `*_name` loader input) must be one of the manifest's pinned files, or
