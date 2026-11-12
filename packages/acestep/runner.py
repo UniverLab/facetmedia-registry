@@ -52,6 +52,10 @@ VERIFIER = "audiopreview"
 PEAK_DBFS_MIN = -40.0
 #: The duration a WAV may miss ``duration`` by (manifest threshold).
 DURATION_TOLERANCE_S = 1.0
+#: The fallback seed, steps and guidance the runner sends when a piece leaves them unset.
+DEFAULT_SEED = 0
+DEFAULT_STEPS = 8
+DEFAULT_GUIDANCE = 7.0
 #: The caption words that ask for sung music; the lab discards it forever.
 VOICE_WORDS = re.compile(
     r"\b(voice|vocal|vocalist|sing|singer|singing|sung|choir|lyrics|rap|chant|speech)\b",
@@ -152,9 +156,9 @@ def _data(answer: Any) -> Any:
     return answer.get("data") if isinstance(answer, dict) else None
 
 
-def _submit(caption: str, duration: float) -> str:
+def _submit(caption: str, duration: float, sent: dict[str, Any]) -> str:
     """Queue one instrumental track; the server answers the task id that owns it."""
-    body = {
+    body: dict[str, Any] = {
         "prompt": caption,
         "lyrics": "[Instrumental]",
         "audio_duration": duration,
@@ -162,7 +166,17 @@ def _submit(caption: str, duration: float) -> str:
         "model": MODEL,
         "task_type": "text2music",
         "thinking": False,
+        "seed": sent["seed"],
+        "use_random_seed": False,
+        "inference_steps": sent["steps"],
+        "guidance_scale": sent["guidance"],
     }
+    if "bpm" in sent:
+        body["bpm"] = sent["bpm"]
+    if "key" in sent:
+        body["key_scale"] = sent["key"]
+    if "time-signature" in sent:
+        body["time_signature"] = sent["time-signature"]
     data = _data(_post("/release_task", body))
     task_id = data.get("task_id") if isinstance(data, dict) else None
     if not isinstance(task_id, str) or not task_id:
@@ -218,17 +232,33 @@ def _properties(audio: Any, samples: Any, rate: int) -> dict[str, Any]:
 
 
 def _asset(
-    path: Path, caption: str, name: str, duration: float, properties: dict[str, Any]
+    path: Path,
+    caption: str,
+    name: str,
+    duration: float,
+    properties: dict[str, Any],
+    sent: dict[str, Any],
 ) -> dict[str, Any]:
     """One bed's record: the written WAV, its level and its params."""
+    params: dict[str, Any] = {
+        "caption": caption,
+        "name": name,
+        "duration": duration,
+        "seed": sent["seed"],
+        "steps": sent["steps"],
+        "guidance": sent["guidance"],
+    }
+    for key in ("bpm", "key", "time-signature"):
+        if key in sent:
+            params[key] = sent[key]
     return {
         "file": path.name,
         "name": name,
         "kind": "audio",
         "mime": "audio/wav",
         "properties": properties,
-        "params": {"caption": caption, "name": name, "duration": duration},
-        "seed": None,
+        "params": params,
+        "seed": sent["seed"],
         "inputs": [],
     }
 
@@ -242,9 +272,20 @@ def run(req: Request) -> dict[str, Any]:
     name = str(params["name"])
     duration = float(params["duration"])
     _require_instrumental(caption)
+    sent: dict[str, Any] = {
+        "seed": int(params.get("seed", DEFAULT_SEED)),
+        "steps": int(params.get("steps", DEFAULT_STEPS)),
+        "guidance": float(params.get("guidance", DEFAULT_GUIDANCE)),
+    }
+    if params.get("bpm") is not None:
+        sent["bpm"] = int(params["bpm"])
+    if params.get("key") is not None:
+        sent["key"] = str(params["key"])
+    if params.get("time-signature") is not None:
+        sent["time-signature"] = str(params["time-signature"])
     audio = _audio()
     path = req.out_dir / f"{name}.wav"
-    path.write_bytes(_download_asset(caption, duration))
+    path.write_bytes(_download_asset(caption, duration, sent))
     samples, rate = audio.read_wav(path)
     samples = audio.normalize(samples, rate, TARGET_LUFS)
     audio.write_wav(path, samples, rate)
@@ -254,12 +295,12 @@ def run(req: Request) -> dict[str, Any]:
         f"{properties['lufs']:.1f} LUFS, peak {properties['peak_dbfs']:.1f} dBFS)",
         flush=True,
     )
-    return {"tool": _tool(), "assets": [_asset(path, caption, name, duration, properties)]}
+    return {"tool": _tool(), "assets": [_asset(path, caption, name, duration, properties, sent)]}
 
 
-def _download_asset(caption: str, duration: float) -> bytes:
+def _download_asset(caption: str, duration: float, sent: dict[str, Any]) -> bytes:
     """Queue, wait and fetch one track's bytes."""
-    return _download(_poll(_submit(caption, duration)))
+    return _download(_poll(_submit(caption, duration, sent)))
 
 
 def _verify_one(audio: Any, path: Path, expected: float) -> dict[str, Any]:

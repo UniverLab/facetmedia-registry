@@ -30,6 +30,13 @@ PEAK_DBFS_MIN = -40.0
 SERVER_TIMEOUT_S = 600
 #: A full git revision, forty lowercase hex digits.
 REV_RE = re.compile(r"[0-9a-f]{40}\Z")
+#: The bed defaults the runner sends when a piece leaves them unset.
+DEFAULT_SEED = 0
+DEFAULT_STEPS = 8
+DEFAULT_GUIDANCE = 7.0
+#: The tempo bounds a bed accepts.
+MIN_BPM = 30
+MAX_BPM = 300
 
 
 def test_index_lists_the_acestep_package() -> None:
@@ -87,7 +94,17 @@ def test_the_two_models_are_backend_owned_and_mit() -> None:
 
 
 def test_the_bed_inputs_are_caption_name_and_duration() -> None:
-    assert set(INPUTS) == {"caption", "name", "duration"}
+    assert set(INPUTS) == {
+        "caption",
+        "name",
+        "duration",
+        "seed",
+        "steps",
+        "guidance",
+        "bpm",
+        "key",
+        "time-signature",
+    }
     assert INPUTS["caption"]["type"] == "string"
     assert INPUTS["caption"]["required"] is True
     assert INPUTS["name"]["type"] == "string"
@@ -96,6 +113,26 @@ def test_the_bed_inputs_are_caption_name_and_duration() -> None:
     assert INPUTS["duration"]["type"] == "number"
     assert INPUTS["duration"]["required"] is True
     assert INPUTS["duration"]["max"] == MAX_DURATION
+    assert INPUTS["seed"]["type"] == "integer"
+    assert INPUTS["seed"]["default"] == DEFAULT_SEED
+    assert INPUTS["seed"]["min"] == DEFAULT_SEED
+    assert INPUTS["steps"]["type"] == "integer"
+    assert INPUTS["steps"]["default"] == DEFAULT_STEPS
+    assert INPUTS["steps"]["min"] == 1
+    assert INPUTS["guidance"]["type"] == "number"
+    assert INPUTS["guidance"]["default"] == DEFAULT_GUIDANCE
+    assert INPUTS["guidance"]["min"] == 0
+    assert INPUTS["bpm"]["type"] == "integer"
+    assert INPUTS["bpm"]["required"] is False
+    assert INPUTS["bpm"]["min"] == MIN_BPM
+    assert INPUTS["bpm"]["max"] == MAX_BPM
+    assert "default" not in INPUTS["bpm"]
+    assert INPUTS["key"]["type"] == "string"
+    assert INPUTS["key"]["required"] is False
+    assert "default" not in INPUTS["key"]
+    assert INPUTS["time-signature"]["type"] == "string"
+    assert INPUTS["time-signature"]["required"] is False
+    assert "default" not in INPUTS["time-signature"]
 
 
 def test_the_bed_verifies_duration_and_peak() -> None:

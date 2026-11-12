@@ -37,6 +37,12 @@ and never comes out of this refusal.
 | `caption` | string | yes | English style caption; the runner refuses one asking for voice |
 | `name` | string | yes | `[a-z0-9][a-z0-9-]*`, writes `<name>.wav` |
 | `duration` | number | yes | seconds of music, at most 30 |
+| `seed` | integer | no (default 0) | random seed, always sent with `use_random_seed = false`; a bed is reproducible from its seed |
+| `steps` | integer | no (default 8) | denoising steps, sent as `inference_steps` |
+| `guidance` | number | no (default 7.0) | guidance scale, sent as `guidance_scale` |
+| `bpm` | integer | no | tempo, 30 to 300; unset sends nothing |
+| `key` | string | no | musical key such as `C major`, sent as `key_scale`; unset sends nothing |
+| `time-signature` | string | no | metre such as `4/4`, sent as `time_signature`; unset sends nothing |
 
 ## Timings and verification
 

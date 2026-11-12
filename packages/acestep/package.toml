@@ -78,6 +78,41 @@ required = true
 max = 30
 description = "Seconds of music to compose, at most 30."
 
+[capabilities.bed.inputs.seed]
+type = "integer"
+default = 0
+min = 0
+description = "Random seed for the bed; the same seed regenerates the same bed."
+
+[capabilities.bed.inputs.steps]
+type = "integer"
+default = 8
+min = 1
+description = "Denoising steps for the bed."
+
+[capabilities.bed.inputs.guidance]
+type = "number"
+default = 7.0
+min = 0
+description = "Guidance scale for the bed."
+
+[capabilities.bed.inputs.bpm]
+type = "integer"
+required = false
+min = 30
+max = 300
+description = "Tempo in beats per minute; omitting it keeps the server default."
+
+[capabilities.bed.inputs.key]
+type = "string"
+required = false
+description = "Musical key, for example \"C major\"; omitting it keeps the server default."
+
+[capabilities.bed.inputs.time-signature]
+type = "string"
+required = false
+description = "Metre, for example \"4/4\"; omitting it keeps the server default."
+
 [capabilities.bed.verify]
 thresholds = { duration_tolerance_s = 1.0, peak_dbfs_min = -40.0 }
 

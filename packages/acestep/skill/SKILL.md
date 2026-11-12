@@ -24,7 +24,8 @@ sung music forever.
 
 ## Pieces
 
-One bed per piece: a `caption`, a `name` and a `duration` in seconds.
+One bed per piece: a `caption`, a `name` and a `duration` in seconds, with
+optional `seed`, `steps`, `guidance`, `bpm`, `key` and `time-signature`.
 
 ```toml
 [inputs]
@@ -35,6 +36,13 @@ duration = 30
 
 `name` matches `[a-z0-9][a-z0-9-]*` and writes `<name>.wav` beside the piece.
 `duration` is at most 30.
+
+A bed is reproducible from its `seed`: the same seed regenerates the same
+bed. `seed` defaults to 0 and is always sent with `use_random_seed = false`;
+`steps` defaults to 8 and `guidance` to 7.0. `bpm` (30 to 300), `key` (sent
+as `key_scale`, for example `C major`) and `time-signature` (sent as
+`time_signature`, for example `4/4`) are unset by default, and an unset one
+sends nothing so the server keeps its own default.
 
 Both approved pieces ship as examples, each with its WAV:
 `examples/clasica-alegre.toml` (major, Vivaldi-style allegro) and

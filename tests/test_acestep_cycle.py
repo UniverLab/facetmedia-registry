@@ -52,6 +52,17 @@ PEAK_DBFS_MIN = -40.0
 WAVEFORM_BINS = 1200
 #: The caption that asks for the sung music the lab discarded forever.
 VOICE_CAPTION = "A warm female singer ballad with piano and soft strings."
+#: The bed defaults the runner sends when a piece leaves them unset.
+DEFAULT_SEED = 0
+DEFAULT_STEPS = 8
+DEFAULT_GUIDANCE = 7.0
+#: The full set of inputs the second cycle test sends.
+FULL_SEED = 7
+FULL_BPM = 120
+FULL_KEY = "C major"
+FULL_TIME_SIGNATURE = "4/4"
+FULL_STEPS = 16
+FULL_GUIDANCE = 3.5
 PULL_FIX = "facet pull acestep"
 START_TIMEOUT_S = 15.0
 OK = 200
@@ -486,7 +497,9 @@ def _missing_required(data: object, schema: dict[str, Any], prefix: str = "") ->
     return missing
 
 
-def _run_cycle(tmp_path: Path) -> tuple[dict[str, Any], str, Path, Path]:
+def _run_cycle(
+    tmp_path: Path, inputs: dict[str, object] | None = None
+) -> tuple[dict[str, Any], str, Path, Path]:
     """One run against the stub server: result, stdout, post log, output dir."""
     stub_dir = _stub_dir(tmp_path)
     checkout = _clone(tmp_path)
@@ -500,7 +513,8 @@ def _run_cycle(tmp_path: Path) -> tuple[dict[str, Any], str, Path, Path]:
     process = _launch(checkout, port, log, wav)
     try:
         assert _wait_healthy(url), "the stub ACE-Step never became healthy"
-        inputs = {"caption": CAPTION, "name": NAME, "duration": DURATION}
+        if inputs is None:
+            inputs = {"caption": CAPTION, "name": NAME, "duration": DURATION}
         request = _request("run", out, tmp_path, inputs)
         result, printed = _call(
             stub_dir, "run", request, tmp_path, _environment(stub_dir, home, url)
@@ -516,7 +530,15 @@ def test_the_cycle_composes_normalises_and_records(tmp_path: Path) -> None:
     asset = result["assets"][0]
     assert asset["file"] == f"{NAME}.wav"
     assert (asset["kind"], asset["mime"]) == ("audio", "audio/wav")
-    assert asset["params"] == {"caption": CAPTION, "name": NAME, "duration": DURATION}
+    assert asset["params"] == {
+        "caption": CAPTION,
+        "name": NAME,
+        "duration": DURATION,
+        "seed": DEFAULT_SEED,
+        "steps": DEFAULT_STEPS,
+        "guidance": DEFAULT_GUIDANCE,
+    }
+    assert asset["seed"] == DEFAULT_SEED
     properties = asset["properties"]
     assert properties["sample_rate_hz"] == RATE_HZ
     assert abs(properties["duration_s"] - DURATION) <= DURATION_TOLERANCE_S
@@ -538,8 +560,56 @@ def test_the_cycle_composes_normalises_and_records(tmp_path: Path) -> None:
     assert body["model"] == "acestep-v15-turbo"
     assert body["task_type"] == "text2music"
     assert body["thinking"] is False
+    assert body["seed"] == DEFAULT_SEED
+    assert body["use_random_seed"] is False
+    assert body["inference_steps"] == DEFAULT_STEPS
+    assert body["guidance_scale"] == DEFAULT_GUIDANCE
+    assert "bpm" not in body
+    assert "key_scale" not in body
+    assert "time_signature" not in body
     queries = [post for post in posts if "task_id_list" in post]
     assert queries and queries[0]["task_id_list"] == ["stub-task"]
+
+
+def test_the_cycle_sends_every_set_input(tmp_path: Path) -> None:
+    result, _printed, log, _out = _run_cycle(
+        tmp_path,
+        {
+            "caption": CAPTION,
+            "name": NAME,
+            "duration": DURATION,
+            "seed": FULL_SEED,
+            "bpm": FULL_BPM,
+            "key": FULL_KEY,
+            "time-signature": FULL_TIME_SIGNATURE,
+            "steps": FULL_STEPS,
+            "guidance": FULL_GUIDANCE,
+        },
+    )
+    asset = result["assets"][0]
+    assert asset["seed"] == FULL_SEED
+    assert asset["params"] == {
+        "caption": CAPTION,
+        "name": NAME,
+        "duration": DURATION,
+        "seed": FULL_SEED,
+        "steps": FULL_STEPS,
+        "guidance": FULL_GUIDANCE,
+        "bpm": FULL_BPM,
+        "key": FULL_KEY,
+        "time-signature": FULL_TIME_SIGNATURE,
+    }
+    posts = _read_lines(log)
+    release = [post for post in posts if "prompt" in post]
+    assert len(release) == 1
+    body = release[0]
+    assert body["seed"] == FULL_SEED
+    assert body["use_random_seed"] is False
+    assert body["bpm"] == FULL_BPM
+    assert body["key_scale"] == FULL_KEY
+    assert body["time_signature"] == FULL_TIME_SIGNATURE
+    assert body["inference_steps"] == FULL_STEPS
+    assert body["guidance_scale"] == FULL_GUIDANCE
 
 
 def test_verify_and_preview_read_the_written_bed(tmp_path: Path) -> None:
