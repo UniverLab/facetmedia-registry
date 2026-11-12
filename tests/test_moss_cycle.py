@@ -636,6 +636,7 @@ def _doctor(
     model: Path,
     extra_env: dict[str, str] | None = None,
     git_stub: str = FAKE_GIT,
+    depth: str = "full",
 ) -> dict[str, Any]:
     """The doctor verb on a canned nvidia-smi/git, the stubs, source and model."""
     machine = tmp_path / "fake-path"
@@ -648,7 +649,7 @@ def _doctor(
     git.chmod(0o755)
     out = tmp_path / "doctor-out"
     out.mkdir(exist_ok=True)
-    request = _request("doctor", out, tmp_path, {}, model, depth="full")
+    request = _request("doctor", out, tmp_path, {}, model, depth=depth)
     input_path = tmp_path / "doctor-request.json"
     result_path = tmp_path / "doctor-result.json"
     input_path.write_text(json.dumps(request), encoding="utf-8")
@@ -697,6 +698,27 @@ def test_the_doctor_checks_machine_and_package(tmp_path: Path) -> None:
     assert model_check["ok"] is False
     assert model_check["fix"] == PULL_FIX
     assert MODEL_ID in model_check["detail"]
+
+
+def test_the_quick_doctor_imports_nothing(tmp_path: Path) -> None:
+    """A module that explodes on import passes quick and fails full.
+
+    The quick depth proves presence and version only, so a cold ``import
+    torch`` no longer runs inside the ten second budget; the full depth still
+    imports and catches the breakage.
+    """
+    stub_dir = _stub_dir(tmp_path)
+    (stub_dir / "torch.py").write_text('raise RuntimeError("torch exploded")', encoding="utf-8")
+    home = tmp_path / "home"
+    model = _model_dir(tmp_path)
+    quick = _doctor(tmp_path, stub_dir, home, model, depth="quick")
+    imports = {check["name"]: check for check in quick["checks"]}["imports"]
+    assert imports["ok"] is True, imports["detail"]
+    assert imports["detail"].startswith("torch ")
+    full = _doctor(tmp_path, stub_dir, home, model, depth="full")
+    imports = {check["name"]: check for check in full["checks"]}["imports"]
+    assert imports["ok"] is False
+    assert "torch: torch exploded" in imports["detail"]
 
 
 def test_the_doctor_refuses_a_card_too_small_for_the_staged_peak(tmp_path: Path) -> None:

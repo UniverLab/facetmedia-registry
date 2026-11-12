@@ -429,17 +429,41 @@ def _doctor_ram() -> dict[str, Any]:
     return _check("ram", ok, detail, "close other heavy jobs: one model at a time")
 
 
-def _doctor_imports() -> dict[str, Any]:
+def _doctor_imports(depth: str) -> dict[str, Any]:
     """The imports the runner leans on, each with its version."""
     # The source check reports a missing checkout with its own fix.
     with contextlib.suppress(Exception):
         _ensure_moss_path()
+    if depth != "full":
+        return _doctor_imports_quick()
     found: list[str] = []
     broken: list[str] = []
     for module_name, distribution in DOCTOR_IMPORTS:
         try:
             module = importlib.import_module(module_name)
             found.append(f"{module_name} {getattr(module, '__version__', _version(distribution))}")
+        except Exception as exc:  # catch-all: one broken import must not hide the rest
+            broken.append(f"{module_name}: {exc}")
+    detail = "; ".join(broken) if broken else ", ".join(found)
+    return _check("imports", not broken, detail, PULL_FIX)
+
+
+def _doctor_imports_quick() -> dict[str, Any]:
+    """Presence and version of each import, without loading any of them.
+
+    The quick contract is imports, files, versions in about ten seconds; a
+    cold ``import torch`` alone costs more than that. A missing spec is
+    reported as the import failure it would be, so the detail keeps its
+    shape and the full depth remains the way to catch a broken module.
+    """
+    found: list[str] = []
+    broken: list[str] = []
+    for module_name, distribution in DOCTOR_IMPORTS:
+        try:
+            spec = importlib.util.find_spec(module_name)
+            if spec is None:
+                raise ModuleNotFoundError(f"No module named {module_name!r}")
+            found.append(f"{module_name} {_version(distribution)}")
         except Exception as exc:  # catch-all: one broken import must not hide the rest
             broken.append(f"{module_name}: {exc}")
     detail = "; ".join(broken) if broken else ", ".join(found)
@@ -505,7 +529,7 @@ def doctor(req: Request) -> dict[str, Any]:
     checks = [
         _doctor_gpu(),
         _doctor_ram(),
-        _doctor_imports(),
+        _doctor_imports(req.depth),
         _doctor_source(),
         _doctor_model(req),
     ]
