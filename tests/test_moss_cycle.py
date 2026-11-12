@@ -110,6 +110,8 @@ import wave
 
 import numpy
 
+PEAK_CAP_DBFS = -1.0
+
 
 def read_wav(path):
     with wave.open(str(path), "rb") as reader:
@@ -530,7 +532,7 @@ def test_verify_and_preview_read_the_written_effect(tmp_path: Path) -> None:
     )
     passed = verdict["assets"][0]
     assert passed["passed"] is True
-    assert passed["thresholds"] == {"lufs_tol": LUFS_TOL}
+    assert passed["thresholds"] == {"lufs_tol": LUFS_TOL, "peak_cap_dbfs": -1.0}
     assert passed["verifier"] == "audiopreview"
     assert abs(passed["metrics"]["lufs"] - TARGET_LUFS) <= FLOAT_TOL
 
@@ -800,7 +802,7 @@ def test_the_capability_inputs_and_thresholds() -> None:
     assert inputs["target-lufs"]["default"] == DEFAULT_TARGET_LUFS
     assert inputs["target-lufs"]["min"] == TARGET_MIN_LUFS
     assert inputs["target-lufs"]["max"] == TARGET_MAX_LUFS
-    assert sfx["verify"]["thresholds"] == {"lufs_tol": LUFS_TOL}
+    assert sfx["verify"]["thresholds"] == {"lufs_tol": LUFS_TOL, "peak_cap_dbfs": -1.0}
 
 
 def test_the_skill_has_the_front_matter_and_four_headings() -> None:

@@ -40,10 +40,12 @@ for hits that must cut through.
 ## Judging the result
 
 `verify` measures the WAV's integrated loudness and passes while it sits
-within 1 LU of `target-lufs`. The run normalises every effect to that
-target and records `duration_s`, `sample_rate_hz`, `lufs` and
-`peak_dbfs`; `facet preview <name>.wav --json` writes the waveform and
-momentary loudness for the audio viewer.
+within 1 LU of `target-lufs`. A transient-heavy effect may sit below the
+target, held at the -1 dBFS peak ceiling; `verify` accepts it and records
+`peak_limited: true`. No limiter is added. The run normalises every
+effect to that target and records `duration_s`, `sample_rate_hz`, `lufs`,
+`peak_dbfs` and `peak_limited`; `facet preview <name>.wav --json` writes
+the waveform and momentary loudness for the audio viewer.
 
 Event count is unreliable: asking for one click can give two, so listen
 to the WAV or read the spectrogram — loudness and duration verify, timbre

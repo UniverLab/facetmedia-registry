@@ -98,7 +98,7 @@ max = -10
 description = "Normalisation target in LUFS; -23 suits beds under voice, pass a louder target for hits."
 
 [capabilities.sfx.verify]
-thresholds = { lufs_tol = 1.0 }
+thresholds = { lufs_tol = 1.0, peak_cap_dbfs = -1.0 }
 
 [capabilities.sfx.preview]
 viewer = "audio"

@@ -31,7 +31,11 @@ stage needs, the pinned source checkout and the model files.
 Every effect is normalised to its declared `target-lufs` (default **-23**,
 the level for beds under voice; pass a louder target up to -10 for hits).
 `verify` passes while the measured integrated loudness sits within
-`lufs_tol = 1.0` LU of the target.
+`lufs_tol = 1.0` LU of the target. A transient-heavy effect (footsteps,
+knocks, hits) may land below the target, held at the -1 dBFS peak ceiling
+the normaliser caps gain at: `verify` accepts it and records
+`peak_limited: true`. No limiter or compressor is added; the transients
+stay as generated.
 
 ## The event-count caveat
 

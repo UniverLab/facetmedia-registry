@@ -217,11 +217,14 @@ def _effect(pipe: Any, params: dict[str, Any], out_dir: Path) -> dict[str, Any]:
     samples = audio.normalize(_samples(generated), rate, params["target-lufs"])
     path = out_dir / f"{params['name']}.wav"
     audio.write_wav(path, samples, rate)
+    lufs = audio.integrated_lufs(samples, rate)
+    peak = audio.peak_dbfs(samples)
     properties = {
         "duration_s": round(audio.duration_s(samples, rate), 3),
         "sample_rate_hz": rate,
-        "lufs": round(audio.integrated_lufs(samples, rate), 2),
-        "peak_dbfs": round(audio.peak_dbfs(samples), 2),
+        "lufs": round(lufs, 2),
+        "peak_dbfs": round(peak, 2),
+        "peak_limited": _is_peak_limited(lufs, peak, params["target-lufs"], audio.PEAK_CAP_DBFS),
     }
     print(
         f"{path.name} ok ({properties['duration_s']:.1f} s in "
@@ -274,9 +277,15 @@ def _clip_for(clips: dict[str, dict[str, Any]], path: Path) -> dict[str, Any]:
     return clip
 
 
+def _is_peak_limited(lufs: float, peak: float, target: float, cap: float) -> bool:
+    """A transient-heavy effect the normaliser held at the peak ceiling."""
+    return lufs < target - LUFS_TOL and peak >= cap - 0.1
+
+
 def _verify_one(audio: Any, path: Path, params: dict[str, Any]) -> dict[str, Any]:
-    """One WAV passes when its loudness sits within ``lufs_tol`` of the target."""
-    thresholds = {"lufs_tol": LUFS_TOL}
+    """One WAV passes within ``lufs_tol`` of target, or peak-limited below it."""
+    cap = audio.PEAK_CAP_DBFS
+    thresholds = {"lufs_tol": LUFS_TOL, "peak_cap_dbfs": cap}
     target = float(params["target-lufs"])
     try:
         samples, rate = audio.read_wav(path)
@@ -290,7 +299,8 @@ def _verify_one(audio: Any, path: Path, params: dict[str, Any]) -> dict[str, Any
             "thresholds": thresholds,
             "verifier": VERIFIER,
         }
-    passed = abs(lufs - target) <= LUFS_TOL
+    peak_limited = _is_peak_limited(lufs, peak, target, cap)
+    passed = abs(lufs - target) <= LUFS_TOL or peak_limited
     return {
         "file": path.name,
         "passed": passed,
@@ -299,6 +309,7 @@ def _verify_one(audio: Any, path: Path, params: dict[str, Any]) -> dict[str, Any
             "target_lufs": target,
             "peak_dbfs": round(peak, 2),
             "duration_s": round(audio.duration_s(samples, rate), 3),
+            "peak_limited": peak_limited and passed,
         },
         "thresholds": thresholds,
         "verifier": VERIFIER,
