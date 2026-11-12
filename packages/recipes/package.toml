@@ -4,7 +4,7 @@ requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "UniverLab (recipes)"
 tool_name = "recipes"
-description = "Complete-piece recipes that chain existing packages into ordered plans: the narrated explainer video, the architectural render with people, voiced material with music and the tool demo"
+description = "Complete-piece recipes that chain existing packages into ordered plans: the narrated explainer video, the architectural render, voiced material with music and the tool demo"
 facet = "text"
 
 [engine]
@@ -34,7 +34,7 @@ kind = "text"
 type = "enum"
 values = ["explainer-video", "architecture-render", "voice-material", "tool-demo"]
 required = true
-description = "Complete piece to plan: explainer-video (narrated explainer video), architecture-render (architectural render with people), voice-material (voiced material with music) or tool-demo (tool demo). The plan is written as <recipe>.plan.json beside the piece."
+description = "Complete piece to plan: explainer-video (narrated explainer video), architecture-render (architectural render), voice-material (voiced material with music) or tool-demo (tool demo). The plan is written as <recipe>.plan.json beside the piece."
 
 [capabilities.plan.verify]
 thresholds = { steps_min = 1 }

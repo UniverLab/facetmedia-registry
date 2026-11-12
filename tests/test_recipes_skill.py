@@ -4,8 +4,8 @@ The skill is the only place an agent learns the recipes, so these tests pin
 what a person reads: the front matter, the four headings the core requires
 in order, one recipe per complete piece with the same chains the data file
 carries, and that every named capability resolves against the packages in
-this registry. People and cars are ``blender.photo`` inputs, never
-capabilities, and no references directory ships.
+this registry. The architectural render names ``blender.scene`` and the
+study-photo example, never a photo preset, and no references directory ships.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ CHAINS = {
         "whisper-subs.subtitles",
         "hyperframes.narrated",
     ],
-    "architecture-render": ["cad.solid", "blender.assets", "blender.photo", "deck.page"],
+    "architecture-render": ["cad.solid", "blender.assets", "blender.scene", "deck.page"],
     "voice-material": ["kokoro.speak", "acestep.bed", "deck.slides"],
     "tool-demo": ["demostage.demo", "deck.slides"],
 }
@@ -100,17 +100,18 @@ def test_the_skill_carries_each_handoff_and_verification() -> None:
             assert verify in flat, f"{recipe}: {step['verify']} missing"
 
 
-def test_people_and_cars_are_photo_inputs_not_capabilities() -> None:
+def test_the_architectural_render_names_the_scripted_capability() -> None:
+    """The preset ids are gone from the registry and from the recipes."""
     capabilities = _registry_capabilities()
+    for old in ("blender.photo", "blender.product", "blender.tour"):
+        assert old not in capabilities, old
     assert "blender.people" not in capabilities
     assert "blender.cars" not in capabilities
-    photo = tomllib.loads(
-        (ROOT / "packages" / "blender" / "package.toml").read_text(encoding="utf-8")
-    )["capabilities"]["photo"]["inputs"]
-    assert "people" in photo and "cars" in photo
     body = _body()
-    assert "people-blend" in body and "cars-blend" in body
-    assert "INPUTS, never capabilities" in body
+    for old in ("blender.photo", "blender.product", "blender.tour"):
+        assert old not in body, old
+    assert "blender.scene" in body
+    assert "study-photo/study_photo.py" in body
 
 
 def test_the_skill_names_kokoro_only_as_the_video_alternative() -> None:

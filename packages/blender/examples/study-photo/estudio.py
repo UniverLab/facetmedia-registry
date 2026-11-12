@@ -2,15 +2,15 @@
 # requires-python = ">=3.11,<3.14"
 # dependencies = ["cadquery==2.8.0"]
 # ///
-"""The lab's study as a CadQuery Assembly, exported as glTF for blender.photo.
+"""The lab's study as a CadQuery Assembly, exported as glTF for the examples.
 
-Each piece is one Assembly element, and its name is the material prefix
-``render.py`` matches: muros, piso, vidrio-*, cama, almohada, mesa, sillas.
-It models in mm, so the glTF carries millimeters and the blender runner
-scales it to metres (x0.001).
+Each piece is one Assembly element, and its name is the material prefix the
+study scripts in ``DATA`` match: muros, piso, vidrio-*, cama, almohada, mesa,
+sillas. It models in mm, so the glTF carries millimeters and
+``study_photo.py`` and ``tour.py`` scale it to metres (x0.001).
 
-Usage: ``uv run packages/blender/examples/estudio.py`` writes ``estudio.glb``
-beside this file.
+Usage: ``uv run packages/blender/examples/study-photo/estudio.py`` writes
+``estudio.glb`` beside this file.
 """
 
 import json

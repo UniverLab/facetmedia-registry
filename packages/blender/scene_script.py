@@ -5,8 +5,8 @@ renders one MP4 from it, both from a factory-empty scene the script builds
 itself: a ground plane, primitives, lights, a camera, keyframes — whatever
 the recipes never foresaw. facet owns only the output: the resolution at
 100 %, the engine and its samples, the seed, the exposure, and for an
-animation the frame range, the frame rate and the FFmpeg MP4 block the tour
-already uses (FFMPEG/MPEG4/H264). Everything else is the script's: the
+animation the frame range, the frame rate and an FFmpeg MP4 block
+(FFMPEG/MPEG4/H264). Everything else is the script's: the
 world, the lights, the materials, the colour-management look and view
 transform, the keyframes.
 
@@ -20,7 +20,7 @@ capabilities use, so a Windows host Blender opens them.
 
 This module is imported by the runner, so it never imports the runner back:
 inside Blender that module is ``__main__`` and importing it would execute
-the entry twice (``producto.py`` says the same about itself).
+the entry twice.
 """
 
 from __future__ import annotations

@@ -1,0 +1,8 @@
+[inputs]
+script = "study_photo.py"
+name = "estudio"
+width = 1600
+height = 1000
+engine = "cycles"
+samples = 128
+exposure = -0.6

@@ -11,7 +11,7 @@ the same knowledge as data.
 
 A **complete piece** is more than one asset: a video needs a voice, a music
 bed, a mix, a transcript, subtitles and a composition; an architectural
-render needs a solid, assets, a photo and a deck. A recipe names the packages
+render needs a solid, assets, a scene and a deck. A recipe names the packages
 to combine, the order to run them and what to check after each step. Use one
 when you are building a whole piece; run a single package's own capability
 when you need one asset.
@@ -21,7 +21,7 @@ when you need one asset.
 | Recipe | What it builds | Steps |
 |--------|----------------|-------|
 | `explainer-video` | A narrated explainer video: voice, music bed, normalize and mix, transcript, subtitles, HyperFrames composition | `voicestudio.speak` · `acestep.bed` · `ffmpeg.normalize` · `ffmpeg.mix` · `whisper.transcribe` · `whisper-subs.subtitles` · `hyperframes.narrated` |
-| `architecture-render` | An architectural render with people: a CAD solid, Poly Haven assets, a daylight photo with people and cars, a one-page deck | `cad.solid` · `blender.assets` · `blender.photo` · `deck.page` |
+| `architecture-render` | An architectural render: a CAD solid, Poly Haven assets, a daylight scene from the study-photo example, a one-page deck | `cad.solid` · `blender.assets` · `blender.scene` · `deck.page` |
 | `voice-material` | Voiced material with music: narration, a music bed, a slide deck | `kokoro.speak` · `acestep.bed` · `deck.slides` |
 | `tool-demo` | A tool demo: a recorded terminal demo and a slide deck | `demostage.demo` · `deck.slides` |
 

@@ -1,0 +1,10 @@
+[inputs]
+script = "tour.py"
+name = "estudio-recorrido"
+width = 1280
+height = 720
+engine = "eevee"
+samples = 32
+exposure = -0.4
+frames = 240
+fps = 24

@@ -41,7 +41,7 @@
       ]
     },
     "architecture-render": {
-      "summary": "Architectural render with people: a CAD solid, Poly Haven assets, a daylight photo with people and cars, and a one-page deck.",
+      "summary": "Architectural render: a CAD solid, its Poly Haven assets, a daylight scene from the study-photo example, and a one-page deck.",
       "steps": [
         {
           "capability": "cad.solid",
@@ -54,9 +54,9 @@
           "verify": "The receipt's files are all present."
         },
         {
-          "capability": "blender.photo",
-          "handoff": "estudio-photo.png (model estudio.glb, people-blend people.blend + people, cars-blend cars.blend + cars)",
-          "verify": "Look at the PNG."
+          "capability": "blender.scene",
+          "handoff": "estudio-photo.png (script study-photo/study_photo.py, name estudio, width 1600, height 1000, engine cycles, exposure -0.6)",
+          "verify": "The PNG measures 1600x1000."
         },
         {
           "capability": "deck.page",

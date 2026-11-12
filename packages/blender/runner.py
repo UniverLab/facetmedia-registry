@@ -1,18 +1,16 @@
-"""The blender package runner: a daylight architectural photo of a CAD model.
+"""The blender package runner: the agent's own Blender script, facet's output.
 
 facet drives a ``host-app`` package through the host binary, so this entry is
 Blender's script: ``blender -b --factory-startup --python-exit-code 1 --python
 runner.py -- <verb> --input <request> --result <result>``. Inside Blender the
-four verbs use ``bpy``: ``run`` imports the CadQuery glTF (millimetres, one
-element per piece carrying its name), scales it to metres, assigns one
-Principled material per piece by name prefix — a piece left without one fails
-the run loudly — builds the sun plus sky wash, the axonometric camera and the
-Cycles GPU settings (OPTIX, 128 samples, denoise, exposure -0.6 under AgX
-Medium High Contrast), and writes ``<model>-photo.png`` at 1600x1000.
-``verify`` measures the PNG header, ``preview`` writes the image kind's
-preview file, and ``doctor`` reports the Blender-side modules.
-``blender.product`` reuses the same four verbs for ``producto.py``: one STL
-part in a studio, 1200x1200, its lights scaled from the part's bounding box.
+scripted capabilities run the piece's own ``.py`` script through
+``scene_script.py``: the script builds the scene, sets ``scene.camera`` and owns
+every creative choice, and the runner applies facet's output settings — the
+resolution, the engine and its samples, the seed, the exposure, and for an
+animation the frame range and rate — over whatever the script set.
+``verify`` measures the PNG header or the MP4's boxes, ``preview`` writes the
+kind's preview file, and ``doctor`` reports the Blender-side modules.
+``blender.assets`` fetches Poly Haven files and needs no Blender at all.
 
 Started with plain Python — ``python runner.py run ...``, as the tests and a
 manual paste-back do — the same entry is the launcher the lab's
@@ -27,7 +25,6 @@ from __future__ import annotations
 
 import importlib
 import json
-import math
 import os
 import posixpath
 import re
@@ -35,37 +32,17 @@ import struct
 import subprocess
 import sys
 import tomllib
-from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import escena
-import mp4
 import polyhaven
-import producto
-import recorrido
 import scene_script
 
-#: The image the daylight recipe produces, per the approved lab render.
-RENDER_WIDTH = 1600
-RENDER_HEIGHT = 1000
-#: Cycles on the GPU: 128 samples with denoise is the lab's 8-10 s recipe.
-SAMPLES = 128
-DEFAULT_EXPOSURE = -0.6
-#: The lab's axonometric view: azimuth and elevation in degrees. The scale is
-#: fitted to the whole model when the piece omits it.
-DEFAULT_CAMERA = {"azimuth": -40.0, "elevation": 48.0}
-#: How far the orthographic camera sits from the model, in frame widths.
-CAMERA_DISTANCE = 2.5
-#: What the run appends to the model's stem: ``estudio.glb`` -> ``estudio-photo.png``.
-ASSET_SUFFIX = "-photo"
-#: Cycles' sampling seed: one scene gives the same photo every run.
-SEED = 0
 #: The lab's headless flags; the exit-code flag must precede ``--python``.
 HOST_FLAGS = ("-b", "--factory-startup", "--python-exit-code", "1", "--python")
-#: The verbs that need Blender; verify and preview read the PNG directly.
+#: The verbs that need Blender; verify and preview read the output directly.
 NEEDS_BLENDER = ("run", "doctor")
 #: The only failure worth a second launch: WSL interop failing the first accept.
 INTEROP_MARKER = "UtilAcceptVsock"
@@ -84,7 +61,6 @@ UNC_PARTS = 4
 _UNC_ROOT: list[str] = [""]
 #: ``C:\`` or ``C:/``: a path the Windows build already understands.
 DRIVE_RE = re.compile(r"[A-Za-z]:[\\/]")
-UNSAFE_NAME = re.compile(r"[^a-z0-9-]+")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -108,14 +84,15 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _verbs(capability: str) -> dict[str, Any]:
-    """The verb table of the capability the request names."""
-    if capability == "blender.product":
-        return PRODUCTO_VERBS
-    if capability == "blender.tour":
-        return RECORRIDO_VERBS
+    """The verb table of the capability the request names.
+
+    ``blender.assets`` runs its own verbs and needs no Blender, but ``doctor``
+    still answers for it — ``facet describe`` asks per capability, and the
+    check is bpy's alone either way.
+    """
     if capability in scene_script.CAPABILITIES:
         return scene_script.verbs(capability, _script_host())
-    return VERBS
+    return {"doctor": scene_script.verbs("blender.scene", _script_host())["doctor"]}
 
 
 def _script_host() -> scene_script.Host:
@@ -162,359 +139,23 @@ def _parse_argv(argv: list[str]) -> tuple[str, Path, Path]:
     return verb, Path(values["--input"]), Path(values["--result"])
 
 
-# --- the four verbs.
-
-
-def _run(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
-    """Render one photo and report it as the image asset it is.
-
-    Paths stay POSIX strings: facet resolves them on WSL, and ``pathlib``
-    inside the Windows build of Blender would rewrite ``/mnt/c/...`` before the
-    host conversion ever sees it.
-    """
-    params = dict(request.get("inputs") or {})
-    model = str(params["model"])
-    name = _asset_name(model)
-    destination = f"{str(request['out_dir']).rstrip('/')}/{name}.png"
-    _render(bpy, model, destination, params)
-    return {
-        "tool": {"name": "blender", "version": _version(bpy)},
-        "assets": [
-            {
-                "file": f"{name}.png",
-                "name": name,
-                "kind": "image",
-                "mime": "image/png",
-                "properties": {
-                    "width": RENDER_WIDTH,
-                    "height": RENDER_HEIGHT,
-                    "samples": SAMPLES,
-                    "exposure": _exposure(params),
-                    "rotation": _rotation(params),
-                },
-                "params": params,
-                "seed": SEED,
-                "inputs": [model],
-            }
-        ],
-    }
-
-
-def _producto_run(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
-    """Render one studio product shot and report it as the image asset it is."""
-    params = dict(request.get("inputs") or {})
-    part = str(params["part"])
-    name = f"{_part_stem(part)}-product"
-    destination = f"{str(request['out_dir']).rstrip('/')}/{name}.png"
-    windows = _on_windows()
-    exposure, fill, light = producto.options(params)
-    producto.render(bpy, _host_path(part, windows), _host_path(destination, windows), params)
-    return {
-        "tool": {"name": "blender", "version": _version(bpy)},
-        "assets": [
-            {
-                "file": f"{name}.png",
-                "name": name,
-                "kind": "image",
-                "mime": "image/png",
-                "properties": {
-                    "width": producto.PRODUCT_WIDTH,
-                    "height": producto.PRODUCT_HEIGHT,
-                    "samples": producto.SAMPLES,
-                    "exposure": exposure,
-                    "fill": fill,
-                    "light": light,
-                    "material": str(params.get("material") or producto.DEFAULT_MATERIAL),
-                    "backdrop": str(params.get("backdrop") or producto.DEFAULT_BACKDROP),
-                },
-                "params": params,
-                "seed": producto.SEED,
-                "inputs": [part],
-            }
-        ],
-    }
-
-
-def _verify(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
-    """Measure each PNG's header against the recipe's size."""
-    product = request.get("capability") == "blender.product"
-    width = producto.PRODUCT_WIDTH if product else RENDER_WIDTH
-    height = producto.PRODUCT_HEIGHT if product else RENDER_HEIGHT
-    thresholds = {"width": width, "height": height}
-    paths = [str(item) for item in request.get("assets") or []]
-    return {"assets": [_verdict(path, thresholds) for path in paths]}
-
-
-def _verdict(path: str, thresholds: dict[str, int]) -> dict[str, Any]:
-    """One asset's verdict: the measured size against the recipe."""
-    try:
-        width, height = _png_size(path)
-    except (OSError, ValueError) as exc:
-        return _asset_verdict(path, False, {"error": str(exc)}, thresholds)
-    passed = width == thresholds["width"] and height == thresholds["height"]
-    return _asset_verdict(path, passed, {"width": width, "height": height}, thresholds)
-
-
-def _asset_verdict(
-    path: str,
-    passed: bool,
-    metrics: dict[str, Any],
-    thresholds: dict[str, Any],
-    verifier: str = "png",
-) -> dict[str, Any]:
-    return {
-        "file": posixpath.basename(path),
-        "passed": passed,
-        "metrics": metrics,
-        "thresholds": thresholds,
-        "verifier": verifier,
-    }
-
-
-def _preview(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
-    """Write the image kind's preview file beside each asset."""
-    params = dict(request.get("inputs") or {})
-    product = request.get("capability") == "blender.product"
-    entries: list[dict[str, Any]] = []
-    for item in request.get("assets") or []:
-        path = str(item)
-        file_name = posixpath.basename(path)
-        name = posixpath.splitext(file_name)[0]
-        width, height = _png_size(path)
-        data = (
-            _producto_preview(name, width, height, params)
-            if product
-            else _foto_preview(name, width, height, params)
-        )
-        preview_name = f"{file_name}.preview.json"
-        preview_path = f"{posixpath.dirname(path)}/{preview_name}"
-        with open(_open_path(preview_path), "w", encoding="utf-8") as handle:
-            handle.write(json.dumps(data, ensure_ascii=False, sort_keys=True) + "\n")
-        entries.append({"file": file_name, "preview": preview_name, "images": []})
-    return {"assets": entries}
-
-
-def _foto_preview(name: str, width: int, height: int, params: dict[str, Any]) -> dict[str, Any]:
-    """The daylight photo's preview: the recipe line is the photo's prompt."""
-    return {
-        "preview": 1,
-        "kind": "image",
-        "summary": (
-            f"{name} · {width}×{height} · rotation {_rotation(params):g} · "
-            f"exposure {_exposure(params):g}"
-        ),
-        "name": name,
-        "prompt": _prompt(params),
-        "seed": SEED,
-        "width": width,
-        "height": height,
-    }
-
-
-def _producto_preview(name: str, width: int, height: int, params: dict[str, Any]) -> dict[str, Any]:
-    """The product shot's preview: material and backdrop name the studio."""
-    material = str(params.get("material") or producto.DEFAULT_MATERIAL)
-    backdrop = str(params.get("backdrop") or producto.DEFAULT_BACKDROP)
-    stem = _part_stem(str(params.get("part") or "product"))
-    return {
-        "preview": 1,
-        "kind": "image",
-        "summary": f"{name} · {width}×{height} · {material} · {backdrop}",
-        "name": name,
-        "prompt": f"{stem} · product photo · {material} on {backdrop} · studio",
-        "seed": producto.SEED,
-        "width": width,
-        "height": height,
-    }
-
-
-def _prompt(params: dict[str, Any]) -> str:
-    """The one line describing the scene, as the image preview's prompt.
-
-    A render has no sampling prompt; the field belongs to the shared image
-    kind, so it carries the recipe that produced the photo instead.
-    """
-    stem = posixpath.splitext(posixpath.basename(str(params.get("model", ""))))[0]
-    camera = _camera(params)
-    return (
-        f"{stem} · daylight architectural photo · azimuth {camera['azimuth']:g} "
-        f"elevation {camera['elevation']:g} · rotation {_rotation(params):g} · "
-        f"exposure {_exposure(params):g}"
-    )
-
-
-def _doctor(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
-    """The Blender-side modules: bpy, its glTF importer and Cycles.
-
-    The host binary itself — present, at least 5.2 — is facet's own check:
-    ``facet doctor`` resolves ``blender.path`` and probes ``--version``.
-    """
-    checks = [_doctor_bpy(bpy), _doctor_gltf(bpy), _doctor_cycles(bpy)]
-    if request.get("depth") == "full":
-        checks.append(_doctor_devices(bpy))
-    return {"checks": checks}
-
-
-def _check(name: str, ok: bool, detail: str, fix: str = "") -> dict[str, Any]:
-    return {"name": name, "ok": ok, "detail": detail, "fix": "" if ok else fix}
-
-
-def _doctor_bpy(bpy: Any) -> dict[str, Any]:
-    return _check("bpy", True, f"bpy {_version(bpy)} imports")
-
-
-def _doctor_gltf(bpy: Any) -> dict[str, Any]:
-    try:
-        importer = bpy.ops.import_scene.gltf
-    except AttributeError as exc:
-        return _check("gltf", False, str(exc), "use a Blender build that ships the glTF importer")
-    return _check("gltf", importer is not None, "bpy.ops.import_scene.gltf is available")
-
-
-def _doctor_cycles(bpy: Any) -> dict[str, Any]:
-    try:
-        preferences = bpy.context.preferences.addons["cycles"].preferences
-    except (AttributeError, KeyError) as exc:
-        return _check("cycles", False, str(exc), "enable the Cycles add-on in Blender")
-    kind = getattr(preferences, "compute_device_type", "")
-    return _check("cycles", True, f"Cycles is available (device type {kind})")
-
-
-def _doctor_devices(bpy: Any) -> dict[str, Any]:
-    try:
-        preferences = bpy.context.preferences.addons["cycles"].preferences
-        preferences.get_devices()
-        devices = [str(device.name) for device in preferences.devices if device.type != "CPU"]
-    except (AttributeError, KeyError, TypeError) as exc:
-        return _check("gpu", False, str(exc), "install the Blender build with an OptiX device")
-    detail = ", ".join(devices) if devices else "no OptiX or CUDA device: Cycles falls back to CPU"
-    return _check("gpu", bool(devices), detail, "install the NVIDIA driver so OptiX is listed")
-
-
-VERBS = {"run": _run, "verify": _verify, "preview": _preview, "doctor": _doctor}
-#: ``blender.product`` keeps verify, preview and doctor; its run is the studio.
-PRODUCTO_VERBS = {**VERBS, "run": _producto_run}
-
-
-# --- blender.tour: the Eevee camera tour, its MP4 probe and its preview.
-#
-# The capability is kind video. Its run is Eevee (``recorrido.py``); verify
-# reads the MP4's ISO BMFF boxes with the standard library alone, because a
-# host-app package ships no Python environment to install ffprobe into; and
-# preview writes the video kind's fields from those same measurements.
-
-
-def _recorrido_run(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
-    """Render the camera tour into one MP4 and report it as the video it is."""
-    params = dict(request.get("inputs") or {})
-    model = str(params["model"])
-    name = recorrido.asset_name(model)
-    destination = f"{str(request['out_dir']).rstrip('/')}/{name}.mp4"
-    windows = _on_windows()
-    rendered = _host_scene(params, windows)
-    root = _dressing_root(params)
-    recorrido.render(
-        bpy, _host_path(model, windows), _host_path(destination, windows), rendered, root
-    )
-    return {
-        "tool": {"name": "blender", "version": _version(bpy)},
-        "assets": [recorrido.asset(params, model)],
-    }
-
-
-def _host_scene(params: dict[str, Any], windows: bool) -> dict[str, Any]:
-    """The tour's params with the scene blends converted; the asset keeps it raw."""
-    converted = dict(params)
-    for key in ("people-blend", "cars-blend"):
-        blend = params.get(key)
-        if blend:
-            converted[key] = _host_path(str(blend), windows)
-    return converted
-
-
-def _recorrido_verify(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
-    """Probe each MP4's boxes against the entry's frames and frame rate."""
-    tour = recorrido.plan(_entry(request))
-    thresholds: dict[str, Any] = {
-        "width": recorrido.WIDTH,
-        "height": recorrido.HEIGHT,
-        "frames": tour.frames,
-        "fps": tour.fps,
-    }
-    paths = [str(item) for item in request.get("assets") or []]
-    return {"assets": [_video_verdict(path, thresholds) for path in paths]}
-
-
-def _entry(request: dict[str, Any]) -> dict[str, Any]:
-    """The piece's tour entry, or one record's params, as comfy's ``_entries``.
-
-    ``verify`` and ``preview`` receive the piece's inputs; ``facet check`` and
-    ``facet preview`` pass the record's params for one asset, which are the
-    entry itself. A ``tour`` list is accepted first when a piece has one.
-    """
-    inputs = dict(request.get("inputs") or {})
-    raw = inputs.get("tour")
-    items = raw if isinstance(raw, list) else [inputs]
-    entries = [item for item in items if isinstance(item, dict)]
-    return entries[0] if entries else {}
-
-
-def _video_verdict(path: str, thresholds: dict[str, Any]) -> dict[str, Any]:
-    """One MP4's measurements against the recipe; unparsable files fail."""
-    try:
-        metrics = _probe_mp4(path)
-    except (OSError, ValueError) as exc:
-        return _asset_verdict(path, False, {"error": str(exc)}, thresholds, "mp4")
-    passed = all(metrics[key] == thresholds[key] for key in thresholds)
-    return _asset_verdict(path, passed, metrics, thresholds, "mp4")
-
-
-def _recorrido_preview(bpy: Any, request: dict[str, Any]) -> dict[str, Any]:
-    """Write the video kind's preview file beside each MP4."""
-    entry = _entry(request)
-    seed = int(entry.get("seed", recorrido.DEFAULT_SEED))
-    tour = recorrido.plan(entry)
-    entries: list[dict[str, Any]] = []
-    for item in request.get("assets") or []:
-        path = str(item)
-        file_name = posixpath.basename(path)
-        name = str(entry.get("name") or posixpath.splitext(file_name)[0])
-        data = _video_preview(path, name, seed, tour)
-        preview_name = f"{file_name}.preview.json"
-        preview_path = f"{posixpath.dirname(path)}/{preview_name}"
-        with open(_open_path(preview_path), "w", encoding="utf-8") as handle:
-            handle.write(json.dumps(data, ensure_ascii=False, sort_keys=True) + "\n")
-        entries.append({"file": file_name, "preview": preview_name, "images": []})
-    return {"assets": entries}
-
-
-def _video_preview(path: str, name: str, seed: int, tour: recorrido.Tour) -> dict[str, Any]:
-    """The video schema's fields, with the probe's measurements of the MP4."""
-    probe = _probe_mp4(path)
-    summary = (
-        f"{name} · {probe['width']}×{probe['height']} · "
-        f"{probe['frames']}f @ {probe['fps']}fps · seed {seed}"
-    )
-    return {
-        "preview": 1,
-        "kind": "video",
-        "summary": summary[:160],
-        "name": name,
-        "prompt": recorrido.prompt(name, tour),
-        "seed": seed,
-        "width": probe["width"],
-        "height": probe["height"],
-        "length": probe["frames"],
-        "fps": probe["fps"],
-    }
-
-
-RECORRIDO_VERBS = {
-    **VERBS,
-    "run": _recorrido_run,
-    "verify": _recorrido_verify,
-    "preview": _recorrido_preview,
-}
+def _cycles(bpy: Any, scene: Any) -> None:
+    """Cycles on the first GPU device it finds: OPTIX, then CUDA, else CPU."""
+    scene.render.engine = "CYCLES"
+    preferences = bpy.context.preferences.addons["cycles"].preferences
+    for kind in ("OPTIX", "CUDA"):
+        try:
+            preferences.compute_device_type = kind
+            preferences.get_devices()
+            devices = [device for device in preferences.devices if device.type == kind]
+        except TypeError:
+            continue
+        if devices:
+            for device in preferences.devices:
+                device.use = device.type == kind
+            scene.cycles.device = "GPU"
+            break
+    scene.cycles.use_denoising = True
 
 
 # --- blender.assets: Poly Haven skies, textures and models, fetched once.
@@ -662,162 +303,6 @@ def _manifest_tool() -> dict[str, str]:
     return {"name": str(manifest["name"]), "version": str(manifest["version"])}
 
 
-# --- the scene: the lab's daylight recipe, one piece per glTF element.
-
-
-def _dressing_root(params: dict[str, Any]) -> str:
-    """The Poly Haven root the scene reads, or nothing when it dresses nothing."""
-    if params.get("sky") or params.get("textures") or params.get("plants"):
-        return str(_polyhaven_root())
-    return ""
-
-
-def _render(bpy: Any, model: str, destination: str, params: dict[str, Any]) -> None:
-    """Import the glTF, dress the scene and render it to ``destination``."""
-    windows = _on_windows()
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    scene = bpy.context.scene
-    bpy.ops.import_scene.gltf(filepath=_host_path(model, windows))
-    escena.scale_roots(scene)
-    _turn_roots(scene, _rotation(params))
-    escena.bake_pieces(bpy, scene)
-    bpy.context.view_layer.update()
-    centre = escena.centre(scene)
-    camera = _camera(params)
-    if "scale" not in camera:
-        camera["scale"] = escena.fit_scale(
-            escena.model_corners(scene),
-            centre,
-            camera["azimuth"],
-            camera["elevation"],
-            RENDER_HEIGHT / RENDER_WIDTH,
-        )
-    floor_z = escena.floor(bpy, scene, centre)
-    converted = _host_scene(params, windows)
-    root = _dressing_root(params)
-    escena.dress_scene(bpy, scene, converted, root, floor_z)
-    item = escena.sky_item(converted)
-    if item:
-        escena.sky_hdri(bpy, scene, item, root)
-    else:
-        escena.sky_and_sun(bpy, scene)
-    _place_camera(bpy, scene, camera, centre)
-    scene.render.resolution_x = RENDER_WIDTH
-    scene.render.resolution_y = RENDER_HEIGHT
-    scene.view_settings.exposure = _exposure(params)
-    with suppress(TypeError):
-        scene.view_settings.look = escena.LOOK
-    _cycles(bpy, scene)
-    scene.render.filepath = _host_path(destination, windows)
-    bpy.ops.render.render(write_still=True)
-
-
-def _turn_roots(scene: Any, degrees: float) -> None:
-    """Turn the whole model about Z; the sun stays, so the light changes.
-
-    The glTF importer leaves every object in ``QUATERNION`` rotation mode,
-    where Blender ignores ``rotation_euler``; switching the mode first is what
-    makes the turn reach the scene (Blender carries the existing orientation
-    over when the mode changes).
-    """
-    if not degrees:
-        return
-    for obj in [item for item in scene.objects if item.parent is None]:
-        obj.rotation_mode = "XYZ"
-        obj.rotation_euler[2] += math.radians(degrees)
-
-
-def _place_camera(
-    bpy: Any, scene: Any, camera: dict[str, float], centre: tuple[float, float, float]
-) -> None:
-    """An orthographic camera looking at the model's centre from the view."""
-    azimuth, elevation = math.radians(camera["azimuth"]), math.radians(camera["elevation"])
-    direction = (
-        math.cos(elevation) * math.cos(azimuth),
-        math.cos(elevation) * math.sin(azimuth),
-        math.sin(elevation),
-    )
-    distance = max(camera["scale"], 1.0) * CAMERA_DISTANCE
-    data = bpy.data.cameras.new("camara")
-    data.type, data.ortho_scale = "ORTHO", camera["scale"]
-    obj = bpy.data.objects.new("camara", data)
-    scene.collection.objects.link(obj)
-    obj.location = tuple(centre[axis] + distance * direction[axis] for axis in range(3))
-    obj.rotation_euler = (math.pi / 2 - elevation, 0, azimuth + math.pi / 2)
-    scene.camera = obj
-
-
-def _cycles(bpy: Any, scene: Any) -> None:
-    """Cycles on the first GPU device it finds: OPTIX, then CUDA, else CPU."""
-    scene.render.engine = "CYCLES"
-    preferences = bpy.context.preferences.addons["cycles"].preferences
-    for kind in ("OPTIX", "CUDA"):
-        try:
-            preferences.compute_device_type = kind
-            preferences.get_devices()
-            devices = [device for device in preferences.devices if device.type == kind]
-        except TypeError:
-            continue
-        if devices:
-            for device in preferences.devices:
-                device.use = device.type == kind
-            scene.cycles.device = "GPU"
-            break
-    scene.cycles.samples = SAMPLES
-    scene.cycles.use_denoising = True
-    scene.cycles.seed = SEED
-
-
-# --- the request's parameters and the asset's name.
-
-
-def _camera(params: dict[str, Any]) -> dict[str, float]:
-    """The piece's camera view: azimuth and elevation, plus scale when given.
-
-    An omitted scale is fitted to the whole model in ``_render``; an explicit
-    one always wins, so it travels here only when the piece gives it.
-    """
-    view = dict(DEFAULT_CAMERA)
-    items = params.get("camera")
-    if isinstance(items, list) and items and isinstance(items[0], dict):
-        first = items[0]
-        view.update({key: float(value) for key, value in first.items() if key in view})
-        if "scale" in first:
-            view["scale"] = float(first["scale"])
-    return view
-
-
-def _rotation(params: dict[str, Any]) -> float:
-    """The model's turn about Z, in degrees."""
-    return float(params.get("rotation", 0.0))
-
-
-def _exposure(params: dict[str, Any]) -> float:
-    """The exposure in stops under the AgX view transform."""
-    return float(params.get("exposure", DEFAULT_EXPOSURE))
-
-
-def _asset_name(model: str) -> str:
-    """``estudio.glb`` -> ``estudio-photo``: the image schema's base name."""
-    stem = posixpath.splitext(posixpath.basename(model))[0].lower()
-    safe = UNSAFE_NAME.sub("-", stem).strip("-")
-    return f"{safe or 'photo'}{ASSET_SUFFIX}"
-
-
-def _part_stem(part: str) -> str:
-    """``escuadra.STL`` -> ``escuadra``: the product asset's base name."""
-    stem = posixpath.splitext(posixpath.basename(part))[0].lower()
-    safe = UNSAFE_NAME.sub("-", stem).strip("-")
-    return safe or "product"
-
-
-def _version(bpy: Any) -> str:
-    try:
-        return str(bpy.app.version_string)
-    except AttributeError:
-        return "unknown"
-
-
 # --- the PNG: measured from its header, which needs no third-party module.
 
 
@@ -835,14 +320,6 @@ def _png_size(value: str) -> tuple[int, int]:
 def _open_path(value: str) -> str:
     """The path ``open`` accepts when this entry runs inside the Windows build."""
     return _host_path(value, _on_windows())
-
-
-# --- the MP4: read from its boxes, which need no third-party module.
-
-
-def _probe_mp4(value: str) -> dict[str, int]:
-    """An MP4's width, height, frames and fps, from its boxes alone."""
-    return mp4.probe(_open_path(value))
 
 
 # --- the host launch, for the WSL Windows Blender the lab runs.

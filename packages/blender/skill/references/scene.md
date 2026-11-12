@@ -1,8 +1,9 @@
 # The scripted scene
 
 `blender.scene` and `blender.animation` render your own Blender Python
-script: a still PNG and an MP4. The recipes fix the scene; the script is the
-free path — model, light and animate whatever they never foresaw.
+script: a still PNG and an MP4. The script owns the whole scene — model,
+light and animate whatever a preset never could — and facet owns only the
+output settings below.
 
 ## The contract
 
@@ -23,7 +24,7 @@ and executes the script with `runpy.run_path`. The guarantees, in order:
   engine and its samples (Cycles on the GPU through the runner's helper,
   then its samples and seed; Eevee with TAA render samples), the seed, and
   the exposure. An animation also gets the frame range 1..`frames`, the
-  `fps`, and the tour's MP4 block (`media_type = "VIDEO"`,
+  `fps`, and the MP4 block (`media_type = "VIDEO"`,
   `file_format = "FFMPEG"`, `ffmpeg.format = "MPEG4"`, `codec = "H264"`,
   `constant_rate_factor = "HIGH"`, `use_file_extension = False`), then the
   output path. Everything else stays the script's: the world, the lights,

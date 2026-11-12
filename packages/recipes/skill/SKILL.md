@@ -1,6 +1,6 @@
 ---
 name: recipes
-description: Complete-piece recipes that chain existing packages into ordered plans — narrated explainer video, architectural render with people, voiced material with music, and tool demo.
+description: Complete-piece recipes that chain existing packages into ordered plans — narrated explainer video, architectural render, voiced material with music, and tool demo.
 ---
 # recipes
 
@@ -16,8 +16,7 @@ stdlib only and never runs a tool itself.
 
 - You are building a whole piece, not one asset, and need to know which
   packages to combine and in what order: a narrated explainer video, an
-  architectural render with people, voiced material with music, or a tool
-  demo.
+  architectural render, voiced material with music, or a tool demo.
 - You want the same knowledge as data for a script or an agent: `plan`
   answers with the ordered steps, the handoff files and what to verify.
 - Not for a single asset: run that package's own capability directly.
@@ -61,17 +60,18 @@ how to judge them.
    is not an input of this step.
    Verify: check the MP4 with an ffprobe probe.
 
-### architecture-render — the architectural render with people
+### architecture-render — the architectural render
 
 1. `cad.solid` → `estudio.step` + `estudio.stl` + `estudio.svg` +
    `estudio.glb`, from a CadQuery `estudio.py`. Verify: volume and bounding
    box.
 2. `blender.assets` → `estudio.assets.json`. Verify: the receipt's files
    are all present.
-3. `blender.photo` → `estudio-photo.png`, from model `estudio.glb`, plus
-   `people-blend` + `people` and `cars-blend` + `cars`. The people and
-   cars are `blender.photo` INPUTS, never capabilities of their own. Verify:
-   look at the PNG — pixel size and the people in frame.
+3. `blender.scene` → `estudio-photo.png`, with `script`
+   `study-photo/study_photo.py` (copied from `packages/blender/examples/`),
+   `name` `estudio`, 1600x1000 on Cycles and exposure -0.6. The script owns
+   the light, the materials and the camera; facet owns the output. Verify:
+   the PNG measures 1600x1000.
 4. `deck.page` → `architecture-render.pdf` + `page-01.png`, from
    `architecture-render.html`. Verify: one PDF page and its page-01 PNG.
 
@@ -115,7 +115,8 @@ recipe and its step count and the fields `recipe`, `steps` and `packages`.
 - The plans name existing capabilities by id, and a recipe naming a missing
   capability fails its own test. Do not hand-edit the data file to add a
   step.
-- People and cars are `blender.photo` inputs (`people`, `cars`), not
-  capabilities; there is no `blender.people` or `blender.cars` to run.
+- The architectural render is `blender.scene` plus a copied example script:
+  there is no photo preset to reach for, and no `blender.people` or
+  `blender.cars` capability.
 - `hyperframes.narrated` reads SubRip: hand it `guion.srt`, not the
   whisper `.json` or `.vtt`.

@@ -1,0 +1,8 @@
+[inputs]
+script = "product.py"
+name = "part-product"
+width = 1200
+height = 1200
+engine = "cycles"
+samples = 128
+exposure = -0.2

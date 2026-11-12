@@ -98,8 +98,10 @@ required file is fine.
 
 Blender reads glTF, not STEP. When the model is headed for blender, have the
 script also export an `Assembly` to `<out>.glb` in millimetres, Y-up, with
-one named element per piece; each element name must start with one of the
-blender skill's `MATERIALS` prefixes (see the blender skill):
+one named element per piece. A scene script dresses each piece by the start
+of its element name; the study-photo example uses `muros`, `piso`,
+`vidrio-*`, `cama`, `almohada`, `mesa` and `sillas` (see the blender skill's
+`examples/study-photo/`):
 
 ```python
 import cadquery as cq
