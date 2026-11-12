@@ -37,6 +37,22 @@ the normaliser caps gain at: `verify` accepts it and records
 `peak_limited: true`. No limiter or compressor is added; the transients
 stay as generated.
 
+## Steps, guidance and seed
+
+Three optional inputs carry the generation knobs, so quality and creative
+direction belong to the piece; a piece that sets none of them generates
+exactly as before:
+
+| input | type | default | range | sent as |
+| --- | --- | --- | --- | --- |
+| `steps` | integer | 100 | 1 to 200 | `num_inference_steps` |
+| `guidance` | number | 4.0 | 0 to 20 | `cfg_scale` |
+| `seed` | integer | 0 | 0 or more | the pipeline `seed` |
+
+Fewer steps are faster but rougher: the ~40 s per effect is the 100-step
+figure. `guidance` 0 is a valid value (no guidance). The asset records
+the values used in `params`, and the seed used in its `seed` field.
+
 ## The event-count caveat
 
 The model does not count events: asking for one click can give two.

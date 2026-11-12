@@ -15,8 +15,9 @@ writing the `audio` kind at 48 kHz mono.
 - The machine needs an NVIDIA GPU and about 19 GB of RAM: the model loads
   on the CPU and only the active stage moves to the card, because a full
   GPU load (~9 GB) does not fit the 8 GB card. One heavy job at a time.
-- About 40 s per effect whatever its length: the pipeline always denoises
-  30 s of audio and trims to `seconds`.
+- About 40 s per effect at the default 100 steps, whatever its length: the
+  pipeline always denoises 30 s of audio and trims to `seconds`. Fewer
+  `steps` are faster but rougher.
 - `facet pull moss` fetches MOSS-TTS at the pinned commit (about 15 MB of
   code) plus the model (about 11 GB): never clone it by hand. `MOSS_DIR`
   is only for a manual run outside facet.
@@ -31,11 +32,21 @@ One effect per piece: a `description` in English, `seconds` up to 30, a
 description = "Rain falling on a window with distant thunder, steady and soft"
 seconds = 8
 name = "lluvia-ventana"
+steps = 100
+guidance = 4.0
+seed = 0
 ```
 
 `name` writes `<name>.wav` beside the piece. `target-lufs` defaults to
 -23.0, the level for beds under voice; pass a louder target (up to -10)
 for hits that must cut through.
+
+The last three lines are optional and show the defaults: `steps` (1 to
+200) is sent as `num_inference_steps` and fewer steps are faster but
+rougher — the ~40 s per effect is the 100-step figure; `guidance` (0 to
+20) is sent as `cfg_scale`, 0 being no guidance; `seed` (0 or more) makes
+the effect reproducible, the same seed giving the same effect. The asset
+records the values used in `params` and the seed in `seed`.
 
 ## Judging the result
 

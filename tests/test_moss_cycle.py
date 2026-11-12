@@ -42,6 +42,17 @@ MODEL_ID = "moss-soundeffect-v2"
 DURATION_TOL_S = 0.01
 FLOAT_TOL = 0.05
 INFERENCE_STEPS = 100
+DEFAULT_GUIDANCE = 4.0
+DEFAULT_SEED = 0
+STEPS_MIN = 1
+STEPS_MAX = 200
+GUIDANCE_MIN = 0.0
+GUIDANCE_MAX = 20.0
+SEED_MIN = 0
+#: Overrides a piece can set; guidance 0 is a valid value (no guidance).
+OVERRIDE_STEPS = 50
+OVERRIDE_GUIDANCE = 0.0
+OVERRIDE_SEED = 7
 RAM_GB = 19
 MAX_SEGUNDOS = 30
 DEFAULT_TARGET_LUFS = -23.0
@@ -445,7 +456,9 @@ def _inputs(**overrides: object) -> dict[str, object]:
     return inputs
 
 
-def _run_cycle(tmp_path: Path) -> tuple[dict[str, Any], str, Path, Path, Path]:
+def _run_cycle(
+    tmp_path: Path, overrides: dict[str, object] | None = None
+) -> tuple[dict[str, Any], str, Path, Path, Path]:
     """One run against the stubs: result, stdout, stub log, out dir, stub dir."""
     stub_dir = _stub_dir(tmp_path)
     home = tmp_path / "home"
@@ -459,7 +472,7 @@ def _run_cycle(tmp_path: Path) -> tuple[dict[str, Any], str, Path, Path, Path]:
     result, printed = _call(
         stub_dir,
         "run",
-        _request("run", out, tmp_path, _inputs(), model),
+        _request("run", out, tmp_path, _inputs(**(overrides or {})), model),
         tmp_path,
         env,
     )
@@ -493,7 +506,11 @@ def test_the_cycle_generates_normalises_and_records(tmp_path: Path) -> None:
         "seconds": SEGUNDOS,
         "name": NAME,
         "target-lufs": TARGET_LUFS,
+        "steps": INFERENCE_STEPS,
+        "guidance": DEFAULT_GUIDANCE,
+        "seed": DEFAULT_SEED,
     }
+    assert asset["seed"] == DEFAULT_SEED
     properties = asset["properties"]
     assert properties["sample_rate_hz"] == RATE_HZ
     assert abs(properties["duration_s"] - SEGUNDOS) <= DURATION_TOL_S
@@ -514,6 +531,26 @@ def test_the_cycle_generates_normalises_and_records(tmp_path: Path) -> None:
     assert call["prompt"] == DESCRIPCION
     assert call["seconds"] == SEGUNDOS
     assert call["steps"] == INFERENCE_STEPS
+    assert call["cfg"] == DEFAULT_GUIDANCE
+    assert call["seed"] == DEFAULT_SEED
+
+
+def test_a_piece_can_set_its_steps_guidance_and_seed(tmp_path: Path) -> None:
+    """An override reaches the pipeline and is recorded; guidance 0 is valid."""
+    result, printed, log, _out, _stub = _run_cycle(
+        tmp_path,
+        {"steps": OVERRIDE_STEPS, "guidance": OVERRIDE_GUIDANCE, "seed": OVERRIDE_SEED},
+    )
+    asset = result["assets"][0]
+    assert f"{NAME}.wav ok" in printed
+    assert asset["params"]["steps"] == OVERRIDE_STEPS
+    assert asset["params"]["guidance"] == OVERRIDE_GUIDANCE
+    assert asset["params"]["seed"] == OVERRIDE_SEED
+    assert asset["seed"] == OVERRIDE_SEED
+    call = next(entry["call"] for entry in _read_lines(log) if "call" in entry)
+    assert call["steps"] == OVERRIDE_STEPS
+    assert call["cfg"] == OVERRIDE_GUIDANCE
+    assert call["seed"] == OVERRIDE_SEED
 
 
 def test_verify_and_preview_read_the_written_effect(tmp_path: Path) -> None:
@@ -814,7 +851,15 @@ def test_the_capability_inputs_and_thresholds() -> None:
     assert sfx["kind"] == "audio"
     assert sfx["preview"]["viewer"] == "audio"
     inputs = sfx["inputs"]
-    assert set(inputs) == {"description", "seconds", "name", "target-lufs"}
+    assert set(inputs) == {
+        "description",
+        "seconds",
+        "name",
+        "target-lufs",
+        "steps",
+        "guidance",
+        "seed",
+    }
     assert inputs["description"]["type"] == "string"
     assert inputs["description"]["required"] is True
     assert inputs["seconds"]["type"] == "number"
@@ -824,6 +869,20 @@ def test_the_capability_inputs_and_thresholds() -> None:
     assert inputs["target-lufs"]["default"] == DEFAULT_TARGET_LUFS
     assert inputs["target-lufs"]["min"] == TARGET_MIN_LUFS
     assert inputs["target-lufs"]["max"] == TARGET_MAX_LUFS
+    assert inputs["steps"]["type"] == "integer"
+    assert (inputs["steps"]["default"], inputs["steps"]["min"], inputs["steps"]["max"]) == (
+        INFERENCE_STEPS,
+        STEPS_MIN,
+        STEPS_MAX,
+    )
+    assert inputs["guidance"]["type"] == "number"
+    assert (
+        inputs["guidance"]["default"],
+        inputs["guidance"]["min"],
+        inputs["guidance"]["max"],
+    ) == (DEFAULT_GUIDANCE, GUIDANCE_MIN, GUIDANCE_MAX)
+    assert inputs["seed"]["type"] == "integer"
+    assert (inputs["seed"]["default"], inputs["seed"]["min"]) == (DEFAULT_SEED, SEED_MIN)
     assert sfx["verify"]["thresholds"] == {"lufs_tol": LUFS_TOL, "peak_cap_dbfs": -1.0}
 
 

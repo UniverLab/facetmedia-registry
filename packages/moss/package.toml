@@ -70,7 +70,7 @@ requires_acceptance = false
 terms_url = "https://huggingface.co/OpenMOSS-Team/MOSS-SoundEffect-v2.0"
 
 [capabilities.sfx]
-summary = "Sound effect from an English description, about 40 s per effect whatever its length, at most 30 s."
+summary = "Sound effect from an English description, about 40 s per effect at 100 steps whatever its length, at most 30 s."
 kind = "audio"
 
 [capabilities.sfx.inputs.description]
@@ -96,6 +96,26 @@ default = -23.0
 min = -30
 max = -10
 description = "Normalisation target in LUFS; -23 suits beds under voice, pass a louder target for hits."
+
+[capabilities.sfx.inputs.steps]
+type = "integer"
+default = 100
+min = 1
+max = 200
+description = "Denoising steps, sent as num_inference_steps; fewer steps are faster but rougher."
+
+[capabilities.sfx.inputs.guidance]
+type = "number"
+default = 4.0
+min = 0
+max = 20
+description = "Guidance scale, sent as cfg_scale; higher follows the description more closely."
+
+[capabilities.sfx.inputs.seed]
+type = "integer"
+default = 0
+min = 0
+description = "Random seed; the same seed regenerates the same effect."
 
 [capabilities.sfx.verify]
 thresholds = { lufs_tol = 1.0, peak_cap_dbfs = -1.0 }

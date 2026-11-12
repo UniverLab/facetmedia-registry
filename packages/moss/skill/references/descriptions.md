@@ -11,6 +11,9 @@ length never goes into the text.
 description = "English effect description, no duration in the text"
 name = "cafe-ambiente"
 seconds = 12
+steps = 100
+guidance = 4.0
+seed = 0
 ```
 
 - `description` — English, required. Describe the sound, not the duration:
@@ -21,10 +24,18 @@ seconds = 12
   denoises 30 s and trims.
 - `target-lufs` — optional, defaults to -23.0 for beds under voice; pass a
   louder target (up to -10) for hits that must cut through.
+- `steps` — optional, 1 to 200, default 100, sent as
+  `num_inference_steps`; fewer steps are faster but rougher, and the
+  ~40 s per effect is the 100-step figure.
+- `guidance` — optional, 0 to 20, default 4.0, sent as `cfg_scale`; 0 is a
+  valid value and means no guidance.
+- `seed` — optional, 0 or more, default 0, passed to the pipeline: the same
+  seed gives the same effect. The asset records the values used in `params`
+  and the seed used in `seed`.
 
-`moss.sfx` declares no seed input: the lab pieces carried one, but a
-reproducible piece here is the description, the length and the loudness
-target.
+A piece that sets none of the last three generates exactly as it did
+before they existed: the values above are the defaults, so the seed is
+reproducible whenever one is pinned.
 
 ## Approved: `cafe-ambiente`
 
@@ -38,8 +49,6 @@ name = "cafe-ambiente"
 seconds = 12
 ```
 
-The lab piece also carried seed; it is not an input here.
-
 ## Approved: `campana-notificacion`
 
 A rising two-tone notification chime, approved by the person on 2026-10-13.
@@ -51,8 +60,6 @@ description = "A bright, pleasant notification chime, two short bell tones risin
 name = "campana-notificacion"
 seconds = 2
 ```
-
-The lab piece also carried seed; it is not an input here.
 
 ## Approved: `clic-interfaz`
 
@@ -66,8 +73,6 @@ name = "clic-interfaz"
 seconds = 1
 ```
 
-The lab piece also carried seed; it is not an input here.
-
 ## Approved: `lluvia-ventana`
 
 Steady rain on a window at night, approved by the person on 2026-10-13.
@@ -79,8 +84,6 @@ description = "Gentle steady rain falling on a window pane at night, soft drops 
 name = "lluvia-ventana"
 seconds = 12
 ```
-
-The lab piece also carried seed; it is not an input here.
 
 ## Approved: `pagina-libro`
 
@@ -95,8 +98,6 @@ name = "pagina-libro"
 seconds = 3
 ```
 
-The lab piece also carried seed; it is not an input here.
-
 ## Approved: `pasos-madera`
 
 Slow footsteps on old boards, approved by the person on 2026-10-13. Ships as
@@ -108,8 +109,6 @@ description = "Slow footsteps of one person walking on an old wooden floor, boar
 name = "pasos-madera"
 seconds = 6
 ```
-
-The lab piece also carried seed; it is not an input here.
 
 ## Approved: `whoosh-transicion`
 
@@ -123,4 +122,3 @@ name = "whoosh-transicion"
 seconds = 2
 ```
 
-The lab piece also carried seed; it is not an input here.

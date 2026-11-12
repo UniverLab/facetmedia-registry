@@ -117,6 +117,9 @@ def _params(inputs: dict[str, Any]) -> dict[str, Any]:
         "seconds": float(inputs["seconds"]),
         "name": str(inputs["name"]),
         "target-lufs": float(inputs.get("target-lufs", TARGET_LUFS)),
+        "steps": int(inputs.get("steps", INFERENCE_STEPS)),
+        "guidance": float(inputs.get("guidance", CFG_SCALE)),
+        "seed": int(inputs.get("seed", SEED)),
     }
 
 
@@ -207,9 +210,9 @@ def _effect(pipe: Any, params: dict[str, Any], out_dir: Path) -> dict[str, Any]:
     generated = pipe(
         prompt=params["description"],
         seconds=params["seconds"],
-        seed=SEED,
-        num_inference_steps=INFERENCE_STEPS,
-        cfg_scale=CFG_SCALE,
+        seed=params["seed"],
+        num_inference_steps=params["steps"],
+        cfg_scale=params["guidance"],
         negative_prompt="",
         progress_bar_cmd=lambda iterable, **_: iterable,
     )
@@ -239,7 +242,7 @@ def _effect(pipe: Any, params: dict[str, Any], out_dir: Path) -> dict[str, Any]:
         "mime": "audio/wav",
         "properties": properties,
         "params": params,
-        "seed": SEED,
+        "seed": params["seed"],
         "inputs": [],
     }
 
