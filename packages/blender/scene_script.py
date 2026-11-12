@@ -28,6 +28,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import ntpath
 import os
 import posixpath
 import runpy
@@ -146,8 +147,12 @@ def _run(bpy: Any, request: dict[str, Any], kind: str, host: Host) -> dict[str, 
 
 
 def _resolve(script: str, piece_dir: str) -> str:
-    """The script's path: absolute as given, else relative to the piece."""
-    if os.path.isabs(script) or not piece_dir:
+    """The script's path: absolute as given, else relative to the piece.
+
+    Inside the Windows build ``os.path.isabs`` reads a WSL path such as
+    ``/home/x`` as relative, so a POSIX root counts as absolute too.
+    """
+    if posixpath.isabs(script) or ntpath.isabs(script) or not piece_dir:
         return script
     return f"{piece_dir.rstrip('/')}/{script}"
 

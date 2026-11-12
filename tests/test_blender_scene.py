@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import ntpath
 import struct
 import sys
 import tomllib
@@ -954,3 +955,14 @@ def test_the_skill_teaches_both_scripted_capabilities() -> None:
         "blender.assets",
     ):
         assert token in reference, token
+
+
+def test_a_wsl_absolute_script_is_not_joined_to_the_piece_dir_inside_windows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scene_script = _load_runner().scene_script
+    monkeypatch.setattr(scene_script.os, "path", ntpath)
+    absolute = "/home/lab/pieces/scene/build.py"
+    assert scene_script._resolve(absolute, "/home/lab/pieces/scene") == absolute
+    assert scene_script._resolve("C:\\lab\\build.py", "/home/lab") == "C:\\lab\\build.py"
+    assert scene_script._resolve("build.py", "/home/lab/scene") == "/home/lab/scene/build.py"
