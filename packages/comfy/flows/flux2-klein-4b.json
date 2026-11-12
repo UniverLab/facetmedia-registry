@@ -1,17 +1,17 @@
 {
   "about": "FLUX.2 klein 4B distilled (Black Forest Labs, Apache-2.0), bf16. Template: ComfyUI image_flux2_klein_text_to_image (distilled). 4 steps, cfg 1.",
-  "params": { "width": 1344, "height": 768, "seed": 0, "steps": 4 },
+  "params": { "width": 1344, "height": 768, "seed": 0, "steps": 4, "cfg": 1, "sampler": "euler" },
   "graph": {
     "unet": { "class_type": "UNETLoader", "inputs": { "unet_name": "flux-2-klein-4b.safetensors", "weight_dtype": "default" } },
     "clip": { "class_type": "CLIPLoader", "inputs": { "clip_name": "qwen_3_4b_fp8_mixed.safetensors", "type": "flux2", "device": "default" } },
     "vae": { "class_type": "VAELoader", "inputs": { "vae_name": "flux2-vae.safetensors" } },
     "positive": { "class_type": "CLIPTextEncode", "inputs": { "text": "$prompt", "clip": ["clip", 0] } },
     "negative": { "class_type": "ConditioningZeroOut", "inputs": { "conditioning": ["positive", 0] } },
-    "guider": { "class_type": "CFGGuider", "inputs": { "model": ["unet", 0], "positive": ["positive", 0], "negative": ["negative", 0], "cfg": 1 } },
+    "guider": { "class_type": "CFGGuider", "inputs": { "model": ["unet", 0], "positive": ["positive", 0], "negative": ["negative", 0], "cfg": "$cfg" } },
     "latent": { "class_type": "EmptyFlux2LatentImage", "inputs": { "width": "$width", "height": "$height", "batch_size": 1 } },
     "sigmas": { "class_type": "Flux2Scheduler", "inputs": { "steps": "$steps", "width": "$width", "height": "$height" } },
     "noise": { "class_type": "RandomNoise", "inputs": { "noise_seed": "$seed" } },
-    "select": { "class_type": "KSamplerSelect", "inputs": { "sampler_name": "euler" } },
+    "select": { "class_type": "KSamplerSelect", "inputs": { "sampler_name": "$sampler" } },
     "sampler": { "class_type": "SamplerCustomAdvanced", "inputs": { "noise": ["noise", 0], "guider": ["guider", 0], "sampler": ["select", 0], "sigmas": ["sigmas", 0], "latent_image": ["latent", 0] } },
     "decode": { "class_type": "VAEDecode", "inputs": { "samples": ["sampler", 0], "vae": ["vae", 0] } },
     "save": { "class_type": "SaveImage", "inputs": { "images": ["decode", 0], "filename_prefix": "$name" } }

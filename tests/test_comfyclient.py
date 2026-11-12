@@ -30,6 +30,10 @@ comfyclient = _load_lib()
 
 BASE = "http://127.0.0.1:8188"
 PROMPT_ID = "stub-prompt"
+#: One knob override per sampling value, for the merge and fill tests.
+OVERRIDE_STEPS = 12
+OVERRIDE_CFG = 2
+OVERRIDE_SHIFT = 5
 
 
 class _JsonResponse:
@@ -95,6 +99,52 @@ def test_values_unknown_key_raises() -> None:
     flow = {"params": {"steps": 8}, "graph": {"a": "$steps"}}
     with pytest.raises(ValueError, match="unknown keys"):
         comfyclient.values(flow, {"nope": 1})
+
+
+def _flow(name: str, package: str = "comfy") -> dict[str, object]:
+    """One shipped flow, read as the runner reads it."""
+    return json.loads((ROOT / "packages" / package / "flows" / f"{name}.json").read_text())
+
+
+def test_values_keeps_the_flow_defaults_a_knob_override_does_not_touch() -> None:
+    flow = _flow("z-image-turbo")
+    merged = comfyclient.values(flow, {"steps": 12, "sampler": "uni_pc"})
+    assert (merged["steps"], merged["sampler"]) == (12, "uni_pc")
+    assert (merged["cfg"], merged["scheduler"], merged["shift"]) == (1, "simple", 3)
+    # The merge is a copy: the flow's own params stay as shipped.
+    params = flow["params"]
+    assert isinstance(params, dict)
+    assert (params["steps"], params["sampler"]) == (8, "res_multistep")
+
+
+def test_values_override_reaches_the_filled_graph() -> None:
+    flow = _flow("z-image-turbo")
+    merged = comfyclient.values(
+        flow,
+        {
+            "prompt": "cup",
+            "name": "still",
+            "steps": OVERRIDE_STEPS,
+            "cfg": OVERRIDE_CFG,
+            "sampler": "euler",
+            "scheduler": "euler_ancestral",
+            "shift": OVERRIDE_SHIFT,
+        },
+    )
+    graph = comfyclient.fill(flow["graph"], merged)
+    sampler = graph["sampler"]["inputs"]
+    assert sampler["steps"] == OVERRIDE_STEPS
+    assert sampler["cfg"] == OVERRIDE_CFG
+    assert sampler["sampler_name"] == "euler"
+    assert sampler["scheduler"] == "euler_ancestral"
+    assert graph["model"]["inputs"]["shift"] == OVERRIDE_SHIFT
+
+
+def test_values_rejects_a_knob_the_selected_flow_does_not_carry() -> None:
+    flow = _flow("flux2-klein-4b")
+    for knob in ("scheduler", "shift"):
+        with pytest.raises(ValueError, match="unknown keys"):
+            comfyclient.values(flow, {knob: "simple"})
 
 
 def test_error_detail_extracts_the_exception_message() -> None:

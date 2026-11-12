@@ -202,6 +202,34 @@ min = 64
 max = 2048
 description = "Image height in pixels, a multiple of 64."
 
+[capabilities.still.inputs.image.items.steps]
+type = "integer"
+required = false
+min = 1
+description = "Sampling steps, overriding the flow's own. Omitting it keeps the flow default (25)."
+
+[capabilities.still.inputs.image.items.cfg]
+type = "number"
+required = false
+min = 0
+description = "Classifier-free guidance, overriding the flow's own. Omitting it keeps the flow default (4)."
+
+[capabilities.still.inputs.image.items.sampler]
+type = "string"
+required = false
+description = "Sampler name, overriding the flow's own. Omitting it keeps the flow default (res_multistep)."
+
+[capabilities.still.inputs.image.items.scheduler]
+type = "string"
+required = false
+description = "Scheduler name, overriding the flow's own. Omitting it keeps the flow default (simple)."
+
+[capabilities.still.inputs.image.items.shift]
+type = "number"
+required = false
+min = 0
+description = "Model sampling shift, overriding the flow's own. Omitting it keeps the flow default (3)."
+
 [capabilities.still.inputs.workflow]
 type = "enum"
 values = ["z-image"]
@@ -256,6 +284,34 @@ default = 768
 min = 64
 max = 2048
 description = "Image height in pixels, a multiple of 64."
+
+[capabilities.edit.inputs.image.items.steps]
+type = "integer"
+required = false
+min = 1
+description = "Sampling steps, overriding the flow's own. Omitting it keeps the flow default (40)."
+
+[capabilities.edit.inputs.image.items.cfg]
+type = "number"
+required = false
+min = 0
+description = "Classifier-free guidance, overriding the flow's own. Omitting it keeps the flow default (4)."
+
+[capabilities.edit.inputs.image.items.sampler]
+type = "string"
+required = false
+description = "Sampler name, overriding the flow's own. Omitting it keeps the flow default (euler)."
+
+[capabilities.edit.inputs.image.items.scheduler]
+type = "string"
+required = false
+description = "Scheduler name, overriding the flow's own. Omitting it keeps the flow default (simple)."
+
+[capabilities.edit.inputs.image.items.shift]
+type = "number"
+required = false
+min = 0
+description = "Model sampling shift, overriding the flow's own. Omitting it keeps the flow default (3.1)."
 
 [capabilities.edit.preview]
 viewer = "image"
@@ -315,6 +371,34 @@ description = "Clip length in frames at 24 fps: 49 is about 2 s, 121 about 5 s (
 type = "string"
 required = false
 description = "Custom negative prompt for the clip. Omitting it keeps the flow default (Wan's official Chinese negative). The wan22-i2v-14b-fast flow runs at cfg 1 and ignores the negative."
+
+[capabilities.clip.inputs.image.items.steps]
+type = "integer"
+required = false
+min = 1
+description = "Sampling steps, overriding the flow's own. Omitting it keeps the flow default (20 on wan22-i2v-14b, 4 on wan22-i2v-14b-fast)."
+
+[capabilities.clip.inputs.image.items.cfg]
+type = "number"
+required = false
+min = 0
+description = "Classifier-free guidance, overriding the flow's own. Omitting it keeps the flow default (5 on wan22-i2v-14b, 1 on wan22-i2v-14b-fast)."
+
+[capabilities.clip.inputs.image.items.sampler]
+type = "string"
+required = false
+description = "Sampler name, overriding the flow's own. Omitting it keeps the flow default (euler)."
+
+[capabilities.clip.inputs.image.items.scheduler]
+type = "string"
+required = false
+description = "Scheduler name, overriding the flow's own. Omitting it keeps the flow default (simple)."
+
+[capabilities.clip.inputs.image.items.shift]
+type = "number"
+required = false
+min = 0
+description = "Model sampling shift, overriding the flow's own. Omitting it keeps the flow default (8)."
 
 [capabilities.clip.inputs.workflow]
 type = "enum"

@@ -34,6 +34,11 @@ The fields below are what `facet describe comfy.still --json` reports.
 | `image[].seed` | integer | yes | — | same seed and prompt give the same image |
 | `image[].width` | integer | no | `1344` | 64 to 2048, a multiple of 64 |
 | `image[].height` | integer | no | `768` | 64 to 2048, a multiple of 64 |
+| `image[].steps` | integer | no | flow default | sampling steps, at least 1; the flow's own is 8 on z-image-turbo and 4 on flux2-klein-4b |
+| `image[].cfg` | number | no | flow default | classifier-free guidance, at least 0; the flow's own is 1 |
+| `image[].sampler` | string | no | flow default | sampler name; the flow's own is `res_multistep` on z-image-turbo and `euler` on flux2-klein-4b |
+| `image[].scheduler` | string | no | flow default | scheduler name; the flow's own is `simple`, and flux2-klein-4b has none, so setting it there fails |
+| `image[].shift` | number | no | flow default | model sampling shift, at least 0; the flow's own is 3, and flux2-klein-4b has none, so setting it there fails |
 | `workflow` | enum | no | `"z-image-turbo"` | `"z-image-turbo"` or `"flux2-klein-4b"`; picks the still flow |
 
 ```toml
@@ -70,9 +75,14 @@ The fields below are what `facet describe comfy.edit --json` reports.
 | `image[].seed` | integer | yes | — | same seed, prompt and reference give the same image |
 | `image[].width` | integer | no | `1344` | 64 to 2048, a multiple of 64 |
 | `image[].height` | integer | no | `768` | 64 to 2048, a multiple of 64 |
+| `image[].steps` | integer | no | flow default | sampling steps, at least 1; the flow's own is 4 |
+| `image[].cfg` | number | no | flow default | classifier-free guidance, at least 0; the flow's own is 1 |
+| `image[].sampler` | string | no | flow default | sampler name; the flow's own is `euler` |
 
-The entries have the same five fields and defaults as `still`, so `verify`
-and `preview` work unchanged; there is no `workflow` input, because an edit
+The entries take the same name, prompt, seed, width and height as `still`,
+plus the img2img flow's steps, cfg and sampler — not the scheduler or shift,
+which `flux2-klein-img2img` does not carry — so `verify` and `preview` work
+unchanged; there is no `workflow` input, because an edit
 always uses `flux2-klein-img2img`. The reference is uploaded once per run and
 guides every entry; a second reference image is a second piece.
 
@@ -117,6 +127,11 @@ The fields below are what `facet describe comfy.clip --json` reports.
 | `image[].width` | integer | no | `1280` | 64 to 2048, a multiple of 64 |
 | `image[].height` | integer | no | `704` | 64 to 2048, a multiple of 64 |
 | `image[].length` | integer | no | `49` | frames at 24 fps: `49` ≈ 2 s, `121` ≈ 5 s |
+| `image[].steps` | integer | no | flow default | sampling steps, at least 1; the flow's own is 20 on wan22-i2v and 4 on wan22-i2v-fast |
+| `image[].cfg` | number | no | flow default | classifier-free guidance, at least 0; the flow's own is 5 on wan22-i2v and 1 on wan22-i2v-fast |
+| `image[].sampler` | string | no | flow default | sampler name; the flow's own is `uni_pc` on wan22-i2v and `euler` on wan22-i2v-fast |
+| `image[].scheduler` | string | no | flow default | scheduler name; the flow's own is `simple` |
+| `image[].shift` | number | no | flow default | model sampling shift, at least 0; the flow's own is 8 |
 | `image[].negative` | string | no | flow default | what to keep out of the clip; omitting it keeps Wan's official Chinese negative, and `wan22-i2v-fast` at cfg 1 ignores it |
 | `workflow` | enum | no | `"wan22-i2v"` | `"wan22-i2v"`, or `"wan22-i2v-fast"` for a draft-only clip |
 
@@ -188,12 +203,25 @@ piece's `workflow` input picks one of the two still flows, the clip's picks
 - `$prompt`, `$seed`, `$width`, `$height` and `$name` come from the entry;
   the edit and clip flows add `$image`, the uploaded reference or first frame,
   and the clip flow also takes `$length`.
-- `$steps` and `$shift` come from the flow's `params`; klein has no
-  `$shift` (its params are width 1344, height 768, seed 0, steps 4). Wan's
-  params are width 1280, height 704, length 49, steps 20, cfg 5, shift 8 and
-  24 fps, with Wan's own Chinese negative prompt as the default. The rapido
-  draft keeps the same size, length and fps with steps 4, cfg 1 and
-  `lora_strength` 1.0 for its FastWan LoRA.
+- `$steps`, `$cfg`, `$sampler` (filled into `sampler_name`), `$scheduler`
+  and `$shift` come from the flow's `params` unless the entry sets them.
+  These are the defaults each flow ships, so a piece that sets none of them
+  renders exactly as before:
+
+  | Flow | steps | cfg | sampler | scheduler | shift |
+  |------|-------|-----|---------|-----------|-------|
+  | `z-image-turbo` | 8 | 1 | `res_multistep` | `simple` | 3 |
+  | `flux2-klein-4b` | 4 | 1 | `euler` | — | — |
+  | `flux2-klein-img2img` | 4 | 1 | `euler` | — | — |
+  | `wan22-i2v` | 20 | 5 | `uni_pc` | `simple` | 8 |
+  | `wan22-i2v-fast` | 4 | 1 | `euler` | `simple` | 8 |
+
+  Setting a knob the selected flow does not carry — `scheduler` or `shift`
+  on either klein flow — fails before anything is submitted, with the
+  client's unknown-key error; the run never reaches the server. Wan's params
+  are also width 1280, height 704, length 49 and 24 fps, with Wan's own
+  Chinese negative prompt as the default. The rapido draft keeps the same
+  size, length and fps and adds `lora_strength` 1.0 for its FastWan LoRA.
 - The unet, clip, vae and LoRA load by the filenames of the manifest models;
   the three still and edit flows share the one Qwen clip file, while both
   Wan flows load the one UMT5 clip and VAE and the rapido draft adds the
@@ -217,8 +245,10 @@ the file `facet pull` downloaded under `models/direct`; nothing is copied.
 ## Assets
 
 One run writes one PNG per entry, each with a record (`kind = "image"`,
-`mime = "image/png"`, `seed` the entry's seed, `params` the entry, and
-`properties` carrying `width`, `height` and `seed`). A clip run writes one
+`mime = "image/png"`, `seed` the entry's seed, `params` the values actually
+used — the flow's defaults merged with the entry, so the sampling knobs and
+the negative prompt the flow supplied show too — and `properties` carrying
+`width`, `height` and `seed`). A clip run writes one
 MP4 per entry instead, with `kind = "video"` and `mime = "video/mp4"`. A
 `wan22-i2v-fast` draft writes `<name>-borrador.mp4` and adds `draft = true`
 to its properties; every other record keeps `width`, `height` and `seed`

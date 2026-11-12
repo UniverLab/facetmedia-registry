@@ -56,11 +56,16 @@ SEED = 7
 STEPS = 25
 SHIFT = 3
 CFG = 4
+SAMPLER = "res_multistep"
+SCHEDULER = "simple"
 EDIT_STEPS = 40
 EDIT_CFG = 4
 EDIT_SHIFT = 3.1
+EDIT_SAMPLER = "euler"
 CLIP_STEPS = 20
 CLIP_CFG = 5
+CLIP_SAMPLER = "euler"
+CLIP_SHIFT = 8
 CLIP_LENGTH = 49
 CLIP_FPS = 24
 #: The draft clip flow: the lightx2v LoRAs, four steps and no CFG.
@@ -68,6 +73,13 @@ RAPIDO_FLOW = "wan22-i2v-14b-fast"
 RAPIDO_STEPS = 4
 RAPIDO_CFG = 1
 RAPIDO_STRENGTH = 1.0
+#: The sampling knobs the override tests set, to prove the entry wins.
+STILL_OVERRIDE_STEPS = 30
+STILL_OVERRIDE_CFG = 3
+STILL_OVERRIDE_SHIFT = 4
+CLIP_OVERRIDE_STEPS = 12
+CLIP_OVERRIDE_CFG = 2
+CLIP_OVERRIDE_SHIFT = 5
 #: The suffix the runner gives every draft output, so none passes for a final.
 DRAFT_SUFFIX = "-borrador"
 WIDTH = 64
@@ -451,6 +463,44 @@ def test_the_cycle_links_the_models_returns_bare_names_and_verifies(tmp_path: Pa
     _assert_verify_and_preview(stub_dir, home, url, out, models, tmp_path)
 
 
+def test_an_entry_sets_every_sampling_knob_and_the_record_shows_them(tmp_path: Path) -> None:
+    home, models, graph_file, stub_dir, checkout, out, url, process = _server(tmp_path)
+    entry = {
+        **ENTRY,
+        "steps": STILL_OVERRIDE_STEPS,
+        "cfg": STILL_OVERRIDE_CFG,
+        "sampler": "euler",
+        "scheduler": "beta",
+        "shift": STILL_OVERRIDE_SHIFT,
+    }
+    try:
+        env = _environment(stub_dir, home, url)
+        request = _request("run", out, tmp_path, models, inputs={"image": [entry]})
+        result, _ = _call(stub_dir, "run", request, tmp_path, env)
+        graph = json.loads(graph_file.read_text(encoding="utf-8"))["prompt"]
+        assert graph["sampler"]["inputs"]["steps"] == STILL_OVERRIDE_STEPS
+        assert graph["sampler"]["inputs"]["cfg"] == STILL_OVERRIDE_CFG
+        assert graph["sampler"]["inputs"]["sampler_name"] == "euler"
+        assert graph["sampler"]["inputs"]["scheduler"] == "beta"
+        assert graph["model"]["inputs"]["shift"] == STILL_OVERRIDE_SHIFT
+        # The record's params are the flow defaults merged with the entry.
+        assert result["assets"][0]["params"] == {
+            "name": "foto-producto",
+            "prompt": PROMPT,
+            "seed": SEED,
+            "width": WIDTH,
+            "height": HEIGHT,
+            "steps": 30,
+            "cfg": 3,
+            "sampler": "euler",
+            "scheduler": "beta",
+            "shift": 4,
+        }
+    finally:
+        process.terminate()
+        process.wait(timeout=10)
+
+
 def test_an_edit_uploads_the_reference_and_fills_the_qwen_graph(tmp_path: Path) -> None:
     home, models, graph_file, stub_dir, checkout, out, url, process = _server(tmp_path)
     reference = tmp_path / "referencia.png"
@@ -505,6 +555,45 @@ def test_a_rapido_clip_is_a_borrador_draft(tmp_path: Path) -> None:
         assert (out / f"bosque-niebla{DRAFT_SUFFIX}.mp4").read_bytes() == CLIP_FIXTURE.read_bytes()
         _assert_links(checkout, models)
         _assert_rapido_graph(graph_file)
+    finally:
+        process.terminate()
+        process.wait(timeout=10)
+
+
+def test_a_wan14b_entry_override_fills_both_ksamplers(tmp_path: Path) -> None:
+    home, models, graph_file, stub_dir, checkout, out, url, process = _server(tmp_path)
+    source = tmp_path / "primer-cuadro.png"
+    PIL.Image.new("RGB", (WIDTH, HEIGHT), (12, 34, 56)).save(source)
+    entry = {
+        **_clip_entry(source),
+        "steps": CLIP_OVERRIDE_STEPS,
+        "cfg": CLIP_OVERRIDE_CFG,
+        "sampler": "uni_pc",
+        "scheduler": "euler",
+        "shift": CLIP_OVERRIDE_SHIFT,
+    }
+    try:
+        env = _environment(stub_dir, home, url)
+        request = _request(
+            "run",
+            out,
+            tmp_path,
+            models,
+            inputs={"workflow": "wan22-i2v-14b", "image": [entry]},
+            capability="comfy-xl.clip",
+        )
+        result, _ = _call(stub_dir, "run", request, tmp_path, env)
+        graph = json.loads(graph_file.read_text(encoding="utf-8"))["prompt"]
+        for name in ("sampler_high", "sampler_low"):
+            assert graph[name]["inputs"]["steps"] == CLIP_OVERRIDE_STEPS
+            assert graph[name]["inputs"]["cfg"] == CLIP_OVERRIDE_CFG
+            assert graph[name]["inputs"]["sampler_name"] == "uni_pc"
+            assert graph[name]["inputs"]["scheduler"] == "euler"
+        assert graph["model_high"]["inputs"]["shift"] == CLIP_OVERRIDE_SHIFT
+        assert graph["model_low"]["inputs"]["shift"] == CLIP_OVERRIDE_SHIFT
+        params = result["assets"][0]["params"]
+        assert (params["steps"], params["cfg"], params["sampler"]) == (12, 2, "uni_pc")
+        assert (params["scheduler"], params["shift"]) == ("euler", 5)
     finally:
         process.terminate()
         process.wait(timeout=10)
@@ -633,6 +722,8 @@ def _assert_graph(graph_file: Path) -> None:
     assert graph["sampler"]["inputs"]["seed"] == SEED
     assert graph["sampler"]["inputs"]["steps"] == STEPS
     assert graph["sampler"]["inputs"]["cfg"] == CFG
+    assert graph["sampler"]["inputs"]["sampler_name"] == SAMPLER
+    assert graph["sampler"]["inputs"]["scheduler"] == SCHEDULER
     assert graph["model"]["inputs"]["shift"] == SHIFT
     assert graph["latent"]["inputs"]["width"] == WIDTH
     assert graph["latent"]["inputs"]["height"] == HEIGHT
@@ -657,6 +748,8 @@ def _assert_edit_graph(graph_file: Path) -> None:
     assert graph["sampler"]["inputs"]["seed"] == SEED
     assert graph["sampler"]["inputs"]["steps"] == EDIT_STEPS
     assert graph["sampler"]["inputs"]["cfg"] == EDIT_CFG
+    assert graph["sampler"]["inputs"]["sampler_name"] == EDIT_SAMPLER
+    assert graph["sampler"]["inputs"]["scheduler"] == SCHEDULER
     assert graph["sampler"]["inputs"]["denoise"] == 1
     assert graph["model_shift"]["inputs"]["shift"] == EDIT_SHIFT
     assert graph["save"]["inputs"]["filename_prefix"] == "foto-producto"
@@ -686,6 +779,11 @@ def _assert_rapido_graph(graph_file: Path) -> None:
     assert graph["model_low"]["inputs"]["model"] == ["lora_low", 0]
     assert graph["sampler_high"]["inputs"]["steps"] == RAPIDO_STEPS
     assert graph["sampler_low"]["inputs"]["cfg"] == RAPIDO_CFG
+    for name in ("sampler_high", "sampler_low"):
+        assert graph[name]["inputs"]["sampler_name"] == CLIP_SAMPLER
+        assert graph[name]["inputs"]["scheduler"] == SCHEDULER
+    assert graph["model_high"]["inputs"]["shift"] == CLIP_SHIFT
+    assert graph["model_low"]["inputs"]["shift"] == CLIP_SHIFT
     assert graph["unet_high"]["inputs"]["unet_name"] == Path(MODEL_PATHS["wan14b-high-unet"]).name
     assert graph["unet_low"]["inputs"]["unet_name"] == Path(MODEL_PATHS["wan14b-low-unet"]).name
     assert "$" not in json.dumps(graph)

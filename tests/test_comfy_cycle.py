@@ -62,10 +62,17 @@ PROMPT = "A handmade matte ceramic cup on a raw concrete surface, soft window li
 CLIP_PROMPT = "Fog drifting slowly between the pine trees at dawn, very slow camera push in"
 SEED = 7
 STEPS = 8
-KLEIN_STEPS = 4
+TURBO_CFG = 1
+TURBO_SAMPLER = "res_multistep"
+TURBO_SCHEDULER = "simple"
 SHIFT = 3
+KLEIN_STEPS = 4
+KLEIN_CFG = 1
+KLEIN_SAMPLER = "euler"
 CLIP_STEPS = 20
 CLIP_CFG = 5
+CLIP_SAMPLER = "uni_pc"
+CLIP_SCHEDULER = "simple"
 CLIP_SHIFT = 8
 CLIP_LENGTH = 49
 CLIP_FPS = 24
@@ -74,6 +81,10 @@ RAPIDO_FLOW = "wan22-i2v-fast"
 RAPIDO_STEPS = 4
 RAPIDO_CFG = 1
 RAPIDO_STRENGTH = 1.0
+#: The sampling knobs one override test sets, to prove the entry wins.
+OVERRIDE_STEPS = 12
+OVERRIDE_CFG = 2
+OVERRIDE_SHIFT = 5
 #: The suffix the runner gives every draft output, so none passes for a final.
 DRAFT_SUFFIX = "-borrador"
 WIDTH = 64
@@ -477,6 +488,55 @@ def test_the_klein_flow_renders_through_the_same_runner(tmp_path: Path) -> None:
         process.wait(timeout=10)
 
 
+def test_an_entry_sets_every_sampling_knob_and_the_record_shows_them(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    models = _model_files(home)
+    graph_file = tmp_path / "graph.json"
+    upload_file = tmp_path / "upload.bin"
+    stub_dir = _stub_sdk(tmp_path)
+    checkout = _clone(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    entry = {
+        **ENTRY,
+        "steps": OVERRIDE_STEPS,
+        "cfg": OVERRIDE_CFG,
+        "sampler": "euler",
+        "scheduler": "euler_ancestral",
+        "shift": OVERRIDE_SHIFT,
+    }
+    port = _free_port()
+    url = f"http://127.0.0.1:{port}"
+    process = _launch(checkout, graph_file, upload_file, port)
+    try:
+        assert _wait_healthy(f"{url}/system_stats"), "the stub ComfyUI never became healthy"
+        env = _environment(stub_dir, home, url)
+        request = _request("run", out, tmp_path, models, inputs={"image": [entry]})
+        result, _ = _call(stub_dir, "run", request, tmp_path, env)
+        graph = json.loads(graph_file.read_text(encoding="utf-8"))["prompt"]
+        assert graph["sampler"]["inputs"]["steps"] == OVERRIDE_STEPS
+        assert graph["sampler"]["inputs"]["cfg"] == OVERRIDE_CFG
+        assert graph["sampler"]["inputs"]["sampler_name"] == "euler"
+        assert graph["sampler"]["inputs"]["scheduler"] == "euler_ancestral"
+        assert graph["model"]["inputs"]["shift"] == OVERRIDE_SHIFT
+        # The record's params are the flow defaults merged with the entry.
+        assert result["assets"][0]["params"] == {
+            "name": "foto-producto",
+            "prompt": PROMPT,
+            "seed": SEED,
+            "width": WIDTH,
+            "height": HEIGHT,
+            "steps": 12,
+            "cfg": 2,
+            "sampler": "euler",
+            "scheduler": "euler_ancestral",
+            "shift": 5,
+        }
+    finally:
+        process.terminate()
+        process.wait(timeout=10)
+
+
 def test_an_edit_uploads_the_reference_and_fills_the_img2img_flow(tmp_path: Path) -> None:
     home = tmp_path / "home"
     models = _model_files(home)
@@ -582,6 +642,8 @@ def _assert_klein_graph(graph_file: Path) -> None:
     assert graph["positive"]["inputs"]["text"] == PROMPT
     assert graph["noise"]["inputs"]["noise_seed"] == SEED
     assert graph["sigmas"]["inputs"]["steps"] == KLEIN_STEPS
+    assert graph["guider"]["inputs"]["cfg"] == KLEIN_CFG
+    assert graph["select"]["inputs"]["sampler_name"] == KLEIN_SAMPLER
     assert graph["latent"]["class_type"] == "EmptyFlux2LatentImage"
     assert graph["latent"]["inputs"]["width"] == WIDTH
     assert graph["latent"]["inputs"]["height"] == HEIGHT
@@ -714,7 +776,8 @@ def test_a_clip_without_a_negative_submits_the_flow_default(tmp_path: Path) -> N
             capability="comfy.clip",
         )
         result, _ = _call(stub_dir, "run", request, tmp_path, env)
-        assert "negative" not in result["assets"][0]["params"]
+        # The entry omits the negative, so the record shows the flow's own.
+        assert result["assets"][0]["params"]["negative"] == WAN_DEFAULT_NEGATIVE
         _assert_wan_graph(graph_file, WAN_DEFAULT_NEGATIVE)
     finally:
         process.terminate()
@@ -729,6 +792,8 @@ def _assert_wan_graph(graph_file: Path, expected_negative: str) -> None:
     assert graph["sampler"]["inputs"]["seed"] == SEED
     assert graph["sampler"]["inputs"]["steps"] == CLIP_STEPS
     assert graph["sampler"]["inputs"]["cfg"] == CLIP_CFG
+    assert graph["sampler"]["inputs"]["sampler_name"] == CLIP_SAMPLER
+    assert graph["sampler"]["inputs"]["scheduler"] == CLIP_SCHEDULER
     assert graph["model"]["inputs"]["shift"] == CLIP_SHIFT
     assert graph["latent"]["inputs"]["length"] == CLIP_LENGTH
     assert graph["latent"]["inputs"]["width"] == WIDTH
@@ -803,6 +868,8 @@ def _assert_rapido_graph(graph_file: Path) -> None:
     assert graph["model"]["inputs"]["model"] == ["lora", 0]
     assert graph["sampler"]["inputs"]["steps"] == RAPIDO_STEPS
     assert graph["sampler"]["inputs"]["cfg"] == RAPIDO_CFG
+    assert graph["sampler"]["inputs"]["sampler_name"] == "euler"
+    assert graph["sampler"]["inputs"]["scheduler"] == "simple"
     assert graph["save"]["inputs"]["filename_prefix"] == "bosque-niebla"
     assert "$" not in json.dumps(graph)
 
@@ -980,6 +1047,9 @@ def _assert_graph(graph_file: Path) -> None:
     assert graph["positive"]["inputs"]["text"] == PROMPT
     assert graph["sampler"]["inputs"]["seed"] == SEED
     assert graph["sampler"]["inputs"]["steps"] == STEPS
+    assert graph["sampler"]["inputs"]["cfg"] == TURBO_CFG
+    assert graph["sampler"]["inputs"]["sampler_name"] == TURBO_SAMPLER
+    assert graph["sampler"]["inputs"]["scheduler"] == TURBO_SCHEDULER
     assert graph["model"]["inputs"]["shift"] == SHIFT
     assert graph["latent"]["inputs"]["width"] == WIDTH
     assert graph["latent"]["inputs"]["height"] == HEIGHT

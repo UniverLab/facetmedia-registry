@@ -14,6 +14,7 @@ import json
 import re
 import tomllib
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -62,9 +63,60 @@ RAPIDO_CFG = 1
 RAPIDO_STRENGTH = 1.0
 SIDE_MIN = 64
 SIDE_MAX = 2048
+STEPS_MIN = 1
+CFG_MIN = 0
+SHIFT_MIN = 0
 #: The core's skill description bounds.
 DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
+
+#: The sampling knobs an entry may set: manifest type and minimum, if any.
+KNOB_FIELDS = {
+    "steps": ("integer", STEPS_MIN),
+    "cfg": ("number", CFG_MIN),
+    "sampler": ("string", None),
+    "scheduler": ("string", None),
+    "shift": ("number", SHIFT_MIN),
+}
+#: A graph input's name to the placeholder and params key that fills it.
+KNOB_INPUTS = {
+    "steps": "steps",
+    "cfg": "cfg",
+    "sampler_name": "sampler",
+    "scheduler": "scheduler",
+    "shift": "shift",
+}
+#: Every flow's sampling knobs: the default each placeholder falls back to.
+FLOW_KNOBS = {
+    "z-image": {
+        "steps": STEPS,
+        "cfg": CFG,
+        "sampler": "res_multistep",
+        "scheduler": "simple",
+        "shift": SHIFT,
+    },
+    "qwen-image-edit": {
+        "steps": EDIT_STEPS,
+        "cfg": EDIT_CFG,
+        "sampler": "euler",
+        "scheduler": "simple",
+        "shift": EDIT_SHIFT,
+    },
+    "wan22-i2v-14b": {
+        "steps": WAN_STEPS,
+        "cfg": WAN_CFG,
+        "sampler": "euler",
+        "scheduler": "simple",
+        "shift": WAN_SHIFT,
+    },
+    "wan22-i2v-14b-fast": {
+        "steps": RAPIDO_STEPS,
+        "cfg": RAPIDO_CFG,
+        "sampler": "euler",
+        "scheduler": "simple",
+        "shift": WAN_SHIFT,
+    },
+}
 
 #: Every whole word the guard must reject: data and lettering in an image.
 GUARD_WORDS = (
@@ -274,11 +326,27 @@ def test_the_description_marks_the_unrun_hardware() -> None:
     assert MANIFEST["description"].endswith("(not yet run on a 24 GB GPU).")
 
 
-def test_the_image_input_is_closed_with_five_fields() -> None:
+def _assert_knob_fields(items: dict[str, dict[str, object]], names: tuple[str, ...]) -> None:
+    """Each knob is optional, typed as declared, and defaults to the flow's value."""
+    for name in names:
+        field = items[name]
+        kind, low = KNOB_FIELDS[name]
+        assert field["type"] == kind, name
+        assert field["required"] is False, name
+        # The default lives in the flow's params, never in the manifest.
+        assert "default" not in field, name
+        assert "flow default" in field["description"], name
+        if low is None:
+            assert "min" not in field, name
+        else:
+            assert field["min"] == low, name
+
+
+def test_the_image_input_is_closed_with_its_sizes_and_knobs() -> None:
     assert IMAGE["type"] == "array"
     assert IMAGE["required"] is True
     assert IMAGE["min_items"] == 1
-    assert set(ITEMS) == {"name", "prompt", "seed", "width", "height"}
+    assert set(ITEMS) == {"name", "prompt", "seed", "width", "height", *KNOB_FIELDS}
     assert ITEMS["name"]["pattern"] == "^[a-z0-9][a-z0-9-]*$"
     assert ITEMS["seed"]["required"] is True
     assert ITEMS["seed"]["type"] == "integer"
@@ -287,6 +355,7 @@ def test_the_image_input_is_closed_with_five_fields() -> None:
     for side in ("width", "height"):
         assert ITEMS[side]["min"] == SIDE_MIN
         assert ITEMS[side]["max"] == SIDE_MAX
+    _assert_knob_fields(ITEMS, tuple(KNOB_FIELDS))
 
 
 def test_the_workflow_input_is_the_one_still_flow() -> None:
@@ -306,7 +375,8 @@ def test_the_edit_capability_is_an_image_from_a_reference() -> None:
 
 
 def test_the_edit_entries_have_the_still_shape_and_defaults() -> None:
-    assert set(EDIT_ITEMS) == {"name", "prompt", "seed", "width", "height"}
+    assert set(EDIT_ITEMS) == {"name", "prompt", "seed", "width", "height", *KNOB_FIELDS}
+    _assert_knob_fields(EDIT_ITEMS, tuple(KNOB_FIELDS))
     assert EDIT_ITEMS["prompt"]["pattern"] == ITEMS["prompt"]["pattern"]
     for side in ("width", "height"):
         assert EDIT_ITEMS[side]["default"] == ITEMS[side]["default"]
@@ -353,6 +423,8 @@ def test_the_edit_flow_guides_the_latent_from_the_uploaded_image() -> None:
         "steps",
         "cfg",
         "shift",
+        "sampler",
+        "scheduler",
         "name",
     }
 
@@ -365,6 +437,8 @@ def test_the_edit_flow_loads_the_qwen_models() -> None:
     assert FLOW_EDIT["params"]["steps"] == EDIT_STEPS
     assert FLOW_EDIT["params"]["cfg"] == EDIT_CFG
     assert FLOW_EDIT["params"]["shift"] == EDIT_SHIFT
+    assert FLOW_EDIT["params"]["sampler"] == "euler"
+    assert FLOW_EDIT["params"]["scheduler"] == "simple"
 
 
 def test_the_clip_capability_is_a_video_from_a_first_frame() -> None:
@@ -387,7 +461,9 @@ def test_the_clip_entries_carry_their_own_first_frame() -> None:
         "height",
         "length",
         "negative",
+        *KNOB_FIELDS,
     }
+    _assert_knob_fields(CLIP_ITEMS, tuple(KNOB_FIELDS))
     assert CLIP_ITEMS["name"]["pattern"] == ITEMS["name"]["pattern"]
     assert CLIP_ITEMS["image"]["type"] == "path"
     assert CLIP_ITEMS["image"]["required"] is True
@@ -516,9 +592,22 @@ def test_the_flow_fills_the_names_of_the_three_models() -> None:
         "steps": STEPS,
         "shift": SHIFT,
         "cfg": CFG,
+        "sampler": "res_multistep",
+        "scheduler": "simple",
     }
     placeholders = set(re.findall(r'"\$([a-z_]+)"', json.dumps(graph)))
-    assert placeholders == {"prompt", "seed", "width", "height", "steps", "shift", "cfg", "name"}
+    assert placeholders == {
+        "prompt",
+        "seed",
+        "width",
+        "height",
+        "steps",
+        "shift",
+        "cfg",
+        "sampler",
+        "scheduler",
+        "name",
+    }
 
 
 def test_the_wan_flow_samples_high_noise_then_low_noise() -> None:
@@ -553,6 +642,8 @@ def test_the_wan_flow_params_are_the_lab_clip() -> None:
         "steps",
         "cfg",
         "shift",
+        "sampler",
+        "scheduler",
         "fps",
         "negative",
     }
@@ -567,6 +658,7 @@ def test_the_wan_flow_params_are_the_lab_clip() -> None:
         WAN_SHIFT,
         24,
     )
+    assert (params["sampler"], params["scheduler"]) == ("euler", "simple")
     assert params["negative"].strip()
     placeholders = set(re.findall(r'"\$([a-z_]+)"', json.dumps(FLOW_WAN["graph"])))
     assert placeholders == {
@@ -580,6 +672,8 @@ def test_the_wan_flow_params_are_the_lab_clip() -> None:
         "steps",
         "cfg",
         "shift",
+        "sampler",
+        "scheduler",
         "fps",
         "name",
     }
@@ -603,6 +697,33 @@ def test_the_rapido_flow_adds_both_lightx2v_loras() -> None:
     assert FLOW_RAPIDO["params"]["lora_strength"] == RAPIDO_STRENGTH
     placeholders = set(re.findall(r'"\$([a-z_]+)"', json.dumps(graph)))
     assert "lora_strength" in placeholders
+
+
+def _knob_inputs(graph: dict[str, Any]) -> dict[str, list[object]]:
+    """Every sampler knob the graph carries, by the input's name."""
+    found: dict[str, list[object]] = {}
+    for body in graph.values():
+        inputs = body.get("inputs", {})
+        for key in KNOB_INPUTS:
+            if key in inputs:
+                found.setdefault(key, []).append(inputs[key])
+    return found
+
+
+def test_every_flow_has_each_knob_as_a_placeholder_with_todays_default() -> None:
+    for flow_name, knobs in FLOW_KNOBS.items():
+        data = json.loads((PACKAGE / "flows" / f"{flow_name}.json").read_text(encoding="utf-8"))
+        for knob, default in knobs.items():
+            assert data["params"][knob] == default, (flow_name, knob)
+        found = _knob_inputs(data["graph"])
+        assert {"steps", "cfg", "sampler_name"} <= set(found), flow_name
+        for input_key, values in found.items():
+            knob = KNOB_INPUTS[input_key]
+            assert knob in knobs, (flow_name, input_key)
+            # Every carrier is a placeholder, never a literal left in the flow.
+            assert values == [f"${knob}"] * len(values), (flow_name, input_key, values)
+        for optional in ("scheduler", "shift"):
+            assert (optional in found) == (optional in knobs), (flow_name, optional)
 
 
 def test_every_flow_model_file_exists_in_the_model_paths() -> None:

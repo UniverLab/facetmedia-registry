@@ -23,27 +23,33 @@ The unet, clip, vae and LoRAs load by the filenames of the manifest models.
 ## Placeholders per flow
 
 - `z-image`: `$prompt`, `$seed`, `$width`, `$height`, `$name`, `$steps`,
-  `$shift`, `$cfg`. Params: width 1344, height 768, seed 0, steps 25,
-  shift 3, cfg 4 (the template's own defaults).
+  `$shift`, `$cfg`, `$sampler`, `$scheduler`. Params: width 1344,
+  height 768, seed 0, steps 25, shift 3, cfg 4, sampler `res_multistep`,
+  scheduler `simple` (the template's own defaults).
 - `qwen-image-edit`: `$prompt`, `$seed`, `$width`, `$height`, `$name`,
-  `$steps`, `$cfg`, `$shift`, `$image`. Params: image `""`, prompt `""`, name
-  `"edit"`, width 1344, height 768, seed 0, steps 40, cfg 4, shift 3.1. The
+  `$steps`, `$cfg`, `$shift`, `$sampler`, `$scheduler`, `$image`. Params:
+  image `""`, prompt `""`, name `"edit"`, width 1344, height 768, seed 0,
+  steps 40, cfg 4, shift 3.1, sampler `euler`, scheduler `simple`. The
   source is scaled to the requested size, VAE-encoded as the edit latent and
   conditioned by `TextEncodeQwenImageEditPlus` reference latents.
 - `wan22-i2v-14b`: `$prompt`, `$negative`, `$seed`, `$width`, `$height`,
-  `$length`, `$steps`, `$cfg`, `$shift`, `$fps`, `$image`, `$name`. Params:
-  width 1280, height 704, length 49, seed 0, steps 20, cfg 5, shift 8,
-  fps 24, and Wan's own Chinese negative prompt as the default. The
-  high-noise stage samples steps 0–10, the low-noise stage steps 10 to the
-  end; overriding `steps` keeps that split.
+  `$length`, `$steps`, `$cfg`, `$shift`, `$sampler`, `$scheduler`, `$fps`,
+  `$image`, `$name`. Params: width 1280, height 704, length 49, seed 0,
+  steps 20, cfg 5, shift 8, sampler `euler`, scheduler `simple`, fps 24, and
+  Wan's own Chinese negative prompt as the default. The high-noise stage
+  samples steps 0–10, the low-noise stage steps 10 to the end; overriding
+  `steps` keeps that split, and both stages share every knob.
 - `wan22-i2v-14b-fast`: the same placeholders plus `$lora_strength`.
-  Params: the same size, length and fps with steps 4, cfg 1 and
-  `lora_strength` 1.0; the high-noise stage samples steps 0–2, the low-noise
-  stage steps 2 to the end.
+  Params: the same size, length and fps with steps 4, cfg 1, sampler
+  `euler`, scheduler `simple` and `lora_strength` 1.0; the high-noise stage
+  samples steps 0–2, the low-noise stage steps 2 to the end.
 
-`$prompt`, `$seed`, `$width`, `$height`, `$length` and `$name` come from the
-entry; `$image` comes from an upload (below); everything else comes from the
-flow's `params` unless the entry repeats the key.
+`$prompt`, `$seed`, `$width`, `$height`, `$length`, `$name` and the five
+sampling knobs come from the entry; `$image` comes from an upload (below);
+everything else comes from the flow's `params` unless the entry repeats the
+key. The flow's value is therefore the default: a piece that sets no knob
+renders exactly as before, and one the selected flow does not carry fails
+with the client's unknown-key error before the server starts.
 
 ## Uploads
 

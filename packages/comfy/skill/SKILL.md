@@ -48,9 +48,10 @@ image = [
 multiple of 64; say both per entry to change the shape. `workflow` picks the
 still flow (`"z-image-turbo"` or `"flux2-klein-4b"`) or the clip flow
 (`"wan22-i2v"` or `"wan22-i2v-fast"`); an edit has no `workflow` input —
-it always uses `flux2-klein-img2img`. The flow's own parameters (`steps = 8`,
-`shift = 3` on z-image-turbo; `steps = 4` on klein) come from
-`flows/<name>.json`, not from the piece. Each entry writes `<name>.png` —
+it always uses `flux2-klein-img2img`. An entry may also set `steps`, `cfg`,
+`sampler`, `scheduler` and `shift`; each defaults to the flow's own value —
+the Flows section lists every flow's defaults — so a piece that sets none
+renders exactly as before. Each entry writes `<name>.png` —
 or `<name>.mp4` for a clip — beside the piece file, so `--out build/` keeps
 generated assets away from sources.
 
@@ -77,6 +78,20 @@ each graph's placeholders, params and uploads.
 | `flux2-klein-img2img` | `edit` | editing a reference image by instruction, ~23 s |
 | `wan22-i2v` | `clip` | movement inside a still: fog, steam, ~7 min per 2 s |
 | `wan22-i2v-fast` | `clip` | motion drafts in half the time |
+
+Each flow's sampling knobs and their defaults. An entry may set any of them
+and wins over the flow; omitting one keeps this value, so a piece that sets
+none renders exactly as before. Every flow takes `steps`, `cfg` and
+`sampler`; a `—` is a knob that flow does not carry, and setting it there
+fails with the client's unknown-key error before the server starts:
+
+| Flow | `steps` | `cfg` | `sampler` | `scheduler` | `shift` |
+|------|---------|-------|-----------|-------------|---------|
+| `z-image-turbo` | 8 | 1 | `res_multistep` | `simple` | 3 |
+| `flux2-klein-4b` | 4 | 1 | `euler` | — | — |
+| `flux2-klein-img2img` | 4 | 1 | `euler` | — | — |
+| `wan22-i2v` | 20 | 5 | `uni_pc` | `simple` | 8 |
+| `wan22-i2v-fast` | 4 | 1 | `euler` | `simple` | 8 |
 
 For clips, `length` is frames at 24 fps and must be `4n+1` — 49 ≈ 2 s,
 121 ≈ 5 s — because the Wan latent keeps one frame plus groups of four. A
@@ -179,6 +194,10 @@ models and the Wan fp8 unet are Apache-2.0.
   missing checkout fails with `facet pull comfy` as its fix.
 - Seeds are part of the result: change only the prompt to explore, then keep
   the seed of the image you approved.
+- Either klein flow carries no scheduler and no shift: setting either knob
+  there fails with the client's unknown-key error before the server starts.
+  Set `steps`, `cfg` and `sampler` on a klein entry; all five knobs work on
+  the Wan flows.
 - Generated images hold no text or data: no caption, no watermark, no
   numbers inside the picture. Prompts must not mention caption, chart,
   graph, label, letter, logo, sign, text, title or word even to forbid

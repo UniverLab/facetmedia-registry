@@ -36,6 +36,11 @@ The fields below are what `facet describe comfy-xl.still --json` reports.
 | `image[].seed` | integer | yes | — | same seed and prompt give the same image |
 | `image[].width` | integer | no | `1344` | 64 to 2048, a multiple of 64 |
 | `image[].height` | integer | no | `768` | 64 to 2048, a multiple of 64 |
+| `image[].steps` | integer | no | flow default | sampling steps, at least 1; the flow's own is 25 |
+| `image[].cfg` | number | no | flow default | classifier-free guidance, at least 0; the flow's own is 4 |
+| `image[].sampler` | string | no | flow default | sampler name; the flow's own is `res_multistep` |
+| `image[].scheduler` | string | no | flow default | scheduler name; the flow's own is `simple` |
+| `image[].shift` | number | no | flow default | model sampling shift, at least 0; the flow's own is 3 |
 | `workflow` | enum | no | `"z-image"` | `"z-image"`; the one still flow |
 
 ```toml
@@ -68,8 +73,14 @@ The fields below are what `facet describe comfy-xl.edit --json` reports.
 | `image[].seed` | integer | yes | — | same seed, prompt and reference give the same image |
 | `image[].width` | integer | no | `1344` | 64 to 2048, a multiple of 64 |
 | `image[].height` | integer | no | `768` | 64 to 2048, a multiple of 64 |
+| `image[].steps` | integer | no | flow default | sampling steps, at least 1; the flow's own is 40 |
+| `image[].cfg` | number | no | flow default | classifier-free guidance, at least 0; the flow's own is 4 |
+| `image[].sampler` | string | no | flow default | sampler name; the flow's own is `euler` |
+| `image[].scheduler` | string | no | flow default | scheduler name; the flow's own is `simple` |
+| `image[].shift` | number | no | flow default | model sampling shift, at least 0; the flow's own is 3.1 |
 
-The entries have the same five fields and defaults as `still`, so `verify`
+The entries take the same name, prompt, seed, width, height and sampling
+knobs as `still`, so `verify`
 and `preview` work unchanged; there is no `workflow` input, because an edit
 always uses `qwen-image-edit`. The reference is scaled to the entry's
 `width`/`height` before it is encoded as the edit latent, uploaded once per
@@ -101,6 +112,11 @@ The fields below are what `facet describe comfy-xl.clip --json` reports.
 | `image[].width` | integer | no | `1280` | 64 to 2048, a multiple of 64 |
 | `image[].height` | integer | no | `704` | 64 to 2048, a multiple of 64 |
 | `image[].length` | integer | no | `49` | frames at 24 fps: `49` ≈ 2 s, `121` ≈ 5 s |
+| `image[].steps` | integer | no | flow default | sampling steps, at least 1; the flow's own is 20 on wan22-i2v-14b and 4 on wan22-i2v-14b-fast |
+| `image[].cfg` | number | no | flow default | classifier-free guidance, at least 0; the flow's own is 5 on wan22-i2v-14b and 1 on wan22-i2v-14b-fast |
+| `image[].sampler` | string | no | flow default | sampler name; the flow's own is `euler` |
+| `image[].scheduler` | string | no | flow default | scheduler name; the flow's own is `simple` |
+| `image[].shift` | number | no | flow default | model sampling shift, at least 0; the flow's own is 8 |
 | `image[].negative` | string | no | flow default | what to keep out of the clip; omitting it keeps Wan's official Chinese negative, and `wan22-i2v-14b-fast` at cfg 1 ignores it |
 | `workflow` | enum | no | `"wan22-i2v-14b"` | `"wan22-i2v-14b"`, or `"wan22-i2v-14b-fast"` for a draft-only clip |
 
@@ -162,12 +178,23 @@ ComfyUI templates shipped with the pinned ComfyUI's
 - `$prompt`, `$seed`, `$width`, `$height` and `$name` come from the entry;
   the edit and clip flows add `$image`, the uploaded reference or first frame,
   and the clip flow also takes `$length`.
-- `$steps`, `$cfg` and `$shift` come from the flow's `params`: z-image runs
-  25 steps at cfg 4 with shift 3; the edit runs 40 steps at cfg 4 with shift
-  3.1; Wan runs
-  20 steps at cfg 5 with shift 8 and 24 fps, with Wan's own Chinese negative
-  prompt as the default. The rapido draft keeps the same size, length and
-  fps with 4 steps, cfg 1 and `lora_strength` 1.0 for its lightx2v LoRAs.
+- `$steps`, `$cfg`, `$sampler` (filled into `sampler_name`), `$scheduler`
+  and `$shift` come from the flow's `params` unless the entry sets them.
+  These are the defaults each flow ships, so a piece that sets none of them
+  renders exactly as before:
+
+  | Flow | steps | cfg | sampler | scheduler | shift |
+  |------|-------|-----|---------|-----------|-------|
+  | `z-image` | 25 | 4 | `res_multistep` | `simple` | 3 |
+  | `qwen-image-edit` | 40 | 4 | `euler` | `simple` | 3.1 |
+  | `wan22-i2v-14b` | 20 | 5 | `euler` | `simple` | 8 |
+  | `wan22-i2v-14b-fast` | 4 | 1 | `euler` | `simple` | 8 |
+
+  Setting a knob the selected flow does not carry fails before anything is
+  submitted, with the client's unknown-key error; the run never reaches the
+  server. Wan also runs at 24 fps with Wan's own Chinese negative prompt as
+  the default, and the rapido draft keeps the same size, length and fps and
+  adds `lora_strength` 1.0 for its lightx2v LoRAs.
 - The unet, clip, vae and LoRAs load by the filenames of the manifest
   models. The high-noise Wan unet samples the first half of the steps, the
   low-noise unet the second; overriding `steps` keeps that split.
@@ -190,8 +217,10 @@ is the file `facet pull` downloaded under `models/direct`; nothing is copied.
 ## Assets
 
 One run writes one PNG per entry, each with a record (`kind = "image"`,
-`mime = "image/png"`, `seed` the entry's seed, `params` the entry, and
-`properties` carrying `width`, `height` and `seed`). A clip run writes one
+`mime = "image/png"`, `seed` the entry's seed, `params` the values actually
+used — the flow's defaults merged with the entry, so the sampling knobs and
+the negative prompt the flow supplied show too — and `properties` carrying
+`width`, `height` and `seed`). A clip run writes one
 MP4 per entry instead, with `kind = "video"` and `mime = "video/mp4"`. A
 `wan22-i2v-14b-fast` draft writes `<name>-borrador.mp4` and adds
 `draft = true` to its properties; every other record keeps `width`,

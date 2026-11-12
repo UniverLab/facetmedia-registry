@@ -102,11 +102,12 @@ def _save(
 def _asset(
     entry: dict[str, Any], path: Path, video: bool = False, draft: bool = False
 ) -> dict[str, Any]:
-    """One record: the entry as its params, its seed beside them.
+    """One record: the values actually used as its params, the seed beside them.
 
-    A still is the ``image`` kind, a clip the ``video`` kind with the same
-    measured width and height. A draft clip marks its properties so no
-    assembly mistakes it for a final.
+    ``entry`` is the flow params merged with the entry, so the record shows
+    the defaults the flow supplied. A still is the ``image`` kind, a clip the
+    ``video`` kind with the same measured width and height. A draft clip marks
+    its properties so no assembly mistakes it for a final.
     """
     seed = int(entry["seed"])
     kind, mime = ("video", "video/mp4") if video else ("image", "image/png")
@@ -203,7 +204,7 @@ def run(req: Request) -> dict[str, Any]:
         found = comfyclient.images(comfyclient.history(comfyclient.submit(graph)))
         for path in _save(found, str(entry["name"]), req.out_dir, draft):
             print(f"{path.name} ok", flush=True)
-            assets.append(_asset(entry, path, video, draft))
+            assets.append(_asset(entry_values, path, video, draft))
     return {"tool": comfyclient.tool(manifest), "assets": assets}
 
 

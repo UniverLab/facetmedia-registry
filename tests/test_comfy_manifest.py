@@ -16,6 +16,7 @@ import json
 import re
 import tomllib
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -48,11 +49,59 @@ DEFAULT_CLIP_WIDTH = 1280
 DEFAULT_CLIP_HEIGHT = 704
 DEFAULT_CLIP_LENGTH = 49
 KLEIN_STEPS = 4
+CFG = 1
+KLEIN_CFG = 1
 SIDE_MIN = 64
 SIDE_MAX = 2048
+STEPS_MIN = 1
+CFG_MIN = 0
+SHIFT_MIN = 0
 #: The core's skill description bounds.
 DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
+
+#: The sampling knobs an entry may set: manifest type and minimum, if any.
+KNOB_FIELDS = {
+    "steps": ("integer", STEPS_MIN),
+    "cfg": ("number", CFG_MIN),
+    "sampler": ("string", None),
+    "scheduler": ("string", None),
+    "shift": ("number", SHIFT_MIN),
+}
+#: A graph input's name to the placeholder and params key that fills it.
+KNOB_INPUTS = {
+    "steps": "steps",
+    "cfg": "cfg",
+    "sampler_name": "sampler",
+    "scheduler": "scheduler",
+    "shift": "shift",
+}
+#: Every flow's sampling knobs: the default each placeholder falls back to.
+FLOW_KNOBS = {
+    "z-image-turbo": {
+        "steps": 8,
+        "cfg": 1,
+        "sampler": "res_multistep",
+        "scheduler": "simple",
+        "shift": 3,
+    },
+    "flux2-klein-4b": {"steps": 4, "cfg": 1, "sampler": "euler"},
+    "flux2-klein-img2img": {"steps": 4, "cfg": 1, "sampler": "euler"},
+    "wan22-i2v": {
+        "steps": 20,
+        "cfg": 5,
+        "sampler": "uni_pc",
+        "scheduler": "simple",
+        "shift": 8,
+    },
+    "wan22-i2v-fast": {
+        "steps": 4,
+        "cfg": 1,
+        "sampler": "euler",
+        "scheduler": "simple",
+        "shift": 8,
+    },
+}
 
 #: Every whole word the guard must reject: data and lettering in an image.
 GUARD_WORDS = (
@@ -273,11 +322,27 @@ def test_the_ten_models_are_the_lab_files() -> None:
         assert "hf_repo" not in model
 
 
-def test_the_image_input_is_closed_with_five_fields() -> None:
+def _assert_knob_fields(items: dict[str, dict[str, object]], names: tuple[str, ...]) -> None:
+    """Each knob is optional, typed as declared, and defaults to the flow's value."""
+    for name in names:
+        field = items[name]
+        kind, low = KNOB_FIELDS[name]
+        assert field["type"] == kind, name
+        assert field["required"] is False, name
+        # The default lives in the flow's params, never in the manifest.
+        assert "default" not in field, name
+        assert "flow default" in field["description"], name
+        if low is None:
+            assert "min" not in field, name
+        else:
+            assert field["min"] == low, name
+
+
+def test_the_image_input_is_closed_with_its_sizes_and_knobs() -> None:
     assert IMAGE["type"] == "array"
     assert IMAGE["required"] is True
     assert IMAGE["min_items"] == 1
-    assert set(ITEMS) == {"name", "prompt", "seed", "width", "height"}
+    assert set(ITEMS) == {"name", "prompt", "seed", "width", "height", *KNOB_FIELDS}
     assert ITEMS["name"]["pattern"] == "^[a-z0-9][a-z0-9-]*$"
     assert ITEMS["seed"]["required"] is True
     assert ITEMS["seed"]["type"] == "integer"
@@ -286,6 +351,7 @@ def test_the_image_input_is_closed_with_five_fields() -> None:
     for side in ("width", "height"):
         assert ITEMS[side]["min"] == SIDE_MIN
         assert ITEMS[side]["max"] == SIDE_MAX
+    _assert_knob_fields(ITEMS, tuple(KNOB_FIELDS))
 
 
 def test_the_workflow_input_is_an_enum_with_a_default() -> None:
@@ -305,7 +371,18 @@ def test_the_edit_capability_is_an_image_from_a_reference() -> None:
 
 
 def test_the_edit_entries_have_the_still_shape_and_defaults() -> None:
-    assert set(EDIT_ITEMS) == {"name", "prompt", "seed", "width", "height"}
+    assert set(EDIT_ITEMS) == {
+        "name",
+        "prompt",
+        "seed",
+        "width",
+        "height",
+        "steps",
+        "cfg",
+        "sampler",
+    }
+    # The img2img flow carries no scheduler and no shift.
+    _assert_knob_fields(EDIT_ITEMS, ("steps", "cfg", "sampler"))
     assert EDIT_ITEMS["prompt"]["pattern"] == ITEMS["prompt"]["pattern"]
     for side in ("width", "height"):
         assert EDIT_ITEMS[side]["default"] == ITEMS[side]["default"]
@@ -330,7 +407,17 @@ def test_the_edit_flow_guides_the_latent_from_the_uploaded_image() -> None:
     assert "denoise" not in json.dumps(graph)
     assert "denoise" not in json.dumps(FLOW_IMG2IMG["params"])
     placeholders = set(re.findall(r'"\$([a-z]+)"', json.dumps(graph)))
-    assert placeholders == {"image", "prompt", "seed", "width", "height", "steps", "name"}
+    assert placeholders == {
+        "image",
+        "prompt",
+        "seed",
+        "width",
+        "height",
+        "steps",
+        "cfg",
+        "sampler",
+        "name",
+    }
 
 
 def test_the_edit_flow_loads_the_klein_models() -> None:
@@ -361,7 +448,9 @@ def test_the_clip_entries_carry_their_own_first_frame() -> None:
         "height",
         "length",
         "negative",
+        *KNOB_FIELDS,
     }
+    _assert_knob_fields(CLIP_ITEMS, tuple(KNOB_FIELDS))
     assert CLIP_ITEMS["name"]["pattern"] == ITEMS["name"]["pattern"]
     assert CLIP_ITEMS["image"]["type"] == "path"
     assert CLIP_ITEMS["image"]["required"] is True
@@ -509,9 +598,29 @@ def test_the_flow_fills_the_names_of_the_three_models() -> None:
     assert graph["unet"]["inputs"]["unet_name"] == Path(LAB_MODELS["z-image-turbo-unet"][2]).name
     assert graph["clip"]["inputs"]["clip_name"] == Path(LAB_MODELS["z-image-qwen-clip"][2]).name
     assert graph["vae"]["inputs"]["vae_name"] == Path(LAB_MODELS["z-image-vae"][2]).name
-    assert FLOW["params"] == {"width": 1344, "height": 768, "seed": 0, "steps": 8, "shift": 3}
+    assert FLOW["params"] == {
+        "width": 1344,
+        "height": 768,
+        "seed": 0,
+        "steps": 8,
+        "shift": 3,
+        "cfg": 1,
+        "sampler": "res_multistep",
+        "scheduler": "simple",
+    }
     placeholders = set(re.findall(r'"\$([a-z]+)"', json.dumps(graph)))
-    assert placeholders == {"prompt", "seed", "width", "height", "steps", "shift", "name"}
+    assert placeholders == {
+        "prompt",
+        "seed",
+        "width",
+        "height",
+        "steps",
+        "shift",
+        "cfg",
+        "sampler",
+        "scheduler",
+        "name",
+    }
 
 
 def test_the_klein_flow_fills_the_names_of_its_three_models() -> None:
@@ -519,9 +628,16 @@ def test_the_klein_flow_fills_the_names_of_its_three_models() -> None:
     assert graph["unet"]["inputs"]["unet_name"] == Path(LAB_MODELS["flux2-klein-unet"][2]).name
     assert graph["clip"]["inputs"]["clip_name"] == Path(LAB_MODELS["flux2-qwen-clip"][2]).name
     assert graph["vae"]["inputs"]["vae_name"] == Path(LAB_MODELS["flux2-klein-vae"][2]).name
-    assert FLOW_KLEIN["params"] == {"width": 1344, "height": 768, "seed": 0, "steps": 4}
+    assert FLOW_KLEIN["params"] == {
+        "width": 1344,
+        "height": 768,
+        "seed": 0,
+        "steps": 4,
+        "cfg": 1,
+        "sampler": "euler",
+    }
     placeholders = set(re.findall(r'"\$([a-z]+)"', json.dumps(graph)))
-    assert placeholders == {"prompt", "seed", "width", "height", "steps", "name"}
+    assert placeholders == {"prompt", "seed", "width", "height", "steps", "cfg", "sampler", "name"}
 
 
 def test_the_wan_flow_animates_the_uploaded_still() -> None:
@@ -547,6 +663,8 @@ def test_the_wan_flow_params_are_the_lab_clip() -> None:
         "steps",
         "cfg",
         "shift",
+        "sampler",
+        "scheduler",
         "fps",
         "negative",
     }
@@ -556,6 +674,7 @@ def test_the_wan_flow_params_are_the_lab_clip() -> None:
         DEFAULT_CLIP_LENGTH,
     )
     assert (params["steps"], params["cfg"], params["shift"], params["fps"]) == (20, 5, 8, 24)
+    assert (params["sampler"], params["scheduler"]) == ("uni_pc", "simple")
     assert params["negative"].strip()
     placeholders = set(re.findall(r'"\$([a-z]+)"', json.dumps(FLOW_WAN["graph"])))
     assert placeholders == {
@@ -569,9 +688,38 @@ def test_the_wan_flow_params_are_the_lab_clip() -> None:
         "steps",
         "cfg",
         "shift",
+        "sampler",
+        "scheduler",
         "fps",
         "name",
     }
+
+
+def _knob_inputs(graph: dict[str, Any]) -> dict[str, list[object]]:
+    """Every sampler knob the graph carries, by the input's name."""
+    found: dict[str, list[object]] = {}
+    for body in graph.values():
+        inputs = body.get("inputs", {})
+        for key in KNOB_INPUTS:
+            if key in inputs:
+                found.setdefault(key, []).append(inputs[key])
+    return found
+
+
+def test_every_flow_has_each_knob_as_a_placeholder_with_todays_default() -> None:
+    for flow_name, knobs in FLOW_KNOBS.items():
+        data = json.loads((PACKAGE / "flows" / f"{flow_name}.json").read_text(encoding="utf-8"))
+        for knob, default in knobs.items():
+            assert data["params"][knob] == default, (flow_name, knob)
+        found = _knob_inputs(data["graph"])
+        assert {"steps", "cfg", "sampler_name"} <= set(found), flow_name
+        for input_key, values in found.items():
+            knob = KNOB_INPUTS[input_key]
+            assert knob in knobs, (flow_name, input_key)
+            # Every carrier is a placeholder, never a literal left in the flow.
+            assert values == [f"${knob}"] * len(values), (flow_name, input_key, values)
+        for optional in ("scheduler", "shift"):
+            assert (optional in found) == (optional in knobs), (flow_name, optional)
 
 
 def test_the_skill_is_valid_and_names_the_capability() -> None:

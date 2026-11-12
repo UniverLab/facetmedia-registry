@@ -53,8 +53,10 @@ image = [
 multiple of 64; say both per entry to change the shape. `workflow` picks
 the still flow (`"z-image"`) or the clip flow (`"wan22-i2v-14b"` or
 `"wan22-i2v-14b-fast"`); an edit has no `workflow` input — it always
-uses `qwen-image-edit`. The flow's own parameters (`steps = 25`, `cfg = 4`,
-`shift = 3` on z-image) come from `flows/<name>.json`, not from the piece.
+uses `qwen-image-edit`. An entry may also set `steps`, `cfg`, `sampler`,
+`scheduler` and `shift`; each defaults to the flow's own value — the Flows
+section lists every flow's defaults — so a piece that sets none renders
+exactly as before.
 Each entry writes `<name>.png` — or `<name>.mp4` for a clip — beside the
 piece file, so `--out build/` keeps generated assets away from sources.
 
@@ -80,6 +82,17 @@ each graph's placeholders, params and uploads.
 | `qwen-image-edit` | `edit` | editing a reference image by instruction |
 | `wan22-i2v-14b` | `clip` | movement inside a still: fog, steam, ~7 min per 2 s |
 | `wan22-i2v-14b-fast` | `clip` | motion drafts in half the time |
+
+Each flow's sampling knobs and their defaults. An entry may set any of the
+five on any flow and wins over the flow; omitting one keeps this value, so a
+piece that sets none renders exactly as before:
+
+| Flow | `steps` | `cfg` | `sampler` | `scheduler` | `shift` |
+|------|---------|-------|-----------|-------------|---------|
+| `z-image` | 25 | 4 | `res_multistep` | `simple` | 3 |
+| `qwen-image-edit` | 40 | 4 | `euler` | `simple` | 3.1 |
+| `wan22-i2v-14b` | 20 | 5 | `euler` | `simple` | 8 |
+| `wan22-i2v-14b-fast` | 4 | 1 | `euler` | `simple` | 8 |
 
 For clips, `length` is frames at 24 fps and must be `4n+1` — 49 ≈ 2 s,
 121 ≈ 5 s — because the Wan latent keeps one frame plus groups of four. A
@@ -140,6 +153,9 @@ VAE — are Apache-2.0, commercial use allowed, and no acceptance is needed.
   missing checkout fails with `facet pull comfy-xl` as its fix.
 - Seeds are part of the result: change only the prompt to explore, then keep
   the seed of the image you approved.
+- All four flows carry the five sampling knobs, so any of them may be set on
+  any entry; one a selected flow lacks would fail with the client's
+  unknown-key error before the server starts.
 - Generated images hold no text or data: no caption, no watermark, no
   numbers inside the picture. Prompts must not mention caption, chart,
   graph, label, letter, logo, sign, text, title or word even to forbid
