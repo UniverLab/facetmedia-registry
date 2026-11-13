@@ -57,6 +57,21 @@ validates the registry directory you give it, which is how CI reads a
 checkout.) Because the commit is pinned, an unpublished package reaches
 machines only once a pull request merges to `main`.
 
+## Bundled examples
+
+Every capability of every package ships at least one example piece under
+`packages/<name>/examples/`: a `.toml` carrying a top-level
+`capability = "<package>.<capability>"` key whose `[inputs]` validate
+against that capability, with every file the inputs name beside it.
+`facet example <capability>` copies the piece and its files into a fresh
+folder and prints the exact next command; `--run` also runs it there and
+previews the first asset, so a person has a deliverable to look at right
+away. Each package's README lists its examples under "## Bundled
+examples". An example that needs the person's own material — a reference
+voice, a 24 GB card — says at the top of its TOML what to replace, and an
+example that needs another capability's output ships that output beside
+it as a fixture, so it runs alone.
+
 ## Entry criteria
 
 A package is merged when all of the following hold:
@@ -83,6 +98,11 @@ A package is merged when all of the following hold:
    system browser and needs neither.
 8. **No text or data inside generated images.**
 9. **Heavy local tests run alone** on the lab machine.
+10. **A bundled example for every capability** — a piece under
+   `packages/<name>/examples/` that names the capability with a top-level
+   `capability` key, validates against its inputs and ships every file it
+   names beside it, so `facet example <capability> --run` works out of
+   the box; CI enforces this for every capability in every manifest.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the step-by-step, and
 [packages/README.md](packages/README.md),
