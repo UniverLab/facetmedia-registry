@@ -152,3 +152,12 @@ with `{ notes }` for `<name>.notes.md`.
 - **`pull` fetches the browser.** `pull` installs the pinned npm closure —
   playwright-core and pdfjs-dist — and the declared `[browser]` (Chromium
   158.0.8127.18, shared by the three packages).
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `deck.page` — `examples/page.toml`: `facet example deck.page --run`
+- `deck.presenter` — `examples/presenter.toml`: `facet example deck.presenter --run`
+- `deck.slides` — `examples/slides.toml`: `facet example deck.slides --run`

@@ -116,3 +116,12 @@ facet's `[engine.binary]` packages assume the tool speaks the runner protocol â€
 lines. So the package is a **python-env** subprocess client whose `runner.py`
 owns the four verbs; the manifest declares no `[engine.binary]`,
 `[[models]]` or server.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `demostage.demo` â€” `examples/demo.toml`: `facet example demostage.demo --run`
+
+Needs the person-installed `demo` binary and its licence.

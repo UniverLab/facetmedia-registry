@@ -127,3 +127,11 @@ with the same extra sections as the banner's record above):
 ```json
 {"bytes": 5050, "id": "sha256:87d18776d1f2000ed91520cad4c900e9385f3af04aefb10869f1ad0920d72896", "kind": "text", "mime": "text/plain", "name": "plate-ascii", "properties": {"charset_size": 95, "columns": 100, "mode": "shape", "rows": 50}, "provenance": {"capability": "ascii.image", "params": {"color": "none", "image": "lamina.png", "invert": true, "mode": "shape", "name": "plate-ascii", "width": 100}, "package": {"name": "ascii", "version": "0.1.0"}, "tool": {"name": "facet ascii (Pillow, NumPy, pyfiglet)", "version": "0.1.0"}}, "verification": {"metrics": {"columns": 100, "ink_ratio": 0.7192, "rows": 50, "similarity": 0.9625421776568691}, "status": "passed", "thresholds": {"similarity_min": 0.55}, "verifier": "ascii-rerender"}}
 ```
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `ascii.banner` — `examples/banner-canopy.toml`: `facet example ascii.banner --run`
+- `ascii.image` — `examples/lamina.toml`: `facet example ascii.image --run`

@@ -75,3 +75,12 @@ Seven effects were approved on the reference machine:
 
 Stable Audio Open stays out (licence plus acceptance). If MOSS stops
 convincing, the fallback is a CC0 sound-effects library.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `moss.sfx` — `examples/cafe-ambiente.toml`, `examples/campana-notificacion.toml`, `examples/clic-interfaz.toml`, `examples/lluvia-ventana.toml`, `examples/pagina-libro.toml`, `examples/pasos-madera.toml`, `examples/whoosh-transicion.toml`: `facet example moss.sfx --run`
+
+The first run pulls the model; CPU only.

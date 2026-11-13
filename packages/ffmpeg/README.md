@@ -167,3 +167,12 @@ at 48 kHz), which is what `verify` expects for this format. All three
 runs (24 October 2026, the lab machine) took a few seconds each, the
 first pull included, and `facet doctor ffmpeg --json` reports
 `healthy: true` after them.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `ffmpeg.convert` — `examples/convert.toml`: `facet example ffmpeg.convert --run`
+- `ffmpeg.mix` — `examples/mix.toml`: `facet example ffmpeg.mix --run`
+- `ffmpeg.normalize` — `examples/normalize.toml`: `facet example ffmpeg.normalize --run`

@@ -138,3 +138,12 @@ dialogue = "dialogue.txt"
 
 Rhubarb takes about a second for a 10 s clip, and `facet doctor rhubarb`
 reports `healthy: true` once the pull has landed the zip.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `rhubarb.mouths` — `examples/mouths.toml`: `facet example rhubarb.mouths --run`
+
+Needs the person-installed Rhubarb CLI.

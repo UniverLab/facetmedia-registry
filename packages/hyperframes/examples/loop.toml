@@ -1,3 +1,5 @@
+capability = "hyperframes.loop"
+
 [inputs]
 composition = "basic/composition"
 prompt = "The same short title rendered as a looping GIF"

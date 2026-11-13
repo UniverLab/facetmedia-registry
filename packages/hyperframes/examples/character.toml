@@ -1,3 +1,5 @@
+capability = "hyperframes.character"
+
 [inputs]
 composition = "character/composition"
 character-svg = "character/zorro.svg"

@@ -1,3 +1,5 @@
+capability = "ascii.image"
+
 [inputs]
 image = "lamina.png"
 width = 100

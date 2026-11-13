@@ -153,3 +153,12 @@ was non-speech. The `.srt` carries those three cues (00:00:00,000 →
 the preview summarises the transcript as `9.6 s · es (1.00) · 28 words ·
 WER 0 %`. `facet doctor whisper --json` reports `healthy: true` after that
 pull (2.4 s, all three checks, the full-depth one included).
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `whisper.transcribe` — `examples/laboratorio.toml`: `facet example whisper.transcribe --run`
+
+The first run pulls the transcription model; CPU only.

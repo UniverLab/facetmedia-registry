@@ -1,3 +1,5 @@
+capability = "whisper.transcribe"
+
 [inputs]
 audio = "laboratorio.flac"
 language = "es"

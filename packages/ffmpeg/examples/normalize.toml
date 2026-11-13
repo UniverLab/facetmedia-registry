@@ -1,4 +1,6 @@
 # The lab's reference voice clip brought to the web/podcast loudness target.
+capability = "ffmpeg.normalize"
+
 [inputs]
 target-lufs = -16.0
 true-peak-db = -1.5

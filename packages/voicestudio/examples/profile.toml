@@ -1,0 +1,11 @@
+# Needs a person's own material: replace `reference-voice.wav` with a 7-30 s
+# recording of your own neutral speech before registering a real profile.
+# The WAV in this folder is a synthetic stand-in generated with `kokoro.speak`
+# (voice `ef_dora`, Spanish, 9.2 s), never a recording of a person.
+capability = "voicestudio.profile"
+
+[inputs]
+name = "mi-voz"
+ref-audio = "reference-voice.wav"
+instruct = "female, adult, medium pitch"
+language = "es"

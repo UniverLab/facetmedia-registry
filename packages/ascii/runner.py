@@ -40,7 +40,7 @@ def _tool() -> dict[str, str]:
         manifest = tomllib.loads((Path(__file__).parent / "package.toml").read_text())
         return {"name": str(manifest["tool_name"]), "version": str(manifest["version"])}
     except (OSError, ValueError, KeyError):
-        return {"name": "facet ascii (Pillow, NumPy, pyfiglet)", "version": "0.1.0"}
+        return {"name": "facet ascii (Pillow, NumPy, pyfiglet)", "version": "0.1.1"}
 
 
 def _mono_font(req: Request) -> Path:

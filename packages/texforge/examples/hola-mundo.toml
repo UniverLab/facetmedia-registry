@@ -1,3 +1,5 @@
+capability = "texforge.document"
+
 [inputs]
 main = "hola-mundo.tex"
 name = "hola-mundo"

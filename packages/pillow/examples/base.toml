@@ -1,0 +1,14 @@
+# Resize the reference plate to 640 px tall (aspect preserved) and convert
+# the result to WebP, applied in order in memory.
+capability = "pillow.base"
+
+[inputs]
+image = "lamina.png"
+
+[[inputs.operations]]
+op = "resize"
+height = 640
+
+[[inputs.operations]]
+op = "convert"
+format = "webp"

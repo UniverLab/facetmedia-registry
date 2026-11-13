@@ -1,0 +1,6 @@
+# Reuses the architecture diagram already in this folder: a group per machine
+# (local lab and GPU) with the services each one runs.
+capability = "mermaid.diagram"
+
+[inputs]
+diagram = "arquitectura.mmd"

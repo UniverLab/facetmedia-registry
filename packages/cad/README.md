@@ -224,3 +224,11 @@ completed by the runner. `facet preview` summarises the part as
 checks at `full` depth, the `host_libs` readiness check loading all seven
 declared sonames included), and `facet skill cad` prints the skill with this
 machine's state.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `cad.drawing` — `examples/plano-estudio.toml`: `facet example cad.drawing --run`
+- `cad.solid` — `examples/escuadra.toml`: `facet example cad.solid --run`

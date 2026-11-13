@@ -575,7 +575,7 @@ def test_the_readme_states_the_headless_path_and_the_exclusion() -> None:
 
 def test_the_manifest_is_a_headless_python_env_client() -> None:
     assert MANIFEST["name"] == "demostage"
-    assert MANIFEST["version"] == "0.1.0"
+    assert MANIFEST["version"] == "0.1.1"
     assert MANIFEST["facet"] == "video"
     assert MANIFEST["engine"] == {"type": "python-env", "python": "3.12"}
     assert MANIFEST["transport"] == {"type": "cli", "entry": "runner.py"}

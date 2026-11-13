@@ -1,0 +1,5 @@
+# The plate cut out of its background: an alpha PNG plus its checkerboard view.
+capability = "rembg.cutout"
+
+[inputs]
+photo = "lamina.png"

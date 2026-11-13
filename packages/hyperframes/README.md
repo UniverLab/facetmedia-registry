@@ -388,3 +388,17 @@ label for loop assets. `doctor` reports two checks: the Chromium executable at
 `facet doctor hyperframes` classifies a missing browser or ffmpeg as
 `machine_cannot` with the fix in the check. Run `facet pull hyperframes` once;
 after that the render has no network at all.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `hyperframes.character` — `examples/character.toml`: `facet example hyperframes.character --run`
+- `hyperframes.diagram` — `examples/diagram.toml`: `facet example hyperframes.diagram --run`
+- `hyperframes.loop` — `examples/loop.toml`: `facet example hyperframes.loop --run`
+- `hyperframes.narrated` — `examples/narrated.toml`: `facet example hyperframes.narrated --run`
+- `hyperframes.render` — `examples/render.toml`: `facet example hyperframes.render --run`
+- `hyperframes.turntable` — `examples/turntable.toml`: `facet example hyperframes.turntable --run`
+
+The composition folders travel with the pieces; the first run pulls the pinned CLI.

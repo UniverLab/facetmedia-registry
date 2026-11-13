@@ -49,3 +49,10 @@ pinned 13.0.0 — and a `full` depth adds a 2x2 PNG encode/decode roundtrip.
 Pillow is MIT-CMU (Jeffrey A. Clark and contributors); the manifest
 records it. The package itself is Apache-2.0 like the rest of the
 registry tooling.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `pillow.base` — `examples/base.toml`: `facet example pillow.base --run`

@@ -145,3 +145,12 @@ of the acceptance rule. The preview of the same clip summarises it as
 `9.6 s · -20.7 LUFS · WER 0 % · ef_dora`, and `facet preview
 laboratorio.wav` serves it in the audio viewer. `facet doctor kokoro --json`
 reports `healthy: true` after that pull (under 4 s, full depth).
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `kokoro.speak` — `examples/laboratorio.toml`: `facet example kokoro.speak --run`
+
+The first run pulls the Kokoro weights and the verification model; CPU only.

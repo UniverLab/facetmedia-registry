@@ -1,3 +1,5 @@
+capability = "moss.sfx"
+
 [inputs]
 description = "Slow footsteps of one person walking on an old wooden floor, boards creaking under the weight, indoors"
 name = "pasos-madera"

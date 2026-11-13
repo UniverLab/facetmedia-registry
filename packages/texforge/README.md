@@ -88,3 +88,12 @@ viewer, and no new schema or viewer is needed.
 Long real documents — a thesis, a book chapter, a paper with notes and a
 bibliography. Pieces of one visual page — a poster, an infographic, a
 slide deck — stay in `deck`.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `texforge.document` — `examples/hola-mundo.toml`: `facet example texforge.document --run`
+
+Needs a person-installed texforge.

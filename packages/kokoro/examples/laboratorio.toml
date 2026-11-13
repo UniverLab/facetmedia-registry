@@ -1,3 +1,5 @@
+capability = "kokoro.speak"
+
 [inputs]
 voice = "ef_dora"
 language = "es"

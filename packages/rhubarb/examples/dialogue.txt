@@ -1,0 +1,1 @@
+Este ejemplo muestra cómo una pieza del registro convierte una idea en un archivo que se puede abrir y escuchar.

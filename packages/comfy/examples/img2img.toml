@@ -7,6 +7,8 @@
 # pedido. Sin fuerza de denoise: si hace falta controlar cuánto se conserva en
 # una transformación gradual, hay que sumar un flujo latent img2img con denoise
 # ajustable y compararlo por separado.
+capability = "comfy.edit"
+
 [inputs]
 source = "flux2-klein-4b/ilustracion-editorial.png"
 image = [

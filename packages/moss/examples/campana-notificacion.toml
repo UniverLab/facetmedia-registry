@@ -1,3 +1,5 @@
+capability = "moss.sfx"
+
 [inputs]
 description = "A bright, pleasant notification chime, two short bell tones rising in pitch"
 name = "campana-notificacion"

@@ -312,3 +312,14 @@ lab's clone.
 **95 GB disk**, exclusive (the default) on Linux — one heavy job at a time.
 The first `facet pull comfy-xl` clones ComfyUI, builds its venv and
 downloads the models; later runs are offline. On an 8 GB card, use `comfy`.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `comfy-xl.clip` — `examples/clip.toml`: `facet example comfy-xl.clip --run`
+- `comfy-xl.edit` — `examples/edit.toml`: `facet example comfy-xl.edit --run`
+- `comfy-xl.still` — `examples/own-flow.toml`: `facet example comfy-xl.still --run`
+
+The first run pulls ComfyUI and its models; every flow needs a 24 GB card.

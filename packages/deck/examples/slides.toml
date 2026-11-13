@@ -1,0 +1,9 @@
+# The slides example: three slides authored as one self-contained HTML file.
+# The file owns its geometry: @page 1280x720, margin 0, one page break per
+# slide and a sources footer on every slide.
+capability = "deck.slides"
+
+[inputs]
+source = "slides.html"
+prompt = "Explain in three slides what a facet piece is: one capability, one command, one deliverable."
+seed = 0

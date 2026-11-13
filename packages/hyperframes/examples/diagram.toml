@@ -1,3 +1,5 @@
+capability = "hyperframes.diagram"
+
 [inputs]
 composition = "diagram/composition"
 diagram-svg = "diagram/diagram.svg"

@@ -1,3 +1,5 @@
+capability = "blender.animation"
+
 [inputs]
 script = "tour.py"
 name = "estudio-recorrido"

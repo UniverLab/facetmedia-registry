@@ -1,0 +1,6 @@
+# The narrated explainer: voice, bed, normalize, mix, transcript, subtitles
+# and the HyperFrames assembly, in that order.
+capability = "recipes.plan"
+
+[inputs]
+recipe = "explainer-video"

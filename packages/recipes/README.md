@@ -64,3 +64,10 @@ voice, look at the PNG, check the MP4 — is the real judgement after the run.
 `packages`) with a summary naming the recipe and its step count. The runner
 is stdlib and receives no registry path, so it never resolves capability ids
 against the registry; the repository tests do that.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `recipes.plan` — `examples/plan.toml`: `facet example recipes.plan --run`

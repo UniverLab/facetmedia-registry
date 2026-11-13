@@ -1,6 +1,10 @@
+# Needs a 24 GB card: the z-image base flow runs at full precision. Replace
+# the prompt with your own composition.
 # Still with your own flow: a copy of the z-image package flow with
 # steps raised from 25 to 30 (see own-flow.json next to this piece).
 # Usage: facet run comfy-xl.still packages/comfy-xl/examples/own-flow.toml
+capability = "comfy-xl.still"
+
 [inputs]
 flow = "own-flow.json"
 image = [

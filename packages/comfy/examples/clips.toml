@@ -5,6 +5,8 @@
 # bosque-niebla.mp4 y taza-vapor.mp4 salen bien; el paneo de calle-acuarela.mp4
 # casi no se nota (un movimiento de cámara sutil sobre una pintura no registra;
 # para eso, un zoom o paneo con GSAP en HyperFrames sale en seconds).
+capability = "comfy.clip"
+
 [inputs]
 workflow = "wan22-i2v"
 image = [

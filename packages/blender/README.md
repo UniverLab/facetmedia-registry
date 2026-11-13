@@ -247,3 +247,14 @@ facet run blender.animation packages/blender/examples/tour/tour.toml --out build
 `script` is resolved relative to the piece file, so run the TOML from the
 example folder that carries its script and model. The record lands beside the
 output as `<name>.png.facet.json` or `<name>.mp4.facet.json`.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `blender.animation` — `examples/scene/animation.toml`, `examples/tour/tour.toml`: `facet example blender.animation --run`
+- `blender.assets` — `examples/assets.toml`: `facet example blender.assets --run`
+- `blender.scene` — `examples/product/product.toml`, `examples/scene/scene.toml`, `examples/study-photo/study-photo.toml`: `facet example blender.scene --run`
+
+The scripted examples ship their own `.glb` and `.stl`; `assets` needs network on its first run.

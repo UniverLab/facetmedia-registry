@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Una pieza, una salida</title>
+<style>
+@page { size: 1280px 720px; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  background: #101215;
+  color: #f2efe9;
+  font-family: "DejaVu Sans", system-ui, sans-serif;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.slide {
+  width: 1280px;
+  height: 720px;
+  break-after: page;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 88px 112px 128px;
+  position: relative;
+  background: #101215;
+}
+.slide:last-child { break-after: auto; }
+.kicker {
+  font-size: 17px;
+  letter-spacing: 7px;
+  text-transform: uppercase;
+  color: #8fbf9f;
+  margin-bottom: 30px;
+}
+h1 { font-size: 96px; line-height: 0.98; letter-spacing: -3px; }
+h2 { font-size: 64px; line-height: 1.04; letter-spacing: -2px; margin-bottom: 34px; }
+p { font-size: 30px; line-height: 1.5; color: #c9c4ba; max-width: 960px; }
+p + p { margin-top: 22px; }
+ul { list-style: none; display: grid; gap: 22px; }
+li { font-size: 29px; line-height: 1.4; padding-left: 52px; position: relative; color: #d8d3c9; }
+li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 16px;
+  width: 26px;
+  height: 4px;
+  background: #8fbf9f;
+}
+code {
+  font-family: "DejaVu Sans Mono", monospace;
+  font-size: 0.88em;
+  background: #1c2024;
+  border: 1px solid #2f353a;
+  border-radius: 6px;
+  padding: 2px 10px;
+}
+footer {
+  position: absolute;
+  left: 112px;
+  right: 112px;
+  bottom: 46px;
+  border-top: 1px solid #343a40;
+  padding-top: 16px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #8b9298;
+}
+</style>
+</head>
+<body>
+
+<section class="slide">
+  <div class="kicker">facetmedia · ejemplo</div>
+  <h1>Una pieza,<br>una salida.</h1>
+  <p>Cada capacidad del registro hace una cosa, recibe un archivo TOML y devuelve un entregable que se puede abrir y juzgar.</p>
+  <footer>Fuentes: contrato de piezas de facetmedia; manifiestos del registro, 2026.</footer>
+</section>
+
+<section class="slide">
+  <div class="kicker">el flujo</div>
+  <h2>Copiar, correr, mirar.</h2>
+  <ul>
+    <li><code>facet example deck.slides</code> copia la pieza y cada archivo que nombra.</li>
+    <li><code>facet run deck.slides slides.toml</code> exporta el PDF y un PNG por página.</li>
+    <li><code>facet preview</code> sirve el entregable para una persona.</li>
+  </ul>
+  <footer>Fuentes: documento de diseño de <code>facet example</code>; ejemplos empaquetados en este registro.</footer>
+</section>
+
+<section class="slide">
+  <div class="kicker">qué buscar</div>
+  <h2>El ejemplo es el contrato.</h2>
+  <p>Un ejemplo que corre solo enseña la forma de la pieza mejor que cualquier descripción: las entradas, los archivos que viajan con ella y la verificación que debe pasar.</p>
+  <p>Si el ejemplo funciona, la capacidad funciona.</p>
+  <footer>Fuentes: guía de paquetes del registro; verificación de capacidades, 2026.</footer>
+</section>
+
+</body>
+</html>

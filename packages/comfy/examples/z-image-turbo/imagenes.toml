@@ -1,5 +1,7 @@
 # Still test: the same four descriptions and seeds in both models. The eight approvals (2026-10-13).
 # Usage: facet run comfy.still projects/comfy/examples/z-image-turbo/imagenes.toml
+capability = "comfy.still"
+
 [inputs]
 workflow = "z-image-turbo"
 image = [

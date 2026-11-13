@@ -1,3 +1,5 @@
+capability = "cad.solid"
+
 [inputs]
 script = "escuadra.py"
 name = "escuadra"

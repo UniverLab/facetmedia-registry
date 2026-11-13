@@ -1,3 +1,5 @@
+capability = "blender.scene"
+
 [inputs]
 script = "product.py"
 name = "part-product"

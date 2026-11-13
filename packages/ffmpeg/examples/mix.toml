@@ -1,4 +1,6 @@
 # The voice over a pink-noise ambience bed, the bed ducked under the voice.
+capability = "ffmpeg.mix"
+
 [inputs]
 name = "voz-sobre-fondo"
 ducking = true

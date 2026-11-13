@@ -1,0 +1,6 @@
+# The same plate returned to clean flat paper: the object keeps its pixels and
+# everything outside its silhouette becomes paper.
+capability = "rembg.paper"
+
+[inputs]
+plate = "lamina.png"

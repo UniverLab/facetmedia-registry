@@ -111,3 +111,12 @@ SVG this package writes, using its stable `my-svg-*` ids).
   the prompt from the diagram's type line and using seed 0.
 - `doctor` reports the extracted mermaid-cli package and the Chrome check;
   a missing Chromium names `facet pull mermaid`.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `mermaid.diagram` — `examples/diagram.toml`: `facet example mermaid.diagram --run`
+
+The first run pulls mermaid-cli and the pinned Chromium.

@@ -1,0 +1,15 @@
+# Needs a person's own material: replace `0d1e2f3a` with the eight-character
+# profile id this backend returned when you registered your reference voice
+# (POST /profiles). The runner refuses an id that is not installed here, so
+# this piece will not run until you swap it for your own.
+capability = "voicestudio.clone"
+
+[inputs]
+voice = "0d1e2f3a"
+model = "cosyvoice"
+language = "es"
+
+[[inputs.clip]]
+name = "clon"
+text = "Esta línea se dice con la voz clonada que registré en mi propia máquina."
+seed = 1

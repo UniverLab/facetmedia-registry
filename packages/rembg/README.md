@@ -85,3 +85,13 @@ the manifest records the sha256, size, licence and terms URL. The rest of
 the chain: onnxruntime (MIT), Pillow (MIT-CMU), NumPy (BSD-3-Clause),
 plus rembg's own dependencies (pymatting MIT, scikit-image BSD-3-Clause,
 scipy BSD-3-Clause, pooch BSD-3-Clause, tqdm MIT, jsonschema MIT).
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `rembg.cutout` — `examples/cutout.toml`: `facet example rembg.cutout --run`
+- `rembg.paper` — `examples/paper.toml`: `facet example rembg.paper --run`
+
+The first run pulls the U2NetP weights; CPU only.

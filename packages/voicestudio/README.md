@@ -271,3 +271,14 @@ The verification model (faster-whisper, ctranslate2) is MIT, the `voxcpm2`
 and `cosyvoice` engines are Apache-2.0, and the `omnivoice` engine's weights
 are CC-BY-NC (non-commercial): see
 [the licence section](#the-omnivoice-licence-cc-by-nc).
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `voicestudio.clone` — `examples/clone.toml`: `facet example voicestudio.clone --run`
+- `voicestudio.profile` — `examples/profile.toml`: `facet example voicestudio.profile --run`
+- `voicestudio.speak` — `examples/speak.toml`: `facet example voicestudio.speak --run`
+
+Needs a running VoiceStudio backend; `clone` and `profile` also need the person's own voice material.

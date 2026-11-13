@@ -560,7 +560,10 @@ def test_no_sample_bytes_land_beside_the_piece_or_in_the_package(
     assert sorted(path.name for path in tmp_path.glob("*.wav")) == ["take.wav"]
     assert take.read_bytes().startswith(b"RIFF")
     assert backend.posts[0]["files"]["ref_audio"].startswith(b"RIFF")
-    assert not list(PACKAGE.rglob("*.wav"))
+    # The example's synthetic reference voice is a shipped fixture, not a run
+    # output; the runner must write no sample bytes anywhere outside examples/.
+    shipped = [path for path in PACKAGE.rglob("*.wav") if PACKAGE / "examples" not in path.parents]
+    assert not shipped
     assert not list(PACKAGE.rglob("*.profile.json"))
     receipt = json.loads((out / "jheison.profile.json").read_text(encoding="utf-8"))
     assert set(receipt) == {"id", "name", "language"}

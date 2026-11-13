@@ -1,3 +1,5 @@
+capability = "hyperframes.turntable"
+
 [inputs]
 composition = "turntable/composition"
 model-glb = "turntable/estudio.glb"

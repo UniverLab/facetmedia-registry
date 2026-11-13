@@ -1,4 +1,6 @@
 # The first 5 seconds of the voice clip as Ogg Opus at 128 kbps.
+capability = "ffmpeg.convert"
+
 [inputs]
 audio = "voz.flac"
 name = "voz-ogg"

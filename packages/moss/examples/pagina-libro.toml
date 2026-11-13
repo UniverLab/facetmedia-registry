@@ -1,3 +1,5 @@
+capability = "moss.sfx"
+
 [inputs]
 description = "Close-up sound of turning the pages of a paper book, crisp paper rustle, quiet room"
 name = "pagina-libro"

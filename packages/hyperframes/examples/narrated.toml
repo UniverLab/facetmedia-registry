@@ -1,3 +1,5 @@
+capability = "hyperframes.narrated"
+
 [inputs]
 composition = "narrated/composition"
 voice = [{ clip = "narrated/voz-a.wav" }, { clip = "narrated/voz-b.wav", start = 2.0 }]

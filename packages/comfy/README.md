@@ -340,3 +340,14 @@ pull comfy` clones ComfyUI, builds its venv and downloads about 34.3 GB of
 models (the shared Qwen clip downloads once); later runs are offline. A still
 or an edit fits the 8 GB reference GPU with room to spare; a clip fills it,
 about 7.8 GB of VRAM and 6.5 GB of RAM, so nothing else may hold the GPU.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `comfy.clip` — `examples/clips.toml`: `facet example comfy.clip --run`
+- `comfy.edit` — `examples/img2img.toml`: `facet example comfy.edit --run`
+- `comfy.still` — `examples/own-flow.toml`, `examples/z-image-turbo/imagenes.toml`: `facet example comfy.still --run`
+
+The first run pulls ComfyUI and its models; the flows need a GPU.

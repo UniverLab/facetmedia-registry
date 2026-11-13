@@ -1,3 +1,5 @@
+capability = "ascii.banner"
+
 [inputs]
 text = "canopy"
 name = "canopy"

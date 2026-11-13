@@ -88,3 +88,12 @@ document it opens. Both are resolved relative to the piece.
 
 If the deliverable is a solid, an STL or a DXF, use `cad` instead. If it is a
 photo or a tour, use `blender`.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `freecad.drawing` — `examples/plano.toml`: `facet example freecad.drawing --run`
+
+Needs a person-installed FreeCAD and `freecadcmd`.

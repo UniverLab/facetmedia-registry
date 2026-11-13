@@ -1,3 +1,5 @@
+capability = "moss.sfx"
+
 [inputs]
 description = "Gentle steady rain falling on a window pane at night, soft drops on glass, distant rolling thunder, calm ambience"
 name = "lluvia-ventana"

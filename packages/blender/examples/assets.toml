@@ -1,0 +1,11 @@
+# Poly Haven dressing for the study: two skies and one shrub, fetched once
+# into the shared models dir. Needs network on the first run; no local file.
+capability = "blender.assets"
+
+[inputs]
+name = "estudio-dressing"
+assets = [
+  { id = "kloppenheim_06_puresky", res = "2k" },
+  { id = "aerial_grass_rock", res = "2k" },
+  { id = "shrub_02", res = "1k" },
+]

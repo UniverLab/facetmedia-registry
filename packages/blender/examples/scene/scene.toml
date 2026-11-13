@@ -1,6 +1,8 @@
 # A still from the agent's own script: build.py's plane, three primitives,
 # two lights and camera at 1920x1080 in Cycles. The script's keyframes are
 # harmless here; the still renders frame 1.
+capability = "blender.scene"
+
 [inputs]
 script = "build.py"
 name = "estudio-script"

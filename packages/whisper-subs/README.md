@@ -77,3 +77,10 @@ bed and whisper subtitles, and declares its `subtitles` input as SubRip
 written offline: give it the converted `<source-stem>.srt`, not the `.vtt`.
 The converted file has been validated for monotonic, non-overlapping cue
 times — so the burn-in parser downstream only ever sees a well-ordered track.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `whisper-subs.subtitles` — `examples/subtitles.toml`: `facet example whisper-subs.subtitles --run`

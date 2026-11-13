@@ -93,3 +93,12 @@ dividers, one reveal. Send the piece to `hyperframes` instead when:
   to run outside it.
 - **`NODE_PATH`** is set by the runner for the script, through the temporary
   module root holding the staged packages.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `svganim.bake` — `examples/bake.toml`: `facet example svganim.bake --run`
+
+The first run pulls the pinned Node runtime and its npm closure.

@@ -1,3 +1,5 @@
+capability = "hyperframes.render"
+
 [inputs]
 composition = "basic/composition"
 prompt = "A short title with a counter that ticks up"

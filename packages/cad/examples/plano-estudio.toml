@@ -1,3 +1,5 @@
+capability = "cad.drawing"
+
 [inputs]
 script = "plano-estudio.py"
 name = "plano-estudio"

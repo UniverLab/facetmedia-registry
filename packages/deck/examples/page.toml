@@ -1,0 +1,8 @@
+# The one-page piece the package already held, exported as a poster: a
+# 1060px page with a sources footer and no page breaks.
+capability = "deck.page"
+
+[inputs]
+source = "modelos-de-lenguaje.html"
+prompt = "A one-page infographic of the language-model timeline, 2017 to 2026."
+seed = 0

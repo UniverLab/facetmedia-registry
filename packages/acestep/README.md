@@ -113,3 +113,10 @@ duration = 30
 
 Run it with `scripts/try-package.sh acestep acestep.bed
 packages/acestep/examples/clasica-alegre.toml`.
+
+## Bundled examples
+
+`facet example <capability> --run` copies the capability's example, with
+every file it names, into a fresh folder and runs it there:
+
+- `acestep.bed` — `examples/clasica-alegre.toml`, `examples/clasica-melancolica.toml`: `facet example acestep.bed --run`
