@@ -1,0 +1,65 @@
+{
+  "folder": "demo",
+  "assets": [
+    {
+      "n": 0,
+      "asset": "foto-producto.png",
+      "name": "foto-producto.png",
+      "package": "facetmedia/image-basics",
+      "kind": "image",
+      "capability": "image.thumb",
+      "created": "2026-11-02T10:15:00Z",
+      "verified": true,
+      "bytes": 12653,
+      "duration_s": null,
+      "preview_state": "fresh",
+      "thumb": "/thumb/0",
+      "open": "/open/0"
+    },
+    {
+      "n": 1,
+      "asset": "tone.wav",
+      "name": "tone.wav",
+      "package": "facetmedia/audio-basics",
+      "kind": "audio",
+      "capability": "audio.speak",
+      "created": "2026-11-03T09:00:00Z",
+      "verified": true,
+      "bytes": 482112,
+      "duration_s": 3.4,
+      "preview_state": "stale",
+      "thumb": "/thumb/1",
+      "open": "/open/1"
+    },
+    {
+      "n": 2,
+      "asset": "escuadra.step",
+      "name": "escuadra.step",
+      "package": "facetmedia/cad-basics",
+      "kind": "cad",
+      "capability": "cad.step",
+      "created": "2026-11-04T12:30:00Z",
+      "verified": false,
+      "bytes": 20480,
+      "duration_s": null,
+      "preview_state": "stale",
+      "thumb": null,
+      "open": "/open/2"
+    },
+    {
+      "n": 3,
+      "asset": "hello.txt",
+      "name": "hello.txt",
+      "package": "facetmedia/text-basics",
+      "kind": "text",
+      "capability": "text.summary",
+      "created": "2026-11-05T08:00:00Z",
+      "verified": true,
+      "bytes": 42,
+      "duration_s": null,
+      "preview_state": "missing",
+      "thumb": null,
+      "open": null
+    }
+  ]
+}

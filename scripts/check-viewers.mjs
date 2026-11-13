@@ -3,7 +3,8 @@
    case at a time, with the system Chrome: fail on any page error, console
    error, failed request or HTTP >= 400, exercise the interaction the viewer
    exists for (audio click-to-seek, the CAD view dialog, the image
-   enlargement), and save a screenshot of each case under
+   enlargement, the gallery's filter and its open link and back button), and
+   save a screenshot of each case under
    viewers/_examples/<kind>/screens/
    (gitignored).
 
@@ -12,7 +13,7 @@
    playwright-core, then NODE_PATH=/tmp/opencode/pw/node_modules). */
 
 import { spawn } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
@@ -22,7 +23,11 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CHROME = process.env.CHROME_PATH || "/usr/bin/google-chrome";
 const KINDS = process.argv.slice(2).length > 0
   ? process.argv.slice(2)
-  : ["generic", "audio", "cad", "image", "video"];
+  : ["generic", "audio", "cad", "image", "video", "gallery"];
+//: The gallery example: the page must render every card this file describes.
+const GALLERY = JSON.parse(
+  readFileSync(path.join(ROOT, "viewers", "_examples", "gallery.json"), "utf8"),
+);
 const CASES = [
   { scheme: "light", width: 1280, height: 800 },
   { scheme: "dark", width: 1280, height: 800 },
@@ -131,6 +136,115 @@ async function checkImageZoom(page, label, failures) {
   await page.evaluate(() => document.getElementById("zoom").close());
 }
 
+/** The header names the folder and counts the assets. */
+async function checkGalleryHeader(page, label, failures) {
+  const header = await page.locator("#gal-head").innerText();
+  if (!header.includes(GALLERY.folder)) {
+    failures.push(`${label}: the header does not name ${GALLERY.folder}`);
+  }
+  if (!header.includes(String(GALLERY.assets.length))) {
+    failures.push(`${label}: the header does not count ${GALLERY.assets.length} assets`);
+  }
+}
+
+/** Every card shows what gallery.json says: thumb or icon, badge, duration. */
+async function checkGalleryCards(page, label, failures) {
+  for (const asset of GALLERY.assets) {
+    const card = page.locator(`.card[data-n="${asset.n}"]`);
+    if ((await card.count()) !== 1) {
+      failures.push(`${label}: no card for ${asset.asset}`);
+      continue;
+    }
+    if (asset.thumb === null) {
+      if ((await card.locator(".kind-icon").count()) === 0) {
+        failures.push(`${label}: ${asset.asset} has no kind icon`);
+      }
+    } else if ((await card.locator(`img[src="${asset.thumb}"]`).count()) === 0) {
+      failures.push(`${label}: ${asset.asset} has no thumbnail`);
+    }
+    const badge = asset.verified ? ".pill.passed" : ".pill.failed";
+    if ((await card.locator(badge).count()) === 0) {
+      failures.push(`${label}: ${asset.asset} has no ${badge.slice(6)} badge`);
+    }
+    if (asset.duration_s !== null) {
+      const text = await card.innerText();
+      if (!text.includes(`${asset.duration_s.toFixed(1)} s`)) {
+        failures.push(`${label}: ${asset.asset} shows no duration`);
+      }
+    }
+  }
+}
+
+/** One toggle per kind present, and each toggle hides and shows its cards. */
+async function checkGalleryFilters(page, label, failures) {
+  const buttons = page.locator("#filters button");
+  const kinds = await buttons.evaluateAll((nodes) => nodes.map((node) => node.dataset.kind));
+  const expected = [...new Set(GALLERY.assets.map((asset) => asset.kind))];
+  if (kinds.length !== expected.length || expected.some((kind) => !kinds.includes(kind))) {
+    failures.push(`${label}: toggles ${kinds.join(",")} do not match kinds ${expected.join(",")}`);
+    return;
+  }
+  const first = buttons.first();
+  const kind = kinds[0];
+  const card = page.locator(`.card[data-kind="${kind}"]`).first();
+  await first.click();
+  if (await card.isVisible()) failures.push(`${label}: turning ${kind} off hid nothing`);
+  await first.click();
+  if (!(await card.isVisible())) failures.push(`${label}: turning ${kind} back on hid its cards`);
+}
+
+/** A card with `open` navigates in the same tab, and back returns here. */
+async function checkGalleryOpen(page, label, failures) {
+  const asset = GALLERY.assets.find((candidate) => candidate.open !== null);
+  if (!asset) return;
+  const link = page.locator(`a.card[href="${asset.open}"]`);
+  if ((await link.count()) === 0) {
+    failures.push(`${label}: no card links to ${asset.open}`);
+    return;
+  }
+  await link.first().click();
+  await page.waitForLoadState("load");
+  if (new URL(page.url()).pathname !== asset.open) {
+    failures.push(`${label}: a card opened ${page.url()}`);
+    return;
+  }
+  await page.goBack({ waitUntil: "load" });
+  await page.waitForSelector(".card");
+  if ((await page.locator("#gal-head").count()) === 0) {
+    failures.push(`${label}: the back button did not return to the gallery`);
+  }
+}
+
+/** A card with no `open` is not a link and names the command that fixes it. */
+async function checkGalleryFix(page, label, failures) {
+  const asset = GALLERY.assets.find((candidate) => candidate.open === null);
+  if (!asset) return;
+  const card = page.locator(`.card[data-n="${asset.n}"]`);
+  if ((await card.count()) === 0) {
+    failures.push(`${label}: no card for ${asset.asset}`);
+    return;
+  }
+  if ((await card.locator("a").count()) !== 0) {
+    failures.push(`${label}: ${asset.asset} is a link without a preview`);
+  }
+  const command = await card.locator("code").innerText();
+  if (command.trim() !== `facet preview ${asset.asset}`) {
+    failures.push(`${label}: fix command is ${JSON.stringify(command)}`);
+  }
+}
+
+async function checkGallery(page, label, failures) {
+  const count = await page.locator(".card").count();
+  if (count !== GALLERY.assets.length) {
+    failures.push(`${label}: ${count} cards, expected ${GALLERY.assets.length}`);
+  }
+  await checkGalleryHeader(page, label, failures);
+  await checkGalleryCards(page, label, failures);
+  await checkGalleryFilters(page, label, failures);
+  await checkGalleryOpen(page, label, failures);
+  await checkGalleryFix(page, label, failures);
+}
+
 async function runCase(browser, url, kind, testCase, failures) {
   const { scheme, width, height } = testCase;
   const label = `${kind} ${scheme} ${width}x${height}`;
@@ -146,6 +260,7 @@ async function runCase(browser, url, kind, testCase, failures) {
   if (kind === "audio") await checkAudioSeek(page, label, failures);
   if (kind === "cad") await checkCadZoom(page, label, failures);
   if (kind === "image") await checkImageZoom(page, label, failures);
+  if (kind === "gallery") await checkGallery(page, label, failures);
   const dir = path.join(ROOT, "viewers", "_examples", kind, "screens");
   mkdirSync(dir, { recursive: true });
   await page.screenshot({

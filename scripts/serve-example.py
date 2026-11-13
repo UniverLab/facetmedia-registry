@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""Serve a viewer example over facet's own three routes.
+"""Serve a viewer example over facet's own routes.
 
     python3 scripts/serve-example.py <kind> [--port N]
 
 ``/viewer/`` is ``viewers/<kind>/``, ``/kit/`` is ``viewers/_kit/`` and
 ``/asset/`` is ``viewers/_examples/<kind>/`` — the same routes ``facet
-preview`` serves on 127.0.0.1. The first line printed is the URL to open;
-anything outside those three routes (and any directory, or any path that
-escapes its root with ``..``) is a 404. No other host is ever bound.
+preview`` serves on 127.0.0.1. The ``gallery`` kind has no single asset, so it
+also answers ``/gallery.json`` (``viewers/_examples/gallery.json``),
+``/thumb/<n>`` and ``/open/<n>``, the routes ``facet preview <folder>``
+serves. The first line printed is the URL to open; anything outside those
+routes (and any directory, or any path that escapes its root with ``..``) is
+a 404. No other host is ever bound.
 
 Assets answer byte ranges (``206``), because a browser cannot seek an
 ``<audio>`` element — the audio viewer's click-to-seek and playhead — over a
@@ -17,6 +20,7 @@ server that always returns the whole file.
 from __future__ import annotations
 
 import argparse
+import base64
 import mimetypes
 from collections.abc import Sequence
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -27,6 +31,27 @@ ROOT = Path(__file__).resolve().parents[1]
 VIEWERS = ROOT / "viewers"
 #: Content types the platform's mimetypes table gets wrong or lacks.
 CONTENT_TYPES = {".css": "text/css", ".js": "text/javascript", ".mjs": "text/javascript"}
+#: The kind that browses a folder instead of rendering one asset.
+GALLERY = "gallery"
+#: A 1x1 PNG: whatever a gallery asset looks like, its example thumbnail is this.
+THUMB_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGOQqveuAAAC+AFdTecdpwAAAA"
+    "BJRU5ErkJggg=="
+)
+#: The page an example card's ``open`` lands on, with a way back.
+OPEN_PAGE = """<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>facet — gallery example asset {n}</title>
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <h1>asset {n}</h1>
+    <p><a href="/viewer/index.html">back to the gallery</a></p>
+  </body>
+</html>
+"""
 
 
 def example_kinds() -> list[str]:
@@ -37,13 +62,37 @@ def example_kinds() -> list[str]:
     return sorted(entry.name for entry in base.iterdir() if entry.is_dir())
 
 
+def available_kinds() -> list[str]:
+    """Every kind the server accepts: the example dirs and the gallery."""
+    return sorted({*example_kinds(), GALLERY})
+
+
 def route_roots(kind: str) -> dict[str, Path]:
-    """The directory each of the three route prefixes serves from."""
-    return {
-        "/viewer/": VIEWERS / kind,
-        "/kit/": VIEWERS / "_kit",
-        "/asset/": VIEWERS / "_examples" / kind,
-    }
+    """The directory each route prefix serves from."""
+    roots = {"/viewer/": VIEWERS / kind, "/kit/": VIEWERS / "_kit"}
+    examples = VIEWERS / "_examples" / kind
+    if examples.is_dir():
+        roots["/asset/"] = examples
+    return roots
+
+
+def gallery_file() -> Path:
+    """The example ``/gallery.json``: a folder of cards, not one asset."""
+    return VIEWERS / "_examples" / f"{GALLERY}.json"
+
+
+def gallery_response(path: str) -> tuple[bytes, str] | None:
+    """The (body, Content-Type) an example gallery route answers with, or None
+    so the ordinary routes (and their 404s) answer instead."""
+    if path == "/gallery.json":
+        return gallery_file().read_bytes(), "application/json"
+    if path.startswith("/thumb/"):
+        number = path.removeprefix("/thumb/")
+        return (THUMB_PNG, "image/png") if number.isdigit() else None
+    if path.startswith("/open/"):
+        number = path.removeprefix("/open/")
+        return (OPEN_PAGE.format(n=number).encode(), "text/html") if number.isdigit() else None
+    return None
 
 
 def example_asset(kind: str) -> str:
@@ -110,7 +159,13 @@ def make_handler(kind: str) -> type[BaseHTTPRequestHandler]:
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802 - http.server's naming
-            target = resolve_route(roots, urlsplit(self.path).path)
+            path = urlsplit(self.path).path
+            if kind == GALLERY:
+                gallery = gallery_response(path)
+                if gallery is not None:
+                    self.send_body(*gallery)
+                    return
+            target = resolve_route(roots, path)
             if target is None:
                 self.send_error(404, "not found")
                 return
@@ -144,13 +199,13 @@ def make_handler(kind: str) -> type[BaseHTTPRequestHandler]:
 
 def make_server(kind: str, port: int = 0) -> ThreadingHTTPServer:
     """A server bound to 127.0.0.1 only; port 0 picks a free one."""
-    if kind not in example_kinds():
+    if kind not in available_kinds():
         raise SystemExit(f"serve-example: no examples for kind {kind!r}")
     return ThreadingHTTPServer(("127.0.0.1", port), make_handler(kind))
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    kinds = example_kinds()
+    kinds = available_kinds()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("kind", choices=kinds, help="the example kind to serve")
     parser.add_argument("--port", type=int, default=0, help="port (0 picks a free one)")
@@ -158,7 +213,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     server = make_server(args.kind, args.port)
     host, port = server.server_address[:2]
-    print(f"http://{host}:{port}/viewer/index.html?asset={example_asset(args.kind)}", flush=True)
+    base = f"http://{host}:{port}/viewer/index.html"
+    if args.kind == GALLERY:
+        print(base, flush=True)
+    else:
+        print(f"{base}?asset={example_asset(args.kind)}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

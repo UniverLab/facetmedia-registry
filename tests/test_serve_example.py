@@ -263,5 +263,84 @@ class ExampleDataTests(unittest.TestCase):
                 self.assertEqual(preview["kind"], record["kind"])
 
 
+class GalleryTests(unittest.TestCase):
+    """The folder gallery: one JSON of cards plus its thumb and open routes."""
+
+    REQUIRED_CARD_KEYS = {
+        "n",
+        "asset",
+        "name",
+        "package",
+        "kind",
+        "capability",
+        "created",
+        "verified",
+        "bytes",
+        "duration_s",
+        "preview_state",
+        "thumb",
+        "open",
+    }
+
+    def test_available_kinds_lists_gallery_once(self) -> None:
+        kinds = serve.available_kinds()
+        self.assertEqual(len(kinds), len(set(kinds)))
+        self.assertIn("gallery", kinds)
+
+    def test_gallery_json_answers_with_every_preview_state(self) -> None:
+        with running("gallery") as base:
+            status, body, headers = fetch(base, "/gallery.json")
+        self.assertEqual(status, 200)
+        self.assertEqual(headers["Content-Type"], "application/json")
+        self.assertEqual(body, serve.gallery_file().read_bytes())
+        gallery = json.loads(body)
+        self.assertIn("folder", gallery)
+        self.assertTrue(gallery["assets"])
+        states = set()
+        for card in gallery["assets"]:
+            with self.subTest(asset=card.get("asset")):
+                self.assertTrue(set(card) >= self.REQUIRED_CARD_KEYS)
+                self.assertIn(card["preview_state"], ("fresh", "stale", "missing"))
+                states.add(card["preview_state"])
+        self.assertEqual(states, {"fresh", "stale", "missing"})
+
+    def test_thumb_answers_png_and_rejects_names(self) -> None:
+        with running("gallery") as base:
+            status, body, headers = fetch(base, "/thumb/0")
+            self.assertEqual(status, 200)
+            self.assertEqual(headers["Content-Type"], "image/png")
+            self.assertTrue(body.startswith(b"\x89PNG\r\n\x1a\n"))
+            for path in ("/thumb/nope", "/thumb/"):
+                with self.subTest(path=path):
+                    status, _, _ = fetch(base, path)
+                    self.assertEqual(status, 404, path)
+
+    def test_open_answers_a_page_with_a_way_back(self) -> None:
+        with running("gallery") as base:
+            status, body, headers = fetch(base, "/open/0")
+            self.assertEqual(status, 200)
+            self.assertEqual(headers["Content-Type"], "text/html")
+            self.assertIn(b"/viewer/index.html", body)
+            status, _, _ = fetch(base, "/open/nope")
+            self.assertEqual(status, 404)
+
+    def test_gallery_viewer_loads_nothing_from_the_network(self) -> None:
+        for name in ("index.html", "main.js", "gallery.css"):
+            source = (VIEWERS / "gallery" / name).read_text(encoding="utf-8")
+            with self.subTest(file=name):
+                self.assertIsNone(EXTERNAL.search(source), f"gallery/{name} loads a remote URL")
+        html = (VIEWERS / "gallery" / "index.html").read_text(encoding="utf-8")
+        for reference in re.findall(r'(?:src|href)="([^"]+)"', html):
+            if reference.startswith("data:") or reference.startswith("#"):
+                continue
+            with self.subTest(reference=reference):
+                target = (
+                    VIEWERS / "_kit" / reference.removeprefix("/kit/")
+                    if reference.startswith("/kit/")
+                    else VIEWERS / "gallery" / reference.removeprefix("./")
+                )
+                self.assertTrue(target.is_file(), f"gallery/index.html -> {reference}")
+
+
 if __name__ == "__main__":
     unittest.main()

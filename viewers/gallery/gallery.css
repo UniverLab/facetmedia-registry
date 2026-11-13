@@ -1,0 +1,162 @@
+/* Gallery viewer: the filter bar and the responsive grid of asset cards,
+   drawn on the kit's tokens so light and dark come from base.css. */
+
+.muted {
+  margin: 0.15rem 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+#gal-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.1rem 0.75rem;
+  align-items: baseline;
+}
+
+#gal-head h1 {
+  overflow-wrap: anywhere;
+}
+
+/* ---- filter bar ---- */
+
+#filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.75rem 0 1rem;
+}
+
+.filter {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.15rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.filter .glyph {
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+.filter[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.filter[aria-pressed="false"] {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+/* ---- grid ---- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a.card:hover,
+a.card:focus-visible {
+  border-color: var(--accent);
+}
+
+/* A shown card is a link, a hidden one must lose both its box and its gap. */
+.card[hidden] {
+  display: none;
+}
+
+.thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border-bottom: 1px solid var(--line);
+  background: var(--ground);
+}
+
+/* Absolute so a thumbnail's own aspect ratio cannot stretch the frame: the
+   frame is always 4:3, and `cover` fills it. */
+.thumb-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.kind-icon {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 2rem;
+}
+
+.card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.6rem 0.75rem 0.75rem;
+}
+
+.card-name {
+  margin: 0;
+  font-size: 0.98rem;
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  margin: 0.15rem 0;
+  font-size: 0.85rem;
+}
+
+.pill {
+  align-self: flex-start;
+  margin: 0.15rem 0;
+}
+
+.fix {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.fix code {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.open-hint {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.8rem;
+}
+
+/* One card per row at phone width: a 14rem minimum would fit two only if the
+   thumbnail shrank below a readable size. */
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
