@@ -89,3 +89,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the step-by-step, and
 [viewers/README.md](viewers/README.md) and
 [schemas/preview/README.md](schemas/preview/README.md) for the directory
 layouts and the preview fields of each kind.
+
+## Contributing
+
+Any change under `packages/<name>/` bumps that package's `version`:
+patch for fixes, minor for new inputs or capabilities, major for a
+removed or renamed capability or input. CI enforces this with
+`scripts/check-versions.py` — see [CONTRIBUTING.md](CONTRIBUTING.md)
+for the step-by-step.

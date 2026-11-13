@@ -6,6 +6,8 @@ provider = "ComfyUI project"
 tool_name = "ComfyUI"
 description = "Stills, reference-guided edits and clips with ComfyUI's z-image, qwen-image-edit and wan22-i2v-14b flows, checked by pixel size and video probe (not yet run on a 24 GB GPU)."
 facet = "image"
+tier_group = "comfy"
+tier = "xl"
 uses = ["comfyclient"]
 
 [engine]
