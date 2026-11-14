@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 #: The capability ids each package must expose, English and old-free.
 CAPABILITIES = {
     "acestep": ("bed",),
-    "ascii": ("image", "banner"),
+    "ascii": ("image", "banner", "fonts"),
     "deck": ("slides", "page", "presenter"),
     "demostage": ("demo",),
     "freecad": ("drawing",),

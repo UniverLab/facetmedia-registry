@@ -12,6 +12,9 @@ column density (each row covers twice the height of a column's width):
 
 from __future__ import annotations
 
+import difflib
+import re
+import tarfile
 from pathlib import Path
 from typing import NamedTuple
 
@@ -50,6 +53,68 @@ FONT_NAMES = {
     "standard": "Standard",
     "small": "Small",
 }
+#: The two font sources a banner may name.
+PYFIGLET = "pyfiglet"
+FIGLET_JS = "figlet.js"
+#: Width the contact sheet renders each sample word at.
+SHEET_TEXT_WIDTH = 200
+#: Tiles per sheet row and the gap between tiles, in pixels.
+SHEET_COLUMNS = 4
+SHEET_GAP = 8
+#: Pixel size the contact sheet renders its tiles at.
+SHEET_SIZE = 10
+#: Spaces, hyphens and underscores are interchangeable in a font name.
+_SEPARATORS = re.compile(r"[\s_-]+")
+
+
+def normalize_font(name: str) -> str:
+    """A font name's key: lower case, spaces/hyphens/underscores equal."""
+    return _SEPARATORS.sub("_", name.strip().lower())
+
+
+class FontEntry(NamedTuple):
+    """One available font: the name to show and where it comes from."""
+
+    display: str
+    source: str
+
+
+class ResolvedFont(NamedTuple):
+    """A font name resolved to its source and the data to render it."""
+
+    display: str
+    source: str
+    stem: str
+    data: str | None
+
+
+class FontIndex(NamedTuple):
+    """Every available font, indexed by :func:`normalize_font` key."""
+
+    fonts: list[FontEntry]
+    stems: dict[str, str]
+    js: dict[str, tuple[str, str]]
+    skipped: list[str]
+
+
+class UnknownFontError(ValueError):
+    """A font name no available source provides."""
+
+
+#: Parsed font indexes, keyed by archive path, mtime and size.
+_INDEX_CACHE: dict[tuple[str, int, int], FontIndex] = {}
+
+
+class _DataFont(pyfiglet.FigletFont):
+    """A figlet font parsed from archive text instead of a file on disk."""
+
+    def __init__(self, name: str, data: str) -> None:
+        self.font = name
+        self.comment = ""
+        self.chars: dict[int, list[str]] = {}
+        self.width: dict[int, int] = {}
+        self.data = data
+        self.loadFont()
 
 
 def load_image(path: str | Path) -> tuple[np.ndarray, np.ndarray]:
@@ -310,9 +375,11 @@ def charset_size(mode: str) -> int:
     return len(GLYPHS)
 
 
-def render_png(lines: list[str], font_path: str | Path, invert: bool) -> Image.Image:
+def render_png(
+    lines: list[str], font_path: str | Path, invert: bool, size: int = FONT_SIZE
+) -> Image.Image:
     """Render text lines with Sometype Mono, black on white (inverted swap)."""
-    font = ImageFont.truetype(str(font_path), FONT_SIZE)
+    font = ImageFont.truetype(str(font_path), size)
     ascent, descent = font.getmetrics()
     cell_w = max(1, int(round(font.getlength("M"))))
     cell_h = ascent + descent
@@ -325,15 +392,216 @@ def render_png(lines: list[str], font_path: str | Path, invert: bool) -> Image.I
     return page.convert("RGB")
 
 
-def make_banner(text: str, font: str, width: int) -> list[str]:
-    """Render a figlet banner, right-stripped, without edge blank lines."""
-    rendered = pyfiglet.figlet_format(text, font=font, width=width)
+def _archive_key(archive: str | Path | None) -> tuple[str, int, int]:
+    """The cache key of an archive path: itself, its mtime and its size."""
+    if archive is None:
+        return ("", 0, 0)
+    path = Path(archive)
+    try:
+        stat = path.stat()
+    except OSError:
+        return ("", 0, 0)
+    return (str(path.resolve()), stat.st_mtime_ns, stat.st_size)
+
+
+def _display(stem: str) -> str:
+    """The name to show for a pyfiglet font stem."""
+    return FONT_NAMES.get(stem, stem)
+
+
+def _decode(raw: bytes) -> str:
+    """Font text as UTF-8, falling back to Latin-1 for old files."""
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw.decode("latin-1")
+
+
+def _flf_name(member: tarfile.TarInfo) -> str | None:
+    """The display name of a ``.flf`` archive member, else None."""
+    if not member.isfile() or not member.name.endswith(".flf"):
+        return None
+    return member.name.rsplit("/", 1)[-1][:-4]
+
+
+def _read_archive(
+    handle: tarfile.TarFile, stems: dict[str, str]
+) -> tuple[dict[str, tuple[str, str]], list[FontEntry], list[str]]:
+    """Read the renderable fonts out of an open archive."""
+    fonts: dict[str, tuple[str, str]] = {}
+    entries: list[FontEntry] = []
+    skipped: list[str] = []
+    for member in handle:
+        name = _flf_name(member)
+        if name is None:
+            continue
+        key = normalize_font(name)
+        if key in stems or key in fonts:
+            continue
+        stream = handle.extractfile(member)
+        if stream is None:
+            continue
+        data = _decode(stream.read())
+        try:
+            _DataFont(name, data)
+        except Exception:
+            skipped.append(name)
+            continue
+        fonts[key] = (name, data)
+        entries.append(FontEntry(name, FIGLET_JS))
+    return fonts, entries, skipped
+
+
+def _archive_fonts(
+    archive: Path | None, stems: dict[str, str]
+) -> tuple[dict[str, tuple[str, str]], list[FontEntry], list[str]]:
+    """Read the renderable figlet.js fonts from the pinned archive."""
+    if archive is None:
+        return {}, [], []
+    try:
+        with tarfile.open(archive, "r:*") as handle:
+            return _read_archive(handle, stems)
+    except (OSError, tarfile.TarError):
+        return {}, [], []
+
+
+def _build_index(archive: Path | None) -> FontIndex:
+    """Every pyfiglet font, plus every figlet.js font it does not already have."""
+    stems = {normalize_font(stem): stem for stem in pyfiglet.FigletFont.getFonts()}
+    entries = [FontEntry(_display(stem), PYFIGLET) for stem in stems.values()]
+    fonts, archive_entries, skipped = _archive_fonts(archive, stems)
+    entries.extend(archive_entries)
+    entries.sort(key=lambda entry: (entry.display.casefold(), entry.source))
+    return FontIndex(entries, stems, fonts, skipped)
+
+
+def load_font_index(archive: str | Path | None = None) -> FontIndex:
+    """The font index of ``archive``, cached until the archive changes."""
+    key = _archive_key(archive)
+    cached = _INDEX_CACHE.get(key)
+    if cached is not None:
+        return cached
+    index = _build_index(None if key == ("", 0, 0) else Path(str(archive)))
+    _INDEX_CACHE[key] = index
+    return index
+
+
+def list_fonts(archive: str | Path | None = None) -> list[FontEntry]:
+    """Every available font, sorted by display name."""
+    return list(load_font_index(archive).fonts)
+
+
+def _display_for_key(key: str, index: FontIndex) -> str:
+    """The display name behind a normalized key."""
+    stem = index.stems.get(key)
+    return _display(stem) if stem is not None else index.js[key][0]
+
+
+def suggest_fonts(name: str, index: FontIndex | None = None) -> list[str]:
+    """The five available display names closest to ``name`` by edit distance."""
+    index = load_font_index() if index is None else index
+    keys = list(index.stems) + list(index.js)
+    closest = difflib.get_close_matches(normalize_font(name), keys, n=5, cutoff=0.0)
+    displays: list[str] = []
+    for key in closest:
+        display = _display_for_key(key, index)
+        if display not in displays:
+            displays.append(display)
+    return displays
+
+
+def _unknown_message(name: str, index: FontIndex) -> str:
+    """The runner's refusal for a font no source provides."""
+    closest = ", ".join(suggest_fonts(name, index))
+    return f'unknown font "{name}"; closest: {closest}; list them with facet run ascii.fonts'
+
+
+def resolve_font(name: str, archive: str | Path | None = None) -> ResolvedFont:
+    """Resolve a font name; pyfiglet wins when both sources have it."""
+    index = load_font_index(archive)
+    key = normalize_font(name)
+    stem = index.stems.get(key)
+    if stem is not None:
+        return ResolvedFont(_display(stem), PYFIGLET, stem, None)
+    found = index.js.get(key)
+    if found is not None:
+        return ResolvedFont(found[0], FIGLET_JS, found[0], found[1])
+    raise UnknownFontError(_unknown_message(name, index))
+
+
+def _clean(rendered: str) -> list[str]:
+    """Right-strip lines and drop the blank ones at either edge."""
     lines = [line.rstrip() for line in rendered.splitlines()]
     while lines and not lines[0].strip():
         lines.pop(0)
     while lines and not lines[-1].strip():
         lines.pop()
     return lines
+
+
+def _render_data(name: str, data: str, text: str, width: int) -> list[str]:
+    """Render text with a figlet font parsed from archive text."""
+    figlet = pyfiglet.Figlet(font="standard", width=width)
+    figlet.Font = _DataFont(name, data)
+    figlet.engine = pyfiglet.FigletRenderingEngine(base=figlet)
+    return _clean(str(figlet.renderText(text)))
+
+
+def render_font_text(
+    text: str, font: str, width: int, archive: str | Path | None = None
+) -> list[str]:
+    """Render text in the named font, from pyfiglet or figlet.js."""
+    resolved = resolve_font(font, archive)
+    if resolved.source == PYFIGLET:
+        return _clean(pyfiglet.figlet_format(text, font=resolved.stem, width=width))
+    return _render_data(resolved.stem, resolved.data or "", text, width)
+
+
+def make_banner(text: str, font: str, width: int, archive: str | Path | None = None) -> list[str]:
+    """Render a figlet banner, right-stripped, without edge blank lines."""
+    return render_font_text(text, font, width, archive)
+
+
+def font_tile(
+    entry: FontEntry,
+    text: str,
+    mono_font: str | Path,
+    archive: str | Path | None = None,
+    size: int = SHEET_SIZE,
+) -> Image.Image:
+    """One contact-sheet tile: the sample word in the font, under its name."""
+    lines = render_font_text(text, entry.display, SHEET_TEXT_WIDTH, archive)
+    return render_png([entry.display, *lines], mono_font, False, size=size)
+
+
+def _pack_tiles(tiles: list[Image.Image]) -> Image.Image:
+    """Paste tiles left to right, ``SHEET_COLUMNS`` per row."""
+    if not tiles:
+        return Image.new("RGB", (1, 1), (255, 255, 255))
+    rows = [tiles[i : i + SHEET_COLUMNS] for i in range(0, len(tiles), SHEET_COLUMNS)]
+    heights = [max(tile.height for tile in row) for row in rows]
+    widths = [sum(tile.width for tile in row) + SHEET_GAP * (len(row) - 1) for row in rows]
+    page = Image.new(
+        "RGB",
+        (max(widths), sum(heights) + SHEET_GAP * (len(rows) - 1)),
+        (255, 255, 255),
+    )
+    y = 0
+    for row, height in zip(rows, heights, strict=False):
+        x = 0
+        for tile in row:
+            page.paste(tile, (x, y))
+            x += tile.width + SHEET_GAP
+        y += height + SHEET_GAP
+    return page
+
+
+def contact_sheet(
+    fonts: list[FontEntry], text: str, mono_font: str | Path, archive: str | Path | None = None
+) -> Image.Image:
+    """A sheet with one labeled tile per font, in a grid."""
+    tiles = [font_tile(entry, text, mono_font, archive) for entry in fonts]
+    return _pack_tiles(tiles)
 
 
 def banner_svg(lines: list[str], cell_w: int = 8, cell_h: int = 16) -> str:

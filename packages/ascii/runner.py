@@ -1,4 +1,4 @@
-"""The ascii package runner: image to ASCII art, figlet banners in DOS Rebel.
+"""The ascii package runner: image to ASCII art, figlet banners and fonts.
 
 Written on the runner SDK (``facet_runner_sdk``, copied into every
 environment). Four verbs: ``run`` writes the assets, ``verify`` judges
@@ -19,7 +19,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import art
 import numpy
 import PIL
+import PIL.Image
 import PIL.ImageFont
+import PIL.PngImagePlugin
 import pyfiglet
 from facet_runner_sdk import Request, Runner
 
@@ -32,6 +34,10 @@ INK_MAX = 0.98
 #: Pixel size of the synthetic gradient the full doctor converts.
 DOCTOR_SIZE = 8
 MODEL_ID = "sometype-mono"
+FONTS_MODEL_ID = "figlet-js-fonts"
+FONTS_TEXT = "fonts.txt"
+FONTS_SHEET = "fonts.png"
+FONTS_COUNT_KEY = "fonts.count"
 
 
 def _tool() -> dict[str, str]:
@@ -40,12 +46,20 @@ def _tool() -> dict[str, str]:
         manifest = tomllib.loads((Path(__file__).parent / "package.toml").read_text())
         return {"name": str(manifest["tool_name"]), "version": str(manifest["version"])}
     except (OSError, ValueError, KeyError):
-        return {"name": "facet ascii (Pillow, NumPy, pyfiglet)", "version": "0.1.1"}
+        return {"name": "facet ascii (Pillow, NumPy, pyfiglet)", "version": "0.2.0"}
 
 
 def _mono_font(req: Request) -> Path:
     """The Sometype Mono file facet downloaded for this package."""
     return req.model_path(MODEL_ID)
+
+
+def _font_archive(req: Request) -> Path | None:
+    """The figlet.js fonts archive facet downloaded, or None when absent."""
+    try:
+        return req.model_path(FONTS_MODEL_ID)
+    except KeyError:
+        return None
 
 
 def _image_file(params: dict[str, Any], base: Path) -> str:
@@ -90,6 +104,8 @@ def run(req: Request) -> dict[str, Any]:
         return _run_image(req, params)
     if req.capability == "ascii.banner":
         return _run_banner(req, params)
+    if req.capability == "ascii.fonts":
+        return _run_fonts(req, params)
     raise ValueError(f"unknown capability: {req.capability}")
 
 
@@ -166,11 +182,21 @@ def _run_banner(req: Request, params: dict[str, Any]) -> dict[str, Any]:
     name = str(params["name"])
     font = str(params.get("font", "dos_rebel"))
     width = int(params.get("width", 120))
-    lines = art.make_banner(str(params["text"]), font, width)
+    archive = _font_archive(req)
+    try:
+        resolved = art.resolve_font(font, archive)
+    except art.UnknownFontError as exc:
+        raise ValueError(str(exc)) from None
+    lines = art.make_banner(str(params["text"]), resolved.display, width, archive)
     columns = max((len(line) for line in lines), default=0)
     (req.out_dir / f"{name}.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
     (req.out_dir / f"{name}.svg").write_text(art.banner_svg(lines), encoding="utf-8")
-    properties = {"columns": columns, "rows": len(lines), "font": font}
+    properties = {
+        "columns": columns,
+        "rows": len(lines),
+        "font": resolved.stem,
+        "source": resolved.source,
+    }
     base = {
         "name": name,
         "kind": "text",
@@ -188,13 +214,44 @@ def _run_banner(req: Request, params: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _run_fonts(req: Request, params: dict[str, Any]) -> dict[str, Any]:
+    name = str(params["name"])
+    text = str(params.get("text", "facet"))
+    archive = _font_archive(req)
+    fonts = art.list_fonts(archive)
+    listing = "".join(f"{entry.display} ({entry.source})\n" for entry in fonts)
+    (req.out_dir / FONTS_TEXT).write_text(listing, encoding="utf-8")
+    sheet = art.contact_sheet(fonts, text, _mono_font(req), archive)
+    info = PIL.PngImagePlugin.PngInfo()
+    info.add_text(FONTS_COUNT_KEY, str(len(fonts)))
+    sheet.save(req.out_dir / FONTS_SHEET, pnginfo=info)
+    properties = {"fonts": len(fonts), "text": text}
+    base = {
+        "name": name,
+        "kind": "text",
+        "properties": properties,
+        "params": params,
+        "seed": None,
+        "inputs": [],
+    }
+    return {
+        "tool": _tool(),
+        "assets": [
+            {**base, "file": FONTS_TEXT, "mime": "text/plain"},
+            {**base, "file": FONTS_SHEET, "mime": "image/png"},
+        ],
+    }
+
+
 @runner.verb("verify")
 def verify(req: Request) -> dict[str, Any]:
     params = dict(req.inputs)
     if req.capability == "ascii.image":
         return {"assets": [_verify_image(req, params, path) for path in req.assets]}
     if req.capability == "ascii.banner":
-        return {"assets": [_verify_banner(params, path) for path in req.assets]}
+        return {"assets": [_verify_banner(req, params, path) for path in req.assets]}
+    if req.capability == "ascii.fonts":
+        return {"assets": [_verify_fonts(req, path) for path in req.assets]}
     raise ValueError(f"unknown capability: {req.capability}")
 
 
@@ -234,7 +291,7 @@ def _verify_image(req: Request, params: dict[str, Any], path: Path) -> dict[str,
     }
 
 
-def _verify_banner(params: dict[str, Any], path: Path) -> dict[str, Any]:
+def _verify_banner(req: Request, params: dict[str, Any], path: Path) -> dict[str, Any]:
     if path.suffix != ".txt":
         ok = path.is_file() and path.stat().st_size > 0
         return {
@@ -246,7 +303,10 @@ def _verify_banner(params: dict[str, Any], path: Path) -> dict[str, Any]:
         }
     text = path.read_text(encoding="utf-8")
     expected = art.make_banner(
-        str(params["text"]), str(params.get("font", "dos_rebel")), int(params.get("width", 120))
+        str(params["text"]),
+        str(params.get("font", "dos_rebel")),
+        int(params.get("width", 120)),
+        _font_archive(req),
     )
     lines = text.splitlines()
     columns = max((len(line) for line in lines), default=0)
@@ -264,6 +324,41 @@ def _verify_banner(params: dict[str, Any], path: Path) -> dict[str, Any]:
     }
 
 
+def _sheet_count(path: Path) -> int:
+    """The font count the contact sheet recorded in its PNG metadata."""
+    try:
+        with PIL.Image.open(path) as image:
+            return int(image.text.get(FONTS_COUNT_KEY, "0"))
+    except (OSError, ValueError):
+        return 0
+
+
+def _verify_fonts(req: Request, path: Path) -> dict[str, Any]:
+    text_path = req.out_dir / FONTS_TEXT
+    sheet_path = req.out_dir / FONTS_SHEET
+    listed = 0
+    if text_path.is_file():
+        listed = sum(
+            1 for line in text_path.read_text(encoding="utf-8").splitlines() if line.strip()
+        )
+    count = _sheet_count(sheet_path) if sheet_path.is_file() else 0
+    passed = (
+        text_path.is_file()
+        and text_path.stat().st_size > 0
+        and sheet_path.is_file()
+        and sheet_path.stat().st_size > 0
+        and listed > 0
+        and count == listed
+    )
+    return {
+        "file": path.name,
+        "passed": passed,
+        "metrics": {"fonts": listed, "sheet_fonts": count},
+        "thresholds": {},
+        "verifier": "ascii-font-sheet",
+    }
+
+
 @runner.verb("preview")
 def preview(req: Request) -> dict[str, Any]:
     params = dict(req.inputs)
@@ -274,6 +369,8 @@ def preview(req: Request) -> dict[str, Any]:
             data = _preview_image(params, path, req)
         elif req.capability == "ascii.banner":
             data = _preview_banner(params, path)
+        elif req.capability == "ascii.fonts":
+            data = _preview_fonts(params, req)
         else:
             raise ValueError(f"unknown capability: {req.capability}")
         (req.out_dir / preview_name).write_text(
@@ -332,6 +429,19 @@ def _preview_banner(params: dict[str, Any], path: Path) -> dict[str, Any]:
     }
 
 
+def _preview_fonts(params: dict[str, Any], req: Request) -> dict[str, Any]:
+    path = req.out_dir / FONTS_TEXT
+    lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+    fonts = sum(1 for line in lines if line.strip())
+    text = str(params.get("text", "facet"))
+    return {
+        "preview": 1,
+        "kind": "text",
+        "summary": f"{fonts} fonts · {text}",
+        "fields": {"fonts": fonts, "text": text},
+    }
+
+
 @runner.verb("doctor")
 def doctor(req: Request) -> dict[str, Any]:
     checks: list[dict[str, Any]] = [
@@ -344,6 +454,7 @@ def doctor(req: Request) -> dict[str, Any]:
         }
     ]
     _doctor_figlet(checks)
+    _doctor_archive(req, checks)
     font_path = _doctor_font(req, checks)
     if req.depth == "full":
         _doctor_full(req, checks, font_path)
@@ -361,6 +472,38 @@ def _doctor_figlet(checks: list[dict[str, Any]]) -> None:
             if present
             else "dos_rebel is not in pyfiglet's fonts",
             "fix": "" if present else "facet pull ascii",
+        }
+    )
+
+
+def _manifest_model_bytes(model_id: str) -> int | None:
+    """The manifest's declared byte count for one model, when it has one."""
+    try:
+        manifest = tomllib.loads((Path(__file__).parent / "package.toml").read_text())
+        for model in manifest.get("models", []):
+            if model.get("id") == model_id:
+                return int(model["bytes"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    return None
+
+
+def _doctor_archive(req: Request, checks: list[dict[str, Any]]) -> None:
+    """Append the figlet.js archive check: present and its manifest size."""
+    archive = _font_archive(req)
+    expected = _manifest_model_bytes(FONTS_MODEL_ID)
+    size = 0
+    if archive is not None and archive.is_file():
+        size = archive.stat().st_size
+    ok = expected is not None and size == expected
+    checks.append(
+        {
+            "name": "figlet_js",
+            "ok": ok,
+            "detail": f"figlet.js fonts archive is {size} bytes"
+            if ok
+            else f"figlet.js fonts archive is {size} bytes, expected {expected}",
+            "fix": "" if ok else "facet pull ascii",
         }
     )
 
