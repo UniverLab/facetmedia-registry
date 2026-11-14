@@ -1,0 +1,57 @@
+/* Video viewer: one stage for everything the record says is a moving picture.
+
+   The clip (or the GIF) is fitted into the window on the slide black, the way
+   a deck's slides are letterboxed: the black is the absence of the picture,
+   never a surface. The controls sit under the stage in Sometype Mono, and a
+   GIF gets one line that says what it is instead of a scrub bar.
+
+   --slide-black is reserved for the letterbox behind a deck or a clip: only
+   this file and the slides viewer may name it. */
+
+#stage {
+  background: var(--slide-black);
+  min-height: 12rem;
+  max-height: 78vh;
+  margin: 0.5rem 0;
+}
+
+/* The clip fills the stage's height and keeps its aspect: a letterbox, never
+   a crop. A GIF keeps its own size, so a small one is not blown up past its
+   pixels. */
+#stage video,
+#stage img {
+  max-height: 78vh;
+  object-fit: contain;
+}
+
+#clip-controls {
+  display: flex;
+}
+
+#clip-controls[hidden] {
+  display: none;
+}
+
+#gif-line {
+  margin: 0.4rem 0 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--hueso-tenue);
+}
+
+#stage-caption {
+  color: var(--hueso-tenue);
+  font-size: 0.85rem;
+}
+
+#unplayable {
+  margin: 0;
+  padding: 1rem;
+  text-align: center;
+  font-family: var(--font-mono);
+}
+
+#kind-label {
+  color: var(--hueso-tenue);
+  text-transform: lowercase;
+}

@@ -15,9 +15,13 @@
       <main>
         <p id="summary"></p>
         <h2>player</h2>
-        <audio id="player" controls preload="auto"></audio>
+        <div class="controls">
+          <button id="play" type="button">play</button>
+          <span id="time">00:00.0 / 00:00.0</span>
+        </div>
+        <audio id="player" preload="auto"></audio>
         <figure>
-          <figcaption>waveform — click to seek, shaded bands are silences</figcaption>
+          <figcaption>waveform — click or drag to seek, shaded bands are silences</figcaption>
           <canvas id="wave" style="height: 8rem"></canvas>
         </figure>
         <figure>

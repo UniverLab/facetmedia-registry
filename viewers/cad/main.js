@@ -1,6 +1,7 @@
-/* CAD viewer: the preview's views (click to enlarge), the solid's
-   measurements and holes, and the drawing's units, layers and audit.
-   A preview with only one of the two sections hides the other. */
+/* CAD viewer: every view the preview lists (click to enlarge), the solid's
+   measurements against the expectations its parameters carry, and the
+   drawing's units, layers and audit. A preview with only one of the two
+   sections hides the other. */
 
 import { renderHeader } from "/kit/header.js";
 import { assetUrl, loadAsset } from "/kit/load.js";
@@ -15,7 +16,7 @@ function main({ name, record, preview }) {
   link.href = assetUrl(name);
   link.textContent = `open ${name}`;
   renderViews(preview.views ?? []);
-  renderSolid(preview.solid);
+  renderSolid(preview.solid, record.provenance?.params ?? {});
   renderDrawing(preview.drawing);
 }
 
@@ -24,9 +25,23 @@ function renderViews(views) {
   const section = document.getElementById("views");
   section.hidden = false;
   const container = section.querySelector(".views");
+  // Every view is a panel of its own: a preview may list one or a dozen.
+  container.classList.add("panels");
   const dialog = document.getElementById("zoom");
   const zoomImg = document.getElementById("zoom-img");
-  document.getElementById("zoom-close").addEventListener("click", () => dialog.close());
+  const close = document.getElementById("zoom-close");
+  let opener = null;
+  /** Open the enlargement on `image`, from a click or a key. */
+  const zoom = (image) => {
+    opener = image;
+    zoomImg.src = image.src;
+    zoomImg.alt = image.alt;
+    dialog.showModal();
+    close.focus();
+  };
+  close.addEventListener("click", () => dialog.close());
+  // Closing gives the focus back to the view that opened it.
+  dialog.addEventListener("close", () => opener?.focus());
   for (const view of views) {
     const figure = document.createElement("figure");
     const image = document.createElement("img");
@@ -34,10 +49,15 @@ function renderViews(views) {
     image.alt = `${view.label ?? view.file} view`;
     const caption = document.createElement("figcaption");
     caption.textContent = view.label ?? view.file;
-    image.addEventListener("click", () => {
-      zoomImg.src = image.src;
-      zoomImg.alt = image.alt;
-      dialog.showModal();
+    // A view is a button: it opens from the keyboard too.
+    image.tabIndex = 0;
+    image.setAttribute("role", "button");
+    image.setAttribute("aria-label", `enlarge ${image.alt}`);
+    image.addEventListener("click", () => zoom(image));
+    image.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      zoom(image);
     });
     figure.append(image, caption);
     container.append(figure);
@@ -58,7 +78,36 @@ function vector(values, suffix) {
   return `${values.join(" × ")}${suffix ?? ""}`;
 }
 
-function renderSolid(solid) {
+/** `expect-bbox-mm` as three numbers: the core delivers `[{x, y, z}]`, but a
+    flat `[x, y, z]` reads the same to a person, so both are accepted. */
+function bboxParam(value) {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const first = value[0];
+  if (first !== null && typeof first === "object") {
+    const sides = [first.x, first.y, first.z];
+    return sides.every((side) => typeof side === "number") ? sides : null;
+  }
+  const flat = value.every((side) => typeof side === "number");
+  return flat && value.length === 3 ? value : null;
+}
+
+/** Each measured size beside the one the piece expected, when its parameters
+    say so: volume first, then the bounding box. */
+function expectationRows(solid, params) {
+  const rows = [];
+  const volume = params["expect-volume-mm3"];
+  if (typeof volume === "number") rows.push(["expected volume", `${volume} mm³`]);
+  const bbox = bboxParam(params["expect-bbox-mm"]);
+  if (bbox !== null) rows.push(["expected bounding box", vector(bbox, " mm")]);
+  if (rows.length === 0) return rows;
+  return [
+    ["measured volume", `${solid.volume_mm3 ?? "—"} mm³`],
+    ...rows,
+    ["measured bounding box", vector(solid.bbox_mm, " mm")],
+  ];
+}
+
+function renderSolid(solid, params) {
   if (!solid) return;
   const section = document.getElementById("solid");
   section.hidden = false;
@@ -73,6 +122,7 @@ function renderSolid(solid) {
   list.append(dt, dd);
   kvRow(list, "volume", `${solid.volume_mm3 ?? "—"} mm³`);
   kvRow(list, "bounding box", vector(solid.bbox_mm, " mm"));
+  for (const [term, value] of expectationRows(solid, params)) kvRow(list, term, value);
   kvRow(list, "faces", String(solid.faces ?? "—"));
   kvRow(list, "solids", String(solid.solids ?? "—"));
   const body = document.querySelector("#holes tbody");

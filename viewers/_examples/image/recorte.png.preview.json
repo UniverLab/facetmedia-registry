@@ -1,0 +1,10 @@
+{
+  "preview": 1,
+  "kind": "image",
+  "summary": "recorte \u00b7 320\u00d7200 \u00b7 cut out on transparency",
+  "name": "recorte",
+  "prompt": "Cut-out of the same ceramic cup, alpha kept where the subject ends.",
+  "seed": 0,
+  "width": 320,
+  "height": 200
+}

@@ -30,7 +30,16 @@
         "commercial_use": false
       }
     ],
-    "params": {},
+    "params": {
+      "expect-volume-mm3": 9500,
+      "expect-bbox-mm": [
+        {
+          "x": 80,
+          "y": 40,
+          "z": 3
+        }
+      ]
+    },
     "params_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
     "seed": null,
     "inputs": []

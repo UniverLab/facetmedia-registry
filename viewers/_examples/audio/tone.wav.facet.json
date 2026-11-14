@@ -39,7 +39,8 @@
     "status": "passed",
     "metrics": {
       "duration_s": 3.0,
-      "peak_dbfs": -1.2
+      "peak_dbfs": -1.2,
+      "peak_limited": true
     },
     "thresholds": {
       "duration_s": 3.0,

@@ -16,22 +16,23 @@
         <p id="summary"></p>
         <section id="image">
           <h2>image</h2>
-          <div class="views">
-            <figure>
-              <img id="still" alt="" />
-              <figcaption>click to enlarge</figcaption>
-            </figure>
+          <div id="stage" class="stage fit" tabindex="0">
+            <img id="still" alt="" />
+          </div>
+          <div class="controls">
+            <button id="bg" type="button" aria-pressed="false">checkerboard</button>
+            <span id="hint" class="muted">click or Z for 1:1 pixels, drag to pan</span>
           </div>
         </section>
+        <h2>metrics</h2>
+        <table id="stats">
+          <tbody></tbody>
+        </table>
         <h2>piece</h2>
         <dl class="kv" id="details"></dl>
         <p><a id="asset-link" href="#">open the asset</a></p>
       </main>
     </div>
-    <dialog id="zoom">
-      <img id="zoom-img" alt="" />
-      <p><button id="zoom-close" type="button">close</button></p>
-    </dialog>
     <script type="module" src="./main.js"></script>
   </body>
 </html>

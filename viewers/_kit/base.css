@@ -5,7 +5,8 @@
    what is verified, the lab's three faces, and the fine grain. There is no
    light variant: every viewer wears the night. The seven colours below are the
    only ones any viewer's CSS or JS may use. `--slide-black` is reserved for
-   the slides audience letterbox: nowhere else. */
+   the letterbox behind a slide deck or a clip: the slides and video viewers
+   only, and nowhere else. */
 
 :root {
   --fondo: #161616;
@@ -403,4 +404,198 @@ dialog img {
 .w-ins {
   background: var(--panel);
   color: var(--hueso);
+}
+
+/* ---- media stages (video, image) ---- */
+
+/* A CAD preview may list one view or a dozen: each one is a large panel of
+   its own, never a thumbnail. */
+.views.panels figure {
+  flex: 1 1 100%;
+}
+
+.views.panels img {
+  max-height: 78vh;
+  object-fit: contain;
+}
+
+/* A view is a button: it enlarges from a click or from Enter and space, and
+   the ring says where the focus is. */
+.views.panels img:focus-visible {
+  outline: 2px solid var(--hueso);
+  outline-offset: 2px;
+}
+
+/* One box for the asset itself: the clip is fitted into it, the still is
+   fitted by default and pans at 1:1. The video viewer paints its own stage on
+   the slide black; this one stays on the surface. */
+.stage {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  max-height: 72vh;
+  margin: 0.5rem 0;
+  border: 1px solid var(--regla);
+  background: var(--panel);
+}
+
+.stage img,
+.stage video {
+  display: block;
+  max-width: 100%;
+  max-height: 72vh;
+  width: auto;
+  height: auto;
+}
+
+/* A hidden element stays hidden: the display above would otherwise show it. */
+.stage [hidden] {
+  display: none;
+}
+
+/* The image viewer: fitted by default; 1:1 shows the pixels and the stage
+   scrolls, so a drag can pan it. */
+#image .stage {
+  display: block;
+  overflow: auto;
+  cursor: zoom-in;
+}
+
+#image .stage:not(.fit) {
+  cursor: grab;
+}
+
+#image .stage:not(.fit) img {
+  max-width: none;
+  max-height: none;
+  margin: 0;
+}
+
+/* ---- controls ---- */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  align-items: center;
+  margin: 0.4rem 0 0.8rem;
+}
+
+.controls button {
+  padding: 0.1rem 0.6rem;
+  background: var(--panel);
+  border: 1px solid var(--regla);
+  color: var(--hueso);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.controls .num,
+#time,
+#frame {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.scrub {
+  flex: 1 1 8rem;
+  min-width: 6rem;
+  width: 100%;
+  accent-color: var(--hueso);
+}
+
+#wave {
+  touch-action: none;
+  cursor: pointer;
+}
+
+/* ---- a checkerboard behind a transparent still (image viewer) ---- */
+
+.checker {
+  background-color: var(--fondo);
+  background-image:
+    linear-gradient(
+      45deg,
+      var(--regla) 25%,
+      transparent 25%,
+      transparent 75%,
+      var(--regla) 75%
+    ),
+    linear-gradient(
+      45deg,
+      var(--regla) 25%,
+      transparent 25%,
+      transparent 75%,
+      var(--regla) 75%
+    );
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
+
+/* ---- text (generic viewer) ---- */
+
+.copy {
+  padding: 0.05rem 0.5rem;
+  background: var(--panel);
+  border: 1px solid var(--regla);
+  color: var(--hueso);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.linenums {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem 0.5rem 3.25rem;
+  border: 1px solid var(--regla);
+  background: var(--panel);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.linenums li {
+  white-space: pre;
+}
+
+/* A blank line is a line: an empty li has no content and would collapse,
+   so a zero-width space gives it its line box. The copy button copies the
+   original text, never this glyph. */
+.linenums li:empty::after {
+  content: "\200B";
+}
+
+.linenums li::marker {
+  color: var(--hueso-tenue);
+}
+
+/* ASCII art keeps its natural width and scrolls sideways: wrapped, the
+   picture stops being the picture. */
+.ascii {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--regla);
+  background: var(--panel);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.15;
+  white-space: pre;
+  overflow-x: auto;
+  max-height: 70vh;
+}
+
+/* Every viewer honours the preference: nothing moves on its own. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

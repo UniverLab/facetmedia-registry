@@ -11,9 +11,12 @@ Markdown is not scanned for colours: the brand values belong in prose.
 
 from __future__ import annotations
 
+import json
 import re
 import unittest
 from pathlib import Path
+
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 VIEWERS = ROOT / "viewers"
@@ -358,13 +361,347 @@ class SlidesViewerTests(unittest.TestCase):
             with self.subTest(selector=selector):
                 self.assertIn("var(--slide-black)", declarations(self.css, selector))
 
-    def test_only_the_slides_viewer_may_name_the_slide_black(self) -> None:
+    def test_only_the_slides_and_video_viewers_may_name_the_slide_black(self) -> None:
         users = sorted(
             path.relative_to(ROOT).as_posix()
             for path in sources()
             if path != BASE and "slide-black" in read(path)
         )
-        self.assertEqual(users, ["viewers/slides/slides.css"])
+        self.assertEqual(users, ["viewers/slides/slides.css", "viewers/video/video.css"])
+
+
+class AudioViewerTests(unittest.TestCase):
+    """The audio viewer: a player, a scrubbable waveform, and the numbers."""
+
+    def setUp(self) -> None:
+        self.html = read(VIEWERS / "audio" / "index.html")
+        self.main = read(VIEWERS / "audio" / "main.js")
+
+    def test_the_transport_is_a_button_and_a_clock_not_the_native_bar(self) -> None:
+        self.assertIn('id="play"', self.html)
+        self.assertIn('id="time"', self.html)
+        player = re.search(r"<audio[^>]*>", self.html)
+        self.assertIsNotNone(player)
+        self.assertNotIn("controls", player.group(0), "the native bar is replaced")
+        self.assertIn('button.textContent = audio.paused ? "play" : "pause"', self.main)
+        self.assertIn("`${clock(audio.currentTime)} / ${clock(duration)}`", self.main)
+
+    def test_space_toggles_and_the_arrows_seek_one_second(self) -> None:
+        self.assertIn('event.key === " "', self.main)
+        self.assertIn("togglePlay(audio)", self.main)
+        self.assertIn("seekBy(audio, -1, duration)", self.main)
+        self.assertIn("seekBy(audio, 1, duration)", self.main)
+        self.assertIn("Math.min(Math.max((audio.currentTime || 0) + seconds, 0), last)", self.main)
+
+    def test_the_waveform_is_scrubbed_by_click_and_by_drag(self) -> None:
+        self.assertIn('canvas.addEventListener("pointerdown"', self.main)
+        self.assertIn('canvas.addEventListener("pointermove"', self.main)
+        self.assertIn("if (dragging) seek(event);", self.main)
+        self.assertIn("audio.currentTime = valueAtX(canvas, event.clientX, duration);", self.main)
+        # a finger drag must not scroll the page instead of seeking
+        self.assertIn("touch-action: none", declarations(read(BASE), "#wave"))
+
+    def test_the_played_part_is_hueso_and_the_rest_hueso_tenue(self) -> None:
+        self.assertIn("paintPlayed(ctx, geom, preview, audio);", self.main)
+        self.assertIn('ctx.fillStyle = token("--hueso");', self.main)
+        self.assertIn('ctx.strokeStyle = token("--hueso");', self.main)
+        # the band underneath is the kit's tenue, drawn by the shared chart
+        self.assertIn("fillStyle = pal.tenue", read(KIT / "chart.js"))
+
+    def test_the_loudness_target_keeps_its_dashed_rule(self) -> None:
+        self.assertIn("ref: preview.loudness?.target_lufs,", self.main)
+        self.assertIn('refLabel: `target ${preview.loudness?.target_lufs ?? ""} LUFS`', self.main)
+        self.assertIn("ctx.setLineDash([5, 4]);", read(KIT / "chart.js"))
+
+    def test_the_numbers_name_loudness_peak_rate_and_peak_limiting(self) -> None:
+        for row in ('["duration"', '["sample rate"', '["integrated loudness"', '["true peak"'):
+            with self.subTest(row=row):
+                self.assertIn(row, self.main)
+        self.assertIn('preview.sample_rate_hz ? `${preview.sample_rate_hz} Hz` : "—"', self.main)
+        self.assertIn(
+            "if (metrics.peak_limited !== undefined) return metrics.peak_limited;", self.main
+        )
+        self.assertIn(
+            "if (record?.properties?.peak_limited !== undefined) "
+            "return record.properties.peak_limited;",
+            self.main,
+        )
+        self.assertIn('["peak limited", yesNo(limited)]', self.main)
+
+
+class VideoViewerTests(unittest.TestCase):
+    """The video viewer: a clip you play and scrub, or a GIF that loops."""
+
+    def setUp(self) -> None:
+        self.html = read(VIEWERS / "video" / "index.html")
+        self.css = read(VIEWERS / "video" / "video.css")
+        self.main = read(VIEWERS / "video" / "main.js")
+
+    def test_the_stage_letterboxes_on_the_reserved_black(self) -> None:
+        body = declarations(self.css, "#stage")
+        self.assertIn("var(--slide-black)", body)
+        self.assertIn("object-fit: contain", declarations(self.css, "#stage video"))
+        self.assertIn("object-fit: contain", declarations(self.css, "#stage img"))
+        self.assertIn('href="./video.css"', self.html)
+        self.assertLess(
+            self.html.index('href="/kit/base.css"'),
+            self.html.index('href="./video.css"'),
+            "the viewer's own sheet comes after the kit",
+        )
+
+    def test_the_playable_clip_plays_scrubs_and_steps_frames(self) -> None:
+        for control in ('id="play"', 'id="scrub"', 'id="time"', 'id="frame"'):
+            with self.subTest(control=control):
+                self.assertIn(control, self.html)
+        self.assertIn('const FRAME_KEYS = { ",": -1, ".": 1 };', self.main)
+        self.assertIn('event.key === " "', self.main)
+        self.assertIn("clip.currentTime = Number(scrub.value);", self.main)
+        self.assertIn("`frame ${frame} / ${ui.total}`", self.main)
+        self.assertIn("ui.clip.currentTime + direction / ui.fps", self.main)
+        self.assertIn("if (ui.clip.paused) stepFrame(ui, direction);", self.main)
+        self.assertIn("stage.requestFullscreen?.()", self.main)
+        self.assertIn('event.key === "f" || event.key === "F"', self.main)
+
+    def test_the_clip_is_chosen_by_mime_and_a_gif_gets_its_own_line(self) -> None:
+        self.assertIn('const GIF_MIME = "image/gif";', self.main)
+        self.assertIn("if (record.mime === GIF_MIME) renderGif(name, record, preview);", self.main)
+        self.assertIn("return `GIF · loops · ${frames} frames · ${fps} fps`;", self.main)
+        self.assertIn("const frames = props.frames ?? preview.length", self.main)
+        self.assertIn("const fps = props.fps ?? preview.fps", self.main)
+        # a GIF loops as GIFs do: no scrub bar, no frame stepping
+        self.assertIn('id="clip-controls" class="controls" hidden', self.html)
+        self.assertNotIn("stepFrame", self.html)
+
+    def test_a_file_the_browser_cannot_play_falls_back_to_an_image_or_its_kind(self) -> None:
+        self.assertIn(
+            'clip.addEventListener("error", () => unplayable(name, record, preview));', self.main
+        )
+        self.assertIn(
+            "const images = Array.isArray(preview.images) ? preview.images : [];", self.main
+        )
+        self.assertIn('document.getElementById("open-file").href = assetUrl(name);', self.main)
+        self.assertIn("open file", self.html)
+        self.assertIn('id="kind-label"', self.html)
+
+    def test_the_metrics_name_resolution_rate_frames_duration_and_sound(self) -> None:
+        for row in ('["resolution"', '["fps"', '["frames"', '["duration"'):
+            with self.subTest(row=row):
+                self.assertIn(row, self.main)
+        self.assertIn(
+            'if (typeof length === "number" && typeof fps === "number" && fps > 0) '
+            "return length / fps;",
+            self.main,
+        )
+        self.assertIn('if (typeof metrics.audio_streams === "number") {', self.main)
+        self.assertIn('["integrated loudness", `${loud.integrated_lufs} LUFS`]', self.main)
+
+
+class ImageViewerTests(unittest.TestCase):
+    """The image viewer: fitted, 1:1 with a pan, and a checkerboard."""
+
+    def setUp(self) -> None:
+        self.html = read(VIEWERS / "image" / "index.html")
+        self.main = read(VIEWERS / "image" / "main.js")
+
+    def test_the_stage_holds_the_still_and_the_old_dialog_is_gone(self) -> None:
+        self.assertIn('<div id="stage" class="stage fit"', self.html)
+        self.assertIn('id="still"', self.html)
+        self.assertNotIn('id="zoom"', self.html)
+        self.assertNotIn("showModal", self.main)
+
+    def test_z_and_a_click_toggle_one_to_one_and_a_drag_pans(self) -> None:
+        self.assertIn('stage.classList.toggle("fit")', self.main)
+        self.assertIn('if (event.key !== "z" && event.key !== "Z") return;', self.main)
+        self.assertIn("if (drag !== null && !drag.moved) toggleFit(stage);", self.main)
+        self.assertIn("stage.scrollLeft = drag.left - dx;", self.main)
+        self.assertIn("#image .stage:not(.fit) img", read(BASE))
+        self.assertIn("overflow: auto", declarations(read(BASE), "#image .stage"))
+
+    def test_the_checkerboard_is_drawn_with_the_kit_tokens(self) -> None:
+        body = declarations(read(BASE), ".checker")
+        self.assertIn("var(--regla)", body)
+        self.assertIn("var(--fondo)", body)
+        self.assertIn('stage.classList.toggle("checker")', self.main)
+        self.assertIn('button.setAttribute("aria-pressed", String(checked))', self.main)
+
+    def test_the_metrics_name_the_pixels_and_the_file_size(self) -> None:
+        self.assertIn('["pixels"', self.main)
+        self.assertIn("formatBytes(record.bytes)", self.main)
+        self.assertIn('if (typeof bytes !== "number") return "—";', self.main)
+
+
+class CadViewerTests(unittest.TestCase):
+    """The CAD viewer: every view as a panel, measures beside expectations."""
+
+    def setUp(self) -> None:
+        self.main = read(VIEWERS / "cad" / "main.js")
+
+    def test_every_view_is_a_large_panel(self) -> None:
+        self.assertIn("for (const view of views) {", self.main)
+        self.assertIn('container.classList.add("panels");', self.main)
+        self.assertIn("flex: 1 1 100%", declarations(read(BASE), ".views.panels figure"))
+
+    def test_every_view_opens_from_the_keyboard(self) -> None:
+        # A view is a button: focusable, labelled, and opened by Enter or space.
+        self.assertIn("image.tabIndex = 0;", self.main)
+        self.assertIn('image.setAttribute("role", "button");', self.main)
+        self.assertIn('image.setAttribute("aria-label", `enlarge ${image.alt}`);', self.main)
+        self.assertIn('if (event.key !== "Enter" && event.key !== " ") return;', self.main)
+        # The dialog gives the focus back to the view that opened it.
+        self.assertIn('dialog.addEventListener("close", () => opener?.focus());', self.main)
+        body = declarations(read(BASE), ".views.panels img:focus-visible")
+        self.assertIn("outline: 2px solid var(--hueso)", body)
+
+    def test_the_expected_volume_and_box_sit_beside_the_measured_ones(self) -> None:
+        self.assertIn('params["expect-volume-mm3"]', self.main)
+        self.assertIn('params["expect-bbox-mm"]', self.main)
+        self.assertIn('["expected volume"', self.main)
+        self.assertIn('["expected bounding box"', self.main)
+        self.assertIn('["measured volume"', self.main)
+        self.assertIn('["measured bounding box"', self.main)
+        # the core delivers one {x, y, z} item, and a flat triple reads too
+        self.assertIn("const sides = [first.x, first.y, first.z];", self.main)
+        self.assertIn("value.length === 3 ? value : null", self.main)
+
+
+class GenericViewerTests(unittest.TestCase):
+    """The generic viewer: text, JSON, subtitles and ASCII, each with a copy."""
+
+    def setUp(self) -> None:
+        self.html = read(VIEWERS / "generic" / "index.html")
+        self.main = read(VIEWERS / "generic" / "main.js")
+
+    def test_the_branch_is_chosen_by_the_record(self) -> None:
+        # ascii is text that says how wide it is: a contact-sheet record
+        # (image/png, image/svg+xml) carries columns too, but keeps the fallback
+        self.assertIn(
+            'if (mime === "text/plain" && typeof record.properties?.columns === "number") {',
+            self.main,
+        )
+        self.assertIn('if (SUBTITLE_MIMES.has(mime)) return "cues";', self.main)
+        self.assertIn('if (mime === "application/json") return "json";', self.main)
+        self.assertIn('if (mime === "text/plain") return "text";', self.main)
+        self.assertIn(
+            'const SUBTITLE_MIMES = new Set(["application/x-subrip", "text/vtt", "text/srt"]);',
+            self.main,
+        )
+        # an unlisted mime keeps the fields table and the link: the fallback
+        self.assertIn("return null;", self.main)
+        self.assertIn('id="fields"', self.html)
+        self.assertIn('id="asset-link"', self.html)
+
+    def test_plain_text_is_numbered_and_json_is_pretty_printed(self) -> None:
+        self.assertIn('id="lines" class="linenums"', self.html)
+        self.assertIn('document.createElement("li")', self.main)
+        self.assertIn("JSON.stringify(JSON.parse(raw), null, 2)", self.main)
+        self.assertIn('id="json" class="ascii"', self.html)
+
+    def test_subtitles_become_a_time_and_text_list(self) -> None:
+        self.assertIn('id="cues-section"', self.html)
+        self.assertIn('const [start, end = ""] = lines[arrow].split("-->");', self.main)
+        self.assertIn("time: `${start.trim()} --> ${trimmedEnd}`", self.main)
+        self.assertIn('text: lines.slice(arrow + 1).join(" ").trim()', self.main)
+
+    def test_ascii_art_keeps_its_width_and_scrolls(self) -> None:
+        body = declarations(read(BASE), ".ascii")
+        self.assertIn("white-space: pre", body)
+        self.assertIn("overflow-x: auto", body)
+        self.assertIn('raw.replace(/\\n+$/, "")', self.main)
+
+    def test_every_branch_has_a_copy_button(self) -> None:
+        for name in ("text", "json", "cues", "ascii"):
+            with self.subTest(branch=name):
+                self.assertIn(f'id="copy-{name}"', self.html)
+                self.assertIn(f'wireCopy("copy-{name}"', self.main)
+        self.assertIn("await navigator.clipboard.writeText(text);", self.main)
+        self.assertIn('button.textContent = "copied";', self.main)
+
+
+class ViewerExampleTests(unittest.TestCase):
+    """Each sample exercises the part its viewer exists for."""
+
+    def test_the_video_example_carries_a_gif_beside_the_clip(self) -> None:
+        folder = VIEWERS / "_examples" / "video"
+        gif = folder / "loop.gif"
+        record = json.loads(read(folder / "loop.gif.facet.json"))
+        preview = json.loads(read(folder / "loop.gif.preview.json"))
+        self.assertTrue(gif.is_file(), "no GIF sample")
+        self.assertEqual(record["kind"], "video")
+        self.assertEqual(record["mime"], "image/gif")
+        self.assertEqual(record["path"], "loop.gif")
+        self.assertEqual(preview["kind"], record["kind"])
+        properties = record["properties"]
+        for key in ("frames", "fps", "duration_s", "width", "height"):
+            with self.subTest(key=key):
+                self.assertIn(key, properties)
+        self.assertEqual(preview["length"], properties["frames"])
+        self.assertEqual(preview["fps"], properties["fps"])
+        # the fixture is the animation its record claims
+        with Image.open(gif) as image:
+            self.assertEqual(image.n_frames, properties["frames"])
+
+    def test_the_audio_example_carries_peak_limiting(self) -> None:
+        record = json.loads(read(VIEWERS / "_examples" / "audio" / "tone.wav.facet.json"))
+        self.assertIs(record["verification"]["metrics"]["peak_limited"], True)
+
+    def test_the_cad_example_declares_what_it_expected(self) -> None:
+        record = json.loads(read(VIEWERS / "_examples" / "cad" / "escuadra.step.facet.json"))
+        params = record["provenance"]["params"]
+        self.assertEqual(params["expect-volume-mm3"], 9500)
+        self.assertEqual(params["expect-bbox-mm"], [{"x": 80, "y": 40, "z": 3}])
+
+    def test_the_generic_examples_cover_the_cues_and_ascii_branches(self) -> None:
+        folder = VIEWERS / "_examples" / "generic"
+        notes = json.loads(read(folder / "notes.srt.facet.json"))
+        self.assertEqual(notes["mime"], "application/x-subrip")
+        self.assertTrue((folder / "notes.srt").is_file())
+        sheet = json.loads(read(folder / "sheet.txt.facet.json"))
+        self.assertEqual(sheet["properties"]["columns"], 40)
+        lines = read(folder / "sheet.txt").splitlines()
+        self.assertEqual(max(len(line) for line in lines), 40, "the art is as wide as it claims")
+        self.assertIn("-->", read(folder / "notes.srt"))
+
+    def test_the_generic_examples_cover_the_json_and_vtt_branches(self) -> None:
+        folder = VIEWERS / "_examples" / "generic"
+        piece = json.loads(read(folder / "pieza.json.facet.json"))
+        self.assertEqual(piece["mime"], "application/json")
+        self.assertIsInstance(json.loads(read(folder / "pieza.json")), dict)
+        # one line on disk, so the viewer's pretty-print is what is read
+        self.assertEqual(len(read(folder / "pieza.json").splitlines()), 1)
+        vtt = json.loads(read(folder / "notes.vtt.facet.json"))
+        self.assertEqual(vtt["mime"], "text/vtt")
+        text = read(folder / "notes.vtt")
+        self.assertTrue(text.startswith("WEBVTT"))
+        self.assertEqual(text.count("-->"), 2)
+
+    def test_the_generic_fallback_sample_is_a_picture_that_says_its_width(self) -> None:
+        """A contact-sheet record (kind text, image mime, columns) is the asset
+        that must keep the fields fallback: never its bytes as text."""
+        folder = VIEWERS / "_examples" / "generic"
+        record = json.loads(read(folder / "plate.svg.facet.json"))
+        preview = json.loads(read(folder / "plate.svg.preview.json"))
+        self.assertEqual(record["kind"], "text")
+        self.assertEqual(record["mime"], "image/svg+xml")
+        self.assertIsInstance(record["properties"]["columns"], int)
+        self.assertEqual(record["bytes"], (folder / "plate.svg").stat().st_size)
+        self.assertTrue((folder / "plate.svg").is_file())
+        self.assertEqual(preview["kind"], "text")
+
+    def test_the_image_examples_carry_a_transparent_cut_out(self) -> None:
+        folder = VIEWERS / "_examples" / "image"
+        cutout = folder / "recorte.png"
+        self.assertTrue(cutout.is_file(), "no transparent PNG sample")
+        record = json.loads(read(folder / "recorte.png.facet.json"))
+        preview = json.loads(read(folder / "recorte.png.preview.json"))
+        self.assertEqual(record["mime"], "image/png")
+        self.assertEqual(preview["kind"], "image")
+        with Image.open(cutout) as image:
+            self.assertEqual(image.mode, "RGBA")
+            self.assertEqual(image.getchannel("A").getextrema()[0], 0, "no see-through pixel")
+            self.assertEqual(
+                (image.width, image.height),
+                (record["properties"]["width"], record["properties"]["height"]),
+            )
 
 
 if __name__ == "__main__":

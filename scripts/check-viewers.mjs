@@ -2,12 +2,20 @@
 /* Open every viewer example in light and dark at 1280x800 and 390x844, one
    case at a time, with the system Chrome: fail on any page error, console
    error, failed request or HTTP >= 400, exercise the interaction the viewer
-   exists for (audio click-to-seek, the CAD view dialog, the document's page
-   step and jump with its PDF link, the image enlargement, the gallery's filter
-   and its open link and back button, the slides viewer in its default,
-   audience and presenter roles), and save a screenshot of each case under
-   viewers/_examples/<kind>/screens/
+   exists for (audio play, pause, seek by click, drag and arrow and its metric
+   lines, the CAD views from a click and from the keyboard and the measures
+   beside their expectations, the document's page step and jump with its PDF
+   link, the image fit/1:1 toggle, its pan and the checkerboard over a
+   transparent cut-out, the video clip's play, scrub, frame step and full
+   screen, the GIF line and the generic text, JSON, subtitle (SRT and VTT),
+   ASCII and copy branches, the fields fallback an image record keeps, the
+   gallery's filter and its open link and back button, the slides viewer in its
+   default, audience and presenter roles), and
+   save a screenshot of each case under viewers/_examples/<kind>/screens/
    (gitignored).
+
+   A kind with more than one example asset is opened once per asset, its name
+   swapped in the URL.
 
    Run by hand:  node scripts/check-viewers.mjs [kind ...]
    Needs playwright-core resolvable (npm i --prefix /tmp/opencode/pw
@@ -37,6 +45,42 @@ function suffixesFor(kind) {
 
 function roleTag(suffix) {
   return suffix.startsWith("&role=") ? `-${suffix.slice("&role=".length)}` : "";
+}
+
+/*: The assets each kind is opened with, when its folder has more than one.
+   The server's own default (`null`) is the first example on disk. */
+const ASSETS = {
+  video: ["bosque-niebla.mp4", "loop.gif"],
+  generic: ["hello.txt", "notes.srt", "notes.vtt", "pieza.json", "sheet.txt", "plate.svg"],
+  image: ["foto-producto.png", "recorte.png"],
+};
+
+function assetsFor(kind) {
+  return ASSETS[kind] ?? [null];
+}
+
+/** The server's URL with `asset` swapped, so one server serves every asset. */
+function assetUrlFor(url, asset) {
+  if (asset === null) return url;
+  const target = new URL(url);
+  target.searchParams.set("asset", asset);
+  return target.toString();
+}
+
+/** A tag from the whole file name, so `notes.srt` and `notes.vtt` never share
+    a label or a screenshot. */
+function assetTag(kind, asset) {
+  if (asset === null || assetsFor(kind).length < 2) return "";
+  return `-${asset.replace(/[^0-9a-zA-Z]+/g, "-").replace(/-$/, "")}`;
+}
+
+/** The preview beside the asset the page opened. */
+async function fetchPreview(page) {
+  return page.evaluate(async () => {
+    const name = new URLSearchParams(window.location.search).get("asset") ?? "";
+    const response = await fetch(`/asset/${encodeURIComponent(name)}.preview.json`);
+    return response.json();
+  });
 }
 //: The gallery example: the page must render every card this file describes.
 const GALLERY = JSON.parse(
@@ -124,30 +168,315 @@ async function checkAudioSeek(page, label, failures) {
   }
 }
 
-/** Clicking a view must open the enlargement dialog (and close it again). */
+/** Space plays and pauses, the arrows seek a second, a drag scrubs, and the
+    metric lines the audio viewer exists for are all there. */
+async function checkAudioTransport(page, label, failures) {
+  const time = await page.locator("#time").innerText();
+  if (!/^\d\d:\d\d\.\d \/ \d\d:\d\d\.\d$/.test(time)) {
+    failures.push(`${label}: the time reads ${JSON.stringify(time)}`);
+  }
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(400);
+  if (await page.evaluate(() => document.getElementById("player").paused)) {
+    failures.push(`${label}: space did not start playback`);
+  }
+  const button = await page.locator("#play").innerText();
+  if (button !== "pause") failures.push(`${label}: the button reads ${JSON.stringify(button)}`);
+  await page.keyboard.press("Space");
+  if (!(await page.evaluate(() => document.getElementById("player").paused))) {
+    failures.push(`${label}: the second space did not pause`);
+  }
+  const before = await page.evaluate(() => document.getElementById("player").currentTime);
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(200);
+  const after = await page.evaluate(() => document.getElementById("player").currentTime);
+  if (Math.abs(after - before - 1) > 0.25) {
+    failures.push(`${label}: ArrowRight moved ${before}s -> ${after}s, not one second`);
+  }
+  const wave = page.locator("#wave");
+  const box = await wave.boundingBox();
+  if (!box) {
+    failures.push(`${label}: no waveform canvas`);
+    return;
+  }
+  const y = box.height / 2;
+  const xAt = (fraction) => box.x + 46 + (box.width - 56) * fraction;
+  await page.mouse.move(xAt(0.2), box.y + y);
+  await page.mouse.down();
+  await page.mouse.move(xAt(0.75), box.y + y, { steps: 6 });
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+  const [dragged, duration] = await page.evaluate(() => {
+    const player = document.getElementById("player");
+    return [player.currentTime, player.duration];
+  });
+  if (!(Number.isFinite(duration) && duration > 0)) {
+    failures.push(`${label}: the player reported no duration`);
+  } else if (Math.abs(dragged - 0.75 * duration) > 0.3) {
+    failures.push(`${label}: dragging left the player at ${dragged}s of ${duration}s`);
+  }
+  const stats = await page.locator("#stats").innerText();
+  for (const row of ["integrated loudness", "true peak", "sample rate", "duration", "peak limited"]) {
+    if (!stats.includes(row)) failures.push(`${label}: no "${row}" metric line`);
+  }
+}
+
+/** A view opens its enlargement from a click and from the keyboard, and
+    Escape gives the focus back to the view that opened it. */
 async function checkCadZoom(page, label, failures) {
   const view = page.locator(".views img").first();
   if ((await view.count()) === 0) {
     failures.push(`${label}: no view image`);
     return;
   }
+  const open = () => page.evaluate(() => document.getElementById("zoom").open);
   await view.click();
-  const open = await page.evaluate(() => document.getElementById("zoom").open);
-  if (!open) failures.push(`${label}: clicking a view did not open the enlargement`);
+  if (!(await open())) failures.push(`${label}: clicking a view did not open the enlargement`);
   await page.evaluate(() => document.getElementById("zoom").close());
+  const focusable = await page.evaluate(() => {
+    const image = document.querySelector(".views img");
+    return image.tabIndex === 0 && image.getAttribute("role") === "button";
+  });
+  if (!focusable) failures.push(`${label}: a view is not a keyboard button`);
+  for (const key of ["Enter", " "]) {
+    await view.focus();
+    await page.keyboard.press(key === " " ? "Space" : key);
+    if (!(await open())) {
+      failures.push(`${label}: ${JSON.stringify(key)} on a view did not open the enlargement`);
+      continue;
+    }
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(100);
+    const back = await page.evaluate(() => document.activeElement?.tagName === "IMG");
+    if (!back) failures.push(`${label}: closing the enlargement did not return the focus`);
+  }
 }
 
-/** Clicking the still must open the enlargement dialog (and close it again). */
-async function checkImageZoom(page, label, failures) {
-  const still = page.locator("#still");
-  if ((await still.count()) === 0) {
+/** The image viewer: fitted at load, Z and a click toggle 1:1, a 1:1 drag pans,
+    the background toggles to a painted checkerboard, and the metrics name the
+    pixels and the file's size. On the cut-out sample the checkerboard has
+    transparent pixels to show through. */
+async function checkImage(page, label, failures, asset) {
+  const fitted = () => page.evaluate(() => document.getElementById("stage").classList.contains("fit"));
+  if ((await page.locator("#still").count()) === 0) {
     failures.push(`${label}: no still image`);
     return;
   }
-  await still.click();
-  const open = await page.evaluate(() => document.getElementById("zoom").open);
-  if (!open) failures.push(`${label}: clicking the still did not open the enlargement`);
-  await page.evaluate(() => document.getElementById("zoom").close());
+  if (!(await fitted())) failures.push(`${label}: the still is not fitted at load`);
+  await page.keyboard.press("z");
+  if (await fitted()) failures.push(`${label}: Z did not show the still at 1:1`);
+  await page.keyboard.press("z");
+  if (!(await fitted())) failures.push(`${label}: the second Z did not fit it again`);
+  await page.locator("#still").click();
+  if (await fitted()) failures.push(`${label}: a click did not show the still at 1:1`);
+  const stage = page.locator("#stage");
+  const box = await stage.boundingBox();
+  const scrolled = await page.evaluate(() => document.getElementById("stage").scrollLeft);
+  if (box) {
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 - 60, box.y + box.height / 2, { steps: 4 });
+    await page.mouse.up();
+  }
+  await page.waitForTimeout(200);
+  const panned = await page.evaluate(() => document.getElementById("stage").scrollLeft);
+  // A small still fits the stage even at 1:1: there is nothing to pan.
+  const overflows = await page.evaluate(() => {
+    const stage = document.getElementById("stage");
+    return stage.scrollWidth > stage.clientWidth;
+  });
+  if (overflows && panned === scrolled) {
+    failures.push(`${label}: dragging at 1:1 did not pan the still`);
+  }
+  await page.click("#bg");
+  const checker = await page.evaluate(() => {
+    const stage = document.getElementById("stage");
+    const style = getComputedStyle(stage);
+    return {
+      classed: stage.classList.contains("checker"),
+      image: style.backgroundImage,
+      size: style.backgroundSize,
+    };
+  });
+  if (!checker.classed) failures.push(`${label}: the background toggle drew no checkerboard`);
+  if (!checker.image.includes("gradient") || !checker.size.startsWith("24px")) {
+    failures.push(`${label}: the checkerboard paints ${JSON.stringify(checker)}`);
+  }
+  if (asset === "recorte.png") await checkTransparency(page, label, failures);
+  const stats = await page.locator("#stats").innerText();
+  for (const row of ["pixels", "file size"]) {
+    if (!stats.includes(row)) failures.push(`${label}: no "${row}" metric line`);
+  }
+}
+
+/** The cut-out sample really carries alpha: at least one pixel is see-through,
+    so the checkerboard behind it has something to show. */
+async function checkTransparency(page, label, failures) {
+  const alpha = await page.evaluate(async () => {
+    const still = document.getElementById("still");
+    await still.decode().catch(() => {});
+    const canvas = document.createElement("canvas");
+    canvas.width = still.naturalWidth;
+    canvas.height = still.naturalHeight;
+    const context = canvas.getContext("2d");
+    context.drawImage(still, 0, 0);
+    const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+    let clear = 0;
+    for (let index = 3; index < data.length; index += 4) {
+      if (data[index] === 0) clear += 1;
+    }
+    return { total: data.length / 4, clear };
+  });
+  if (alpha.clear === 0) {
+    failures.push(`${label}: the cut-out is opaque (${JSON.stringify(alpha)})`);
+  }
+}
+
+/** The CAD viewer: one panel per view the preview lists, and the measures
+    beside the expectations the piece carries. */
+async function checkCad(page, label, failures) {
+  const preview = await fetchPreview(page);
+  const views = await page.locator(".views img").count();
+  if (views !== preview.views.length) {
+    failures.push(`${label}: ${views} views, expected ${preview.views.length}`);
+  }
+  await checkCadZoom(page, label, failures);
+  if (preview.solid) {
+    const list = await page.locator("#solid-kv").innerText();
+    for (const row of ["expected volume", "expected bounding box"]) {
+      if (!list.includes(row)) failures.push(`${label}: no "${row}" measure`);
+    }
+  }
+}
+
+/** The video viewer on a playable clip: play, scrub, frame step, the metrics. */
+async function checkVideoClip(page, label, failures) {
+  const preview = await fetchPreview(page);
+  const clip = page.locator("#clip");
+  if (!(await clip.isVisible())) {
+    failures.push(`${label}: the clip element is hidden`);
+    return;
+  }
+  await page.waitForFunction(() => document.getElementById("clip").readyState >= 1, null, {
+    timeout: 10000,
+  }).catch(() => failures.push(`${label}: the clip never loaded metadata`));
+  const frame = await page.locator("#frame").innerText();
+  if (frame !== `frame 1 / ${preview.length}`) {
+    failures.push(`${label}: the frame reads ${JSON.stringify(frame)}`);
+  }
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(400);
+  if (await page.evaluate(() => document.getElementById("clip").paused)) {
+    failures.push(`${label}: space did not play the clip`);
+  }
+  await page.keyboard.press("Space");
+  if (!(await page.evaluate(() => document.getElementById("clip").paused))) {
+    failures.push(`${label}: the second space did not pause the clip`);
+  }
+  await page.locator("#scrub").fill("1");
+  await page.waitForTimeout(300);
+  const scrubbed = await page.evaluate(() => document.getElementById("clip").currentTime);
+  if (Math.abs(scrubbed - 1) > 0.25) {
+    failures.push(`${label}: the scrub bar left the clip at ${scrubbed}s`);
+  }
+  const before = await page.evaluate(() => document.getElementById("clip").currentTime);
+  await page.keyboard.press(".");
+  await page.waitForTimeout(200);
+  const after = await page.evaluate(() => document.getElementById("clip").currentTime);
+  const step = 1 / preview.fps;
+  if (Math.abs(after - before - step) > step / 2) {
+    failures.push(`${label}: "." moved ${before}s -> ${after}s, not one frame`);
+  }
+  const stats = await page.locator("#stats").innerText();
+  for (const row of ["resolution", "fps", "frames", "duration"]) {
+    if (!stats.includes(row)) failures.push(`${label}: no "${row}" metric line`);
+  }
+  if (!/^\d\d:\d\d\.\d \/ \d\d:\d\d\.\d$/.test(await page.locator("#time").innerText())) {
+    failures.push(`${label}: the time reads ${JSON.stringify(await page.locator("#time").innerText())}`);
+  }
+}
+
+/** The video viewer on a GIF: the line, the image, no scrub bar, and F. */
+async function checkVideoGif(page, label, failures) {
+  const line = await page.locator("#gif-line").innerText();
+  if (!/^GIF · loops · \d+ frames · \d+ fps$/.test(line)) {
+    failures.push(`${label}: the GIF line reads ${JSON.stringify(line)}`);
+  }
+  if (!(await page.locator("#gif").isVisible())) {
+    failures.push(`${label}: the GIF image is hidden`);
+  }
+  if (await page.locator("#clip-controls").isVisible()) {
+    failures.push(`${label}: a GIF shows a scrub bar`);
+  }
+  await page.keyboard.press("f");
+  await page.waitForTimeout(400);
+  // A headless window may refuse full screen; either way F must not throw,
+  // which the console watcher above would have caught.
+}
+
+/** The generic viewer's text branches: numbered lines, pretty JSON, cues from
+    SRT and VTT, ASCII, and the copy button each one carries. */
+async function checkGeneric(page, label, failures, asset) {
+  if (asset === "hello.txt") {
+    const lines = await page.locator("#lines li").count();
+    if (lines !== 1) failures.push(`${label}: ${lines} numbered lines, expected 1`);
+    await checkCopy(page, "#copy-text", label, failures);
+  } else if (asset === "notes.srt" || asset === "notes.vtt") {
+    const cues = await page.locator("#cues tbody tr").count();
+    if (cues !== 2) failures.push(`${label}: ${cues} cue rows, expected 2`);
+    const time = await page.locator("#cues tbody tr td").first().innerText();
+    const sep = asset === "notes.vtt" ? "." : ",";
+    const first = `00:00:00${sep}000 --> 00:00:02${sep}000`;
+    if (time !== first) {
+      failures.push(`${label}: the first cue starts ${JSON.stringify(time)}`);
+    }
+    await checkCopy(page, "#copy-cues", label, failures);
+  } else if (asset === "pieza.json") {
+    const pretty = await page.locator("#json").innerText();
+    if (!pretty.startsWith("{")) failures.push(`${label}: the JSON is not an object`);
+    if (!pretty.includes('\n  "pieza": "escuadra"')) {
+      failures.push(`${label}: the JSON is not pretty-printed (${JSON.stringify(pretty)})`);
+    }
+    await checkCopy(page, "#copy-json", label, failures);
+  } else if (asset === "sheet.txt") {
+    const art = await page.locator("#ascii").innerText();
+    if (!art.includes("ascii contact sheet")) {
+      failures.push(`${label}: the ASCII sheet is not shown`);
+    }
+    const layout = await page.evaluate(() => {
+      const style = getComputedStyle(document.getElementById("ascii"));
+      return { whiteSpace: style.whiteSpace, overflowX: style.overflowX };
+    });
+    if (layout.whiteSpace !== "pre" || layout.overflowX !== "auto") {
+      failures.push(`${label}: the ASCII sheet wraps (${JSON.stringify(layout)})`);
+    }
+    await checkCopy(page, "#copy-ascii", label, failures);
+  } else if (asset === "plate.svg") {
+    // A contact sheet is a picture that says how wide its art would be: the
+    // fields table and the link are the answer, never the bytes as text.
+    if (await page.locator("#ascii-section").isVisible()) {
+      failures.push(`${label}: an image record was rendered as ASCII text`);
+    }
+    const rows = await page.locator("#fields tbody tr").count();
+    if (rows === 0) failures.push(`${label}: the fallback shows no fields`);
+    const link = await page.locator("#asset-link").getAttribute("href");
+    if (link !== "/asset/plate.svg") {
+      failures.push(`${label}: the fallback link is ${JSON.stringify(link)}`);
+    }
+  }
+}
+
+/** A copy button says `copied` once the text is in the clipboard. */
+async function checkCopy(page, selector, label, failures) {
+  const button = page.locator(selector);
+  if ((await button.count()) === 0) {
+    failures.push(`${label}: no copy button (${selector})`);
+    return;
+  }
+  await button.click();
+  await page.waitForTimeout(300);
+  const text = await button.innerText();
+  if (text !== "copied") failures.push(`${label}: the copy button reads ${JSON.stringify(text)}`);
 }
 
 /** The document viewer: one thumbnail per page, the keys and a jump step it,
@@ -469,28 +798,38 @@ async function checkSlides(page, context, label, failures, suffix) {
   else await checkSlidesPresenter(page, context, label, failures);
 }
 
-async function runCase(browser, url, kind, testCase, failures, suffix = "") {
+async function runCase(browser, url, kind, testCase, failures, suffix = "", asset = null) {
   const { scheme, width, height } = testCase;
-  const label = `${kind}${roleTag(suffix)} ${scheme} ${width}x${height}`;
+  const tag = assetTag(kind, asset);
+  const label = `${kind}${roleTag(suffix)}${tag} ${scheme} ${width}x${height}`;
   const context = await browser.newContext({
     viewport: { width, height },
     colorScheme: scheme,
     deviceScaleFactor: 1,
+    permissions: ["clipboard-read", "clipboard-write"],
   });
   const page = await context.newPage();
   watchPage(page, label, failures);
-  await page.goto(`${url}${suffix}`, { waitUntil: "load" });
+  await page.goto(`${assetUrlFor(url, asset)}${suffix}`, { waitUntil: "load" });
   await page.waitForTimeout(600); // canvases draw, images and fonts settle
-  if (kind === "audio") await checkAudioSeek(page, label, failures);
-  if (kind === "cad") await checkCadZoom(page, label, failures);
+  if (kind === "audio") {
+    await checkAudioSeek(page, label, failures);
+    await checkAudioTransport(page, label, failures);
+  }
+  if (kind === "cad") await checkCad(page, label, failures);
   if (kind === "document") await checkDocument(page, label, failures);
-  if (kind === "image") await checkImageZoom(page, label, failures);
+  if (kind === "generic") await checkGeneric(page, label, failures, asset);
+  if (kind === "image") await checkImage(page, label, failures, asset);
+  if (kind === "video") {
+    if (String(asset).endsWith(".gif")) await checkVideoGif(page, label, failures);
+    else await checkVideoClip(page, label, failures);
+  }
   if (kind === "gallery") await checkGallery(page, label, failures);
   if (kind === "slides") await checkSlides(page, context, label, failures, suffix);
   const dir = path.join(ROOT, "viewers", "_examples", kind, "screens");
   mkdirSync(dir, { recursive: true });
   await page.screenshot({
-    path: path.join(dir, `${scheme}-${width}x${height}${roleTag(suffix)}.png`),
+    path: path.join(dir, `${scheme}-${width}x${height}${roleTag(suffix)}${tag}.png`),
     fullPage: true,
   });
   await context.close();
@@ -498,15 +837,21 @@ async function runCase(browser, url, kind, testCase, failures, suffix = "") {
 }
 
 async function main() {
-  const browser = await chromium.launch({ executablePath: CHROME, headless: true });
+  const browser = await chromium.launch({
+    executablePath: CHROME,
+    headless: true,
+    args: ["--autoplay-policy=no-user-gesture-required"],
+  });
   const failures = [];
   try {
     for (const kind of KINDS) {
       const { child, url } = await startServer(kind);
       try {
         for (const suffix of suffixesFor(kind)) {
-          for (const testCase of CASES) {
-            await runCase(browser, url, kind, testCase, failures, suffix);
+          for (const asset of assetsFor(kind)) {
+            for (const testCase of CASES) {
+              await runCase(browser, url, kind, testCase, failures, suffix, asset);
+            }
           }
         }
       } finally {

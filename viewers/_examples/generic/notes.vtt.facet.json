@@ -1,0 +1,54 @@
+{
+  "record": 1,
+  "id": "sha256:25fd7a604f483311188bb40c455980871bfa8a01c8d6f11f48462ec8904edba6",
+  "name": "notes",
+  "path": "notes.vtt",
+  "kind": "text",
+  "mime": "text/vtt",
+  "bytes": 154,
+  "created": "2026-11-14T00:00:00Z",
+  "properties": {},
+  "provenance": {
+    "facet": "text",
+    "registry": {
+      "commit": "0000000000000000000000000000000000000000",
+      "path": null
+    },
+    "capability": "subs",
+    "package": {
+      "name": "example",
+      "version": "0.1.0"
+    },
+    "tool": {
+      "name": "example",
+      "version": "0.1.0"
+    },
+    "models": [],
+    "params": {},
+    "params_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "seed": null,
+    "inputs": []
+  },
+  "verification": {
+    "status": "passed",
+    "metrics": {
+      "cues": 2
+    },
+    "thresholds": {
+      "cues": 2
+    },
+    "verifier": "subs"
+  },
+  "license": {
+    "tools": [
+      {
+        "name": "example",
+        "spdx": "MIT",
+        "commercial_use": true
+      }
+    ],
+    "models": [],
+    "commercial_use": true,
+    "accepted": []
+  }
+}

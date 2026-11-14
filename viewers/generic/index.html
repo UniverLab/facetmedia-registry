@@ -14,6 +14,30 @@
       <header id="header"></header>
       <main>
         <p id="summary"></p>
+        <section id="text-section" hidden>
+          <h2>text <button id="copy-text" class="copy" type="button">copy</button></h2>
+          <ol id="lines" class="linenums"></ol>
+        </section>
+        <section id="json-section" hidden>
+          <h2>json <button id="copy-json" class="copy" type="button">copy</button></h2>
+          <pre id="json" class="ascii"></pre>
+        </section>
+        <section id="cues-section" hidden>
+          <h2>cues <button id="copy-cues" class="copy" type="button">copy</button></h2>
+          <table id="cues">
+            <thead>
+              <tr>
+                <th class="num">time</th>
+                <th>text</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+        <section id="ascii-section" hidden>
+          <h2>ascii <button id="copy-ascii" class="copy" type="button">copy</button></h2>
+          <pre id="ascii" class="ascii"></pre>
+        </section>
         <h2>fields</h2>
         <table id="fields">
           <thead>

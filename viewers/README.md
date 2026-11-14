@@ -38,8 +38,9 @@ Every viewer wears facet's night surface, as the facet brand manual
 
 The seven tokens are the only colours a viewer's CSS or JS may use; the check in
 `tests/test_viewers_look.py` fails on a hex colour or an `rgb(` anywhere in
-`viewers/` outside `_kit/base.css`. `--slide-black` is reserved for the slides
-audience letterbox: only the slides viewer may name it, and only there.
+`viewers/` outside `_kit/base.css`. `--slide-black` is reserved for the letterbox
+behind a slide deck or a clip: only the slides and video viewers may name it, and
+only there — the slides audience window and blackout, and the video stage.
 
 ## Rules
 
@@ -77,11 +78,18 @@ a folder rather than one asset, so it also answers `/gallery.json`,
 them by hand with `node scripts/check-viewers.mjs [kind ...]`: with
 `playwright-core` resolvable and the system Chrome, it opens each example
 under both colour-scheme preferences (the surface stays night either way) at
-1280x800 and 390x844, exercises the audio click-to-seek, the
-CAD view enlargement, the image enlargement and the gallery's kind filter,
-open link and back button, fails on any console error, page error, failed
-request or HTTP status >= 400, and saves a screenshot of each case under
-`_examples/<kind>/screens/` (gitignored).
+1280x800 and 390x844, exercises the audio play/pause, click, drag and arrow
+seek and its metric lines, the CAD views from a click and from the keyboard
+and the measures beside their expectations, the document's page step and jump
+with its PDF link, the image's fit/1:1 toggle, pan and the checkerboard it
+draws over a transparent cut-out, the video clip's play, scrub and frame step,
+the GIF's line, the generic text, JSON, subtitle (SRT and VTT), ASCII and copy
+branches, and the gallery's kind filter, open link and back button, fails on
+any console error, page error, failed request or HTTP status >= 400, and saves
+a screenshot of each case under `_examples/<kind>/screens/` (gitignored). A
+kind with more than one example asset (`video` with its GIF, `generic` with
+its JSON, SRT, VTT, ASCII and banner files, `image` with a photo and a
+transparent cut-out) is opened once per asset, the name swapped in the URL.
 
 Every viewer that renders one asset (`audio`, `cad`, `document`, `generic`,
 `image`, `video`, `slides`) opens with the same header line, `_kit/header.js`:
@@ -95,15 +103,29 @@ parameters) collapsed. The gallery browses a folder rather than one asset, so
 it opens with that folder's name and its asset count instead, and each card
 carries its own `✓ verified` or `✗ failed`.
 
-The viewers here are `generic` (any preview: summary, fields, the asset),
-`gallery` (a whole folder from `facet preview <folder>`: one card per asset,
-filterable by kind, each opening its own viewer), `audio` (player, waveform
-with silences and the playhead, loudness against the target, speech
-alignment), `cad` (views that enlarge, solid and drawing measurements),
-`document` (a paginated PDF page by page: thumbnails, the selected page, the
-PDF a click away), `image` (the still itself, click to enlarge, with its
-prompt, seed and pixel size), `video` (the clip in a player, with its
-motion prompt, seed, frame count and rate) and `slides` (a deck's preview as
+The viewers here are `generic` (any preview: summary, fields, the asset — and a
+real branch for the text kinds: numbered lines for `text/plain`, pretty-printed
+`application/json`, a time-and-text cue list for `application/x-subrip` and
+`text/vtt`, and ASCII art at its natural width with a sideways scroll when the
+record carries `columns`, each with a copy button), `gallery` (a whole folder
+from `facet preview <folder>`: one card per asset, filterable by kind, each
+opening its own viewer), `audio` (a play/pause button and space, a waveform with
+silences and the played part in Hueso over the rest in Hueso tenue, scrubbable
+by click and drag, the time in Sometype Mono with ←/→ seeking a second, the
+momentary loudness against its dashed target, the integrated LUFS, true peak,
+duration, sample rate and `peak_limited`, and the speech alignment), `cad`
+(every view the preview lists as a large panel that enlarges from a click or
+Enter, the solid's measures beside the volume and bounding box its parameters
+expected, the drawing's layers and audit), `document` (a paginated PDF page by page:
+thumbnails, the selected page, the PDF a click away), `image` (the still fitted
+by default, 1:1 pixels on a click or Z with a drag to pan, a checkerboard behind
+transparent PNGs, its pixels and file size), `video` (by the record's mime: a
+clip letterboxed on the slide black with play/pause, a scrub bar, the time and
+the frame number, `,`/`.` stepping a frame and F for full screen; a GIF looped
+on the same stage with its `GIF · loops · <frames> frames · <fps> fps` line; a
+file the browser cannot play falling back to the preview's first image or its
+kind, with the asset one click away; resolution, fps, frames, duration and any
+audio streams and loudness the record verifies) and `slides` (a deck's preview as
 its presentation player: the default surface with the current slide, a
 thumbnail strip and a `present` action; `?role=audience` for the full-screen
 audience window; `?role=presenter` for the current and next slides with notes,

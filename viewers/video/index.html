@@ -6,6 +6,7 @@
     <title>facet — video viewer</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/kit/base.css" />
+    <link rel="stylesheet" href="./video.css" />
     <script type="module" src="/kit/grain.js"></script>
   </head>
   <body>
@@ -16,11 +17,37 @@
         <p id="summary"></p>
         <section id="clip-section">
           <h2>clip</h2>
-          <figure>
-            <video id="clip" controls playsinline></video>
-            <figcaption>what moves inside the still</figcaption>
-          </figure>
+          <div id="stage" class="stage" tabindex="0">
+            <video id="clip" playsinline preload="auto" hidden></video>
+            <img id="gif" alt="" hidden />
+            <img id="still" alt="" hidden />
+            <p id="unplayable" hidden>
+              <span id="kind-label" class="num"></span>
+              <a id="open-file" href="#">open file</a>
+            </p>
+          </div>
+          <div id="clip-controls" class="controls" hidden>
+            <button id="play" type="button">play</button>
+            <input
+              id="scrub"
+              class="scrub"
+              type="range"
+              min="0"
+              max="0"
+              step="0.01"
+              value="0"
+              aria-label="scrub"
+            />
+            <span id="time">00:00.0 / 00:00.0</span>
+            <span id="frame">frame 1 / 1</span>
+          </div>
+          <p id="gif-line" hidden></p>
+          <p id="stage-caption">space plays, the bar scrubs, , and . step a frame, F fills the screen</p>
         </section>
+        <h2>metrics</h2>
+        <table id="stats">
+          <tbody></tbody>
+        </table>
         <h2>piece</h2>
         <dl class="kv" id="details"></dl>
         <p><a id="asset-link" href="#">open the asset</a></p>

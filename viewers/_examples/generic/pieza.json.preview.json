@@ -1,0 +1,11 @@
+{
+  "preview": 1,
+  "kind": "text",
+  "summary": "JSON preview of pieza.json: one object, four keys.",
+  "fields": {
+    "objects": 1,
+    "keys": 4,
+    "chars": 110,
+    "lines": 1
+  }
+}

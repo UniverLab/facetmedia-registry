@@ -1,0 +1,68 @@
+{
+  "record": 1,
+  "id": "sha256:bd7b0f70792370c63e27966c8a80afe2a1ccc5b9092745593aad2fb6d16985d4",
+  "name": "loop",
+  "path": "loop.gif",
+  "kind": "video",
+  "mime": "image/gif",
+  "bytes": 1033,
+  "created": "2026-11-14T00:00:00Z",
+  "properties": {
+    "width": 160,
+    "height": 90,
+    "frames": 8,
+    "duration_s": 0.8,
+    "fps": 10
+  },
+  "provenance": {
+    "facet": "video",
+    "registry": {
+      "commit": "0000000000000000000000000000000000000000",
+      "path": null
+    },
+    "capability": "demo",
+    "package": {
+      "name": "demostage",
+      "version": "0.1.2"
+    },
+    "tool": {
+      "name": "demostage",
+      "version": "0.1.2"
+    },
+    "models": [],
+    "params": {
+      "name": "loop"
+    },
+    "params_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "seed": null,
+    "inputs": []
+  },
+  "verification": {
+    "status": "passed",
+    "metrics": {
+      "width": 160,
+      "height": 90,
+      "fps": 10,
+      "frames": 8
+    },
+    "thresholds": {
+      "width": 160,
+      "height": 90,
+      "fps": 10,
+      "frames": 8
+    },
+    "verifier": "demostage"
+  },
+  "license": {
+    "tools": [
+      {
+        "name": "demostage",
+        "spdx": "MIT",
+        "commercial_use": true
+      }
+    ],
+    "models": [],
+    "commercial_use": true,
+    "accepted": []
+  }
+}
