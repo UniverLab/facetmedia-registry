@@ -81,6 +81,33 @@ demo record <score> -o <out>/_demostage/demo.rec
 demo export gif,svg <out>/_demostage/demo.rec
 ```
 
+## Authoring the score
+
+- **Settings first, steps after.** `[demo]`, `[typing]` and `[layout]` are read
+  once, before the first step runs; a settings table written below the first
+  `[[timeline]]` block is ignored and the demo renders with defaults that look
+  like a different piece. Public tape formats document the same silent-ignore
+  trap, so keep every settings table above the first step.
+- **Wait for output, not for time.** `wait_for_stdout` with a `match` returns
+  the moment the program prints it and takes exactly as long as the machine
+  needs; `wait` with `duration_ms` is for a dramatic pause only, and it drifts
+  with machine speed. Never pad a step with a sleep to cover a command that has
+  not finished printing.
+- **Record first, then transcribe.** The reliable authoring loop is to run the
+  session once yourself, keep the transcript, and turn it into `focus`, `type`,
+  `keypress` and `wait_for_stdout` steps in that order. Timings invented blind
+  are the usual reason a demo scrolls past its own output.
+- **Frame it on purpose.** `[layout]` covers size, fps and font, and the gif
+  loops from its first frame, so open on the state worth seeing: a title or a
+  prompt, never the cursor blinking on an empty screen.
+
+The score DSL is what facet has: there is no key to hide a command's output
+while it still runs, no per-step typing-speed override (a step's `human_salt`
+only adds jitter on top of `[typing]`'s global speed), no loop-start frame for
+the gif poster, and no theme or window-chrome knob. Public tape formats offer
+all four and facet deliberately does not, because a demo here is a reproducible
+score, not a styled product page; do not write those keys into a score.
+
 ## Judging the result
 
 `verify` reads both files back: the gif must start with `GIF87a`/`GIF89a` and
@@ -107,3 +134,6 @@ preview. Read the summary first; open the gif when a step looks wrong.
   that still exists then. MP4 is not requested: the gif and svg are enough.
 - Never reach for `capture`: it needs an interactive terminal, and the score
   is written by hand in the piece anyway.
+
+Sources: `references/sources.md` lists the public source the authoring section
+relies on, with its maintainer, licence and what was taken from it.

@@ -19,9 +19,10 @@ package wraps the pinned CLI: it runs
 step.
 
 The skill has three pillars: the timeline rules, the SVG and DOM id maps, and
-the render limits. Each pillar has one row per capability. The full contracts
-live in `references/composition.md`, `references/timeline.md`,
-`references/id-maps.md` and `references/limits.md`.
+the render limits, plus the authoring habits that keep a timeline correct under
+seek. Each pillar has one row per capability. The full contracts live in
+`references/composition.md`, `references/timeline.md`, `references/id-maps.md`
+and `references/limits.md`.
 
 ## When to use
 
@@ -217,6 +218,123 @@ required exactly once and every cue must fit `data-duration`.
 `verify` fails a `narrated` or `character` MP4 with no audio stream. See
 `references/limits.md`.
 
+## Authoring
+
+`check` and the render seek the timeline frame by frame, at a second they pick,
+in an order the author does not control. These habits keep the composition
+correct on a direct seek, not only on continuous playback.
+
+### Keep the clip anatomy legal
+
+- A nested clip's `data-start` counts from the composition's start, not from
+  its parent's.
+- Every clip ends at or before the root `data-duration`.
+- One `data-composition-id` per file. `data-end` and `data-layer` are legacy
+  spellings, not extra knobs.
+- Asset paths stay inside the project; nothing climbs above the root.
+- Caption rows sit on one track with one index.
+
+### Load the face before measuring it
+
+Request the exact face — family, weight, size and the string about to be
+measured — through `document.fonts.load`, build the tweens inside the resolved
+promise, and assign `window.__timelines[id]` last. `document.fonts.ready` waits
+only for faces something already asked for, so it can resolve while the text
+still measures in the fallback font, and a timeline registered while it is
+empty still satisfies `check`: the render then shows fallback-font geometry,
+with underlines and boxes a few pixels off. Registering the timeline last is
+what stops an empty timeline from passing as ready.
+
+### Tween with both ends named
+
+`tl.fromTo(target, from, to, position)` re-applies both ends on every seek, so a
+backward or random seek lands where the tween intends. A bare `from` or `to`
+remembered its start state once, on a timeline that only ran forward, and can
+skip on the way back. Give every tween that matters an explicit position
+argument instead of appending it: the timeline's layout must not depend on the
+order the author's calls happen to run in.
+
+### Move with transforms and opacity
+
+Animate `x`, `y`, `scale`, `rotation` and `opacity`. Keep `top`, `left`, `width`
+and `height` out of tweens: every seek re-runs them, layout on each seek is
+slow, and the box can round to a different subpixel position from frame to
+frame.
+
+### Never drive media from the timeline
+
+No `play()`, `currentTime`, `pause()` or seek call on `<audio>` or `<video>`.
+The render jumps between frames, so media does not follow a timeline and a
+played media element is not a tween. Declare timing with the element's own
+attributes (`data-start`, `data-duration`, `data-volume`) and, when the frame
+needs the media to move or resize, animate a wrapper `<div>` around it, never
+the media element itself.
+
+### Stay a pure function of time
+
+No wall clock, no unseeded `Math.random`, no fetch after frame 0, `data-fps` and
+the composition size fixed before the first frame, and a finite
+`data-duration`. A seek may arrive at any second, in any order, and the same
+second must always produce the same state; a value read from
+`performance.now()` breaks both rules at once.
+
+### Snapshot three points
+
+Judge a composition at its first frame, at a state in the middle of a tween, and
+at its end state: timeline code that plays smoothly can still be wrong when
+seeked to directly. `verify` probes the encoded file, so the three stills are
+the composition-side half of the check, never a replacement for it.
+
+### Land the motion
+
+- Landed elements hold still; only content still being spoken or pointed at
+  keeps moving.
+- Stagger entrances so each starts before the last settles; a row of cards that
+  all wait for each other reads as one slow move.
+- One idea per move. Position and scale and opacity changing together is three
+  moves fighting for one beat.
+- Overshoot belongs to physical objects. Never let text, UI or counters
+  overshoot their target: a number that bounces past its value reads as an
+  error.
+- Parallax reads as depth when nearer layers move faster than farther ones.
+- Pace to the length of the idea: a three-second idea gets short beats, not the
+  rhythm of a twelve-second one.
+
+### Cause every transition
+
+A transition is caused by something already on screen — a button that zooms
+through becomes the next scene, a card that grows becomes the next frame. Three
+to five kinds per piece, about 0.4 s each, and never a dissolve between two
+scenes that have nothing to do with each other.
+
+### Hold in frames, seed the randomness
+
+Count holds in frames, never in odd fractions of a second: a hold of 0.067 s at
+15 fps drifts across the frame grid and steps unevenly. Seed every random
+offset so the same piece renders the same way twice.
+
+### Write the brief so the motion survives
+
+When the agent writes the `prompt` rather than the composition, keep one shared
+preamble of standing motion rules and reuse it for every piece, then name
+exactly one spectacle beat per piece: the single exaggerated moment the brief is
+built around. A burst of motion nobody named is the first thing dropped.
+
+### Land reveals on the voice
+
+In `narrated` and `character` pieces the voice is the clock: place reveals on
+the word-level timestamps whisper produces, let a reveal land as its word is
+spoken, and let the narration lead, because the visuals never hold the audio
+back for a cut. Each `voice` item carries its own `start`, so time the reveals
+against the same offsets. State the loudness relation in the brief ("under the
+voice") instead of a bare "add music": the `music` bed arrives already mixed and
+ducked by the ffmpeg package, and the runner normalises the finished video to
+`target-lufs`.
+
+facet pins GSAP and the paused-seek timeline while upstream's frame-adapter
+contract also admits other seekable runtimes: the package's scope is GSAP, so
+every composition here is a `gsap.timeline({ paused: true })`.
+
 ## Judging the result
 
 `verify` probes the MP4 with `ffprobe`: a video stream with positive width,
@@ -251,3 +369,6 @@ The approved examples ship in `examples/`:
   piece input.
 - **`check` runs before every render.** A failing check aborts the run with its
   own output; fix the timeline or the composition, never the runner.
+
+Sources: `references/sources.md` lists every public source the authoring habits
+above rely on, with its maintainer, licence and what was taken from it.

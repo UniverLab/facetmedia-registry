@@ -40,6 +40,10 @@ HOST_HINT = "curl -fsSL https://get.univerlab.org/demostage | sh"
 HEADINGS = ("## When to use", "## Pieces", "## Judging the result", "## Pitfalls")
 NAME = "cli-tour"
 DESCRIPTION_MIN = 20
+#: Where the skill's cited sources live, and the shape of one table row.
+SOURCES = PACKAGE / "skill" / "references" / "sources.md"
+SOURCE_ROWS = 1
+SOURCE_COLUMNS = 4
 WIDTH = 1280
 HEIGHT = 720
 FPS = 15
@@ -562,6 +566,35 @@ def test_the_skill_teaches_the_headless_loop_and_the_dsl() -> None:
     assert "seed" in body and "font" in body
 
 
+def test_the_skill_orders_settings_before_the_steps() -> None:
+    """A settings table below the first step is ignored; the skill says so."""
+    _meta, body = _front_matter()
+    ordering = body.index("above the first step")
+    assert body.index("[layout]") < ordering < body.index("## Judging the result")
+    assert "wait_for_stdout" in body
+    assert "transcribe" in body
+    for unsupported in ("hide", "loop-start", "theme"):
+        assert unsupported in body.lower(), unsupported
+
+
+def test_the_skill_ships_sources_for_the_guidance_it_teaches() -> None:
+    """The one public source behind the authoring section is on disk."""
+    _meta, body = _front_matter()
+    assert "references/sources.md" in body
+    assert SOURCES.is_file()
+    rows = [
+        line
+        for line in SOURCES.read_text(encoding="utf-8").splitlines()
+        if line.startswith("| https://")
+    ]
+    assert len(rows) == SOURCE_ROWS
+    cells = [cell.strip() for cell in rows[0].strip("|").split("|")]
+    assert len(cells) == SOURCE_COLUMNS
+    assert "charmbracelet/vhs" in cells[0]
+    assert cells[1] == "Charm (charmbracelet)"
+    assert cells[2] == "MIT"
+
+
 def test_the_readme_states_the_headless_path_and_the_exclusion() -> None:
     assert "demo record" in README
     assert "demo export" in README
@@ -575,7 +608,7 @@ def test_the_readme_states_the_headless_path_and_the_exclusion() -> None:
 
 def test_the_manifest_is_a_headless_python_env_client() -> None:
     assert MANIFEST["name"] == "demostage"
-    assert MANIFEST["version"] == "0.1.2"
+    assert MANIFEST["version"] == "0.1.3"
     assert MANIFEST["facet"] == "video"
     assert MANIFEST["engine"] == {"type": "python-env", "python": "3.12"}
     assert MANIFEST["transport"] == {"type": "cli", "entry": "runner.py"}

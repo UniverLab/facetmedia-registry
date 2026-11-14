@@ -22,6 +22,10 @@ MANIFEST: dict[str, Any] = tomllib.loads((PACKAGE / "package.toml").read_text(en
 INDEX = tomllib.loads((ROOT / "index.toml").read_text(encoding="utf-8"))
 HEADINGS = ("## When to use", "## Pieces", "## Judging the result", "## Pitfalls")
 DESCRIPTION_MIN = 20
+#: Where the skill's cited sources live, and the shape of one table row.
+SOURCES = PACKAGE / "skill" / "references" / "sources.md"
+SOURCE_ROWS = 2
+SOURCE_COLUMNS = 4
 DESCRIPTION_MAX = 200
 #: The mouth map, verbatim: X rest, A closed, B teeth, C open, D wide,
 #: E round, F pursed, G teeth on lip, H tongue.
@@ -97,9 +101,32 @@ def test_the_skill_points_at_the_reference_character() -> None:
     assert "/home/jheisonmblivecom" not in SKILL
 
 
-def test_the_skill_ships_no_references_directory() -> None:
-    """The plan keeps it compact: the map lives in the skill itself."""
-    assert not (PACKAGE / "skill" / "references").exists()
+def test_the_skill_ships_sources_for_the_guidance_it_teaches() -> None:
+    """Every tip the skill teaches names a source a reader can check."""
+    _meta, body = _front_matter()
+    assert "references/sources.md" in body
+    assert SOURCES.is_file()
+    rows = [
+        line
+        for line in SOURCES.read_text(encoding="utf-8").splitlines()
+        if line.startswith("| https://")
+    ]
+    assert len(rows) == SOURCE_ROWS
+    for row in rows:
+        assert "| Daniel Wolf |" in row
+        assert "| MIT |" in row
+        cells = [cell.strip() for cell in row.strip("|").split("|")]
+        assert len(cells) == SOURCE_COLUMNS
+        assert cells[3], row
+
+
+def test_the_skill_states_the_cue_list_invariants_and_the_wave_input() -> None:
+    """The reading facts and the input formats that fail a run are taught."""
+    _meta, body = _front_matter()
+    for token in ("0.00", "contiguous", "WAVE", "Ogg"):
+        assert token in body, token
+    assert "biased" in body.lower() or "biases" in body
+    assert "-r phonetic" in body
 
 
 def test_the_manifest_is_a_python_env_client_not_a_binary_package() -> None:

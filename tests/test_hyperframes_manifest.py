@@ -91,6 +91,9 @@ SKILL_TOKENS = (
     "check",
 )
 DESCRIPTION_MIN = 20
+#: The cited sources' table: at least this many rows, each with this many cells.
+MIN_SOURCE_ROWS = 5
+SOURCE_COLUMNS = 4
 DESCRIPTION_MAX = 200
 #: The loudness target narrated and character normalise to, in LUFS, and its range.
 TARGET_LUFS_DEFAULT = -14.0
@@ -153,7 +156,7 @@ def _expected_tarball(name: str, version: str) -> str:
 
 def test_the_header_names_the_video_facet_and_the_pinned_contract() -> None:
     assert MANIFEST["name"] == "hyperframes"
-    assert MANIFEST["version"] == "0.1.3"
+    assert MANIFEST["version"] == "0.1.4"
     assert MANIFEST["requires_facet"] == ">=0.1.0b1,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["provider"] == "HeyGen (hyperframes)"
@@ -319,6 +322,37 @@ def test_the_three_pillars_sit_between_pieces_and_judging() -> None:
     assert positions == sorted(positions)
 
 
+def test_the_authoring_habits_sit_between_limits_and_the_verdict() -> None:
+    """Seek-safe authoring is taught before judging, after the hard limits."""
+    body = _skill_body()
+    authoring = body.index("## Authoring")
+    assert body.index("## Render limits") < authoring < body.index("## Judging the result")
+    section = _section(body, "## Authoring")
+    for token in (
+        "document.fonts.load",
+        "window.__timelines[id]",
+        "fromTo",
+        "opacity",
+        "wrapper",
+        "end state",
+        "spectacle beat",
+        "0.4 s",
+    ):
+        assert token in section, token
+
+
+def test_the_sources_reference_names_a_licence_for_every_row() -> None:
+    """A cited source without a licence cannot be checked by a reader."""
+    text = (REFERENCES / "sources.md").read_text(encoding="utf-8")
+    rows = [line for line in text.splitlines() if line.startswith("| https://")]
+    assert len(rows) >= MIN_SOURCE_ROWS
+    for row in rows:
+        cells = [cell.strip() for cell in row.strip("|").split("|")]
+        assert len(cells) == SOURCE_COLUMNS, row
+        assert cells[1] and cells[2] and cells[3], row
+        assert "none stated" in cells[2] or "Apache-2.0" in cells[2], row
+
+
 def test_each_pillar_has_one_row_per_capability() -> None:
     """Every capability appears once under every pillar, not only in the intro."""
     body = _skill_body()
@@ -339,7 +373,7 @@ def test_every_reference_the_skill_cites_exists() -> None:
     """A cited reference that is not on disk sends the reader nowhere."""
     body = _skill_body()
     cited = set(REFERENCE_RE.findall(body))
-    assert cited == {"composition", "timeline", "id-maps", "limits"}
+    assert cited == {"composition", "timeline", "id-maps", "limits", "sources"}
     for name in cited:
         path = REFERENCES / f"{name}.md"
         assert path.is_file(), name
