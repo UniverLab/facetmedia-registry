@@ -70,3 +70,45 @@ name = "whisper-subs"
 [[packages]]
 name = "recipes"
 
+
+[facets.voice]
+label = "Voice"
+
+[facets.voice.i18n.es]
+label = "Voz"
+
+[facets.audio]
+label = "Audio"
+
+[facets.audio.i18n.es]
+label = "Audio"
+
+[facets.image]
+label = "Image"
+
+[facets.image.i18n.es]
+label = "Imagen"
+
+[facets.video]
+label = "Video"
+
+[facets.video.i18n.es]
+label = "Video"
+
+[facets.cad]
+label = "CAD"
+
+[facets.cad.i18n.es]
+label = "CAD"
+
+[facets.text]
+label = "Text"
+
+[facets.text.i18n.es]
+label = "Texto"
+
+[facets.presentation]
+label = "Presentation"
+
+[facets.presentation.i18n.es]
+label = "Presentación"

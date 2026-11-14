@@ -1,5 +1,5 @@
 name = "ascii"
-version = "0.2.0"
+version = "0.2.1"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "UniverLab"
@@ -68,6 +68,9 @@ path = "figlet-js/fonts.tgz"
 summary = "Image to ASCII art (density, stroke, braille or shape matching), checked by re-rendering."
 kind = "text"
 
+[capabilities.image.i18n.es]
+summary = "Imagen a arte ASCII (densidad, trazo, braille o formas coincidentes), verificada por re-renderizado."
+
 [capabilities.image.inputs.image]
 type = "path"
 required = true
@@ -113,6 +116,9 @@ viewer = "generic"
 summary = "A text banner in the lab's figlet font (DOS Rebel by default)."
 kind = "text"
 
+[capabilities.banner.i18n.es]
+summary = "Un banner de texto en la fuente figlet del laboratorio (DOS Rebel por defecto)."
+
 [capabilities.banner.inputs.text]
 type = "string"
 required = true
@@ -143,6 +149,9 @@ viewer = "generic"
 [capabilities.fonts]
 summary = "Every figlet font pyfiglet and figlet.js provide, listed with its source and shown in a contact sheet."
 kind = "text"
+
+[capabilities.fonts.i18n.es]
+summary = "Todas las fuentes figlet que ofrecen pyfiglet y figlet.js, listadas con su origen y mostradas en una hoja de contactos."
 
 [capabilities.fonts.inputs.text]
 type = "string"

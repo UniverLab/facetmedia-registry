@@ -1,5 +1,5 @@
 name = "texforge"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "facet"
@@ -30,6 +30,9 @@ spdx = "Apache-2.0"
 [capabilities.document]
 summary = "Long LaTeX document: a verified PDF with per-page PNGs, built by the person-installed texforge binary"
 kind = "document"
+
+[capabilities.document.i18n.es]
+summary = "Documento LaTeX largo: un PDF verificado con PNG por página, construido con el binario texforge instalado por la persona"
 
 [capabilities.document.inputs.main]
 type = "path"

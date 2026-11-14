@@ -304,7 +304,7 @@ def test_run_stages_the_sources_and_writes_the_real_project(tmp_path: Path) -> N
     assert (asset["kind"], asset["mime"]) == ("document", "application/pdf")
     assert asset["params"] == {"main": PRINCIPAL, "name": NAME, "author": AUTHOR}
     assert (out / f"{NAME}.pdf").is_file()
-    assert result["tool"] == {"name": "texforge", "version": "0.1.1"}
+    assert result["tool"] == {"name": "texforge", "version": "0.1.2"}
     assert not any(path.name.startswith("_stage_") for path in out.iterdir())
 
     entries = _read_lines(log)

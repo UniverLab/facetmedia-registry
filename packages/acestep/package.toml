@@ -1,5 +1,5 @@
 name = "acestep"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "ace-step (ACE-Step 1.5)"
@@ -60,6 +60,9 @@ requires_acceptance = false
 [capabilities.bed]
 summary = "Instrumental bed from an English caption, about 50 s per 30 s track, at most 30 s."
 kind = "audio"
+
+[capabilities.bed.i18n.es]
+summary = "Base instrumental a partir de una descripción en inglés, unos 50 s por pista de 30 s, máximo 30 s."
 
 [capabilities.bed.inputs.caption]
 type = "string"

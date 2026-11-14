@@ -1,5 +1,5 @@
 name = "rhubarb"
-version = "0.1.2"
+version = "0.1.3"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "DanielSWolf (Rhubarb Lip Sync)"
@@ -39,6 +39,9 @@ requires_acceptance = false
 [capabilities.mouths]
 summary = "Mouth cues X..H for a drawn character, timed to a voice clip, from the voice and the text it says"
 kind = "text"
+
+[capabilities.mouths.i18n.es]
+summary = "Pistas de boca X..H para un personaje dibujado, sincronizadas con un clip de voz, desde la voz y el texto que dice"
 
 [capabilities.mouths.inputs.voice]
 type = "path"

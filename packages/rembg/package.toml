@@ -1,5 +1,5 @@
 name = "rembg"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "Daniel Gatis (rembg) · xuebinqin (U-2-Net)"
@@ -57,6 +57,9 @@ terms_url = "https://github.com/xuebinqin/U-2-Net"
 summary = "Background removal from a photo with rembg's U2NetP on CPU, writing the alpha PNG and a checkerboard preview for edge review"
 kind = "image"
 
+[capabilities.cutout.i18n.es]
+summary = "Eliminación de fondo de una foto con U2NetP de rembg en CPU, con PNG alfa y vista previa de cuadros para revisar bordes"
+
 [capabilities.cutout.inputs.photo]
 type = "path"
 required = true
@@ -68,6 +71,9 @@ viewer = "image"
 [capabilities.paper]
 summary = "Clean paper for a plate: the object keeps its original pixels while everything outside its rembg U2NetP silhouette becomes even paper with grain"
 kind = "image"
+
+[capabilities.paper.i18n.es]
+summary = "Papel limpio para una lámina: el objeto conserva sus píxeles originales mientras todo fuera de su silueta U2NetP de rembg se vuelve papel uniforme con grano"
 
 [capabilities.paper.inputs.plate]
 type = "path"

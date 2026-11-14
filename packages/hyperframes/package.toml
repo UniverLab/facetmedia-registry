@@ -1,5 +1,5 @@
 name = "hyperframes"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "HeyGen (hyperframes)"
@@ -487,6 +487,9 @@ spdx = "GPL-3.0-or-later"
 summary = "Render a checked HTML+GSAP composition to an MP4 with the pinned HyperFrames CLI"
 kind = "video"
 
+[capabilities.render.i18n.es]
+summary = "Renderiza una composición HTML+GSAP verificada a MP4 con el CLI fijado de HyperFrames"
+
 [capabilities.render.inputs.composition]
 type = "path"
 required = true
@@ -524,6 +527,9 @@ viewer = "video"
 [capabilities.loop]
 summary = "Render a checked HTML+GSAP composition to a looping GIF or a MOV with alpha, from the same source as the MP4"
 kind = "video"
+
+[capabilities.loop.i18n.es]
+summary = "Renderiza una composición HTML+GSAP verificada a un GIF en bucle o un MOV con alfa, desde la misma fuente que el MP4"
 
 [capabilities.loop.inputs.composition]
 type = "path"
@@ -568,6 +574,9 @@ viewer = "video"
 [capabilities.diagram]
 summary = "Render a Mermaid SVG inside a checked HTML+GSAP composition, drawn by a validated GSAP timeline"
 kind = "video"
+
+[capabilities.diagram.i18n.es]
+summary = "Renderiza un SVG de Mermaid dentro de una composición HTML+GSAP verificada, dibujado por una línea de tiempo GSAP validada"
 
 [capabilities.diagram.inputs.composition]
 type = "path"
@@ -627,6 +636,9 @@ viewer = "video"
 [capabilities.turntable]
 summary = "Render a checked Three.js composition that turns an embedded CAD model on a camera orbit, without Cycles frame runs"
 kind = "video"
+
+[capabilities.turntable.i18n.es]
+summary = "Renderiza una composición Three.js verificada que gira un modelo CAD incrustado en una órbita de cámara, sin pasadas de fotogramas Cycles"
 
 [capabilities.turntable.inputs.composition]
 type = "path"
@@ -701,6 +713,9 @@ viewer = "video"
 summary = "Speak a drawn SVG character with Rhubarb mouth cues timed to the voice"
 kind = "video"
 
+[capabilities.character.i18n.es]
+summary = "Da voz a un personaje SVG dibujado con pistas de boca Rhubarb sincronizadas con la voz"
+
 [capabilities.character.inputs.composition]
 type = "path"
 required = true
@@ -755,6 +770,9 @@ viewer = "video"
 [capabilities.narrated]
 summary = "Assemble a narrated piece: voice clips, a music bed and whisper subtitles on one checked HyperFrames timeline"
 kind = "video"
+
+[capabilities.narrated.i18n.es]
+summary = "Ensambla una pieza narrada: clips de voz, una base musical y subtítulos whisper en una línea de tiempo HyperFrames verificada"
 
 [capabilities.narrated.inputs.composition]
 type = "path"

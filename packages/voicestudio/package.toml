@@ -1,5 +1,5 @@
 name = "voicestudio"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "debpalash (VoiceStudio)"
@@ -70,6 +70,9 @@ terms_url = "https://huggingface.co/k2-fsa/OmniVoice"
 summary = "Narration through a facet-managed VoiceStudio backend (engine voxcpm2 or omnivoice), checked by transcription"
 kind = "audio"
 
+[capabilities.speak.i18n.es]
+summary = "Narración mediante un backend VoiceStudio gestionado por facet (motor voxcpm2 u omnivoice), verificada por transcripción"
+
 [capabilities.speak.inputs.voice]
 type = "enum"
 values = ["narradora"]
@@ -119,6 +122,9 @@ viewer = "audio"
 [capabilities.clone]
 summary = "Cloned voice on cosyvoice (Apache-2.0, ~15 s/clip)"
 kind = "audio"
+
+[capabilities.clone.i18n.es]
+summary = "Voz clonada en cosyvoice (Apache-2.0, ~15 s/clip)"
 
 [capabilities.clone.inputs.voice]
 type = "string"
@@ -173,6 +179,9 @@ kind = "text"
 # server-side: no synthesis engine, so no engine licence to accept.
 models = []
 verify_uses_server = true
+
+[capabilities.profile.i18n.es]
+summary = "Un perfil de clonación local creado desde las muestras de referencia propias de la persona; el recibo lleva su id"
 
 [capabilities.profile.inputs.name]
 type = "string"

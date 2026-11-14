@@ -1,5 +1,5 @@
 name = "moss"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "OpenMOSS Team (MOSS-SoundEffect v2)"
@@ -72,6 +72,9 @@ terms_url = "https://huggingface.co/OpenMOSS-Team/MOSS-SoundEffect-v2.0"
 [capabilities.sfx]
 summary = "Sound effect from an English description, about 40 s per effect at 100 steps whatever its length, at most 30 s."
 kind = "audio"
+
+[capabilities.sfx.i18n.es]
+summary = "Efecto de sonido desde una descripción en inglés, unos 40 s por efecto a 100 pasos sin importar su duración, máximo 30 s."
 
 [capabilities.sfx.inputs.description]
 type = "string"

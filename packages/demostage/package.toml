@@ -1,5 +1,5 @@
 name = "demostage"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "UniverLab (demostage)"
@@ -30,6 +30,9 @@ spdx = "MIT"
 [capabilities.demo]
 summary = "Terminal demo gif and animated SVG from a hand-written demo.toml score, recorded in the demo binary's own PTY with no caller terminal"
 kind = "video"
+
+[capabilities.demo.i18n.es]
+summary = "Gif de demostración de terminal y SVG animado desde una partitura demo.toml escrita a mano, grabados en el PTY propio del binario demo sin terminal del llamante"
 
 [capabilities.demo.inputs.score]
 type = "path"

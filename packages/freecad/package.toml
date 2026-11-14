@@ -1,5 +1,5 @@
 name = "freecad"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "FreeCAD project"
@@ -35,6 +35,9 @@ spdx = "GPL-2.0-or-later"
 [capabilities.drawing]
 summary = "Workshop drawing of a 3D part via scripted FreeCAD TechDraw: a paginated PDF plus its SVG sheets"
 kind = "document"
+
+[capabilities.drawing.i18n.es]
+summary = "Dibujo de taller de una pieza 3D con FreeCAD TechDraw programado: un PDF paginado más sus hojas SVG"
 
 [capabilities.drawing.inputs.script]
 type = "path"

@@ -1,5 +1,5 @@
 name = "svganim"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "UniverLab (svganim)"
@@ -79,6 +79,9 @@ spdx = "Apache-2.0"
 [capabilities.bake]
 summary = "Bake a self-contained animated SVG from a Node script and its data, with every label drawn as a path"
 kind = "image"
+
+[capabilities.bake.i18n.es]
+summary = "Genera un SVG animado autocontenido desde un script Node y sus datos, con cada etiqueta dibujada como trazado"
 
 [capabilities.bake.inputs.script]
 type = "path"

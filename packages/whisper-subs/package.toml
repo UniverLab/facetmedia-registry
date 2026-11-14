@@ -1,5 +1,5 @@
 name = "whisper-subs"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "UniverLab (whisper-subs)"
@@ -29,6 +29,9 @@ spdx = "MIT"
 [capabilities.subtitles]
 summary = "Convert a whisper sidecar's timed segments into a validated SRT or VTT subtitle file"
 kind = "text"
+
+[capabilities.subtitles.i18n.es]
+summary = "Convierte los segmentos temporizados de un sidecar whisper en un archivo de subtítulos SRT o VTT validado"
 
 [capabilities.subtitles.inputs.source]
 type = "path"

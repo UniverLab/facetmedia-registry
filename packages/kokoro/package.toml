@@ -1,5 +1,5 @@
 name = "kokoro"
-version = "0.1.2"
+version = "0.1.3"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "hexgrad (model) · thewh1teagle (kokoro-onnx)"
@@ -102,6 +102,9 @@ terms_url = "https://huggingface.co/Systran/faster-whisper-small"
 [capabilities.speak]
 summary = "Narration from text on CPU (Spanish and English), checked by transcription"
 kind = "audio"
+
+[capabilities.speak.i18n.es]
+summary = "Narración desde texto en CPU (español e inglés), verificada por transcripción"
 
 [capabilities.speak.inputs.voice]
 type = "enum"

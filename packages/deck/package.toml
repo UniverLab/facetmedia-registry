@@ -1,5 +1,5 @@
 name = "deck"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "facet"
@@ -56,6 +56,9 @@ spdx = "Apache-2.0"
 summary = "Author slides as HTML with a CSS @page size and one page break per slide, exported to a paginated PDF plus one PNG per page"
 kind = "document"
 
+[capabilities.slides.i18n.es]
+summary = "Crea diapositivas como HTML con tamaño CSS @page y un salto de página por diapositiva, exportadas a un PDF paginado más un PNG por página"
+
 [capabilities.slides.inputs.source]
 type = "path"
 required = true
@@ -79,6 +82,9 @@ viewer = "generic"
 summary = "Lay out a one-page infographic or poster from HTML + CSS + SVG, exported to a one-page PDF plus its page PNG through the pinned Chromium's screen-media measured-height render"
 kind = "document"
 
+[capabilities.page.i18n.es]
+summary = "Maqueta una infografía o póster de una página desde HTML + CSS + SVG, exportada a un PDF de una página más su PNG con el renderizado de altura medida del Chromium fijado"
+
 [capabilities.page.inputs.source]
 type = "path"
 required = true
@@ -101,6 +107,9 @@ viewer = "generic"
 [capabilities.presenter]
 summary = "Attach one speaker note per slide and build a self-contained presenter file with speaker view and notes from the same deck"
 kind = "document"
+
+[capabilities.presenter.i18n.es]
+summary = "Agrega una nota de orador por diapositiva y genera un archivo de presentación autocontenido con vista de orador y notas desde el mismo deck"
 
 [capabilities.presenter.inputs.source]
 type = "path"

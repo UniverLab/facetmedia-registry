@@ -1,5 +1,5 @@
 name = "blender"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "Blender project (Blender Foundation)"
@@ -35,6 +35,9 @@ spdx = "GPL-2.0-or-later"
 [capabilities.scene]
 summary = "A still from the agent's own Blender script, rendered with facet-owned output settings (1920x1080, ~2 s)"
 kind = "image"
+
+[capabilities.scene.i18n.es]
+summary = "Una imagen fija del script Blender del agente, renderizada con ajustes propios de facet (1920x1080, ~2 s)"
 
 [capabilities.scene.inputs.script]
 type = "path"
@@ -92,6 +95,9 @@ viewer = "image"
 [capabilities.animation]
 summary = "An animation from the agent's own Blender script, encoded by Blender's own FFmpeg output (120 frames at 1920x1080, 24 fps)"
 kind = "video"
+
+[capabilities.animation.i18n.es]
+summary = "Una animación del script Blender del agente, codificada con la salida FFmpeg propia de Blender (120 fotogramas a 1920x1080, 24 fps)"
 
 [capabilities.animation.inputs.script]
 type = "path"
@@ -163,6 +169,9 @@ viewer = "video"
 [capabilities.assets]
 summary = "Versioned Poly Haven skies, textures and models fetched once into the shared models dir, with a receipt that verify re-checks."
 kind = "text"
+
+[capabilities.assets.i18n.es]
+summary = "Cielos, texturas y modelos versionados de Poly Haven descargados una vez al directorio compartido de modelos, con un recibo que verify vuelve a comprobar."
 
 [capabilities.assets.inputs.name]
 type = "string"

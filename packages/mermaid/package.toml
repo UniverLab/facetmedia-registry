@@ -1,5 +1,5 @@
 name = "mermaid"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "mermaid-js (mermaid-cli)"
@@ -1197,6 +1197,9 @@ spdx = "MIT"
 [capabilities.diagram]
 summary = "Render a .mmd Mermaid diagram to SVG and PNG with the pinned mermaid-cli and the pinned Chromium that `facet pull` installs"
 kind = "image"
+
+[capabilities.diagram.i18n.es]
+summary = "Renderiza un diagrama Mermaid .mmd a SVG y PNG con el mermaid-cli fijado y el Chromium fijado que instala `facet pull`"
 
 [capabilities.diagram.inputs.diagram]
 type = "path"

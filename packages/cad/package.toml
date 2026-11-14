@@ -1,5 +1,5 @@
 name = "cad"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "CadQuery project · Manfred Moitzi (ezdxf)"
@@ -56,6 +56,9 @@ spdx = "PSF-2.0"
 summary = "3D part from a CadQuery script: STEP, STL, a line view and an optional glb"
 kind = "cad"
 
+[capabilities.solid.i18n.es]
+summary = "Pieza 3D a partir de un script CadQuery: STEP, STL, una vista de líneas y un glb opcional"
+
 [capabilities.solid.inputs.script]
 type = "path"
 required = true
@@ -109,6 +112,9 @@ viewer = "cad"
 [capabilities.drawing]
 summary = "2D plan from an ezdxf script: DXF with an audit, SVG and PNG views"
 kind = "cad"
+
+[capabilities.drawing.i18n.es]
+summary = "Plano 2D a partir de un script ezdxf: DXF con auditoría, vistas SVG y PNG"
 
 [capabilities.drawing.inputs.script]
 type = "path"

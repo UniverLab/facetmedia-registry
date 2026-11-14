@@ -51,7 +51,7 @@ def _expected_tarball(name: str, version: str) -> str:
 
 def test_the_header_names_the_presentation_facet_and_the_pinned_contract() -> None:
     assert MANIFEST["name"] == "mermaid"
-    assert MANIFEST["version"] == "0.1.1"
+    assert MANIFEST["version"] == "0.1.2"
     assert MANIFEST["requires_facet"] == ">=0.1.0b1,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["facet"] == "presentation"

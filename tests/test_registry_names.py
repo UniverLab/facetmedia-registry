@@ -90,11 +90,38 @@ def test_the_capability_ids_are_the_english_ones(package: str) -> None:
     assert tuple(manifest["capabilities"]) == CAPABILITIES[package]
 
 
+def _declared_identifiers(package: str) -> set[str]:
+    """Capability ids, input keys and enum values — not prose.
+
+    Spanish summaries legitimately say ``texto`` or ``imagen``; only the
+    identifiers the registry exposes must stay English.  Every parsed table
+    key counts, whatever syntax declared it — header, dotted, quoted or an
+    inline table — because prose never becomes a key.
+    """
+    text = _manifest_text(package)
+    manifest = tomllib.loads(text)
+    declared = set(manifest.get("capabilities", {}))
+    declared.update(re.findall(r"(?:inputs|items)\.([a-z][a-z-]*)", text))
+    stack: list[object] = [manifest.get("capabilities", {})]
+    while stack:
+        node = stack.pop()
+        if isinstance(node, dict):
+            for key, value in node.items():
+                declared.add(key)
+                if key == "values" and isinstance(value, list):
+                    declared.update(v for v in value if isinstance(v, str))
+                else:
+                    stack.append(value)
+        elif isinstance(node, list):
+            stack.extend(node)
+    return declared
+
+
 @pytest.mark.parametrize("package", sorted(OLD_IDENTIFIERS))
 def test_the_manifest_carries_no_old_identifier(package: str) -> None:
-    text = _manifest_text(package)
+    declared = _declared_identifiers(package)
     for old in OLD_IDENTIFIERS[package]:
-        assert not re.search(rf"\b{old}\b", text), f"{package}/package.toml still names {old!r}"
+        assert old not in declared, f"{package}/package.toml still names {old!r}"
 
 
 @pytest.mark.parametrize("package", sorted(NEW_INPUTS))

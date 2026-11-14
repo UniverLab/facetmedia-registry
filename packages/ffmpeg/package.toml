@@ -1,5 +1,5 @@
 name = "ffmpeg"
-version = "0.1.2"
+version = "0.1.3"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "FFmpeg project · imageio (imageio-ffmpeg)"
@@ -47,6 +47,9 @@ spdx = "BSD-3-Clause"
 summary = "Bring clips to a loudness target (EBU R128, two-pass) without clipping"
 kind = "audio"
 
+[capabilities.normalize.i18n.es]
+summary = "Lleva clips a un nivel de sonoridad objetivo (EBU R128, dos pasadas) sin recorte"
+
 [capabilities.normalize.inputs.clip]
 type = "array"
 min_items = 1
@@ -93,6 +96,9 @@ viewer = "audio"
 [capabilities.mix]
 summary = "Lay voice layers over a music or ambience bed, with the bed ducked under the voice"
 kind = "audio"
+
+[capabilities.mix.i18n.es]
+summary = "Coloca capas de voz sobre una base de música o ambiente, con la base atenuada bajo la voz"
 
 [capabilities.mix.inputs.name]
 type = "string"
@@ -157,6 +163,9 @@ viewer = "audio"
 [capabilities.convert]
 summary = "Convert, resample or cut a clip"
 kind = "audio"
+
+[capabilities.convert.i18n.es]
+summary = "Convierte, remuestrea o recorta un clip"
 
 [capabilities.convert.inputs.audio]
 type = "path"

@@ -42,7 +42,7 @@ html, body { margin: 0; height: 100%; }
 
 // The presenter build: the same deck, speaker view and notes attached per slide.
 const PACKAGE = "deck";
-const PACKAGE_VERSION = "0.1.1";
+const PACKAGE_VERSION = "0.1.2";
 const PRESENTER = `${PACKAGE}.presenter`;
 const PRESENTER_DIR = path.join(__dirname, "presenter");
 const MIME = {

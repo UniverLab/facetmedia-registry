@@ -1,5 +1,5 @@
 name = "comfy"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "ComfyUI project"
@@ -146,6 +146,9 @@ path = "wan2v2-fastwan-lora/Wan2_2_5B_FastWanFullAttn_lora_rank_128_bf16.safeten
 summary = "Still illustration with the z-image-turbo (~8 s) or flux2-klein-4b (~6 s) flow, per 1344x768 image."
 kind = "image"
 
+[capabilities.still.i18n.es]
+summary = "Ilustración fija con el flujo z-image-turbo (~8 s) o flux2-klein-4b (~6 s), por imagen de 1344x768."
+
 [capabilities.still.inputs.image]
 type = "array"
 required = true
@@ -228,6 +231,9 @@ viewer = "image"
 summary = "Reference-guided edit by instruction with the flux2-klein-img2img flow (~23 s), per 1344x768 image."
 kind = "image"
 
+[capabilities.edit.i18n.es]
+summary = "Edición guiada por referencia según instrucciones con el flujo flux2-klein-img2img (~23 s), por imagen de 1344x768."
+
 [capabilities.edit.inputs.source]
 type = "path"
 required = true
@@ -298,6 +304,9 @@ viewer = "image"
 [capabilities.clip]
 summary = "Micro video from a still with the wan22-i2v flow (~7 min), per 1280x704 clip."
 kind = "video"
+
+[capabilities.clip.i18n.es]
+summary = "Microvideo a partir de una imagen fija con el flujo wan22-i2v (~7 min), por clip de 1280x704."
 
 [capabilities.clip.inputs.image]
 type = "array"

@@ -1,5 +1,5 @@
 name = "pillow"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "Jeffrey A. Clark and contributors (Pillow)"
@@ -29,6 +29,9 @@ spdx = "MIT-CMU"
 [capabilities.base]
 summary = "Convert a still between PNG, JPEG and WebP, resize it exact or aspect-preserving, or lay a contact sheet of it, one op per table applied in order"
 kind = "image"
+
+[capabilities.base.i18n.es]
+summary = "Convierte una imagen fija entre PNG, JPEG y WebP, la redimensiona exacta o con proporción, o arma una hoja de contactos, una op por tabla aplicada en orden"
 
 [capabilities.base.inputs.image]
 type = "path"

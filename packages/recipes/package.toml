@@ -1,5 +1,5 @@
 name = "recipes"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "UniverLab (recipes)"
@@ -29,6 +29,9 @@ spdx = "MIT"
 [capabilities.plan]
 summary = "Write an ordered plan for one complete piece, one step per capability to run with its handoff files and its verification"
 kind = "text"
+
+[capabilities.plan.i18n.es]
+summary = "Escribe un plan ordenado para una pieza completa, un paso por capacidad a ejecutar con sus archivos de entrega y su verificación"
 
 [capabilities.plan.inputs.recipe]
 type = "enum"

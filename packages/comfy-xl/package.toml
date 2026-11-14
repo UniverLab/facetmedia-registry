@@ -1,5 +1,5 @@
 name = "comfy-xl"
-version = "0.1.1"
+version = "0.1.2"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "ComfyUI project"
@@ -167,6 +167,9 @@ path = "qwen-edit-vae/qwen_image_vae.safetensors"
 summary = "Still illustration with the z-image base flow (~1 min), per 1344x768 image."
 kind = "image"
 
+[capabilities.still.i18n.es]
+summary = "Ilustración fija con el flujo base z-image (~1 min), por imagen de 1344x768."
+
 [capabilities.still.inputs.image]
 type = "array"
 required = true
@@ -249,6 +252,9 @@ viewer = "image"
 summary = "Reference-guided edit by instruction with the qwen-image-edit flow, per 1344x768 image."
 kind = "image"
 
+[capabilities.edit.i18n.es]
+summary = "Edición guiada por referencia según instrucciones con el flujo qwen-image-edit, por imagen de 1344x768."
+
 [capabilities.edit.inputs.source]
 type = "path"
 required = true
@@ -330,6 +336,9 @@ viewer = "image"
 [capabilities.clip]
 summary = "Micro video from a still with the wan22-i2v-14b flow, per 1280x704 clip."
 kind = "video"
+
+[capabilities.clip.i18n.es]
+summary = "Microvideo a partir de una imagen fija con el flujo wan22-i2v-14b, por clip de 1280x704."
 
 [capabilities.clip.inputs.image]
 type = "array"
