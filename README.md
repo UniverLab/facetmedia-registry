@@ -95,8 +95,8 @@ A package is merged when all of the following hold:
    below it with an exact error.
 7. A **`preview`** that writes the preview file of its kind; a kind without a
    preview schema and a viewer adds both in the same change — except a kind
-   the core previews itself, like `document`, which opens the PDF in the
-   system browser and needs neither.
+   the core previews itself that needs no schema, like `document`, which the
+   core serves through its viewer.
 8. **No text or data inside generated images.**
 9. **Heavy local tests run alone** on the lab machine.
 10. **A bundled example for every capability** — a piece under
