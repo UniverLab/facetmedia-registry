@@ -1,9 +1,9 @@
 /* Gallery viewer: the filter bar and the responsive grid of asset cards,
-   drawn on the kit's tokens so light and dark come from base.css. */
+   drawn on the kit's tokens so the whole gallery sits on the night surface. */
 
 .muted {
   margin: 0.15rem 0;
-  color: var(--muted);
+  color: var(--hueso-tenue);
   font-size: 0.88rem;
 }
 
@@ -16,6 +16,10 @@
 
 #gal-head h1 {
   overflow-wrap: anywhere;
+}
+
+#gal-count {
+  font-family: var(--font-mono);
 }
 
 /* ---- filter bar ---- */
@@ -32,27 +36,26 @@
   gap: 0.35rem;
   align-items: center;
   padding: 0.15rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
+  border: 1px solid var(--regla);
   background: var(--panel);
-  color: var(--ink);
-  font: inherit;
+  color: var(--hueso);
+  font-family: var(--font-mono);
   font-size: 0.85rem;
   cursor: pointer;
 }
 
 .filter .glyph {
-  color: var(--muted);
+  color: var(--hueso-tenue);
   font-family: var(--font-mono);
 }
 
 .filter[aria-pressed="true"] {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--hueso);
+  color: var(--hueso);
 }
 
 .filter[aria-pressed="false"] {
-  color: var(--muted);
+  color: var(--hueso-tenue);
   text-decoration: line-through;
 }
 
@@ -68,16 +71,15 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border: 1px solid var(--regla);
   background: var(--panel);
-  color: var(--ink);
+  color: var(--hueso);
   text-decoration: none;
 }
 
 a.card:hover,
 a.card:focus-visible {
-  border-color: var(--accent);
+  border-color: var(--hueso);
 }
 
 /* A shown card is a link, a hidden one must lose both its box and its gap. */
@@ -91,8 +93,8 @@ a.card:focus-visible {
   place-items: center;
   overflow: hidden;
   aspect-ratio: 4 / 3;
-  border-bottom: 1px solid var(--line);
-  background: var(--ground);
+  border-bottom: 1px solid var(--regla);
+  background: var(--fondo);
 }
 
 /* Absolute so a thumbnail's own aspect ratio cannot stretch the frame: the
@@ -106,7 +108,7 @@ a.card:focus-visible {
 }
 
 .kind-icon {
-  color: var(--muted);
+  color: var(--hueso-tenue);
   font-family: var(--font-mono);
   font-size: 2rem;
 }
@@ -121,12 +123,15 @@ a.card:focus-visible {
 
 .card-name {
   margin: 0;
-  font-size: 0.98rem;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 400;
   overflow-wrap: anywhere;
 }
 
 .facts {
   margin: 0.15rem 0;
+  font-family: var(--font-mono);
   font-size: 0.85rem;
 }
 
@@ -137,19 +142,19 @@ a.card:focus-visible {
 
 .fix {
   margin: 0;
-  color: var(--muted);
+  color: var(--hueso-tenue);
   font-size: 0.85rem;
 }
 
 .fix code {
-  color: var(--ink);
+  color: var(--hueso);
   font-family: var(--font-mono);
   overflow-wrap: anywhere;
 }
 
 .open-hint {
   margin: 0;
-  color: var(--accent);
+  color: var(--hueso-tenue);
   font-size: 0.8rem;
 }
 

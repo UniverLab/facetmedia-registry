@@ -1,30 +1,65 @@
 /* Shared design tokens and layout for every facet viewer.
-   The facetMedia visual identity later replaces only the :root tokens. */
+
+   facet's night surface, from the brand manual (brand/facet v0.4, 2026-11-13):
+   a terminal in a night gallery. One ground, one text colour, one accent for
+   what is verified, the lab's three faces, and the fine grain. There is no
+   light variant: every viewer wears the night. The six colours below are the
+   only ones any viewer's CSS or JS may use. */
 
 :root {
-  --ground: #fbfbfc;
-  --panel: #f1f2f5;
-  --ink: #171a20;
-  --muted: #5c6270;
-  --accent: #1a7f4b;   /* verified values */
-  --warning: #8a5a00;
-  --error: #b3261e;
-  --line: #d8dbe2;
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --fondo: #161616;
+  --hueso: #e7ded1;
+  --hueso-tenue: #9a938a;
+  --senal: #e8c547;
+  --regla: rgba(231, 222, 209, 0.16);
+  --panel: rgba(231, 222, 209, 0.04);
+  --font-title: "Old Standard TT", Georgia, "Times New Roman", serif;
+  --font-text: "EB Garamond", Georgia, "Times New Roman", serif;
+  --font-mono: "Sometype Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ground: #14161b;
-    --panel: #1d2129;
-    --ink: #e9ebef;
-    --muted: #99a1af;
-    --accent: #4ecb8a;
-    --warning: #e2a93b;
-    --error: #e5736a;
-    --line: #2d333d;
-  }
+/* The three faces are vendored (google/fonts, OFL) under /kit/fonts/. Every
+   url() is quoted: a variable face's file name carries [wght], and an unquoted
+   CSS url token cannot hold brackets. */
+
+@font-face {
+  font-family: "Old Standard TT";
+  src: url("/kit/fonts/oldstandardtt/OldStandard-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Old Standard TT";
+  src: url("/kit/fonts/oldstandardtt/OldStandard-Italic.ttf") format("truetype");
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "EB Garamond";
+  src: url("/kit/fonts/ebgaramond/EBGaramond[wght].ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "EB Garamond";
+  src: url("/kit/fonts/ebgaramond/EBGaramond-Italic[wght].ttf") format("truetype");
+  font-style: italic;
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sometype Mono";
+  src: url("/kit/fonts/sometypemono/SometypeMono[wght].ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
 }
 
 * {
@@ -32,22 +67,42 @@
 }
 
 html {
-  color-scheme: light dark;
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
-  background: var(--ground);
-  color: var(--ink);
-  font-family: var(--font-sans);
-  font-size: 15px;
+  background: var(--fondo);
+  color: var(--hueso);
+  font-family: var(--font-text);
+  font-size: 17px;
   line-height: 1.5;
 }
 
+/* The grain sits behind the content and never over the text. */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
 .wrap {
+  position: relative;
+  z-index: 1;
   max-width: 64rem;
   margin: 0 auto;
   padding: 1rem 1.25rem 3rem;
+}
+
+h1,
+h2,
+summary {
+  font-family: var(--font-title);
+  font-weight: 400;
 }
 
 h1 {
@@ -58,79 +113,116 @@ h1 {
 h2 {
   font-size: 1.05rem;
   margin: 1.75rem 0 0.5rem;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--regla);
   padding-bottom: 0.25rem;
 }
 
+/* A link is a line under Hueso, never the accent: Señal marks what passed. */
 a {
-  color: var(--accent);
+  color: var(--hueso);
+  text-decoration-color: var(--hueso-tenue);
+  text-underline-offset: 0.18em;
 }
 
-/* Numbers are monospaced so columns line up. */
+/* Every label, metric, file name, capability id, number and date. */
 .num,
 td.num,
 th.num,
-.mono {
+.mono,
+th,
+dd,
+dt {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
+.muted {
+  color: var(--hueso-tenue);
+}
+
 /* ---- header ---- */
 
-.asset-head {
+.head {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem 0.75rem;
   align-items: baseline;
+  justify-content: space-between;
 }
 
-.kind-chip {
+.head h1.mark {
+  margin: 0;
   font-family: var(--font-mono);
-  font-size: 0.8rem;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 0.05rem 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--hueso-tenue);
+  overflow-wrap: anywhere;
+}
+
+.head .brand {
+  color: var(--hueso);
+}
+
+/* The verdict is the only place Señal appears in the header. */
+.verdict {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.verdict.passed {
+  color: var(--senal);
+}
+
+.verdict.failed,
+.verdict.skipped {
+  color: var(--hueso-tenue);
+}
+
+hr.rule {
+  border: 0;
+  border-top: 1px solid var(--regla);
+  margin: 0.45rem 0 0.9rem;
 }
 
 /* ---- status pill ---- */
 
 .pill {
   display: inline-block;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
-  font-weight: 600;
-  border-radius: 999px;
-  padding: 0.1rem 0.7rem;
-  border: 1px solid currentColor;
+  padding: 0;
 }
 
 .pill.passed {
-  color: var(--accent);
+  color: var(--senal);
 }
 
-.pill.failed {
-  color: var(--error);
-}
-
+.pill.failed,
 .pill.skipped {
-  color: var(--muted);
+  color: var(--hueso-tenue);
 }
 
-/* The header's verification block (pill + metrics table). */
+/* The header's verification block (verdict + metrics table). */
 .verify {
   margin: 0.5rem 0 0.9rem;
 }
 
+/* A metric value is Señal only when that metric passed. */
+td.num.verified {
+  color: var(--senal);
+}
+
 .badge-nc {
   display: inline-block;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--warning);
-  border: 1px solid var(--warning);
-  border-radius: 4px;
+  text-transform: uppercase;
+  color: var(--hueso-tenue);
+  border: 1px solid var(--regla);
   padding: 0.05rem 0.4rem;
+  margin-left: 0.5rem;
 }
 
 /* ---- error box (load.js) ---- */
@@ -138,12 +230,12 @@ th.num,
 .error-box {
   margin: 1rem 0;
   padding: 0.75rem 1rem;
-  border: 1px solid var(--error);
-  border-left-width: 6px;
-  border-radius: 6px;
-  color: var(--error);
-  background: color-mix(in srgb, var(--error) 8%, transparent);
+  border: 1px solid var(--regla);
+  border-left: 6px solid var(--hueso-tenue);
+  background: var(--panel);
+  color: var(--hueso);
   font-family: var(--font-mono);
+  font-size: 0.9rem;
   white-space: pre-wrap;
 }
 
@@ -164,13 +256,13 @@ th,
 td {
   text-align: left;
   padding: 0.3rem 0.6rem;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--regla);
   vertical-align: top;
 }
 
 th {
-  color: var(--muted);
-  font-weight: 600;
+  color: var(--hueso-tenue);
+  font-weight: 400;
 }
 
 td.v,
@@ -200,15 +292,15 @@ td.num {
 
 details {
   margin: 0.5rem 0;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  border: 1px solid var(--regla);
   padding: 0.4rem 0.75rem;
   background: var(--panel);
 }
 
 summary {
   cursor: pointer;
-  color: var(--muted);
+  font-size: 0.95rem;
+  color: var(--hueso-tenue);
 }
 
 dl.kv {
@@ -219,12 +311,11 @@ dl.kv {
 }
 
 dl.kv dt {
-  color: var(--muted);
+  color: var(--hueso-tenue);
 }
 
 dl.kv dd {
   margin: 0;
-  font-family: var(--font-mono);
   overflow-wrap: anywhere;
 }
 
@@ -233,7 +324,7 @@ figure {
 }
 
 figcaption {
-  color: var(--muted);
+  color: var(--hueso-tenue);
   font-size: 0.85rem;
 }
 
@@ -248,16 +339,16 @@ audio {
 }
 
 dialog {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--ground);
-  color: var(--ink);
+  border: 1px solid var(--regla);
+  background: var(--fondo);
+  color: var(--hueso);
   padding: 1rem;
   max-width: min(92vw, 60rem);
 }
 
 dialog::backdrop {
-  background: color-mix(in srgb, var(--ground) 55%, transparent);
+  background: var(--fondo);
+  opacity: 0.88;
 }
 
 dialog img {
@@ -280,9 +371,8 @@ dialog img {
 .views img {
   width: 100%;
   height: auto;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #fff;
+  border: 1px solid var(--regla);
+  background: var(--panel);
   cursor: zoom-in;
 }
 
@@ -293,24 +383,22 @@ dialog img {
 }
 
 .w-ok {
-  color: var(--ink);
+  color: var(--hueso);
 }
 
 .w-sub {
-  background: color-mix(in srgb, var(--warning) 25%, transparent);
-  color: var(--ink);
-  border-radius: 3px;
+  background: var(--panel);
+  color: var(--hueso);
+  text-decoration: underline;
+  text-decoration-color: var(--hueso-tenue);
 }
 
 .w-del {
-  background: color-mix(in srgb, var(--error) 25%, transparent);
-  color: var(--ink);
+  color: var(--hueso-tenue);
   text-decoration: line-through;
-  border-radius: 3px;
 }
 
 .w-ins {
-  background: color-mix(in srgb, var(--accent) 25%, transparent);
-  color: var(--ink);
-  border-radius: 3px;
+  background: var(--panel);
+  color: var(--hueso);
 }

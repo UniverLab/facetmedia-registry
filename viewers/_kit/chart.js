@@ -1,20 +1,21 @@
 /* A minimal canvas plot: axes, a filled band and/or a line series (null = gap),
    one or two horizontal reference lines, device-pixel-ratio aware.
-   mountPlot() redraws on resize and on a light/dark theme change. */
+   mountPlot() redraws on resize and once the faces have loaded. */
 
 const MARGIN = { left: 46, right: 10, top: 10, bottom: 22 };
+const MONO_FONT = '10px "Sometype Mono", ui-monospace, monospace';
 
 function token(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
+/** The kit's four drawing colours: a line, a label and a ground. */
 function colors() {
   return {
-    ink: token("--ink"),
-    muted: token("--muted"),
-    accent: token("--accent"),
-    line: token("--line"),
-    ground: token("--ground"),
+    hueso: token("--hueso"),
+    tenue: token("--hueso-tenue"),
+    regla: token("--regla"),
+    fondo: token("--fondo"),
   };
 }
 
@@ -48,11 +49,11 @@ function geometry(width, height, spec) {
 }
 
 function drawAxes(ctx, geom, spec, pal) {
-  ctx.strokeStyle = pal.line;
+  ctx.strokeStyle = pal.regla;
   ctx.lineWidth = 1;
   ctx.strokeRect(geom.left + 0.5, geom.top + 0.5, geom.width - 1, geom.height - 1);
-  ctx.fillStyle = pal.muted;
-  ctx.font = "10px ui-monospace, monospace";
+  ctx.fillStyle = pal.tenue;
+  ctx.font = MONO_FONT;
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   const ticks = spec.yTicks ?? [spec.yMin, (spec.yMin + spec.yMax) / 2, spec.yMax];
@@ -83,11 +84,11 @@ function drawBand(ctx, geom, spec, pal) {
     ctx.lineTo(geom.left + i * step, geom.yToPx(min[i]));
   }
   ctx.closePath();
-  ctx.fillStyle = pal.accent;
+  ctx.fillStyle = pal.tenue;
   ctx.globalAlpha = 0.35;
   ctx.fill();
   ctx.globalAlpha = 0.9;
-  ctx.strokeStyle = pal.accent;
+  ctx.strokeStyle = pal.tenue;
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.globalAlpha = 1;
@@ -100,7 +101,7 @@ function drawLine(ctx, geom, spec, pal) {
   const step = geom.width / (count - 1);
   const xAt = (i) => geom.left + i * step;
   const scale = spec.lineX ? (i) => geom.xToPx(spec.lineX(i)) : xAt;
-  ctx.strokeStyle = spec.lineColor ?? pal.accent;
+  ctx.strokeStyle = spec.lineColor ?? pal.hueso;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   let pen = false;
@@ -133,7 +134,7 @@ function drawRef(ctx, geom, value, label, style, pal) {
   ctx.restore();
   if (label) {
     ctx.fillStyle = style;
-    ctx.font = "10px ui-monospace, monospace";
+    ctx.font = MONO_FONT;
     ctx.textAlign = "right";
     ctx.textBaseline = "bottom";
     ctx.fillText(label, geom.left + geom.width - 3, y - 2);
@@ -150,8 +151,8 @@ export function drawPlot(canvas, spec) {
   if (spec.paint) spec.paint(ctx, geom, pal);
   drawBand(ctx, geom, spec, pal);
   drawLine(ctx, geom, spec, pal);
-  drawRef(ctx, geom, spec.ref, spec.refLabel, spec.refColor ?? pal.muted, pal);
-  drawRef(ctx, geom, spec.ref2, spec.ref2Label, spec.ref2Color ?? pal.accent, pal);
+  drawRef(ctx, geom, spec.ref, spec.refLabel, spec.refColor ?? pal.tenue, pal);
+  drawRef(ctx, geom, spec.ref2, spec.ref2Label, spec.ref2Color ?? pal.tenue, pal);
   if (spec.overlay) spec.overlay(ctx, geom, pal);
 }
 
@@ -164,7 +165,7 @@ export function valueAtX(canvas, clientX, xMax) {
 }
 
 /**
- * Draw and keep `specOf()` redrawn on canvas resize and theme change.
+ * Draw and keep `specOf()` redrawn on canvas resize.
  *
  * spec: { min?, max?, line?, lineX?, lineColor?, ref?, refLabel?, ref2?,
  *         ref2Label?, refColor?, ref2Color?, xMax, yMin, yMax, yTicks?,
@@ -177,6 +178,6 @@ export function mountPlot(canvas, specOf) {
   const redraw = () => drawPlot(canvas, specOf());
   redraw();
   new ResizeObserver(redraw).observe(canvas);
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redraw);
+  document.fonts?.ready.then(redraw);
   return { redraw };
 }

@@ -65,14 +65,14 @@ function factsOf(card) {
 function bodyOf(card) {
   const body = element("div", "card-body");
   body.append(element("h3", "card-name", card.name));
-  body.append(element("p", "muted", `${card.kind} · ${card.capability}`));
-  body.append(element("p", "muted", `created ${fmtDate(card.created)}`));
+  body.append(element("p", "muted mono", `${card.kind} · ${card.capability}`));
+  body.append(element("p", "muted mono", `created ${fmtDate(card.created)}`));
   body.append(factsOf(card));
   body.append(
     element(
       "p",
       card.verified ? "pill passed" : "pill failed",
-      card.verified ? "verified" : "failed",
+      card.verified ? "✓ verified" : "✗ failed",
     ),
   );
   if (card.open) {

@@ -54,7 +54,7 @@ function fillStats(preview) {
 
 function shadeSilences(ctx, geom, preview) {
   ctx.save();
-  ctx.fillStyle = token("--muted");
+  ctx.fillStyle = token("--hueso-tenue");
   ctx.globalAlpha = 0.18;
   for (const silence of preview.silences ?? []) {
     const x = geom.xToPx(silence.start_s);
@@ -71,7 +71,7 @@ function token(name) {
 function drawPlayhead(ctx, geom, audio) {
   const x = geom.xToPx(audio.currentTime ?? 0);
   ctx.save();
-  ctx.strokeStyle = token("--error");
+  ctx.strokeStyle = token("--hueso");
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(x, geom.top);

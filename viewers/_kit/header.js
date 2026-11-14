@@ -1,6 +1,12 @@
-/* renderHeader(el, record): the header every viewer shares — name and kind,
-   verification (status, metrics against thresholds), licences with a visible
-   non-commercial badge, and provenance collapsed in a <details>. */
+/* renderHeader(el, record): the header every viewer shares, one line deep —
+   `facetMedia · capability · asset` in Sometype Mono on the left, the
+   verification verdict on the right, a thin rule below — then the metrics
+   against their thresholds, the licences with a visible non-commercial badge,
+   and the provenance collapsed in a <details>.
+
+   Señal marks only what is verified: the verdict when it passed, and a metric
+   value that passed its threshold. A failure is a word with a ✗ in Hueso
+   tenue, never a red. */
 
 function text(value) {
   if (value === null || value === undefined) return "—";
@@ -28,14 +34,63 @@ function statusOf(record) {
   return ["passed", "failed", "skipped"].includes(status) ? status : "skipped";
 }
 
-function verificationBlock(record) {
+/** `facetMedia · <capability id> · <asset name>`, the brand in Hueso. */
+function markOf(record) {
+  const mark = document.createElement("h1");
+  mark.className = "mark";
+  const brand = document.createElement("span");
+  brand.className = "brand";
+  brand.textContent = "facetMedia";
+  const capability = provenanceOf(record).capability ?? "unknown capability";
+  const name = record.name ?? "asset";
+  mark.append(brand, ` · ${text(capability)} · ${text(name)}`);
+  return mark;
+}
+
+/** `✓ passed` in Señal, everything else `✗ <status>` in Hueso tenue. */
+function verdictOf(status) {
+  const verdict = document.createElement("span");
+  verdict.className = `verdict ${status}`;
+  verdict.textContent = status === "passed" ? "✓ passed" : `✗ ${status}`;
+  return verdict;
+}
+
+function headOf(record) {
+  const head = document.createElement("div");
+  head.className = "head";
+  head.append(markOf(record), verdictOf(statusOf(record)));
+  return head;
+}
+
+function ruleOf() {
+  const rule = document.createElement("hr");
+  rule.className = "rule";
+  return rule;
+}
+
+function metricRow(key, record, metrics, thresholds) {
+  const row = document.createElement("tr");
+  const name = document.createElement("th");
+  name.scope = "row";
+  name.textContent = key;
+  const measured = document.createElement("td");
+  measured.className = "num";
+  measured.textContent = text(metrics[key]);
+  const threshold = document.createElement("td");
+  threshold.className = "num";
+  threshold.textContent = text(thresholds[key]);
+  // Only a metric with a threshold, inside a passing verification, is verified.
+  const verified = statusOf(record) === "passed"
+    && thresholds[key] !== undefined
+    && metrics[key] !== undefined;
+  if (verified) measured.classList.add("verified");
+  row.append(name, measured, threshold);
+  return row;
+}
+
+function metricsBlock(record) {
   const block = document.createElement("div");
   block.className = "verify";
-  const status = statusOf(record);
-  const pill = document.createElement("span");
-  pill.className = `pill ${status}`;
-  pill.textContent = `verification ${status}`;
-  block.append(pill);
   const verification = record.verification;
   if (!verification || typeof verification !== "object") return block;
   const metrics = verification.metrics ?? {};
@@ -46,18 +101,7 @@ function verificationBlock(record) {
   table.innerHTML = "<thead><tr><th>metric</th><th class='num'>measured</th>"
     + "<th class='num'>threshold</th></tr></thead>";
   const body = document.createElement("tbody");
-  for (const key of keys) {
-    const row = document.createElement("tr");
-    const cells = [key, text(metrics[key]), text(thresholds[key])];
-    cells.forEach((value, index) => {
-      const cell = document.createElement(index === 0 ? "th" : "td");
-      if (index > 0) cell.className = "num";
-      cell.textContent = value;
-      if (index === 0) cell.scope = "row";
-      row.append(cell);
-    });
-    body.append(row);
-  }
+  for (const key of keys) body.append(metricRow(key, record, metrics, thresholds));
   table.append(body);
   block.append(table);
   return block;
@@ -118,13 +162,11 @@ function provenanceBlock(record) {
 /** Render the shared header into `el` from the asset's record. */
 export function renderHeader(el, record) {
   el.replaceChildren();
-  const head = document.createElement("div");
-  head.className = "asset-head";
-  const name = document.createElement("h1");
-  name.textContent = record.name ?? "asset";
-  const kind = document.createElement("span");
-  kind.className = "kind-chip";
-  kind.textContent = record.kind ?? "unknown kind";
-  head.append(name, kind);
-  el.append(head, verificationBlock(record), licenceBlock(record), provenanceBlock(record));
+  el.append(
+    headOf(record),
+    ruleOf(),
+    metricsBlock(record),
+    licenceBlock(record),
+    provenanceBlock(record),
+  );
 }
