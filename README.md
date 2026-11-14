@@ -52,7 +52,8 @@ the core:
 and keeps that commit as an immutable snapshot under `FACET_HOME`; every later
 command (`facet pull`, `facet run`, `facet preview`, `facet skill`,
 `facet doctor`) reads that snapshot, offline. `index.toml` lists the package
-directories facet knows about. (`facet registry validate` is the exception: it
+directories facet knows about and names the facets, each with an English and a
+Spanish label a site can show. (`facet registry validate` is the exception: it
 validates the registry directory you give it, which is how CI reads a
 checkout.) Because the commit is pinned, an unpublished package reaches
 machines only once a pull request merges to `main`.
