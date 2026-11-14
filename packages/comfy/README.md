@@ -56,8 +56,12 @@ unknown key.
 
 ## Edits
 
-`comfy.edit` iterates an image instead of rerolling it: one `source`
-reference image for the whole piece, then one instruction per entry. The lab's
+`comfy.edit` iterates an image instead of rerolling it: exactly one `source`
+reference image for the whole piece, at the `[inputs]` level, then one
+instruction per entry. Each `[[inputs.image]]` entry carries its own `name`,
+`seed`, `width`, `height` and `prompt`, and never an `image` key — piece
+validation refuses one there. A clip is the opposite: it takes no `source`,
+and `image` sits inside each entry as that clip's first frame. The lab's
 verdict on `flux2-klein-img2img` holds here: **guided by reference image, no
 denoise slider.** It is reference-guided, not strength-guided. Editing keeps
 the framing and the character and changes what the instruction says: a
@@ -91,15 +95,34 @@ guides every entry; a second reference image is a second piece.
 ```toml
 [inputs]
 source = "flux2-klein-4b/editorial-illustration.png"
-image = [
-  { name = "print-iteration", seed = 242, prompt = "Edit the reference image into a two-color linocut print in deep indigo and warm cream. Preserve the woman reading under the desk lamp, the framing, and the large geometric shapes. Use rough carved edges and visible paper grain. Do not add lettering or symbols." },
-]
+
+[[inputs.image]]
+name = "print-iteration"
+seed = 242
+width = 1344
+height = 768
+prompt = "Edit the reference image into a two-color linocut print in deep indigo and warm cream. Preserve the woman reading under the desk lamp, the framing, and the large geometric shapes. Use rough carved edges and visible paper grain. Do not add lettering or symbols."
 ```
 
 That pair is the approved piece (`examples/img2img.toml`):
 `print-iteration.png` came from `editorial-illustration.png` in 22.7 s at
 1344 × 768, keeping the character and framing while turning the picture into
 a blue and cream print.
+
+A clip instead carries `image` per entry — the clip's first frame — and no
+`source`:
+
+```toml
+[inputs]
+workflow = "wan22-i2v"
+
+[[inputs.image]]
+name = "pine-fog"
+image = "video-still.png"
+seed = 51
+prompt = "Fog drifting slowly between the pine trees at dawn, soft light rays shifting through the mist, calm and quiet"
+```
+
 
 ## Clips
 
@@ -177,13 +200,15 @@ no draft passes for a final. The approved draft sample is
 
 ## The no-data rule
 
-Images carry image content only: no caption, no chart, no label, no logo, no
-sign, no title, no watermark, no numbers. Text and figures belong in HTML or
-SVG. A prompt that names one of those words (as a whole word, any case) is
-rejected with `invalid_input` before anything runs; digits stay allowed, so
-"85mm lens" passes. This holds for a still prompt, an edit instruction and a
-clip's motion prompt: a generated frame carries no lettering either.
-Illustrations, backgrounds and mood only.
+Images carry image content only: no watermark, no numbers. A prompt that
+names any of these whole words, any case, is rejected with `invalid_input`
+before anything runs: caption, captions, chart, graph, label, labels, letter,
+letters, logo, sign, text, title, word, words. A refused word is refused
+even negated ("no text") and inside a phrase ("folded letter"): the pattern
+scans the words, not the intent. Digits stay allowed, so "85mm lens" passes.
+Text and figures belong in HTML or SVG. This holds for a still prompt, an
+edit instruction and a clip's motion prompt: a generated frame carries no
+lettering either. Illustrations, backgrounds and mood only.
 
 ## Flows
 

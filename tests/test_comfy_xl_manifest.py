@@ -63,6 +63,7 @@ RAPIDO_CFG = 1
 RAPIDO_STRENGTH = 1.0
 SIDE_MIN = 64
 SIDE_MAX = 2048
+SIDE_MULTIPLE = 64
 STEPS_MIN = 1
 CFG_MIN = 0
 SHIFT_MIN = 0
@@ -358,6 +359,18 @@ def test_the_image_input_is_closed_with_its_sizes_and_knobs() -> None:
     _assert_knob_fields(ITEMS, tuple(KNOB_FIELDS))
 
 
+def test_every_size_field_is_a_multiple_of_64() -> None:
+    """The core refuses a size the flows cannot honour, before anything runs."""
+    for items in (ITEMS, EDIT_ITEMS, CLIP_ITEMS):
+        for side in ("width", "height"):
+            field = items[side]
+            assert field["type"] == "integer", side
+            assert field["multiple_of"] == SIDE_MULTIPLE, side
+            # The core also checks the declared bounds against the divisor.
+            for bound in ("default", "min", "max"):
+                assert field[bound] % SIDE_MULTIPLE == 0, (side, bound)
+
+
 def test_the_workflow_input_is_the_one_still_flow() -> None:
     workflow = CAPABILITY["inputs"]["workflow"]
     assert workflow["type"] == "enum"
@@ -586,6 +599,54 @@ def test_the_guard_keeps_texture_digits_and_longer_words() -> None:
     assert GUARD.fullmatch("subtle paper grain texture, 85mm lens") is not None
     # "photograph" holds "graph" and "design" holds "sign": whole words only.
     assert GUARD.fullmatch("a photograph of a design") is not None
+
+
+def _words_the_pattern_refuses(pattern: str) -> set[str]:
+    """Every whole word the pattern's alternation refuses, ``s?`` expanded."""
+    group = re.search(r"\(\?:([^)]*)\)", pattern)
+    assert group is not None, pattern
+    words: set[str] = set()
+    for token in group.group(1).split("|"):
+        singular = token.removesuffix("s?")
+        assert singular.isalpha(), token
+        words.add(singular)
+        if token.endswith("s?"):
+            words.add(f"{singular}s")
+    return words
+
+
+def test_the_skill_lists_every_word_the_prompt_pattern_refuses() -> None:
+    """The skill's list and the manifest's pattern cannot drift apart."""
+    words = _words_the_pattern_refuses(ITEMS["prompt"]["pattern"])
+    assert words == set(GUARD_WORDS)
+    text = (PACKAGE / "skill" / "SKILL.md").read_text(encoding="utf-8")
+    missing = sorted(word for word in words if re.search(rf"\b{word}\b", text) is None)
+    assert missing == []
+
+
+def test_the_skill_says_a_refused_word_is_refused_negated_and_in_a_phrase() -> None:
+    flat = " ".join((PACKAGE / "skill" / "SKILL.md").read_text(encoding="utf-8").split())
+    assert 'even negated ("no text")' in flat
+    assert 'inside a phrase ("folded letter")' in flat
+
+
+def test_the_skill_edit_example_takes_one_source_and_never_an_image_key() -> None:
+    text = (PACKAGE / "skill" / "SKILL.md").read_text(encoding="utf-8")
+    blocks = re.findall(r"```toml\n(.*?)```", text, re.DOTALL)
+    examples = [tomllib.loads(block)["inputs"] for block in blocks if "source" in block]
+    assert len(examples) == 1
+    piece = examples[0]
+    assert isinstance(piece["source"], str)
+    entries = piece["image"]
+    assert entries
+    for entry in entries:
+        assert {"name", "seed", "width", "height", "prompt"} <= set(entry)
+        # An edit entry has no image key: the reference is the piece's source.
+        assert "image" not in entry
+    # A clip is the other way round: image per entry, as its first frame.
+    flat = " ".join(text.split())
+    assert "A clip is the mirror image" in flat
+    assert "first frame" in flat
 
 
 def test_the_flow_fills_the_names_of_the_three_models() -> None:

@@ -62,11 +62,38 @@ a piece that sets none renders exactly as before.
 Each entry writes `<name>.png` — or `<name>.mp4` for a clip — beside the
 piece file, so `--out build/` keeps generated assets away from sources.
 
-The prompt is English and carries the manifest's guard: a whole word such
-as `text`, `label`, `chart`, `title`, `logo` or `sign` fails piece
-validation with `invalid_input`. Digits are fine ("85mm lens"). The no-data
-rule holds for a still prompt, an edit instruction and a clip's motion
-prompt alike: a generated frame carries no lettering either.
+The prompt is English and carries the manifest's guard: a whole word from
+this list fails piece validation with `invalid_input` — caption, captions,
+chart, graph, label, labels, letter, letters, logo, sign, text, title, word,
+words. A refused word is refused even negated ("no text") and inside a
+phrase ("folded letter"): the pattern scans the words, not the intent.
+Digits are fine ("85mm lens"). The no-data rule holds for a still prompt, an
+edit instruction and a clip's motion prompt alike: a generated frame carries
+no lettering either.
+
+### Edits
+
+`comfy-xl.edit` takes exactly one reference image, `source`, at the
+`[inputs]` level — one for the whole piece, not one per entry. Each
+`[[inputs.image]]` entry carries its own `name`, `seed`, `width`, `height`
+and `prompt`, and never an `image` key (piece validation refuses one):
+
+```toml
+[inputs]
+source = "reference.png"
+
+[[inputs.image]]
+name = "new-material"
+seed = 31
+width = 1344
+height = 768
+prompt = "Edit the reference image into brushed copper, keeping the framing, the subject and the large flat shapes"
+```
+
+A clip is the mirror image: it takes no `source`, and `image` goes inside
+each entry as that clip's first frame — `[[inputs.image]]` with
+`image = "video-still.png"` beside its `prompt`, `seed`, `width` and
+`height`.
 
 ## Flows
 
@@ -173,11 +200,11 @@ VAE — are Apache-2.0, commercial use allowed, and no acceptance is needed.
 - All four flows carry the five sampling knobs, so any of them may be set on
   any entry; one a selected flow lacks would fail with the client's
   unknown-key error before the server starts.
-- Generated images hold no text or data: no caption, no watermark, no
-  numbers inside the picture. Prompts must not mention caption, chart,
-  graph, label, letter, logo, sign, text, title or word even to forbid
-  them: the prompt pattern refuses those words anywhere, including
-  "no text".
+- Generated images hold no text or data: no caption, captions, chart, graph,
+  label, labels, letter, letters, logo, sign, text, title, word, words — even
+  negated ("no text") or inside a phrase ("folded letter"). The prompt
+  pattern refuses those words anywhere, any case; digits stay allowed, so
+  "85mm lens" passes.
 - The edit and clip flows upload the reference or each first frame to the
   server's `/upload/image` before running; the log prints one
   `<file> uploaded as <name>` line per upload.

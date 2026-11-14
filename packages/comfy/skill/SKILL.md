@@ -57,11 +57,38 @@ defaults — so a piece that sets none renders exactly as before. Each entry
 writes `<name>.png` — or `<name>.mp4` for a clip — beside the piece file,
 so `--out build/` keeps generated assets away from sources.
 
-The prompt is English and carries the manifest's guard: a whole word such
-as `text`, `label`, `chart`, `title`, `logo` or `sign` fails piece
-validation with `invalid_input`. Digits are fine ("85mm lens"). The no-data
-rule holds for a still prompt, an edit instruction and a clip's motion
-prompt alike: a generated frame carries no lettering either.
+The prompt is English and carries the manifest's guard: a whole word from
+this list fails piece validation with `invalid_input` — caption, captions,
+chart, graph, label, labels, letter, letters, logo, sign, text, title, word,
+words. A refused word is refused even negated ("no text") and inside a
+phrase ("folded letter"): the pattern scans the words, not the intent.
+Digits are fine ("85mm lens"). The no-data rule holds for a still prompt, an
+edit instruction and a clip's motion prompt alike: a generated frame carries
+no lettering either.
+
+### Edits
+
+`comfy.edit` takes exactly one reference image, `source`, at the `[inputs]`
+level — one for the whole piece, not one per entry. Each `[[inputs.image]]`
+entry carries its own `name`, `seed`, `width`, `height` and `prompt`, and
+never an `image` key (piece validation refuses one):
+
+```toml
+[inputs]
+source = "editorial-illustration.png"
+
+[[inputs.image]]
+name = "linocut"
+seed = 242
+width = 1344
+height = 768
+prompt = "Edit the reference image into a two-color linocut print in deep indigo and warm cream, preserving the framing and the large geometric shapes"
+```
+
+A clip is the mirror image: it takes no `source`, and `image` goes inside
+each entry as that clip's first frame — `[[inputs.image]]` with
+`image = "video-still.png"` beside its `prompt`, `seed`, `width` and
+`height`. The engraved-plate recipe below is a full clip example.
 
 ## Flows
 
@@ -215,11 +242,11 @@ models and the Wan fp8 unet are Apache-2.0.
   there fails with the client's unknown-key error before the server starts.
   Set `steps`, `cfg` and `sampler` on a klein entry; all five knobs work on
   the Wan flows.
-- Generated images hold no text or data: no caption, no watermark, no
-  numbers inside the picture. Prompts must not mention caption, chart,
-  graph, label, letter, logo, sign, text, title or word even to forbid
-  them: the prompt pattern refuses those words anywhere, including
-  "no text".
+- Generated images hold no text or data: no caption, captions, chart, graph,
+  label, labels, letter, letters, logo, sign, text, title, word, words — even
+  negated ("no text") or inside a phrase ("folded letter"). The prompt
+  pattern refuses those words anywhere, any case; digits stay allowed, so
+  "85mm lens" passes.
 - The edit and clip flows upload the reference or each first frame to the
   server's `/upload/image` before running; the log prints one
   `<file> uploaded as <name>` line per upload.
