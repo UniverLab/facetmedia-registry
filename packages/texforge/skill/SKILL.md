@@ -45,6 +45,10 @@ with no browser or external diagram binary.
 
 ## Judging the result
 
+Check first in every flow: run `texforge check` before compiling — most
+build failures (missing inputs, broken refs and cites, unclosed
+environments) surface without a compile cycle.
+
 `verify` runs the linter `texforge check` — a broken `\ref`, a missing
 `\cite` or a missing input is an error and fails the run — then
 `texforge pdf info` and passes only when the page count is above 0. The
@@ -54,11 +58,34 @@ preview` into `preview/page-NN.png` and writes the document preview
 (`page_count`, `pages`), which the person reads as the PDF in a browser
 and an agent reads page by page.
 
+Expect automatic reruns: the engine loops TeX and BibTeX until
+cross-references settle, so never add a manual recompile pass and never
+parse intermediate files. Keep content separate from style: layout lives
+in the template and the preamble, prose in the body — restyling then
+swaps one file, not every page.
+
+Acceptance is agent-side: after `verify` passes, extract the PDF text
+(`texforge pdf text`), confirm `texforge pdf check` shows no new
+warnings, and confirm `texforge pdf info` shows the fonts embedded — a
+PDF that opens is not a PDF that reads.
+Divergence: public guidance gates on those probes, but facet's `verify`
+stays check-plus-page-count so automation never blocks on warnings; the
+agent confirms readability itself.
+
 ## Pitfalls
 
 - `texforge` is person-installed: a pull only creates the environment.
   Never expect facet to install, upgrade or bundle the binary.
-- A failed build is a runner failure carrying texforge's log tail; read
-  the first error, not the last line.
+- Escape the seven specials (`& % $ # _ { }`) with a backslash, and
+  `~ ^ \` outside their commands — `~` is a non-breaking space, not a
+  tilde. Left bare they break the build or silently misrender.
+- A failed build is a runner failure carrying texforge's log tail; fix
+  error #1 and rebuild, ignoring everything below it — LaTeX fails at
+  the earliest breakage and the tail of the log misleads.
 - Do not stage a `project.toml` of your own and do not run `texforge
   init`: the runner writes the real `[document]` and `[build]` keys.
+  Never commit the interactive path in automation: no wizards, no
+  hand-written generated files.
+
+Sources: [references/sources.md](references/sources.md) lists the public
+sources the guidance above draws on, with their licences.

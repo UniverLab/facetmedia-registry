@@ -25,6 +25,10 @@ stdlib only and never runs a tool itself.
 
 ## Pieces
 
+State the outcome first: one line naming who the piece is for and to
+what end, before the plan. Steps that do not serve it get cut, and the
+wrong recipe surfaces early.
+
 ```toml
 [inputs]
 recipe = "explainer-video"
@@ -104,6 +108,16 @@ Each step's own `verify` is the real judgement: transcribe the voice, look
 at the PNG, check the MP4. Run the capability's `verify` after its `run`;
 a passing plan says the recipe is well formed, not that the piece is good.
 
+Before step 1, get sign-off: echo the ordered plan back in your own
+words, naming what each step touches, and wait for explicit approval.
+The plan is data, so approval is the gate that starts execution. Read
+what the plan points at before running — the step's handoff files and
+the piece they connect to — never re-ask what the plan or repo already
+answers. When a step fails, fix the first failing step and re-run its
+verify; ignore everything downstream of it until the first failure
+clears, and validate structured intermediates as data (typed cue lists
+with timings, not the final render by eye).
+
 `facet preview <recipe>.plan.json` writes
 `<recipe>.plan.json.preview.json` (generic viewer) with a summary naming the
 recipe and its step count and the fields `recipe`, `steps` and `packages`.
@@ -122,3 +136,10 @@ recipe and its step count and the fields `recipe`, `steps` and `packages`.
   `blender.cars` capability.
 - `hyperframes.narrated` reads SubRip: hand it `transcript.srt`, not the
   whisper `.json` or `.vtt`.
+- No wizards, no hand-written generated files: never run an interactive
+  setup a capability owns, and never hand-write a file a capability
+  generates — the runner writes its own staged files, and automation
+  that works around it breaks the next run.
+
+Sources: [references/sources.md](references/sources.md) lists the public
+sources the guidance above draws on, with their licences.

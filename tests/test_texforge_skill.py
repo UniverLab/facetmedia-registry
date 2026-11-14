@@ -167,6 +167,22 @@ def test_the_build_reference_carries_the_keys_and_the_invocations() -> None:
         assert command in text, command
 
 
+def test_the_skill_teaches_the_document_discipline() -> None:
+    """The document guidance: check first, reruns, style split, acceptance."""
+    _, body = _front_matter()
+    flat = " ".join(body.lower().split())
+    assert "check first in every flow" in flat
+    assert "expect automatic reruns" in flat
+    assert "never parse intermediate files" in flat
+    assert "keep content separate from style" in flat
+    assert "acceptance is agent-side" in flat
+    assert "texforge pdf text" in body
+    assert "fonts embedded" in flat
+    assert "fix error #1" in flat
+    assert "escape the seven specials" in flat
+    assert "no wizards" in flat
+
+
 def test_the_example_is_a_runnable_piece() -> None:
     """The piece parses, stays inside ``texforge.document`` and ships its source."""
     _, body = _front_matter()

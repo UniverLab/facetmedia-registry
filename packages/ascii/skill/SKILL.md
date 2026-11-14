@@ -48,6 +48,11 @@ name = "fonts"
 
 It writes `fonts.txt` (`<name> (<source>)` per font) and `fonts.png`.
 
+Sample before choosing: note the intended look first, then render the
+text in every candidate font and compare each render against it — the
+fonts sheet is the sampler, so never guess a font name. For images,
+render the candidate modes and compare before committing.
+
 Image to ASCII with shape matching (`examples/plate.toml`):
 
 ```toml
@@ -87,7 +92,14 @@ bytes, no line is wider than `width`, and one non-space character exists.
 sheet's recorded font count equals the list's line count.
 Read `columns`, `rows`, `similarity`, and `ink_ratio` from the generic
 preview's `fields`. Size `width` against the terminal or README the
-art goes into.
+art goes into. Judge every render in a monospaced viewer or in the
+re-rendered PNG only: a proportional font misrepresents spacing and
+alignment, so judgement there is invalid. Pin `width` and `mode` for
+runs that must reproduce: the same inputs give the same bytes, so
+record both beside any committed art. A banner passes when re-rendering
+the resolved font gives the same bytes, which is the identical-output
+discipline the underlying engine aims for — a mismatch against real
+FIGlet is a bug signal, not a style choice.
 
 ## Pitfalls
 
@@ -101,3 +113,9 @@ art goes into.
 - `color = "ansi"` suits terminals only; committed files stay plain.
 - Generated images hold no text or data: the `.png` is a rendering of
   the `.txt`, never a new source of words.
+- Divergence: the underlying engine also reads installed `.flf` files
+  from system directories, but facet exposes only the fonts
+  `ascii.fonts` lists, so runs stay reproducible.
+
+Sources: [references/sources.md](references/sources.md) lists the public
+sources the guidance above draws on, with their licences.

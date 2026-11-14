@@ -5,7 +5,8 @@ what a person reads: the front matter, the four headings the core requires
 in order, one recipe per complete piece with the same chains the data file
 carries, and that every named capability resolves against the packages in
 this registry. The architectural render names ``blender.scene`` and the
-study example, never a photo preset, and no references directory ships.
+study example, never a photo preset, and its sources table ships beside
+the skill and is linked from it.
 """
 
 from __future__ import annotations
@@ -123,5 +124,21 @@ def test_the_skill_names_kokoro_only_as_the_video_alternative() -> None:
     assert "kokoro.speak" not in video
 
 
-def test_no_references_dir_ships() -> None:
-    assert not (PACKAGE / "skill" / "references").exists()
+def test_the_skill_cites_its_sources_reference() -> None:
+    """The skill links its sources table, and the file ships beside it."""
+    sources = PACKAGE / "skill" / "references" / "sources.md"
+    assert sources.is_file()
+    assert sources.stat().st_size > 0
+    assert "references/sources.md" in SKILL
+
+
+def test_the_skill_teaches_the_planning_discipline() -> None:
+    """The planning guidance: outcome first, sign-off, first-error triage."""
+    body = _body()
+    flat = " ".join(body.lower().split())
+    assert "state the outcome first" in flat
+    assert "before step 1, get sign-off" in flat
+    assert "explicit approval" in flat
+    assert "fix the first failing step" in flat
+    assert "validate structured intermediates as data" in flat
+    assert "no wizards" in flat
