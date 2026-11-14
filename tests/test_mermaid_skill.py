@@ -18,7 +18,7 @@ SKILL = (PACKAGE / "skill" / "SKILL.md").read_text(encoding="utf-8")
 HEADINGS = ("## When to use", "## Pieces", "## Judging the result", "## Pitfalls")
 DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
-CITED_REFERENCES = {"headers", "architecture"}
+CITED_REFERENCES = {"headers", "architecture", "sources"}
 EXAMPLE_FILES = (
     "cycle.mmd",
     "cycle.svg",

@@ -53,6 +53,25 @@ icons, Iconify `logos:`/`mdi:` icons and the `junction` split — is in
 `examples/cycle.mmd` and `examples/architecture.mmd`, each with its SVG and
 PNG beside it.
 
+**Labels that break the parse.** Quote a label that reads `end` in any
+capitalization — the word closes a block, so `"end"` keeps it a label.
+Enclose a label carrying non-ASCII text in double quotes. A node id that
+starts with `o` or `x` right after `---` misparses as an arrow tip; add a
+space before the letter, capitalize it, or rename the id. A label that uses
+Markdown formatting needs `htmlLabels: false` in the header and double-quoted
+backticks around the formatted text.
+
+**Sequence diagrams.** Declare every `participant` up front: the declaration
+order sets the left-to-right order, otherwise the order of first mention
+does. Use `actor` for a human stick figure, `participant` for a system box,
+`autonumber` for numbered messages, `activate`/`deactivate` around a
+participant's busy span, and a typed declaration such as
+`participant X@{ "type": "database" }` to give a participant its database
+cylinder. Each of these is one line and each buys readability.
+
+**Timelines.** Add `TD` after `timeline` for a top-down timeline. Wrap long
+event text with `<br>` rather than letting it run off the edge.
+
 **Animating the SVG in HyperFrames.** Mermaid's SVG carries stable ids:
 flowchart boxes `my-svg-flowchart-<id>-<n>`, arrows
 `my-svg-L_<from>_<to>_0`, arrow labels
@@ -94,3 +113,9 @@ the approved diagrams in `examples/`, and use the hand-drawn render at
 - **Chromium is pinned.** `facet pull mermaid` installs it once (~200 MB,
   shared by the three packages); the runner reads `FACET_BROWSER` and sets
   `PUPPETEER_SKIP_DOWNLOAD=1`.
+- **Only `diagram` is exposed.** The underlying renderer ships extra flags —
+  dark or transparent backgrounds, custom stylesheets, large-image sizing —
+  that facet's runner does not pass through; do not promise them. What the
+  skill and `references/` describe is the whole surface.
+
+Sources: references/sources.md.

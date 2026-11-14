@@ -121,6 +121,37 @@ image.
 every slide but the last. A one-page piece sets no `@page` and owns its height
 through the content. Copy the snippets from `references/page.md`.
 
+## Designing slides
+
+**One motif, varied layouts.** Pick one repeating visual device — a rule, a
+color band, an icon row — and carry it across the deck, but never repeat the
+same title-and-bullets arrangement twice running: alternate two-column, icon
+rows, a 2×2 grid, a half-bleed image. No slide is text alone; every slide
+carries at least one visual element.
+
+**Type scale.** Titles 36–44pt bold, section headers 20–24pt, body 14–16pt,
+captions 10–12pt muted. Body text aligns left, never centered.
+
+**Spacing.** Keep at least half an inch of margin on every side and repeat
+the same gaps throughout — roughly 0.3in between related items, 0.5in
+between groups. When a text edge must sit flush against a line or shape, set
+`margin: 0` on the text container first; default padding otherwise leaves a
+visible step.
+
+**Font slack.** The pinned local fonts measure exactly, but any font the
+pin does not cover may substitute at a different width. Leave about 10%
+slack around text set in a non-pinned font, and do not trust a pixel-fit
+overflow check there.
+
+**Template slots.** When reusing `examples/language-models.html` with fewer
+items than its slots, delete the whole unused group — visual and text
+together, not just the text — then re-check the deck for orphaned visuals
+left pointing at removed content.
+
+**Present from the PDF.** The delivered PDF is the artifact a person presents
+from, in any viewer; there is nothing to serve and nothing to open, as the
+presenter section already states.
+
 ## Judging the result
 
 **Export, review, and repeat — never call a piece done unexported and unseen.**
@@ -131,7 +162,9 @@ through the content. Copy the snippets from `references/page.md`.
    re-verifies it. A presenter run writes `<base>.present.html` and
    `<base>.notes.md`.
 2. Open the PNG (or a screenshot) and check for overlaps, clipped text,
-   overflow and hierarchy.
+   overflow and hierarchy. Review the pages as one contact sheet as well as
+   one by one, so a layout repeated on every slide, or a slide with no visual
+   element, is obvious.
 3. For anything that is not an image — PDF pages, a deck, an assembled
    presenter file — turn it into images with the lab's
    `tools/visualize.sh <file> [pages]`, which leaves them in
@@ -184,3 +217,5 @@ stops the check with `runner_failed` naming the check.
   fails, so the video file has to travel beside the deck.
 - The presenter never serves and never opens: there is no `--open` flag. A
   person opens the `document` asset through facet's own preview.
+
+Sources: references/sources.md.

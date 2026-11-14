@@ -48,3 +48,22 @@ it, then `dispatch:R --> L:voice` and `dispatch:B --> L:comfy` fan out.
 An arrow that leaves from the bottom (`B`) crosses the service's label. Split
 the exit through a `junction` instead of drawing the `B` arrow from the
 service itself, as `dispatch` does above.
+
+## Lining services up with `align`
+
+To place services in a shared row or column, declare it instead of chaining
+invisible links:
+
+```mermaid
+architecture-beta
+  align row agent toml
+  align column voice comfy
+```
+
+Each `align` names the members along one axis in order, and that order sets
+their order on the axis. The declared order must agree with the arrow
+directions between the members — lining up two services whose arrow runs the
+other way fights the layout. Facet's older invisible-link chain (`a ~~~ b`)
+still applies to flowcharts, which have no `align` directive; in
+`architecture-beta` prefer `align`. An agent that has read older facet
+examples may reach for `~~~` here; the directive is the current form.
