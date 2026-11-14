@@ -13,11 +13,17 @@
     <div class="wrap">
       <div id="error" class="error-box" role="alert" hidden></div>
       <header id="gal-head">
-        <h1 id="gal-folder"></h1>
-        <p id="gal-count" class="muted"></p>
+        <div class="head">
+          <h1 id="gal-mark" class="mark"><span class="brand">facetMedia</span> · gallery · <span id="gal-folder"></span></h1>
+          <span id="gal-verified" class="verdict passed"></span>
+        </div>
+        <hr class="rule" />
+        <p id="gal-count" class="muted mono"></p>
       </header>
-      <nav id="filters" aria-label="filter by kind"></nav>
-      <main id="grid" class="grid"></main>
+      <nav id="filters" aria-label="filter by kind">
+        <input id="search" type="search" aria-label="search name or capability" />
+      </nav>
+      <main id="grid"></main>
     </div>
     <script type="module" src="./main.js"></script>
   </body>

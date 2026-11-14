@@ -182,6 +182,92 @@ class FontTests(unittest.TestCase):
         self.assertIn('"muted mono"', read(VIEWERS / "gallery" / "main.js"))
 
 
+class GalleryLineTests(unittest.TestCase):
+    """The gallery lists one line per asset under its facet, in the manual's
+    order: a rule, not a card; only the verdict may carry Señal, from the kit."""
+
+    def setUp(self) -> None:
+        self.html = read(VIEWERS / "gallery" / "index.html")
+        self.main = read(VIEWERS / "gallery" / "main.js")
+        self.css = read(VIEWERS / "gallery" / "gallery.css")
+
+    def test_the_facet_groups_run_in_the_manual_order(self) -> None:
+        match = re.search(r"const FACETS = \[([^\]]*)\]", self.main)
+        self.assertIsNotNone(match)
+        assert match is not None
+        ids = re.findall(r'"([a-z]+)"', match.group(1))
+        self.assertEqual(
+            ids,
+            ["voice", "audio", "image", "video", "cad", "text", "presentation"],
+        )
+        self.assertIn('const OTHER = "other";', self.main)
+        self.assertIn(
+            "if (FACETS.includes(card.facet)) buckets.get(card.facet).push(card);", self.main
+        )
+        self.assertIn("else other.push(card);", self.main)
+        self.assertIn("groups.push({ facet: OTHER", self.main)
+        # The groups are what the grid renders, each opening with its heading.
+        self.assertIn("grid.replaceChildren(...groupsOf(assets).map(groupFor))", self.main)
+        self.assertIn('element("h2", null, group.facet)', self.main)
+
+    def test_a_line_without_open_names_the_fix(self) -> None:
+        self.assertIn("`facet pull --package ${card.package}`", self.main)
+        self.assertIn('"no preview: the record names no package"', self.main)
+        self.assertIn('typeof card.package === "string"', self.main)
+        self.assertIn('document.createElement(card.open ? "a" : "article")', self.main)
+        self.assertIn("if (!card.open) line.append(fixOf(card));", self.main)
+
+    def test_a_line_without_a_thumb_shows_its_kind_in_mono(self) -> None:
+        self.assertIn('element("span", "kind-icon", card.kind)', self.main)
+        self.assertNotIn("GLYPHS[card.kind]", self.main)
+        body = declarations(self.css, ".kind-icon")
+        self.assertIn("var(--font-mono)", body)
+        self.assertIn("var(--hueso-tenue)", body)
+
+    def test_the_fix_hint_is_hueso_tenue_throughout(self) -> None:
+        self.assertIn("color: var(--hueso-tenue)", declarations(self.css, ".fix"))
+        self.assertNotIn("var(--hueso)", declarations(self.css, ".fix code"))
+
+    def test_a_line_is_a_rule_with_a_thumbnail_and_its_facts(self) -> None:
+        card = declarations(self.css, ".card")
+        self.assertIn("grid-template-columns: 48px 1fr auto", card)
+        self.assertIn("border-bottom: 1px solid var(--regla)", card)
+        self.assertIn("text-decoration: none", card)
+        thumb = declarations(self.css, ".thumb")
+        self.assertIn("width: 48px", thumb)
+        self.assertIn("height: 48px", thumb)
+        self.assertIn("var(--fondo)", thumb)
+        self.assertIn("object-fit: cover", declarations(self.css, ".thumb img"))
+        focus = declarations(self.css, ".card:focus-visible")
+        self.assertIn("outline: 2px solid var(--hueso)", focus)
+        for selector in (".card-name", ".capability", ".facts", ".created", ".pill"):
+            with self.subTest(selector=selector):
+                self.assertIn(selector, self.css)
+
+    def test_only_the_kit_may_name_senal(self) -> None:
+        self.assertNotIn("--senal", self.css)
+        self.assertIn('"pill passed"', self.main)
+        self.assertIn('"pill failed"', self.main)
+
+    def test_the_search_matches_name_or_capability_under_the_kind_toggles(self) -> None:
+        self.assertIn('id="search"', self.html)
+        self.assertIn('aria-label="search name or capability"', self.html)
+        self.assertIn("name.includes(needle) || capability.includes(needle)", self.main)
+        self.assertIn("shown.has(line.dataset.kind)", self.main)
+        self.assertIn("group.hidden = visible === 0", self.main)
+
+    def test_the_header_names_the_gallery_and_counts_the_verified(self) -> None:
+        mark = re.search(r'<h1 id="gal-mark"[^>]*>(.*?)</h1>', self.html, re.DOTALL)
+        self.assertIsNotNone(mark)
+        assert mark is not None
+        self.assertIn("gallery", mark.group(1))
+        self.assertIn('class="brand">facetMedia', mark.group(1))
+        self.assertIn('id="gal-verified"', self.html)
+        self.assertIn("verdict passed", self.html)
+        self.assertIn("`${verified} verified`", self.main)
+        self.assertIn("var(--font-mono)", declarations(self.css, "#gal-count"))
+
+
 class GrainTests(unittest.TestCase):
     """FR3: the grain, drawn once per viewer with the manual's values."""
 

@@ -281,6 +281,7 @@ class GalleryTests(unittest.TestCase):
         "preview_state",
         "thumb",
         "open",
+        "facet",
     }
 
     def test_available_kinds_lists_gallery_once(self) -> None:
@@ -304,6 +305,21 @@ class GalleryTests(unittest.TestCase):
                 self.assertIn(card["preview_state"], ("fresh", "stale", "missing"))
                 states.add(card["preview_state"])
         self.assertEqual(states, {"fresh", "stale", "missing"})
+
+    def test_gallery_carries_a_card_with_no_package_and_no_open(self) -> None:
+        gallery = json.loads(serve.gallery_file().read_bytes())
+        without_package = [card for card in gallery["assets"] if card["package"] is None]
+        self.assertTrue(without_package, "no card names a missing package")
+        for card in without_package:
+            with self.subTest(asset=card["asset"]):
+                self.assertIsNone(card["open"], "a card with no package cannot open")
+                self.assertIsNone(card["facet"], "a card with no package has no facet")
+
+    def test_every_card_names_its_facet_or_null(self) -> None:
+        gallery = json.loads(serve.gallery_file().read_bytes())
+        facets = {card["facet"] for card in gallery["assets"]}
+        self.assertIn("image", facets)
+        self.assertIn(None, facets)
 
     def test_thumb_answers_png_and_rejects_names(self) -> None:
         with running("gallery") as base:

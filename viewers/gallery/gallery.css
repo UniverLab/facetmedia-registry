@@ -1,20 +1,8 @@
-/* Gallery viewer: the filter bar and the responsive grid of asset cards,
-   drawn on the kit's tokens so the whole gallery sits on the night surface. */
+/* Gallery viewer: one line per asset under its facet, drawn on the kit's
+   tokens so the whole gallery sits on the night surface. A facet is a line,
+   never a coloured card; the verdict is the only Señal, from the kit. */
 
-.muted {
-  margin: 0.15rem 0;
-  color: var(--hueso-tenue);
-  font-size: 0.88rem;
-}
-
-#gal-head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.1rem 0.75rem;
-  align-items: baseline;
-}
-
-#gal-head h1 {
+#gal-mark {
   overflow-wrap: anywhere;
 }
 
@@ -29,6 +17,21 @@
   flex-wrap: wrap;
   gap: 0.4rem;
   margin: 0.75rem 0 1rem;
+}
+
+#search {
+  flex: 1 1 16rem;
+  padding: 0.15rem 0.75rem;
+  border: 1px solid var(--regla);
+  background: var(--panel);
+  color: var(--hueso);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+#search:focus-visible {
+  outline: 2px solid var(--hueso);
+  outline-offset: 1px;
 }
 
 .filter {
@@ -59,109 +62,115 @@
   text-decoration: line-through;
 }
 
-/* ---- grid ---- */
+/* ---- one group per facet, in the manual's order ---- */
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-  gap: 1rem;
+.group {
+  margin: 1.5rem 0;
 }
 
+/* ---- one line per asset ---- */
+
 .card {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--regla);
-  background: var(--panel);
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 0.25rem 0.75rem;
+  align-items: center;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--regla);
   color: var(--hueso);
   text-decoration: none;
 }
 
-a.card:hover,
-a.card:focus-visible {
-  border-color: var(--hueso);
+a.card:hover .card-name {
+  text-decoration: underline;
+  text-decoration-color: var(--hueso-tenue);
 }
 
-/* A shown card is a link, a hidden one must lose both its box and its gap. */
-.card[hidden] {
-  display: none;
+.card:focus-visible {
+  outline: 2px solid var(--hueso);
+  outline-offset: 2px;
 }
 
 .thumb {
-  position: relative;
+  grid-column: 1;
+  grid-row: 1 / span 3;
   display: grid;
   place-items: center;
+  width: 48px;
+  height: 48px;
   overflow: hidden;
-  aspect-ratio: 4 / 3;
-  border-bottom: 1px solid var(--regla);
   background: var(--fondo);
 }
 
-/* Absolute so a thumbnail's own aspect ratio cannot stretch the frame: the
-   frame is always 4:3, and `cover` fills it. */
-.thumb-img {
-  position: absolute;
-  inset: 0;
+.thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
 .kind-icon {
+  padding: 0 0.1rem;
   color: var(--hueso-tenue);
   font-family: var(--font-mono);
-  font-size: 2rem;
-}
-
-.card-body {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.6rem 0.75rem 0.75rem;
+  font-size: 0.6rem;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .card-name {
+  grid-column: 2;
+  grid-row: 1;
   margin: 0;
   font-family: var(--font-mono);
   font-size: 0.95rem;
-  font-weight: 400;
   overflow-wrap: anywhere;
 }
 
-.facts {
-  margin: 0.15rem 0;
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-}
-
-.pill {
-  align-self: flex-start;
-  margin: 0.15rem 0;
+.capability {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
 }
 
 .fix {
-  margin: 0;
-  color: var(--hueso-tenue);
-  font-size: 0.85rem;
-}
-
-.fix code {
-  color: var(--hueso);
-  font-family: var(--font-mono);
-  overflow-wrap: anywhere;
-}
-
-.open-hint {
+  grid-column: 2;
+  grid-row: 3;
   margin: 0;
   color: var(--hueso-tenue);
   font-size: 0.8rem;
 }
 
-/* One card per row at phone width: a 14rem minimum would fit two only if the
-   thumbnail shrank below a readable size. */
-@media (max-width: 480px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
+.fix code {
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  grid-column: 3;
+  grid-row: 1;
+  font-size: 0.82rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.created {
+  grid-column: 3;
+  grid-row: 2;
+  font-size: 0.82rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pill {
+  grid-column: 3;
+  grid-row: 3;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.card[hidden],
+.group[hidden] {
+  display: none;
 }

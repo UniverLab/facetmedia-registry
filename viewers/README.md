@@ -100,8 +100,10 @@ the metrics against their thresholds, the licences with a visible
 `non-commercial` badge when the tool's licence or a model's forbids commercial
 use, and the provenance (capability, package version, registry commit, models,
 parameters) collapsed. The gallery browses a folder rather than one asset, so
-it opens with that folder's name and its asset count instead, and each card
-carries its own `✓ verified` or `✗ failed`.
+it opens with `facetMedia · gallery · <folder>` and its asset count, with the
+number verified at the right, and lists one line per asset grouped under its
+facet — never a card grid. Each line carries its own `✓` in Señal or
+`✗ failed` in Hueso tenue.
 
 The viewers here are `generic` (any preview: summary, fields, the asset — and a
 real branch for the text kinds: numbered lines for `text/plain`, pretty-printed
@@ -109,8 +111,9 @@ real branch for the text kinds: numbered lines for `text/plain`, pretty-printed
 `text/vtt`, and ASCII art at its natural width with a sideways scroll for a
 `text/plain` record that carries `columns` — a picture whose record carries
 `columns` keeps the fields — each with a copy button), `gallery` (a whole folder
-from `facet preview <folder>`: one card per asset, filterable by kind, each
-opening its own viewer), `audio` (a play/pause button and space, a waveform with
+from `facet preview <folder>`: one line per asset grouped under its facet,
+filterable by kind and searchable by name or capability, each line opening its
+own viewer when its preview can be opened), `audio` (a play/pause button and space, a waveform with
 silences and the played part in Hueso over the rest in Hueso tenue, scrubbable
 by click and drag, the time in Sometype Mono with ←/→ seeking a second, the
 momentary loudness against its dashed target, the integrated LUFS, true peak,

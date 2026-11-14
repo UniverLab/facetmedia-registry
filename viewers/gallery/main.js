@@ -1,9 +1,23 @@
-/* Gallery viewer: one folder of assets as a filterable grid of cards.
-   The page reads facet's `/gallery.json` and nothing else; a card's `thumb`
-   and `open` are the only URLs it follows. */
+/* Gallery viewer: one folder of assets as a filterable list, one line per
+   asset grouped under its facet, in the manual's order. The page reads
+   facet's `/gallery.json` and nothing else; a line's `thumb` and `open` are
+   the only URLs it follows. */
 
-const GLYPHS = { audio: "♪", cad: "◇", image: "▣", text: "¶", video: "▶" };
+const FACETS = ["voice", "audio", "image", "video", "cad", "text", "presentation"];
+const OTHER = "other";
+const GLYPHS = {
+  audio: "♪",
+  cad: "◇",
+  image: "▣",
+  presentation: "▤",
+  text: "¶",
+  video: "▶",
+  voice: "◉",
+};
 const FALLBACK_GLYPH = "•";
+const MUTED = "muted mono";
+
+const shown = new Set();
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -43,65 +57,98 @@ function fmtDate(iso) {
 function thumbnailOf(card) {
   const box = element("div", "thumb");
   if (card.thumb) {
-    const image = element("img", "thumb-img");
+    const image = element("img");
     image.src = card.thumb;
     image.alt = "";
     image.loading = "lazy";
     box.append(image);
   } else {
-    box.append(element("span", "kind-icon", GLYPHS[card.kind] ?? FALLBACK_GLYPH));
+    box.append(element("span", "kind-icon", card.kind));
   }
   return box;
 }
 
 function factsOf(card) {
-  const facts = element("p", "facts mono", fmtBytes(card.bytes));
+  const facts = [fmtBytes(card.bytes)];
   if (card.duration_s !== null && card.duration_s !== undefined) {
-    facts.textContent += ` · ${fmtDuration(card.duration_s)}`;
+    facts.push(fmtDuration(card.duration_s));
   }
-  return facts;
+  return element("span", "facts mono", facts.join(" · "));
 }
 
-function bodyOf(card) {
-  const body = element("div", "card-body");
-  body.append(element("h3", "card-name", card.name));
-  body.append(element("p", "muted mono", `${card.kind} · ${card.capability}`));
-  body.append(element("p", "muted mono", `created ${fmtDate(card.created)}`));
-  body.append(factsOf(card));
-  body.append(
+function fixOf(card) {
+  const hint = element("p", "fix");
+  const command = typeof card.package === "string"
+    ? `facet pull --package ${card.package}`
+    : "no preview: the record names no package";
+  hint.append(element("code", null, command));
+  return hint;
+}
+
+function lineFor(card) {
+  const line = document.createElement(card.open ? "a" : "article");
+  line.className = "card";
+  line.dataset.n = String(card.n);
+  line.dataset.kind = card.kind;
+  line.dataset.name = card.name;
+  line.dataset.capability = card.capability;
+  if (card.open) line.href = card.open;
+  line.append(
+    thumbnailOf(card),
+    element("span", "card-name", card.name),
+    element("span", `capability ${MUTED}`, card.capability),
+    factsOf(card),
+    element("span", `created ${MUTED}`, fmtDate(card.created)),
     element(
-      "p",
+      "span",
       card.verified ? "pill passed" : "pill failed",
-      card.verified ? "✓ verified" : "✗ failed",
+      card.verified ? "✓" : "✗ failed",
     ),
   );
-  if (card.open) {
-    body.append(element("p", "open-hint", "open in this tab →"));
-  } else {
-    const fix = element("p", "fix");
-    fix.append(
-      element("span", null, "no preview yet: "),
-      element("code", null, `facet preview ${card.asset}`),
-    );
-    body.append(fix);
+  if (!card.open) line.append(fixOf(card));
+  return line;
+}
+
+function groupsOf(assets) {
+  const buckets = new Map(FACETS.map((facet) => [facet, []]));
+  const other = [];
+  for (const card of assets) {
+    if (FACETS.includes(card.facet)) buckets.get(card.facet).push(card);
+    else other.push(card);
   }
-  return body;
+  const groups = FACETS
+    .map((facet) => ({ facet, cards: buckets.get(facet) }))
+    .filter((group) => group.cards.length > 0);
+  if (other.length > 0) groups.push({ facet: OTHER, cards: other });
+  return groups;
 }
 
-function cardFor(card) {
-  const shell = document.createElement(card.open ? "a" : "article");
-  shell.className = "card";
-  shell.dataset.kind = card.kind;
-  shell.dataset.n = String(card.n);
-  if (card.open) shell.href = card.open;
-  shell.append(thumbnailOf(card), bodyOf(card));
-  return shell;
+function groupFor(group) {
+  const section = element("section", "group");
+  section.append(element("h2", null, group.facet), ...group.cards.map(lineFor));
+  return section;
 }
 
-function renderFilters(assets, grid) {
+function applyFilters(query) {
+  const needle = query.trim().toLowerCase();
+  for (const group of document.querySelectorAll("#grid .group")) {
+    let visible = 0;
+    for (const line of group.querySelectorAll(".card")) {
+      const name = (line.dataset.name ?? "").toLowerCase();
+      const capability = (line.dataset.capability ?? "").toLowerCase();
+      const matches = needle === "" || name.includes(needle) || capability.includes(needle);
+      line.hidden = !(matches && shown.has(line.dataset.kind));
+      if (!line.hidden) visible += 1;
+    }
+    group.hidden = visible === 0;
+  }
+}
+
+function renderFilters(assets) {
+  const container = document.getElementById("filters");
+  const search = document.getElementById("search");
   const kinds = [...new Set(assets.map((card) => card.kind))];
-  const shown = new Set(kinds);
-  const buttons = kinds.map((kind) => {
+  const toggles = kinds.map((kind) => {
     const button = element("button", "filter");
     button.type = "button";
     button.dataset.kind = kind;
@@ -114,13 +161,12 @@ function renderFilters(assets, grid) {
       if (shown.has(kind)) shown.delete(kind);
       else shown.add(kind);
       button.setAttribute("aria-pressed", String(shown.has(kind)));
-      for (const card of grid.children) {
-        card.hidden = !shown.has(card.dataset.kind);
-      }
+      applyFilters(search.value);
     });
     return button;
   });
-  document.getElementById("filters").replaceChildren(...buttons);
+  container.replaceChildren(search, ...toggles);
+  search.addEventListener("input", () => applyFilters(search.value));
 }
 
 function renderGallery(gallery) {
@@ -128,10 +174,15 @@ function renderGallery(gallery) {
   document.getElementById("gal-folder").textContent = gallery.folder ?? "";
   document.getElementById("gal-count").textContent =
     `${assets.length} ${assets.length === 1 ? "asset" : "assets"}`;
+  const verified = assets.filter((card) => card.verified).length;
+  document.getElementById("gal-verified").textContent = `${verified} verified`;
+  shown.clear();
+  for (const kind of new Set(assets.map((card) => card.kind))) shown.add(kind);
   const grid = document.getElementById("grid");
-  grid.replaceChildren(...assets.map(cardFor));
+  grid.replaceChildren(...groupsOf(assets).map(groupFor));
   if (assets.length === 0) grid.append(element("p", "muted", "This folder holds no assets."));
-  renderFilters(assets, grid);
+  renderFilters(assets);
+  applyFilters(document.getElementById("search").value);
 }
 
 try {

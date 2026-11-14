@@ -516,18 +516,55 @@ async function checkDocument(page, label, failures) {
   if (!fitted) failures.push(`${label}: the fit toggle did nothing`);
 }
 
-/** The header names the folder and counts the assets. */
+/** The header names the folder, counts the assets and the verified ones. */
 async function checkGalleryHeader(page, label, failures) {
   const header = await page.locator("#gal-head").innerText();
-  if (!header.includes(GALLERY.folder)) {
+  if (!header.includes(`facetMedia · gallery · ${GALLERY.folder}`)) {
     failures.push(`${label}: the header does not name ${GALLERY.folder}`);
   }
   if (!header.includes(String(GALLERY.assets.length))) {
     failures.push(`${label}: the header does not count ${GALLERY.assets.length} assets`);
   }
+  const verified = GALLERY.assets.filter((asset) => asset.verified).length;
+  if (!header.includes(`${verified} verified`)) {
+    failures.push(`${label}: the header does not count ${verified} verified`);
+  }
 }
 
-/** Every card shows what gallery.json says: thumb or icon, badge, duration. */
+/** The gallery's facets, in the manual's order, with `other` last. */
+const FACET_ORDER = ["voice", "audio", "image", "video", "cad", "text", "presentation"];
+const OTHER_FACET = "other";
+
+/** One group per facet present, in the manual's order, holding its own cards. */
+async function checkGalleryGroups(page, label, failures) {
+  const groups = await page.evaluate(() =>
+    Object.fromEntries(
+      [...document.querySelectorAll("#grid .group")].map((group) => [
+        group.querySelector("h2")?.textContent,
+        group.querySelectorAll(".card").length,
+      ]),
+    ),
+  );
+  const facetOf = (asset) =>
+    FACET_ORDER.includes(asset.facet) ? asset.facet : OTHER_FACET;
+  const facets = GALLERY.assets.map(facetOf);
+  const expected = [
+    ...FACET_ORDER.filter((facet) => facets.includes(facet)),
+    ...(facets.includes(OTHER_FACET) ? [OTHER_FACET] : []),
+  ];
+  const shown = Object.keys(groups);
+  if (shown.join(",") !== expected.join(",")) {
+    failures.push(`${label}: groups ${shown.join(",")} do not run in ${expected.join(",")}`);
+  }
+  for (const facet of expected) {
+    const want = facets.filter((value) => value === facet).length;
+    if (groups[facet] !== want) {
+      failures.push(`${label}: the ${facet} group holds ${groups[facet]} cards, expected ${want}`);
+    }
+  }
+}
+
+/** Every card shows what gallery.json says: thumb or kind, facts, badge. */
 async function checkGalleryCards(page, label, failures) {
   for (const asset of GALLERY.assets) {
     const card = page.locator(`.card[data-n="${asset.n}"]`);
@@ -546,11 +583,15 @@ async function checkGalleryCards(page, label, failures) {
     if ((await card.locator(badge).count()) === 0) {
       failures.push(`${label}: ${asset.asset} has no ${badge.slice(6)} badge`);
     }
-    if (asset.duration_s !== null) {
-      const text = await card.innerText();
-      if (!text.includes(`${asset.duration_s.toFixed(1)} s`)) {
-        failures.push(`${label}: ${asset.asset} shows no duration`);
-      }
+    const text = await card.innerText();
+    if (!text.includes(asset.capability)) {
+      failures.push(`${label}: ${asset.asset} shows no capability`);
+    }
+    if (!text.includes(String(asset.created).slice(0, 10))) {
+      failures.push(`${label}: ${asset.asset} shows no created date`);
+    }
+    if (asset.duration_s !== null && !text.includes(`${asset.duration_s.toFixed(1)} s`)) {
+      failures.push(`${label}: ${asset.asset} shows no duration`);
     }
   }
 }
@@ -595,21 +636,25 @@ async function checkGalleryOpen(page, label, failures) {
   }
 }
 
-/** A card with no `open` is not a link and names the command that fixes it. */
+/** Every card with no `open` is not a link and names the command that fixes it. */
 async function checkGalleryFix(page, label, failures) {
-  const asset = GALLERY.assets.find((candidate) => candidate.open === null);
-  if (!asset) return;
-  const card = page.locator(`.card[data-n="${asset.n}"]`);
-  if ((await card.count()) === 0) {
-    failures.push(`${label}: no card for ${asset.asset}`);
-    return;
-  }
-  if ((await card.locator("a").count()) !== 0) {
-    failures.push(`${label}: ${asset.asset} is a link without a preview`);
-  }
-  const command = await card.locator("code").innerText();
-  if (command.trim() !== `facet preview ${asset.asset}`) {
-    failures.push(`${label}: fix command is ${JSON.stringify(command)}`);
+  const assets = GALLERY.assets.filter((candidate) => candidate.open === null);
+  for (const asset of assets) {
+    const card = page.locator(`.card[data-n="${asset.n}"]`);
+    if ((await card.count()) === 0) {
+      failures.push(`${label}: no card for ${asset.asset}`);
+      continue;
+    }
+    if ((await card.locator("a").count()) !== 0) {
+      failures.push(`${label}: ${asset.asset} is a link without a preview`);
+    }
+    const command = await card.locator("code").innerText();
+    const expected = typeof asset.package === "string"
+      ? `facet pull --package ${asset.package}`
+      : "no preview: the record names no package";
+    if (command.trim() !== expected) {
+      failures.push(`${label}: fix command for ${asset.asset} is ${JSON.stringify(command)}`);
+    }
   }
 }
 
@@ -619,6 +664,7 @@ async function checkGallery(page, label, failures) {
     failures.push(`${label}: ${count} cards, expected ${GALLERY.assets.length}`);
   }
   await checkGalleryHeader(page, label, failures);
+  await checkGalleryGroups(page, label, failures);
   await checkGalleryCards(page, label, failures);
   await checkGalleryFilters(page, label, failures);
   await checkGalleryOpen(page, label, failures);

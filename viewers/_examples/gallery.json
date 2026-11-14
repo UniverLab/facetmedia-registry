@@ -14,7 +14,8 @@
       "duration_s": null,
       "preview_state": "fresh",
       "thumb": "/thumb/0",
-      "open": "/open/0"
+      "open": "/open/0",
+      "facet": "image"
     },
     {
       "n": 1,
@@ -29,7 +30,8 @@
       "duration_s": 3.4,
       "preview_state": "stale",
       "thumb": "/thumb/1",
-      "open": "/open/1"
+      "open": "/open/1",
+      "facet": "audio"
     },
     {
       "n": 2,
@@ -44,7 +46,8 @@
       "duration_s": null,
       "preview_state": "stale",
       "thumb": null,
-      "open": "/open/2"
+      "open": "/open/2",
+      "facet": "cad"
     },
     {
       "n": 3,
@@ -59,7 +62,24 @@
       "duration_s": null,
       "preview_state": "missing",
       "thumb": null,
-      "open": null
+      "open": null,
+      "facet": "text"
+    },
+    {
+      "n": 4,
+      "asset": "nota.md",
+      "name": "nota.md",
+      "package": null,
+      "kind": "text",
+      "capability": "text.summary",
+      "created": "2026-11-06T08:00:00Z",
+      "verified": false,
+      "bytes": 1200,
+      "duration_s": null,
+      "preview_state": "missing",
+      "thumb": null,
+      "open": null,
+      "facet": null
     }
   ]
 }
