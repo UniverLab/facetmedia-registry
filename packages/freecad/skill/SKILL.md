@@ -36,6 +36,14 @@ sheets into `<name>.pdf` with FreeCAD's bundled Qt and returns the PDF plus
 the sheets as assets. Copy `examples/bracket-plan.py`, which draws the
 `bracket.step` bracket on one A3 landscape sheet.
 
+The bundled example takes the light route: it projects the part's views
+straight onto a hand-laid sheet, with no document. A drawing that carries
+dimensions or standard sheet furniture follows the document shape in
+references/techdraw.md instead: open the part, check it is worth drawing,
+recompute, then build one page per sheet from a pinned SVG template with a
+projection group (front, top, side and isometric views, third-angle) at an
+explicit scale — and nothing GUI-side, ever.
+
 ## Judging the result
 
 `verify` checks the PDF's page count and each sheet's millimetre size.
@@ -44,6 +52,15 @@ and writes the core document shape `{preview, kind, summary, page_count,
 pages}` beside it. A person then opens the PDF: a missing view, a dimension
 off the geometry or an empty sheet is caught by eye.
 
+Do not stop at what `verify` checks: page count and sheet size pass on an
+empty sheet too. Re-open the rendered PNG pages and confirm each sheet
+actually shows the part — views present, dimensions legible and attached to
+the geometry, no blank pages. Dimensions must be measured from the model
+edges they annotate, never typed in by hand: a retyped number stays behind
+the day the model changes, while a measured one moves with it. Keep
+dimension text clear of views and leaders, and re-read the PDF after every
+change, the way the model side re-reads its view.
+
 ## Pitfalls
 
 - FreeCAD is never installed: point `facet config set freecad.path` at 1.1.4
@@ -51,5 +68,27 @@ off the geometry or an empty sheet is caught by eye.
 - `freecadcmd` exits 0 when a script raises: the runner's wrapper reports the
   traceback and a non-zero exit, so a failed drawing never looks like a pass;
   the invocation, sys.argv and the lookup order are in references/wrapper.md.
+- Recompute after every structural change in a document-based script:
+  downstream features otherwise keep consuming the previous shape with no
+  error until the export looks wrong, so call `doc.recompute()` before
+  projecting anything.
+- Never import or call GUI modules headless: GUI imports fail silently
+  without a display and selection-driven macros have nothing to select, so
+  drive everything explicitly (`Import.export` for whole documents, never
+  the GUI-only import calls) and wire each object by name.
+- Check the part before drawing it: confirm the opened file's units look
+  like millimetres (a bracket-sized bbox, not a room-sized one), refuse an
+  empty or invalid solid before projecting views, and compare the STEP mass
+  after a round trip when the part matters — an invalid solid draws clean
+  views of nothing.
 - The script receives an output prefix without extension, not a file name:
   write `<prefix>-01.svg`, `<prefix>-02.svg`, … yourself, one per page.
+- Where facet differs from common public advice: some guides expect
+  `freecadcmd` itself to exit non-zero on script errors, but observed
+  behaviour varies by version, so facet keeps its wrapper, which forces a
+  non-zero exit either way. Public drawing guides check sheet content in
+  tooling while facet's `verify` checks page count and size only, so
+  confirm each sheet is non-empty yourself in the rendered pages.
+
+Sources for the practices above — one row per source, with what was taken
+from it — are listed in references/sources.md.

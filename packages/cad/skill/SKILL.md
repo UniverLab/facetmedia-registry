@@ -124,16 +124,36 @@ piece; it never generates one itself.
   and the volume and bbox against those expectations. A wrong feature that
   keeps the volume right shows up in `expect-bbox-mm`; one that keeps both
   right shows up in the view.
+- Aim for exactly one solid in every part: a stray second body (a leftover
+  cutter, a duplicated feature) passes `verify` today but is a modelling
+  defect — read the `solids` count in the preview and delete the extra body
+  before calling the part done.
 - `facet preview <name>.step` writes `solid` with `valid`, `volume_mm3`,
   `bbox_mm`, `faces`, `solids` and `holes`. To fix a misplaced feature,
   read `holes`: each has its `center_mm`, `diameter_mm` and `axis`, so a
   hole at (47, 20, 2.5) instead of (45, 20, 2.5) names the constant to
   change. Then look at the view image (`<name>.view.png`, a shaded
   isometric) — the shape is judged visually.
+- A passing check is not proof the shape is right: a boolean on touching or
+  near-touching faces can succeed with the wrong region kept while
+  `isValid()` still passes, so after every geometry change re-read the
+  volume, the bbox and the view together and ask whether all three moved
+  the way the edit should have moved them.
+- After every geometry change, re-render and re-read the view and compare
+  it against the previous view — scalars plus a fresh look catch what
+  either alone misses — and re-import the STEP to confirm the exported
+  file still builds the same volume. On curved or lofted solids allow a
+  wider volume drift (about a percent, not the default tenth of a percent),
+  because the kernel's own measurement runs high on splines.
 - For drawings, `verify` audits the DXF with 0 errors and 0 fixes and
   checks every `expect-layers` layer is defined; the preview's `drawing`
   carries `units`, `entities`, `layers` with entity counts and the `audit`,
   so an empty layer (0 entities) or a missing one is visible at a glance.
+- Dimensions on a drawing must be measured from the geometry, never retyped:
+  dimension entities reference the points on the part, so editing the model
+  moves the values instead of leaving stale numbers beside changed shapes.
+  A number copied by hand onto a drawing is a defect even when it happens
+  to match today.
 - The STL, SVG and PNG views pass when they parse: a corrupt mesh or view
   fails `verify` even when the STEP or DXF is perfect.
 
@@ -142,7 +162,46 @@ piece; it never generates one itself.
 - Place holes and features in **absolute coordinates** (a
   `cq.Solid.makeCylinder` at a known point, then `cut`): a hole positioned
   relative to a face that shifts does not change the volume, so nothing
-  betrays it — the lab's rule after measuring the bracket by hand.
+  betrays it — the lab's rule after measuring the bracket by hand. More
+  generally, a selector that matches nothing, or more than intended, builds
+  the wrong part without an error: prefer stable references (`.tag()` and
+  workplanes built from tags) for anything positioned off other features,
+  and keep the absolute-coordinate rule for holes.
+- Round edges before joining, not after: put broad fillets on the
+  primitives first, and after a boolean only round by naming an explicit
+  point near the edge (`NearestToPointSelector`). A wide selector such as
+  "all vertical edges" run after a union or cut is the most common kernel
+  crash, because it catches small edges the boolean created.
+- The kernel's common failures have known fixes — an error catalogue with
+  one-line repairs lives in references/failures.md; read the matching row
+  before restructuring a script around a traceback.
+- Mind the extrusion direction: an `XZ` workplane extrudes toward `-Y`, so
+  a feature drawn on it grows the opposite way from a first guess, and a
+  detached-looking solid is usually this sign error. Never place a part by
+  reading `bounding_box()` off curved or lofted geometry either: it can
+  report several times too wide, so use it to check size, not position.
+- Start every script with a named parameters block — lengths in
+  millimetres, each with its unit, derived values computed below it, one
+  function per feature — and keep literal numbers out of the body. When a
+  dimension mates with something real, look it up (a datasheet, two
+  agreeing sources), write the source beside the parameter, and mark
+  estimates as estimates so a guess never poses as a specification.
+- Save STEP as `.step`, never `.stp`: the exporter can silently write
+  nothing under the short extension. Never call `show()` (or import a
+  viewer) in a script either: it hangs with no display, and facet always
+  runs headless with `-I`.
+- For drawings, name the unit in the file, not just in your head: the ezdxf
+  calls are unitless and the `$INSUNITS` header only tells CAD programs
+  what the numbers mean, so set it deliberately for the piece and confirm
+  the scale in the preview — an audit-clean file can still be drawn a
+  thousand times off. Define every layer, linetype and style the file
+  references, and keep the audit at 0 errors and 0 fixes: a fix the auditor
+  applies silently can hide a file another program refuses to open.
+- Drawing practice that survives real shops lives in
+  references/drawing.md: layers carry machine intent (cut vs marking),
+  machine-read text goes down as outlines, cut profiles stay closed with no
+  duplicates, the model is framed for whoever opens the file next, and a
+  current-version file uses that version's entity set.
 - The script runs with the caller's rights, exactly as `uv run` would: it
   is your code, chosen by you, and facet does not sandbox it further.
 - A missing host library (the GL/X stack the OCP kernel links against)
@@ -153,3 +212,12 @@ piece; it never generates one itself.
   offline.
 - Keep the script beside the piece: `inputs = [script]` hashes it into every
   record, so the record names exactly the code that made the part.
+- Where facet differs from common public advice: broad-fillet-last is the
+  popular rule, but facet rounds primitives first because wide selectors
+  after booleans are the top crash source. Public guides assert exactly one
+  solid while facet's `verify` still accepts at least one, so count the
+  solids yourself. Public guides check DXF header units in tooling while
+  facet's `verify` does not, so set and eyeball the scale yourself.
+
+Sources for the practices above — one row per source, with what was taken
+from it — are listed in references/sources.md.
