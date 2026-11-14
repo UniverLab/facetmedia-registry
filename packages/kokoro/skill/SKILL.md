@@ -58,6 +58,28 @@ Run a piece with `facet run kokoro.speak <piece.toml> --out build/`; every
 clip becomes `<name>.wav` beside the others, with its record. Without
 `--out` the clips land in the piece's directory.
 
+## Before synthesis
+
+Normalise the text for the ear before synthesis, not after verification:
+write out numbers, units, symbols, acronyms and brand names as they are
+pronounced, strip or rewrite anything the phonemiser mangles (smart
+quotes, dashes, emoji, arrows, code identifiers, file names, URLs — read
+paths as bare file names or drop them), and give names the engine reads
+wrong an inline phoneme spelling. The WER repair table under "Judging
+the result" stays as the backstop, but a normalisation pass first means
+fewer regenerations.
+
+Size each clip for the engine's middle range: aim for roughly 100-200
+tokens per clip, bundle sub-20-token shorts together, and split long
+utterances into sentences across clips. When a long clip rushes, reach
+for the per-clip `speed` first — slowing it down is the mitigation; a
+split is the other one.
+
+For `en-us`/`en-gb` work, prefer the top-graded voices (`af_heart`,
+`af_bella`, `bf_emma`) and treat low-grade voices as legacy. Divergence:
+`ef_dora` is the only Spanish female voice, so grade shopping does not
+apply to `es` — it is the Spanish voice.
+
 ## Judging the result
 
 `verify` transcribes each clip with faster-whisper `small` (CPU, int8) and
@@ -98,3 +120,6 @@ Then, in order of preference:
 - The package environment carries GPL components (phonemizer, espeak-ng).
   They run isolated as libraries of the runner and do not license the audio
   they produce.
+
+The guidance above draws on public sources listed in
+[references/sources.md](references/sources.md).

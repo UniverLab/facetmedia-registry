@@ -73,6 +73,26 @@ seconds to listen to, and the words show what the model substituted.
 with a summary like `9.6 s · en (0.99) · 28 words · WER 0 %` and the same
 metrics as fields. The sidecar must sit beside the transcript.
 
+## How it runs, fixed
+
+The runner pins its decode setup, so there is no speed knob to turn —
+quality first is the whole policy:
+
+- Beam width is 5, the quality default. Public advice often lowers it for
+  speed at a small accuracy cost; this runner keeps 5. Divergence: beam 5
+  is kept against that public speed advice.
+- Compute is int8 on CPU with no system `ffmpeg` in the path: faster-whisper
+  decodes through its bundled libraries.
+- The VAD filter is on: silence is skipped before decoding, which cuts CPU
+  time and is the main defence against the model inventing words over
+  silence or music.
+- Timed words are always written — the subtitle pipeline downstream needs
+  them — and that costs speed deliberately.
+
+A future upgrade path, not today's behaviour: `large-v3-turbo` offers
+near-equal accuracy at much higher speed and would suit this quality-first
+setup if the package ever moves off `small`.
+
 ## Pitfalls
 
 - `language = "auto"` can pick the wrong language on short clips: a two-second
@@ -85,3 +105,6 @@ metrics as fields. The sidecar must sit beside the transcript.
   same model: the two packages share the size, not the files.
 - Keep `<name>.json` beside `<name>.txt`: `verify` and `preview` read the
   confidence and the timed segments from it.
+
+The guidance above draws on public sources listed in
+[references/sources.md](references/sources.md).

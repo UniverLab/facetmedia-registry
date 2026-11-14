@@ -5,8 +5,8 @@ what a person reads: the front matter and the four headings the core requires
 in order, the capability id ``whisper-subs.subtitles`` with the srt/vtt
 tokens, the extraction-first workflow through the packages that exist in this
 registry (ffmpeg.convert and whisper.transcribe), the handoff to
-``hyperframes.narrated`` — which reads whisper SRT — and that no references
-directory ships.
+``hyperframes.narrated`` — which reads whisper SRT — and that the skill
+cites the sources reference it ships.
 """
 
 from __future__ import annotations
@@ -65,5 +65,6 @@ def test_the_body_carries_the_extraction_first_workflow() -> None:
     assert "subtitles" in body
 
 
-def test_no_references_dir_ships() -> None:
-    assert not (PACKAGE / "skill" / "references").exists()
+def test_sources_reference_ships() -> None:
+    assert (PACKAGE / "skill" / "references" / "sources.md").is_file()
+    assert "references/sources.md" in _body()

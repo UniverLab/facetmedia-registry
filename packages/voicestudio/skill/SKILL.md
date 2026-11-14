@@ -80,6 +80,8 @@ Write proper nouns and brand names as they are pronounced in Spanish
 (`fáset media`, not `facetMedia`): the verification transcribes the clip and a
 name the engine reads letter by letter fails the word error rate, as
 `facetMedia` -> `imedienta` did. Keep the real spelling for the subtitles.
+Normalise numbers, units and symbols the same way before synthesis — spell
+them out as spoken — so verification stays the backstop, not the first fix.
 
 The first clip on an engine installs it (about 8 GB for `voxcpm2`, 13 GB for
 `cosyvoice`); `cosyvoice` needs `g++` on the machine to build.
@@ -100,7 +102,19 @@ their consent.
 
 - The reference is 7-30 s of **neutral speech**. A reference that starts
   with a question or an exclamation contaminates the clone with a sharp
-  attack and can skip the first sentence.
+  attack and can skip the first sentence. The sweet spot is a short clean
+  stretch at the end, around 10 s: clean seconds beat long noisy ones, and
+  the recording paired with its exact transcript clones with the best
+  fidelity.
+- There is no per-clip style field. Style lives in the profile's
+  closed-vocabulary `instruct` — gender, age range, pitch, a whisper
+  delivery — fixed when the profile is created, and the clone keeps
+  that timbre on every clip. Emotion or a per-clip pace has no lever:
+  write the delivery you need into the text itself or accept the
+  profile's design. Divergence: facet styles the voice once at profile
+  time, where public cloning advice layers style instructions per clip.
+- Inline non-verbal tags are untested on these engines — keep the text
+  plain and leave delivery to the profile's fixed `instruct` design.
 - To record it, read a script of neutral, declarative sentences (the
   original `guion-grabacion.md` is not shipped with this package).
 - If a WAV arrives in stereo with one channel digitally silent, keep the
@@ -163,3 +177,6 @@ its first seed passed on first hearing.
   own reference recordings; the doctor names the recipe.
 - **Verification is always on.** There is no skip field in the piece format
   and no flag the runner would accept. A clip is heard back every time.
+
+The guidance above draws on public sources listed in
+[references/sources.md](references/sources.md).

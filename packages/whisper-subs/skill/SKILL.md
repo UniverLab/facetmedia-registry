@@ -56,6 +56,14 @@ verdict means the times were already monotonic at conversion.
 `<source-stem>.<format>.preview.json` (generic viewer) with a summary like
 `2 cues · 2.2 s · srt` and the same three fields.
 
+The cues are sentence segments, the readable-subtitle granularity — not
+karaoke-style word timings, which stay in the sidecar's timed words. Spell
+names right one step earlier, in the transcription, and no subtitle repair
+is ever needed. Divergence: verification checks monotonic non-overlapping
+times plus the header only — it deliberately does not judge readability
+shaping such as characters per line or reading speed. When conversion
+fails, re-run from the sidecar; never hand-edit it.
+
 ## Pitfalls
 
 - The sidecar is the input: keep `laboratory.json` where the piece names it,
@@ -68,3 +76,6 @@ verdict means the times were already monotonic at conversion.
   the format `format`, the same voice-facet precedents as whisper.
 - `hyperframes.narrated` declares its subtitles as SubRip: give it the `.srt`,
   not the `.vtt`.
+
+The guidance above draws on public sources listed in
+[references/sources.md](references/sources.md).
