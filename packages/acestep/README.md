@@ -44,6 +44,11 @@ and never comes out of this refusal.
 | `key` | string | no | musical key such as `C major`, sent as `key_scale`; unset sends nothing |
 | `time-signature` | enum | no | metre, one of `2/4`, `3/4`, `4/4`, `6/8`, sent as its beats-per-bar number as `time_signature`; unset sends nothing |
 
+`time-signature` is a closed set: `4/4` reaches ACE-Step as
+`time_signature = "4"`, its beats per bar, and the record's `params` keep the
+metre the piece wrote. Any other value is refused as `invalid_input` before
+the runner or the server starts.
+
 ## Timings and verification
 
 About **50 s per 30 s track** on the reference GPU. `run` polls the server
