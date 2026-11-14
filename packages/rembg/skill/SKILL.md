@@ -47,6 +47,30 @@ plate = "plate.png"
 This is a port of the paper-cleaning tool; `lamina_web.py` stays
 out — it is a univerlab.org pipeline, not part of this package.
 
+## Edges and limits
+
+The cutout runs rembg's default single pass — no edge mode, no alpha matting,
+no decontamination — so the mask is whatever U2NetP produced. That is the
+right trade for a couple of seconds per photo on CPU, and it fails in known
+ways:
+
+- **A coloured halo** around a subject shot on a strongly coloured backdrop is
+  backdrop colour left in the fringe. rembg's `-dc` decontamination mode is
+  the upstream fix; this package does not run it, so crop the fringe out or
+  reshoot against a neutral backdrop.
+- **Hair, fur and wispy edges** are where U2NetP softens or eats detail. A
+  bigger session model (`birefnet-general`) or alpha matting refines them;
+  neither is exposed here, and rerunning the same photo cannot improve the
+  same mask.
+- **Large plates.** U2NetP on a photo past roughly 4096 px on the long side
+  risks the memory blow-up: downscale before the piece and keep the cutout at
+  the size you need.
+
+A flat, solid AI backdrop is better cut with a chroma key than with a matte:
+when the backdrop is one known colour, key it out and skip rembg entirely.
+`rembg.paper` shares the same mask and the same limits: a halo left by the
+cutout is paper-coloured in the cleaned plate too.
+
 ## Judging the result
 
 `verify` re-opens both PNGs: the cutout must be RGBA, the checkerboard RGB, and
@@ -72,6 +96,12 @@ kept the figure, the book and the lamp. The package ships that lab run:
 - **The weights come from `facet pull rembg`.** A missing or mismatched
   `u2netp.onnx` fails `doctor` with that fix; tests and CI never download.
   `rembg.paper` uses the same `u2netp` session and the same pull.
+- **Record the numbers.** Read the alpha channel after a run: the four corner
+  values and the share of fully transparent pixels are the cheapest sanity
+  record, and they catch an inverted or empty mask that a thumbnail hides.
 - **Attribution.** rembg's code is MIT (Daniel Gatis); the U2NetP weights
   are U-2-Net, Apache-2.0 (xuebinqin et al.), fetched by
   `facet pull rembg`; both are recorded in the manifest.
+
+Sources for these rules, with their licences, are in
+`skill/references/sources.md`.

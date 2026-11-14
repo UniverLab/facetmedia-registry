@@ -95,6 +95,40 @@ each entry as that clip's first frame — `[[inputs.image]]` with
 `image = "video-still.png"` beside its `prompt`, `seed`, `width` and
 `height`.
 
+## Prompting
+
+Word order changes the picture: the model weighs the start of the prompt most,
+so lead with what matters. The order that works across these flows is
+**subject → action or style → context → lighting → camera**. Lighting carries
+the most quality weight; name one light and one lens instead of piling on
+style words.
+
+`z-image` runs 25 steps at CFG 4, so guidance is real — but no negative input
+is exposed, and an "avoid X" clause still has nowhere to go. Write the
+positive form of every avoidance: "sharp focus" for no blur, "neutral
+backdrop" for no clutter, "window light from the side" for no flat light.
+Lock the seed and change exactly one dial per run (steps, CFG or one prompt
+clause) to learn what the prompt is doing; run three seeds and keep the best.
+
+For an edit, write the instruction in three parts — **target, change,
+preservation** — in one sentence or three: "Replace the jacket's colour with
+deep indigo. Preserve its cut, folds, lighting and position. Keep the face,
+background and camera framing unchanged." One operation per run: a second
+change applied on top of the first compounds drift. If unrelated detail moves,
+restart from the original reference, never from the damaged output.
+
+For a clip, describe motion, not content: **subject → motion → camera →
+scene**. Name the movement with concrete verbs, one scene per clip, and only
+what is visible in the first frame — the image already decides what appears.
+Keep "static, still image, frozen, motionless, no movement" in a custom
+negative. On `wan22-i2v-14b-fast`, CFG 1 makes the negative inert, so a fast
+draft tells you nothing about prompt-following.
+
+facet's no-lettering rule is a deliberate product divergence, not a model
+limit: the frames carry no type, so public advice about quoted brand words and
+hex colours does not apply here. `references/prompting.md` has the full
+skeletons and cue lists.
+
 ## Flows
 
 A **flow** is a ComfyUI API graph whose inputs written as `"$key"` are
@@ -156,6 +190,14 @@ the run fails naming it and listing the allowed ones. Unknown node classes
 fail with ComfyUI's own error; facet installs no custom nodes. VRAM is the
 author's: a 24 GB card runs the package flows.
 
+When you author an edit graph, derive the sampler's latent from the scaled
+source rather than from an empty latent at another size: an edit inherits its
+geometry from the reference, and a mismatched empty latent silently
+resynthesises a plastic-looking image instead of failing. Validate node
+schemas with `/object_info`, match IMAGE (`[B,H,W,C]` float) against MASK
+(`[B,H,W]`) across every link, and keep a save or preview sink on the terminal
+node.
+
 ## Drafts
 
 `workflow = "wan22-i2v-14b-fast"` runs the same two-stage Wan graph with
@@ -208,3 +250,6 @@ VAE — are Apache-2.0, commercial use allowed, and no acceptance is needed.
 - The edit and clip flows upload the reference or each first frame to the
   server's `/upload/image` before running; the log prints one
   `<file> uploaded as <name>` line per upload.
+
+Sources for these rules, with their licences, are in
+`skill/references/sources.md`.

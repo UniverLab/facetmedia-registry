@@ -107,6 +107,36 @@ assets = [
 The id is the last part of the asset's polyhaven.com URL; `res` pins the level
 (2k by default for skies and textures, 1k for models).
 
+## Writing the script
+
+Prefer Blender's data API over its operators: `bpy.data`, `bpy.types`, `bmesh`
+and `mathutils` build and change the scene directly, while `bpy.ops` calls are
+UI tools that expect a screen and an active context — headless they fail, or
+act on the wrong object. Never use a modal or interactive operator
+(`wm.call_menu`, a confirmation popup) in a script.
+
+- **Fetch before you touch.** `obj = bpy.data.objects.get("Part")`; if it is
+  `None`, raise naming the object. Never assume the active object or the
+  selection: set `scene.camera` yourself and address collections by name.
+- **Start deterministic.** facet starts from the factory-empty scene, so there
+  is no default cube to delete; when the script deletes objects, purge the
+  orphaned data-blocks with `bpy.data.orphans_purge()` so a rerun does not
+  carry them.
+- **Keep one `DATA` dict.** Every example keeps its creative values in one dict
+  at the top: edit values, not code. Read fetched assets from `FACET_ASSETS`
+  and the script's own files from `FACET_PIECE_DIR`; never hardcode an absolute
+  path.
+- **Frame and light from the subject.** Derive the camera from the subject's
+  bounding box and scale lamp energies to the scene's size, so a new model is
+  framed at a sane exposure without retuning. Treat any preset values as a
+  pattern to recalibrate, not numbers to copy.
+- **Self-review inside the script.** Blender's Python ships numpy: load the
+  written PNG back and measure mean and spread of brightness, then compare them
+  with what the scene meant. A flat frame fails the run as a uniform image, but
+  a technically valid dark or blown frame does not — measure it.
+- **Version-tolerant calls only.** Avoid undocumented behaviour and isolate any
+  version-specific call, so the script survives a Blender update.
+
 ## Judging the result
 
 `verify` measures the file, never the look: a scripted still's PNG header
@@ -148,3 +178,6 @@ was meant to. Aesthetics are yours, never the verifier's.
 - **WSL only retries interop.** The first launch of a Windows `blender.exe`
   from WSL can fail on `UtilAcceptVsock`; that failure alone is retried once,
   so a broken script is never rendered twice.
+
+Sources for these rules, with their licences, are in
+`skill/references/sources.md`.

@@ -118,6 +118,47 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="340" v
 process.stdout.write(svg);
 ```
 
+## Motion gotchas the bake must handle
+
+**Transform origin.** CSS transforms on an SVG element use the viewBox origin
+unless told otherwise, so a spin around the element's own centre needs an
+explicit origin in user units:
+
+```xml
+<style>
+  @keyframes turn { to { transform: rotate(360deg); } }
+  .wheel { transform-origin: 640px 170px; animation: turn 8s linear infinite; }
+</style>
+```
+
+**Measured dash lengths.** A stroke-draw needs the real path length before it
+can animate. `getTotalLength()` does not exist in Node, so measure at bake
+time from geometry you already have — a straight segment's length, `2πr` for
+a circle, the sum of a polyline's segments — or sample the path and accumulate
+distances. Write the result into the document:
+
+```js
+const length = circleLength(r); // 2 * Math.PI * r, or a measured sum
+const draw = `<path d="${d}" fill="none" stroke="#ecebe4"
+  stroke-dasharray="${length}" stroke-dashoffset="${length}"
+  style="animation: draw 1.2s ease-out forwards"/>`;
+```
+
+with `@keyframes draw { to { stroke-dashoffset: 0; } }`.
+
+**Frozen end state.** An animation without `forwards` (or an explicit 100 %
+keyframe holding the last state) reverts to the first frame when it ends. Add
+`animation-fill-mode: forwards` to every one-shot reveal.
+
+**Reduced motion and metadata.** A `@media (prefers-reduced-motion: reduce)`
+block that sets `animation: none` keeps the file usable for people who ask for
+calm, and `<title>`/`<desc>` give the document an accessible name and
+description. Neither is `<text>`, so `verify` accepts them.
+
+**ID hygiene.** Prefix every gradient, clipPath and mask id with the banner's
+own slug (`sale-grad-1`, not `gradient1`): several baked SVGs can share a page
+and ids are document-global.
+
 What `verify` then re-checks on the baked file: a well-formed SVG document,
 CSS `@keyframes` present, no `<script>`, no `<text>` — and a valid PNG beside
 it, rendered by sharp from the SVG's first frame at 2x.

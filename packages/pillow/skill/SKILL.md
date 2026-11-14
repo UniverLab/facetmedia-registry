@@ -55,6 +55,25 @@ cuts the current image into equal tiles of `floor(W/columns)` by
 bottom are dropped — and reassembles them row-major into one sheet with
 2 px white dividers and no outer border, ideal for review boards.
 
+## Working on a photo
+
+The runner opens the source once and never rotates it: EXIF orientation is
+ignored today, so a phone JPEG keeps the orientation its pixels were stored
+in and can come out sideways even though a viewer shows it upright. There is
+no orientation input — check the photo before the piece, and rotate the source
+yourself if the result must be upright.
+
+Ops chain in memory and each output is written once. That is deliberate: every
+JPEG re-encode loses a little detail, so a chain that re-read its own files
+would degrade the image twice; here only the final state of each output is
+encoded. No quality knob is exposed, so Pillow's own encoder defaults apply.
+
+`resize()` returns a new image while `thumbnail()` resizes in place; the runner
+uses `resize` with `Image.Resampling.LANCZOS` (the Pillow 10 name — `ANTIALIAS`
+is gone), so nothing is mutated behind you. The output suffix decides the
+writer: `save` infers the format from the extension, and each op names its own
+suffix, so a png op never silently writes a JPEG.
+
 ## Judging the result
 
 `verify` re-opens every written file with Pillow and compares its suffix,
@@ -78,3 +97,12 @@ record, `width`/`height` measured from the file.
   op's image, but every output is named after `image`'s stem with its own
   1-based index — `foto-2-resize.png` is op 2, not a file the next
   op read.
+- **Trim before the sheet, not during it.** `sheet` only cuts equal tiles, so
+  a source with a flat border tiles with that border inside every tile. Trim
+  it before the piece: `getbbox()` on an RGBA conversion gives the content box
+  to crop to.
+- **A sideways phone photo stays sideways.** The runner never transposes by
+  EXIF orientation; rotate the source before the piece when upright matters.
+
+Sources for these rules, with their licences, are in
+`skill/references/sources.md`.

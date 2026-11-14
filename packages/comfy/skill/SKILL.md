@@ -90,6 +90,44 @@ each entry as that clip's first frame — `[[inputs.image]]` with
 `image = "video-still.png"` beside its `prompt`, `seed`, `width` and
 `height`. The engraved-plate recipe below is a full clip example.
 
+## Prompting
+
+Word order changes the picture: the model weighs the start of the prompt most,
+so lead with what matters. The order that works across these flows is
+**subject → action or style → context → lighting → camera**. Lighting carries
+the most quality weight; name one light and one lens instead of piling on
+style words.
+
+`z-image-turbo` runs 8 steps at CFG 1: with guidance that low the negative
+side is switched off, and the flow exposes no negative input at all, so an
+"avoid X" clause buys nothing. Say what should be there instead — "sharp
+focus", "neutral backdrop", "window light from the side", "natural skin
+texture, visible pores", "85mm lens, shallow depth of field". Lock the seed
+and change exactly one dial per run (steps, CFG or one prompt clause) to learn
+what the prompt is doing; run three seeds and keep the best.
+
+The FLUX.2 klein flows expose no negative knob either, which matches the
+model vendor's guidance that FLUX takes no negative prompt: describe the image
+you want. facet's no-lettering rule is a deliberate product divergence, not a
+model limit — the frames carry no type, so public FLUX advice about quoted
+brand words and hex colours does not apply here.
+
+For an edit, write the instruction in three parts — **target, change,
+preservation** — in one sentence or three: "Replace the jacket's colour with
+deep indigo. Preserve its cut, folds, lighting and position. Keep the face,
+background and camera framing unchanged." One operation per run: a second
+change applied on top of the first compounds drift. If unrelated detail moves,
+restart from the original reference, never from the damaged output.
+
+For a clip, describe motion, not content: **subject → motion → camera →
+scene**. Name the movement with concrete verbs, one scene per clip, and only
+what is visible in the first frame — the image already decides what appears.
+Keep "static, still image, frozen, motionless, no movement" in a custom
+negative (see the engraved-plate recipe). On `wan22-i2v-fast`, CFG 1 makes the
+negative inert, so a fast draft tells you nothing about prompt-following.
+
+`references/prompting.md` has the full skeletons and cue lists.
+
 ## Flows
 
 A **flow** is a ComfyUI API graph whose inputs written as `"$key"` are
@@ -157,6 +195,14 @@ together fail before the server starts. Every model file the graph names
 the run fails naming it and listing the allowed ones. Unknown node classes
 fail with ComfyUI's own error; facet installs no custom nodes. VRAM is the
 author's: an 8 GB card runs the package flows.
+
+When you author an edit graph, derive the sampler's latent from the scaled
+source rather than from an empty latent at another size: an edit inherits its
+geometry from the reference, and a mismatched empty latent silently
+resynthesises a plastic-looking image instead of failing. Validate node
+schemas with `/object_info`, match IMAGE (`[B,H,W,C]` float) against MASK
+(`[B,H,W]`) across every link, and keep a save or preview sink on the terminal
+node.
 
 ## Drafts
 
@@ -250,3 +296,6 @@ models and the Wan fp8 unet are Apache-2.0.
 - The edit and clip flows upload the reference or each first frame to the
   server's `/upload/image` before running; the log prints one
   `<file> uploaded as <name>` line per upload.
+
+Sources for these rules, with their licences, are in
+`skill/references/sources.md`.
