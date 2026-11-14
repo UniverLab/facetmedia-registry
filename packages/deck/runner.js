@@ -379,6 +379,7 @@ async function runSlides(request) {
   await renderPdf(source, pdf, chrome, outDir);
   const pages = normalizePages(outDir);
   if (!pages.length) throw new Error(`the render wrote no page PNGs for ${name}.pdf`);
+  normalizeSlidesNotes(inputs, pages.length);
   const { version } = packageDir(PLAYWRIGHT);
   return {
     tool: { name: "deck", version },
@@ -420,19 +421,21 @@ function isPng(asset) {
 }
 
 async function verify(request) {
+  const inputs = inputsOf(request);
   const assets = [];
-  for (const asset of request.assets || []) assets.push(await verdictOf(asset));
+  for (const asset of request.assets || []) assets.push(await verdictOf(asset, inputs));
   return { assets };
 }
 
-async function verdictOf(asset) {
-  return isPng(asset) ? verdictOfImage(asset) : verdictOfSlides(asset);
+async function verdictOf(asset, inputs) {
+  return isPng(asset) ? verdictOfImage(asset) : verdictOfSlides(asset, inputs);
 }
 
-async function verdictOfSlides(asset) {
+async function verdictOfSlides(asset, inputs) {
   const file = path.basename(String(asset));
   const rendered = numberedPages(path.dirname(String(asset))).length;
   const fresh = rendered || (await raster.pdfPageCount(String(asset)));
+  normalizeSlidesNotes(inputs, fresh);
   const recorded = recordedPages(asset);
   if (recorded !== null && recorded !== fresh) {
     throw new Error(
@@ -480,12 +483,12 @@ async function preview(request) {
   if (browser && !chrome) throw new Error(BROWSER_MISSING);
   const entries = [];
   for (const asset of assets) {
-    entries.push(await previewOf(asset, seed, chrome, prompt));
+    entries.push(await previewOf(asset, seed, chrome, prompt, inputs));
   }
   return { assets: entries };
 }
 
-async function previewOf(asset, seed, chrome, prompt) {
+async function previewOf(asset, seed, chrome, prompt, inputs) {
   const file = path.basename(String(asset));
   if (isPng(file)) return previewImage(asset, file, seed, prompt);
   const dir = path.join(path.dirname(String(asset)), PREVIEW_DIR);
@@ -494,12 +497,14 @@ async function previewOf(asset, seed, chrome, prompt) {
   await raster.rasterizePdf(String(asset), dir, chrome);
   const pages = normalizePages(dir).map((name) => `${PREVIEW_DIR}/${name}`);
   const summary = `${file} · ${pages.length} page${pages.length === 1 ? "" : "s"} · seed ${seed}`;
+  const notes = normalizeSlidesNotes(inputs, pages.length);
   const data = {
     preview: 1,
     kind: "document",
     summary: summary.slice(0, MAX_SUMMARY),
     page_count: pages.length,
     pages,
+    notes,
   };
   fs.writeFileSync(`${asset}.preview.json`, `${JSON.stringify(data, null, 2)}\n`);
   return { file, preview: `${file}.preview.json`, images: [] };
@@ -567,6 +572,16 @@ function normalizeNotes(inputs, maxPage) {
   const notes = raw.map((item, index) => noteOf(item, index, seen, maxPage));
   notes.sort((left, right) => left.page - right.page);
   return notes;
+}
+
+// Slides notes are optional: an absent or empty table means no notes, while
+// a present table follows the presenter's shape, distinctness, range and
+// text checks.
+function normalizeSlidesNotes(inputs, maxPage) {
+  const raw = inputs.notes;
+  if (raw === undefined || raw === null) return [];
+  if (Array.isArray(raw) && raw.length === 0) return [];
+  return normalizeNotes({ notes: raw }, maxPage);
 }
 
 function inlineData(ref, dir) {

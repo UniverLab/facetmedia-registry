@@ -36,7 +36,7 @@ SCALE = 2
 VIEWPORT = {"width": 1060, "height": 800}
 RUN_SEED = 3
 PREVIEW_SEED = 7
-PREVIEW_KEYS = {"preview", "kind", "summary", "page_count", "pages"}
+PREVIEW_KEYS = {"preview", "kind", "summary", "page_count", "pages", "notes"}
 PAGE_NAMES = ["page-01.png", "page-02.png"]
 PREVIEW_PAGES = ["preview/page-01.png", "preview/page-02.png"]
 PNG_WIDTH = 2560
@@ -464,6 +464,156 @@ def test_run_refuses_a_missing_slide_html(tmp_path: Path) -> None:
     assert "source" in done.stderr
 
 
+def _noted_inputs() -> dict[str, Any]:
+    """Slides inputs with one note per page, out of page order."""
+    return {
+        "source": "slides.html",
+        "prompt": "brief",
+        "seed": RUN_SEED,
+        "notes": [
+            {"page": 3, "text": "Third"},
+            {"page": 1, "text": "First"},
+            {"page": 2, "text": "Second"},
+        ],
+    }
+
+
+def test_run_accepts_slides_notes_in_any_page_order(tmp_path: Path) -> None:
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _slide(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, node_path, bin_dir, pages=3, chrome=chrome)
+    request = _request("run", out, piece, inputs=_noted_inputs())
+    done, result = _invoke(tmp_path, "run", request, env)
+    assert done.returncode == 0, done.stderr
+    assert result is not None
+    assert result["assets"][0]["properties"] == {"page_count": 3}
+
+
+def test_run_refuses_a_repeated_note_page(tmp_path: Path) -> None:
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _slide(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
+    inputs = {**_inputs(), "notes": [{"page": 1, "text": "A"}, {"page": 1, "text": "B"}]}
+    done, result = _invoke(tmp_path, "run", _request("run", out, piece, inputs=inputs), env)
+    assert done.returncode != 0
+    assert result is None
+    assert "repeated" in done.stderr
+
+
+def test_run_refuses_a_note_beyond_the_rendered_pages(tmp_path: Path) -> None:
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _slide(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
+    inputs = {**_inputs(), "notes": [{"page": 1, "text": "A"}, {"page": 3, "text": "C"}]}
+    done, result = _invoke(tmp_path, "run", _request("run", out, piece, inputs=inputs), env)
+    assert done.returncode != 0
+    assert result is None
+    assert "beyond the deck's 2 slides" in done.stderr
+
+
+def test_run_refuses_an_empty_note_text(tmp_path: Path) -> None:
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _slide(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
+    inputs = {**_inputs(), "notes": [{"page": 1, "text": ""}, {"page": 2, "text": "B"}]}
+    done, result = _invoke(tmp_path, "run", _request("run", out, piece, inputs=inputs), env)
+    assert done.returncode != 0
+    assert result is None
+    assert "non-empty" in done.stderr
+
+
+def test_run_refuses_a_note_of_the_wrong_shape(tmp_path: Path) -> None:
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _slide(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
+    inputs = {**_inputs(), "notes": [{"page": 1}]}
+    done, result = _invoke(tmp_path, "run", _request("run", out, piece, inputs=inputs), env)
+    assert done.returncode != 0
+    assert result is None
+    assert "notes[0]" in done.stderr
+
+
+def test_verify_refuses_notes_beyond_the_rendered_pages(tmp_path: Path) -> None:
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _slide(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
+    _done, _result = _run(tmp_path, out, piece, env)
+    asset = out / "slides.pdf"
+    inputs = {**_inputs(), "notes": [{"page": 1, "text": "A"}, {"page": 3, "text": "C"}]}
+    request = _request("verify", out, piece, inputs=inputs, assets=[str(asset)])
+    done, result = _invoke(tmp_path, "verify", request, env)
+    assert done.returncode != 0
+    assert result is None
+    assert "beyond the deck's 2 slides" in done.stderr
+
+
+def test_preview_orders_slides_notes_by_page(tmp_path: Path) -> None:
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _slide(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, node_path, bin_dir, pages=3, chrome=chrome)
+    run_request = _request("run", out, piece, inputs=_noted_inputs())
+    done, _result = _invoke(tmp_path, "run", run_request, env)
+    assert done.returncode == 0, done.stderr
+    asset = out / "slides.pdf"
+    preview_request = _request(
+        "preview", out, piece, inputs={**_noted_inputs(), "seed": PREVIEW_SEED}, assets=[str(asset)]
+    )
+    done, result = _invoke(tmp_path, "preview", preview_request, env)
+    assert done.returncode == 0, done.stderr
+    assert result is not None
+    data = json.loads((out / "slides.pdf.preview.json").read_text(encoding="utf-8"))
+    assert data["notes"] == [
+        {"page": 1, "text": "First"},
+        {"page": 2, "text": "Second"},
+        {"page": 3, "text": "Third"},
+    ]
+
+
+def test_run_accepts_an_explicitly_empty_notes_table(tmp_path: Path) -> None:
+    node_path = _package(tmp_path)
+    bin_dir, chrome = _tools(tmp_path)
+    piece, _html = _slide(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(tmp_path, node_path, bin_dir, chrome=chrome)
+    inputs = {**_inputs(), "notes": []}
+    done, result = _invoke(tmp_path, "run", _request("run", out, piece, inputs=inputs), env)
+    assert done.returncode == 0, done.stderr
+    assert result is not None
+    preview_request = _request(
+        "preview",
+        out,
+        piece,
+        inputs={**inputs, "seed": PREVIEW_SEED},
+        assets=[str(out / "slides.pdf")],
+    )
+    done, _result = _invoke(tmp_path, "preview", preview_request, env)
+    assert done.returncode == 0, done.stderr
+    data = json.loads((out / "slides.pdf.preview.json").read_text(encoding="utf-8"))
+    assert data["notes"] == []
+
+
 def test_verify_passes_when_the_page_count_matches(tmp_path: Path) -> None:
     node_path = _package(tmp_path)
     bin_dir, chrome = _tools(tmp_path)
@@ -600,6 +750,7 @@ def test_preview_writes_the_core_document_fixture_keys(tmp_path: Path) -> None:
     assert data["kind"] == "document"
     assert data["page_count"] == PAGE_COUNT
     assert data["pages"] == PREVIEW_PAGES
+    assert data["notes"] == []
     assert f"seed {PREVIEW_SEED}" in data["summary"]
     assert all((out / name).is_file() for name in data["pages"])
     assert sorted(path.name for path in (out / "preview").iterdir()) == PAGE_NAMES

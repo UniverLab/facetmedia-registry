@@ -1,6 +1,6 @@
 """The viewers wear facet's night surface, from the brand manual.
 
-Stdlib unittest: the six tokens are the only colours a viewer's CSS or JS may
+Stdlib unittest: the seven tokens are the only colours a viewer's CSS or JS may
 name, the light variant and the red failure colours are gone, the three faces
 are vendored under ``_kit/fonts/`` with their licences, the grain is drawn with
 the manual's values behind the text, and the shared header is one line ending
@@ -20,9 +20,9 @@ VIEWERS = ROOT / "viewers"
 KIT = VIEWERS / "_kit"
 BASE = KIT / "base.css"
 #: Every viewer, gallery included: it shares the surface but its own header.
-KINDS = ("audio", "cad", "document", "generic", "image", "video", "gallery")
+KINDS = ("audio", "cad", "document", "generic", "image", "video", "gallery", "slides")
 #: The viewers that render one asset's record, and so the shared header.
-RECORD_KINDS = ("audio", "cad", "document", "generic", "image", "video")
+RECORD_KINDS = ("audio", "cad", "document", "generic", "image", "video", "slides")
 SOURCES = (".css", ".js", ".html")
 #: FR1: the whole palette, and every value it may take.
 TOKENS = {
@@ -32,6 +32,7 @@ TOKENS = {
     "--senal": "#e8c547",
     "--regla": "rgba(231, 222, 209, 0.16)",
     "--panel": "rgba(231, 222, 209, 0.04)",
+    "--slide-black": "#000",
 }
 #: FR2: the five faces, relative to viewers/_kit/fonts/.
 FACES = (
@@ -81,7 +82,7 @@ def declarations(css: str, selector: str) -> str:
 
 
 class PaletteTests(unittest.TestCase):
-    """FR1: six tokens, and no other colour anywhere in the viewers."""
+    """FR1: the seven tokens, and no other colour anywhere in the viewers."""
 
     def test_only_the_kit_names_a_colour(self) -> None:
         files = [path for path in sources() if path != BASE]
@@ -92,7 +93,7 @@ class PaletteTests(unittest.TestCase):
                 self.assertIsNone(HEX.search(source), "a hex colour outside _kit/base.css")
                 self.assertIsNone(COLOUR_CALL.search(source), "rgb() outside _kit/base.css")
 
-    def test_the_kit_defines_the_six_tokens(self) -> None:
+    def test_the_kit_defines_the_tokens(self) -> None:
         css = read(BASE)
         root = re.search(r":root\s*\{([^}]*)\}", css)
         self.assertIsNotNone(root, "no :root block")
@@ -309,6 +310,61 @@ class DocumentViewerTests(unittest.TestCase):
         self.assertIn("grid-template-columns: 1fr", narrow)
         self.assertIn("flex-direction: row", narrow)
         self.assertIn("overflow-x: auto", narrow)
+
+
+class SlidesViewerTests(unittest.TestCase):
+    """The slides viewer: three roles over one channel, black reserved."""
+
+    def setUp(self) -> None:
+        self.folder = VIEWERS / "slides"
+        self.html = read(self.folder / "index.html")
+        self.css = read(self.folder / "slides.css")
+        self.main = read(self.folder / "main.js")
+
+    def test_the_role_parameter_picks_three_views_over_one_channel(self) -> None:
+        for view in ("view-default", "view-audience", "view-presenter"):
+            with self.subTest(view=view):
+                self.assertIn(f'id="{view}"', self.html)
+        for role in ("audience", "presenter"):
+            with self.subTest(role=role):
+                self.assertIn(f'"{role}"', self.main)
+        self.assertIn("BroadcastChannel(`facet-slides-${name}`)", self.main)
+
+    def test_the_audience_view_hides_the_header_and_the_grain(self) -> None:
+        self.assertIn('document.getElementById("header").hidden = view !== "default"', self.main)
+        self.assertIn("display: none", declarations(self.css, 'body[data-role="audience"] .grain'))
+
+    def test_the_views_take_their_keys_notes_counter_and_clock(self) -> None:
+        for key in ("ArrowRight", "ArrowLeft", "PageDown", "PageUp"):
+            with self.subTest(key=key):
+                self.assertIn(f"{key}:", self.main)
+        for key in ("Home", "End"):
+            with self.subTest(key=key):
+                self.assertIn(f'"{key}"', self.main)
+        self.assertIn('event.key === "Enter"', self.main)
+        self.assertIn("/^[0-9]$/.test(event.key)", self.main)
+        for button in ("btn-prev", "btn-next", "btn-black", "btn-audience"):
+            with self.subTest(button=button):
+                self.assertIn(f'id="{button}"', self.html)
+                self.assertIn(f'getElementById("{button}")', self.main)
+        self.assertIn("no speaker notes", self.main)
+        self.assertIn("var(--font-text)", declarations(self.css, "#pres-notes"))
+        for selector in ("#pres-count", "#pres-clock"):
+            with self.subTest(selector=selector):
+                self.assertIn("var(--font-mono)", declarations(self.css, selector))
+
+    def test_the_blackout_and_the_letterbox_use_the_reserved_black(self) -> None:
+        for selector in ("#aud-frame", "#aud-black"):
+            with self.subTest(selector=selector):
+                self.assertIn("var(--slide-black)", declarations(self.css, selector))
+
+    def test_only_the_slides_viewer_may_name_the_slide_black(self) -> None:
+        users = sorted(
+            path.relative_to(ROOT).as_posix()
+            for path in sources()
+            if path != BASE and "slide-black" in read(path)
+        )
+        self.assertEqual(users, ["viewers/slides/slides.css"])
 
 
 if __name__ == "__main__":

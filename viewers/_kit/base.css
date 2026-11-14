@@ -3,8 +3,9 @@
    facet's night surface, from the brand manual (brand/facet v0.4, 2026-11-13):
    a terminal in a night gallery. One ground, one text colour, one accent for
    what is verified, the lab's three faces, and the fine grain. There is no
-   light variant: every viewer wears the night. The six colours below are the
-   only ones any viewer's CSS or JS may use. */
+   light variant: every viewer wears the night. The seven colours below are the
+   only ones any viewer's CSS or JS may use. `--slide-black` is reserved for
+   the slides audience letterbox: nowhere else. */
 
 :root {
   --fondo: #161616;
@@ -13,6 +14,7 @@
   --senal: #e8c547;
   --regla: rgba(231, 222, 209, 0.16);
   --panel: rgba(231, 222, 209, 0.04);
+  --slide-black: #000;
   --font-title: "Old Standard TT", Georgia, "Times New Roman", serif;
   --font-text: "EB Garamond", Georgia, "Times New Roman", serif;
   --font-mono: "Sometype Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;

@@ -58,13 +58,15 @@ content into one tall page.
   `{ page, width, height }` read from its header — so facet copies it out of
   the run and writes its own record.
 - **`<name>.pdf.preview.json`** — the document preview:
-  `{ "preview": 1, "kind": "document", "summary", "page_count", "pages" }`.
+  `{ "preview": 1, "kind": "document", "summary", "page_count", "pages", "notes" }`.
   Its page rasters are written under `preview/` (`pages` entries are
   `preview/page-01.png`, ...), cleared and recreated on every preview, so a
   preview never deletes, rewrites or renames the delivered PNGs beside the
-  PDF. A person's preview is the `document` viewer: the pages down the left,
-  the selected page on the right, and the PDF itself one click away at
-  `/asset/<name>`.
+  PDF. `notes` carries the record's `{ page, text }` tables in page order,
+  or `[]` when the piece names none. A person's preview is the `slides`
+  viewer: the current slide large with a thumbnail strip, a `present` action
+  that opens the audience window and turns the tab into the presenter, and
+  the PDF itself one click away at `/asset/<name>`.
 - **`page-NN.png.preview.json`** — a page PNG previews as the image kind:
   `{ preview, kind, summary, name, prompt, seed, width, height }`.
 

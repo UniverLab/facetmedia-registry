@@ -3,9 +3,9 @@
 The registry suite runs without the core, so every rule the core's
 ``manifest/node.py`` applies is asserted here as data: an npm name, a semver
 version, an SRI integrity, a ``registry.npmjs.org`` tarball computed from the
-name and version, and the first row as the entry package. ``slides`` and
-``presenter`` stay on the generic viewer; ``page`` writes a paginated PDF and
-names the document viewer. The index carries the entry facet loads packages
+name and version, and the first row as the entry package. ``presenter`` stays
+on the generic viewer; ``slides`` names the slides viewer and ``page`` the
+document viewer. The index carries the entry facet loads packages
 from.
 """
 
@@ -130,9 +130,9 @@ def test_the_requirements_are_the_lab_machine_with_no_host_libs() -> None:
 def test_the_capability_is_the_document_kind_with_the_slide_inputs() -> None:
     capability = MANIFEST["capabilities"]["slides"]
     assert capability["kind"] == "document"
-    assert capability["preview"] == {"viewer": "generic"}
+    assert capability["preview"] == {"viewer": "slides"}
     inputs = capability["inputs"]
-    assert set(inputs) == {"source", "prompt", "seed"}
+    assert set(inputs) == {"source", "prompt", "seed", "notes"}
     assert inputs["source"]["type"] == "path"
     assert inputs["source"]["required"] is True
     assert "@page" in inputs["source"]["description"]
@@ -140,6 +140,16 @@ def test_the_capability_is_the_document_kind_with_the_slide_inputs() -> None:
     assert inputs["prompt"]["required"] is True
     assert inputs["seed"]["type"] == "integer"
     assert (inputs["seed"]["default"], inputs["seed"]["min"]) == (0, 0)
+    notes = inputs["notes"]
+    assert notes["type"] == "array"
+    assert notes["required"] is False
+    items = notes["items"]
+    assert set(items) == {"page", "text"}
+    assert items["page"]["type"] == "integer"
+    assert items["page"]["required"] is True
+    assert items["page"]["min"] == 1
+    assert items["text"]["type"] == "string"
+    assert items["text"]["required"] is True
 
 
 def test_the_page_capability_is_the_document_kind_with_the_piece_inputs() -> None:

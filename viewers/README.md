@@ -36,9 +36,10 @@ Every viewer wears facet's night surface, as the facet brand manual
   text. Under `prefers-reduced-motion: reduce` it is drawn once and stays
   still.
 
-The six tokens are the only colours a viewer's CSS or JS may use; the check in
+The seven tokens are the only colours a viewer's CSS or JS may use; the check in
 `tests/test_viewers_look.py` fails on a hex colour or an `rgb(` anywhere in
-`viewers/` outside `_kit/base.css`.
+`viewers/` outside `_kit/base.css`. `--slide-black` is reserved for the slides
+audience letterbox: only the slides viewer may name it, and only there.
 
 ## Rules
 
@@ -83,7 +84,7 @@ request or HTTP status >= 400, and saves a screenshot of each case under
 `_examples/<kind>/screens/` (gitignored).
 
 Every viewer that renders one asset (`audio`, `cad`, `document`, `generic`,
-`image`, `video`) opens with the same header line, `_kit/header.js`:
+`image`, `video`, `slides`) opens with the same header line, `_kit/header.js`:
 `facetMedia · <capability id> · <asset name>` in Sometype Mono, with
 `facetMedia` in Hueso, and the verification verdict at the right — `✓ passed`
 in Señal, `✗ failed` in Hueso tenue — above a thin `--regla` rule. Below it:
@@ -101,6 +102,10 @@ with silences and the playhead, loudness against the target, speech
 alignment), `cad` (views that enlarge, solid and drawing measurements),
 `document` (a paginated PDF page by page: thumbnails, the selected page, the
 PDF a click away), `image` (the still itself, click to enlarge, with its
-prompt, seed and pixel size) and `video` (the clip in a player, with its
-motion prompt, seed, frame count and rate); each has a runnable example under
-`_examples/`.
+prompt, seed and pixel size), `video` (the clip in a player, with its
+motion prompt, seed, frame count and rate) and `slides` (a deck's preview as
+its presentation player: the default surface with the current slide, a
+thumbnail strip and a `present` action; `?role=audience` for the full-screen
+audience window; `?role=presenter` for the current and next slides with notes,
+a counter and a clock, synced over a `BroadcastChannel`); each has a runnable
+example under `_examples/`.

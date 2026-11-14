@@ -1,0 +1,202 @@
+/* Slides viewer: the deck's preview is its presentation player.
+
+   The default view is the facet surface (the kit header, the current slide
+   large, a thumbnail strip, the present and open-PDF actions). The audience
+   view is one slide at a time, letterboxed on the slide black and centred,
+   with nothing else on screen — no header, no grain. The presenter view is
+   the current slide beside the next slide, the notes, a counter and a clock.
+   Only the slides viewer may use --slide-black, and only for the audience
+   letterbox and the black screen. */
+
+/* ---- the default view: stage, strip, actions ---- */
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0.25rem 0 0.75rem;
+}
+
+#summary {
+  margin: 0;
+  color: var(--hueso-tenue);
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem 1rem;
+  align-items: baseline;
+}
+
+#pdf-link {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+#present,
+.pres-buttons button {
+  padding: 0.1rem 0.6rem;
+  background: var(--panel);
+  border: 1px solid var(--regla);
+  color: var(--hueso);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+#stage-default img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border: 1px solid var(--regla);
+  background: var(--panel);
+}
+
+#thumbs {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+#thumbs button {
+  flex: 0 0 8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.25rem;
+  background: var(--panel);
+  border: 1px solid var(--regla);
+  border-left: 3px solid transparent;
+  color: var(--hueso-tenue);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+#thumbs button[aria-current="page"] {
+  border-left-color: var(--senal);
+  color: var(--hueso);
+}
+
+#thumbs img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--regla);
+  background: var(--fondo);
+}
+
+#thumbs .num {
+  font-size: 0.8rem;
+}
+
+/* ---- the audience view: one slide on the slide black ---- */
+
+body[data-role="audience"] .wrap {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+body[data-role="audience"] .grain {
+  display: none;
+}
+
+#aud-frame {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--slide-black);
+}
+
+#aud-img {
+  max-width: 100vw;
+  max-height: 100vh;
+  object-fit: contain;
+}
+
+#aud-black,
+#pres-black {
+  position: fixed;
+  inset: 0;
+  background: var(--slide-black);
+  pointer-events: none;
+}
+
+#aud-hint {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 2rem;
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--hueso-tenue);
+}
+
+/* ---- the presenter view: current, next, notes, counter, clock ---- */
+
+.pres-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+#pres-stage img,
+#pres-side img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--regla);
+  background: var(--panel);
+}
+
+#pres-next-end {
+  margin: 0;
+  padding: 1rem;
+  border: 1px dashed var(--regla);
+  color: var(--hueso-tenue);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+#pres-count,
+#pres-clock {
+  margin: 0.5rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+#pres-clock {
+  color: var(--hueso-tenue);
+}
+
+#pres-notes {
+  font-family: var(--font-text);
+  font-size: 1.2rem;
+  line-height: 1.5;
+}
+
+.pres-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.6rem;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 40rem) {
+  .pres-grid {
+    grid-template-columns: 1fr;
+  }
+}

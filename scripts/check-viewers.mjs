@@ -4,7 +4,8 @@
    error, failed request or HTTP >= 400, exercise the interaction the viewer
    exists for (audio click-to-seek, the CAD view dialog, the document's page
    step and jump with its PDF link, the image enlargement, the gallery's filter
-   and its open link and back button), and save a screenshot of each case under
+   and its open link and back button, the slides viewer in its default,
+   audience and presenter roles), and save a screenshot of each case under
    viewers/_examples/<kind>/screens/
    (gitignored).
 
@@ -23,7 +24,20 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CHROME = process.env.CHROME_PATH || "/usr/bin/google-chrome";
 const KINDS = process.argv.slice(2).length > 0
   ? process.argv.slice(2)
-  : ["generic", "audio", "cad", "document", "image", "video", "gallery"];
+  : ["generic", "audio", "cad", "document", "image", "video", "gallery", "slides"];
+/*: The slides viewer renders three roles: the default surface plus
+   `&role=audience` and `&role=presenter`, each with its own interaction. */
+const ROLE_SUFFIXES = {
+  slides: ["", "&role=audience", "&role=presenter"],
+};
+
+function suffixesFor(kind) {
+  return ROLE_SUFFIXES[kind] ?? [""];
+}
+
+function roleTag(suffix) {
+  return suffix.startsWith("&role=") ? `-${suffix.slice("&role=".length)}` : "";
+}
 //: The gallery example: the page must render every card this file describes.
 const GALLERY = JSON.parse(
   readFileSync(path.join(ROOT, "viewers", "_examples", "gallery.json"), "utf8"),
@@ -282,9 +296,182 @@ async function checkGallery(page, label, failures) {
   await checkGalleryFix(page, label, failures);
 }
 
-async function runCase(browser, url, kind, testCase, failures) {
+/** The slides viewer: the default surface steps with the arrows, opens the
+    PDF in a new tab, and turns itself into the presenter while opening the
+    audience where the deck was. */
+async function checkSlidesDefault(page, context, label, failures) {
+  const preview = await page.evaluate(async () => {
+    const name = new URLSearchParams(window.location.search).get("asset") ?? "";
+    const response = await fetch(`/asset/${encodeURIComponent(name)}.preview.json`);
+    return response.json();
+  });
+  const thumbs = await page.locator("#thumbs button").count();
+  if (thumbs !== preview.page_count) {
+    failures.push(`${label}: ${thumbs} thumbnails, expected ${preview.page_count}`);
+  }
+  const source = () => page.evaluate(() => document.getElementById("slide").getAttribute("src"));
+  if ((await source()) !== `/asset/${preview.pages[0]}`) {
+    failures.push(`${label}: the first slide is ${await source()}`);
+  }
+  await page.keyboard.press("ArrowRight");
+  if ((await source()) !== `/asset/${preview.pages[1]}`) {
+    failures.push(`${label}: ArrowRight left the slide at ${await source()}`);
+  }
+  // The default surface steps with the arrows only (digit jumps live in the
+  // audience and presenter roles), so ArrowLeft returns to the first slide.
+  await page.keyboard.press("ArrowLeft");
+  if ((await source()) !== `/asset/${preview.pages[0]}`) {
+    failures.push(`${label}: ArrowLeft left the slide at ${await source()}`);
+  }
+  const link = page.locator("#pdf-link");
+  if ((await link.getAttribute("href")) !== "/asset/deck.pdf") {
+    failures.push(`${label}: the PDF link is ${await link.getAttribute("href")}`);
+  }
+  if ((await link.getAttribute("target")) !== "_blank") {
+    failures.push(`${label}: the PDF link is not a new tab`);
+  }
+  const [popup] = await Promise.all([
+    context.waitForEvent("page"),
+    page.click("#present"),
+  ]);
+  await popup.waitForLoadState("load");
+  if (!popup.url().includes("&role=audience")) {
+    failures.push(`${label}: present opened ${popup.url()}`);
+  }
+  if (!page.url().includes("&role=presenter")) {
+    failures.push(`${label}: present left this tab at ${page.url()}`);
+  }
+  const count = await page.locator("#pres-count").innerText();
+  if (count !== `1 / ${preview.page_count}`) {
+    failures.push(`${label}: the presenter counts ${JSON.stringify(count)}`);
+  }
+  await popup.close();
+}
+
+/** The audience: one slide on the black, keys step and jump, B blacks out. */
+async function checkSlidesAudience(page, label, failures) {
+  const preview = await page.evaluate(async () => {
+    const name = new URLSearchParams(window.location.search).get("asset") ?? "";
+    const response = await fetch(`/asset/${encodeURIComponent(name)}.preview.json`);
+    return response.json();
+  });
+  if (!(await page.locator("#header").isHidden())) {
+    failures.push(`${label}: the audience shows a header`);
+  }
+  const source = () => page.evaluate(() => document.getElementById("aud-img").getAttribute("src"));
+  if ((await source()) !== `/asset/${preview.pages[0]}`) {
+    failures.push(`${label}: the first slide is ${await source()}`);
+  }
+  await page.keyboard.press("ArrowRight");
+  if ((await source()) !== `/asset/${preview.pages[1]}`) {
+    failures.push(`${label}: ArrowRight left the slide at ${await source()}`);
+  }
+  await page.keyboard.press("End");
+  if ((await source()) !== `/asset/${preview.pages[preview.pages.length - 1]}`) {
+    failures.push(`${label}: End left the slide at ${await source()}`);
+  }
+  await page.keyboard.press("Home");
+  if ((await source()) !== `/asset/${preview.pages[0]}`) {
+    failures.push(`${label}: Home left the slide at ${await source()}`);
+  }
+  await page.keyboard.press("2");
+  await page.keyboard.press("Enter");
+  if ((await source()) !== `/asset/${preview.pages[1]}`) {
+    failures.push(`${label}: "2" then Enter left the slide at ${await source()}`);
+  }
+  await page.keyboard.press("b");
+  if (!(await page.locator("#aud-black").isVisible())) {
+    failures.push(`${label}: B did not black the screen`);
+  }
+  await page.keyboard.press("b");
+  if (await page.locator("#aud-black").isVisible()) {
+    failures.push(`${label}: the second B did not lift the black screen`);
+  }
+  await page.locator("#aud-frame").click();
+  if ((await source()) !== `/asset/${preview.pages[2]}`) {
+    failures.push(`${label}: a click left the slide at ${await source()}`);
+  }
+  await page.keyboard.press("f");
+  await page.waitForTimeout(400);
+  const full = await page.evaluate(() => document.fullscreenElement !== null);
+  const hinted = await page.locator("#aud-hint").isVisible();
+  if (!full && !hinted) {
+    failures.push(`${label}: F neither fullscreened nor explained itself`);
+  }
+  if (full) await page.keyboard.press("f");
+}
+
+/** The presenter: current and next, notes, counter, clock and buttons. */
+async function checkSlidesPresenter(page, context, label, failures) {
+  const preview = await page.evaluate(async () => {
+    const name = new URLSearchParams(window.location.search).get("asset") ?? "";
+    const response = await fetch(`/asset/${encodeURIComponent(name)}.preview.json`);
+    return response.json();
+  });
+  const total = preview.page_count;
+  const count = () => page.locator("#pres-count").innerText();
+  if ((await count()) !== `1 / ${total}`) {
+    failures.push(`${label}: the counter is ${JSON.stringify(await count())}`);
+  }
+  const firstNote = preview.notes[0]?.text ?? "";
+  if ((await page.locator("#pres-notes").innerText()) !== firstNote) {
+    failures.push(`${label}: the first note is not shown`);
+  }
+  await page.keyboard.press("ArrowRight");
+  if ((await count()) !== `2 / ${total}`) {
+    failures.push(`${label}: ArrowRight left the counter at ${JSON.stringify(await count())}`);
+  }
+  if ((await page.locator("#pres-notes").innerText()) !== (preview.notes[1]?.text ?? "")) {
+    failures.push(`${label}: the second note is not shown`);
+  }
+  const clock = await page.locator("#pres-clock").innerText();
+  if (!/^\d\d:\d\d$/.test(clock)) {
+    failures.push(`${label}: the clock reads ${JSON.stringify(clock)}`);
+  }
+  await page.keyboard.press("r");
+  await page.click("#btn-black");
+  if (!(await page.locator("#pres-black").isVisible())) {
+    failures.push(`${label}: the black button did nothing`);
+  }
+  await page.click("#btn-black");
+  const [popup] = await Promise.all([
+    context.waitForEvent("page"),
+    page.click("#btn-audience"),
+  ]);
+  await popup.waitForLoadState("load");
+  if (!popup.url().includes("&role=audience")) {
+    failures.push(`${label}: the audience button opened ${popup.url()}`);
+  }
+  await page.click("#btn-audience");
+  await page.waitForTimeout(600);
+  const full = await popup.evaluate(() => document.fullscreenElement !== null);
+  const hinted = await popup.locator("#aud-hint").isVisible();
+  if (!full && !hinted) {
+    failures.push(`${label}: audience full screen did neither fullscreen nor explain`);
+  }
+  // Either window drives the others: the last slide lands in the audience.
+  await page.keyboard.press("End");
+  try {
+    await popup.waitForFunction(
+      (last) => document.getElementById("aud-img").src.endsWith(last),
+      preview.pages[total - 1],
+      { timeout: 3000 },
+    );
+  } catch {
+    failures.push(`${label}: the audience did not follow to the last slide`);
+  }
+  await popup.close();
+}
+
+async function checkSlides(page, context, label, failures, suffix) {
+  if (suffix === "") await checkSlidesDefault(page, context, label, failures);
+  else if (suffix === "&role=audience") await checkSlidesAudience(page, label, failures);
+  else await checkSlidesPresenter(page, context, label, failures);
+}
+
+async function runCase(browser, url, kind, testCase, failures, suffix = "") {
   const { scheme, width, height } = testCase;
-  const label = `${kind} ${scheme} ${width}x${height}`;
+  const label = `${kind}${roleTag(suffix)} ${scheme} ${width}x${height}`;
   const context = await browser.newContext({
     viewport: { width, height },
     colorScheme: scheme,
@@ -292,17 +479,18 @@ async function runCase(browser, url, kind, testCase, failures) {
   });
   const page = await context.newPage();
   watchPage(page, label, failures);
-  await page.goto(url, { waitUntil: "load" });
+  await page.goto(`${url}${suffix}`, { waitUntil: "load" });
   await page.waitForTimeout(600); // canvases draw, images and fonts settle
   if (kind === "audio") await checkAudioSeek(page, label, failures);
   if (kind === "cad") await checkCadZoom(page, label, failures);
   if (kind === "document") await checkDocument(page, label, failures);
   if (kind === "image") await checkImageZoom(page, label, failures);
   if (kind === "gallery") await checkGallery(page, label, failures);
+  if (kind === "slides") await checkSlides(page, context, label, failures, suffix);
   const dir = path.join(ROOT, "viewers", "_examples", kind, "screens");
   mkdirSync(dir, { recursive: true });
   await page.screenshot({
-    path: path.join(dir, `${scheme}-${width}x${height}.png`),
+    path: path.join(dir, `${scheme}-${width}x${height}${roleTag(suffix)}.png`),
     fullPage: true,
   });
   await context.close();
@@ -316,8 +504,10 @@ async function main() {
     for (const kind of KINDS) {
       const { child, url } = await startServer(kind);
       try {
-        for (const testCase of CASES) {
-          await runCase(browser, url, kind, testCase, failures);
+        for (const suffix of suffixesFor(kind)) {
+          for (const testCase of CASES) {
+            await runCase(browser, url, kind, testCase, failures, suffix);
+          }
         }
       } finally {
         child.kill("SIGTERM");

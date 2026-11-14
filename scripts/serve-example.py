@@ -209,6 +209,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("kind", choices=kinds, help="the example kind to serve")
     parser.add_argument("--port", type=int, default=0, help="port (0 picks a free one)")
+    parser.add_argument(
+        "--role",
+        default=None,
+        help="append ?role=<role> to the printed viewer URL (audience, presenter)",
+    )
     args = parser.parse_args(argv)
 
     server = make_server(args.kind, args.port)
@@ -217,7 +222,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.kind == GALLERY:
         print(base, flush=True)
     else:
-        print(f"{base}?asset={example_asset(args.kind)}", flush=True)
+        url = f"{base}?asset={example_asset(args.kind)}"
+        if args.role:
+            url += f"&role={args.role}"
+        print(url, flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

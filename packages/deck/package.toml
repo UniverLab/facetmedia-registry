@@ -75,8 +75,24 @@ default = 0
 min = 0
 description = "Recorded seed; the paginated export is deterministic, so it labels the record."
 
+[capabilities.slides.inputs.notes]
+type = "array"
+required = false
+description = "One speaker note table per slide; the runner orders them by page and carries them into the document preview."
+
+[capabilities.slides.inputs.notes.items.page]
+type = "integer"
+required = true
+min = 1
+description = "1-based slide number the note belongs to; every page must be distinct and inside the deck."
+
+[capabilities.slides.inputs.notes.items.text]
+type = "string"
+required = true
+description = "Speaker note shown for that slide in the presenter view."
+
 [capabilities.slides.preview]
-viewer = "generic"
+viewer = "slides"
 
 [capabilities.page]
 summary = "Lay out a one-page infographic or poster from HTML + CSS + SVG, exported to a one-page PDF plus its page PNG through the pinned Chromium's screen-media measured-height render"

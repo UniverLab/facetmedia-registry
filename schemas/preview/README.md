@@ -11,8 +11,9 @@ that kind; a package whose preview does not match it is a review blocker.
 including `text`. A kind the core previews itself has no schema here at all:
 `document` (a paginated PDF plus one PNG per page) is served by its viewer at
 `/viewer/`, beside the PDF at `/asset/<name>`; its preview shape — `preview`,
-`kind`, `summary`, `page_count`, `pages` — is the core's document fixture, not
-a schema in this directory.
+`kind`, `summary`, `page_count`, `pages`, plus `notes` (the `{ page, text }`
+tables in page order, `[]` when the piece names none, read by the slides
+viewer) — is the core's document fixture, not a schema in this directory.
 
 A field is added only when a viewer or an agent uses it.
 

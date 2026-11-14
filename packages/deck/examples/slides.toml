@@ -7,3 +7,8 @@ capability = "deck.slides"
 source = "slides.html"
 prompt = "Explain in three slides what a facet piece is: one capability, one command, one deliverable."
 seed = 0
+notes = [
+  { page = 1, text = "Open with the promise: one capability, one command, one deliverable." },
+  { page = 2, text = "Walk through the three commands: copy the example, run it, preview the asset." },
+  { page = 3, text = "Close on the point: a working example is the contract a person can read." },
+]

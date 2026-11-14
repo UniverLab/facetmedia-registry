@@ -9,7 +9,9 @@ page. The HTML owns the page geometry: an `@page` rule sets each slide's size
 and a page break separates the slides. The runner waits for the fonts, switches
 to print media and lets the `@page` rule decide the PDF pages, then screenshots
 one clipped region per page from the same Chromium run; page counts and text
-come from the bundled pdf.js, never from a host tool.
+come from the bundled pdf.js, never from a host tool. It takes an optional
+`notes` table shaped like the presenter's, one `{ page, text }` per slide, and
+carries it into the document preview for the presenter view.
 
 `deck.page` turns one piece of HTML — an infographic or a poster — into a
 single-page PDF and its page PNG. The runner renders it with screen media and
@@ -67,7 +69,9 @@ seed = 0
 ```
 
 `deck.slides` takes `source` (the slide HTML, resolved relative to the piece),
-`prompt` (the brief the deck was authored from) and `seed`. `source` carries one
+`prompt` (the brief the deck was authored from) and `seed`, plus an optional
+`notes` table shaped like the presenter's: one `{ page, text }` per slide, with
+`page` inside the rendered deck. `source` carries one
 `@page` rule for the slide size, for example `@page { size: 1280px 720px; margin:
 0; }`, and one page break per slide (`.slide { break-after: page; }`, with the
 last slide left without a break). Keep it self-contained: local fonts, images
@@ -142,7 +146,8 @@ with the `page_count` the record holds; a mismatch stops the check with
 `runner_failed`. Every page PNG is its own image asset: it verifies against
 its record, and a PNG whose header size differs from the recorded `width` and
 `height` stops the check. The preview file carries `preview`, `kind`,
-`summary`, `page_count` and `pages`; its rasters live under `preview/`, so
+`summary`, `page_count`, `pages` and `notes` (the `{ page, text }` tables in
+page order, or `[]`); its rasters live under `preview/`, so
 previewing the PDF leaves the delivered `page-NN.png` files untouched, and a
 person's preview opens the PDF itself.
 
