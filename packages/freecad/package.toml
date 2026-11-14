@@ -50,4 +50,4 @@ required = true
 description = "Part file the script opens (STEP or a FreeCAD document), resolved relative to the piece."
 
 [capabilities.drawing.preview]
-viewer = "generic"
+viewer = "document"

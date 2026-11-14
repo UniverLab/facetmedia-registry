@@ -104,10 +104,10 @@ def test_the_host_hint_is_the_install_line() -> None:
     assert MANIFEST["requirements"]["host_hint"] == INSTALL_LINE
 
 
-def test_the_capability_is_a_document_with_the_generic_viewer() -> None:
+def test_the_capability_is_a_document_with_the_document_viewer() -> None:
     document = MANIFEST["capabilities"]["document"]
     assert document["kind"] == "document"
-    assert document["preview"] == {"viewer": "generic"}
+    assert document["preview"] == {"viewer": "document"}
     inputs = document["inputs"]
     assert set(inputs) == {"main", "name", "author"}
     assert inputs["main"]["type"] == "path"

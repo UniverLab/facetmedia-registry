@@ -26,7 +26,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "serve-example.py"
 VIEWERS = ROOT / "viewers"
-KINDS = ("generic", "audio", "cad", "image", "video")
+KINDS = ("generic", "audio", "cad", "document", "image", "video")
 #: Content types a browser needs exactly right for ES modules and tokens.
 CONTENT_TYPES = {".html": "text/html", ".js": "text/javascript", ".css": "text/css"}
 EXTERNAL = re.compile(r"https?://")
@@ -238,6 +238,7 @@ class ExampleDataTests(unittest.TestCase):
         self.assertEqual(serve.example_asset("generic"), "hello.txt")
         self.assertEqual(serve.example_asset("audio"), "tone.wav")
         self.assertEqual(serve.example_asset("cad"), "escuadra.step")
+        self.assertEqual(serve.example_asset("document"), "doc.pdf")
         self.assertEqual(serve.example_asset("image"), "foto-producto.png")
         self.assertEqual(serve.example_asset("video"), "bosque-niebla.mp4")
 

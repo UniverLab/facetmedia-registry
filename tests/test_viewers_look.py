@@ -20,9 +20,9 @@ VIEWERS = ROOT / "viewers"
 KIT = VIEWERS / "_kit"
 BASE = KIT / "base.css"
 #: Every viewer, gallery included: it shares the surface but its own header.
-KINDS = ("audio", "cad", "generic", "image", "video", "gallery")
+KINDS = ("audio", "cad", "document", "generic", "image", "video", "gallery")
 #: The viewers that render one asset's record, and so the shared header.
-RECORD_KINDS = ("audio", "cad", "generic", "image", "video")
+RECORD_KINDS = ("audio", "cad", "document", "generic", "image", "video")
 SOURCES = (".css", ".js", ".html")
 #: FR1: the whole palette, and every value it may take.
 TOKENS = {
@@ -249,6 +249,66 @@ class HeaderTests(unittest.TestCase):
         self.assertIn("thresholds[key] !== undefined", source)
         self.assertIn('classList.add("verified")', source)
         self.assertIn("var(--senal)", declarations(read(BASE), "td.num.verified"))
+
+
+class DocumentViewerTests(unittest.TestCase):
+    """The document viewer: pages down the left, the selected page on the right."""
+
+    def setUp(self) -> None:
+        self.folder = VIEWERS / "document"
+        self.html = read(self.folder / "index.html")
+        self.css = read(self.folder / "document.css")
+        self.main = read(self.folder / "main.js")
+
+    def test_the_layout_is_a_thumbnail_column_beside_the_stage(self) -> None:
+        body = declarations(self.css, ".doc")
+        self.assertIn("display: grid", body)
+        self.assertIn("grid-template-columns: 9rem 1fr", body)
+        self.assertIn('id="thumbs"', self.html)
+        self.assertIn('id="stage"', self.html)
+        self.assertIn('id="page"', self.html)
+
+    def test_every_thumbnail_carries_its_number_in_mono(self) -> None:
+        self.assertIn('document.createElement("button")', self.main)
+        self.assertIn('num.className = "num"', self.main)
+        self.assertIn('padStart(2, "0")', self.main)
+        self.assertIn("var(--font-mono)", declarations(read(BASE), ".num"))
+        self.assertIn("var(--senal)", declarations(self.css, '#thumbs button[aria-current="page"]'))
+
+    def test_the_page_is_fitted_to_the_width_with_a_one_to_one_toggle(self) -> None:
+        self.assertIn("max-width: 100%", declarations(self.css, "#stage img"))
+        self.assertIn("width: auto", declarations(self.css, "#stage.fit img"))
+        self.assertIn('id="fit"', self.html)
+        self.assertIn('stage.classList.toggle("fit")', self.main)
+        self.assertIn('button.textContent = fit ? "fit width" : "1:1"', self.main)
+
+    def test_the_keys_step_and_a_number_then_enter_jumps(self) -> None:
+        for key in ("ArrowUp", "ArrowDown", "PageUp", "PageDown"):
+            with self.subTest(key=key):
+                self.assertIn(f"{key}:", self.main)
+        self.assertIn('event.key === "Enter"', self.main)
+        self.assertIn("/^[0-9]$/.test(event.key)", self.main)
+        self.assertIn("select(Number(typed) - 1)", self.main)
+        self.assertIn("Math.min(Math.max(index, 0), pages.length - 1)", self.main)
+
+    def test_the_header_action_opens_the_pdf_from_the_asset_route(self) -> None:
+        self.assertIn('id="pdf-link"', self.html)
+        self.assertIn('target="_blank"', self.html)
+        self.assertIn('rel="noopener"', self.html)
+        self.assertIn("open PDF", self.html)
+        self.assertIn("record.path ?? name", self.main)
+        self.assertIn("assetUrl(asset)", self.main)
+
+    def test_the_pages_come_from_the_preview_beside_the_asset(self) -> None:
+        self.assertIn("`/asset/${folder}${page}`", self.main)
+        self.assertIn("Array.isArray(preview.pages)", self.main)
+
+    def test_a_phone_window_turns_the_column_into_a_strip(self) -> None:
+        self.assertIn("@media (max-width: 40rem)", self.css)
+        narrow = self.css[self.css.index("@media (max-width: 40rem)") :]
+        self.assertIn("grid-template-columns: 1fr", narrow)
+        self.assertIn("flex-direction: row", narrow)
+        self.assertIn("overflow-x: auto", narrow)
 
 
 if __name__ == "__main__":

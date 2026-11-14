@@ -62,8 +62,9 @@ content into one tall page.
   Its page rasters are written under `preview/` (`pages` entries are
   `preview/page-01.png`, ...), cleared and recreated on every preview, so a
   preview never deletes, rewrites or renames the delivered PNGs beside the
-  PDF. A person's preview opens the PDF itself in the system browser; there is
-  no viewer server for a document.
+  PDF. A person's preview is the `document` viewer: the pages down the left,
+  the selected page on the right, and the PDF itself one click away at
+  `/asset/<name>`.
 - **`page-NN.png.preview.json`** — a page PNG previews as the image kind:
   `{ preview, kind, summary, name, prompt, seed, width, height }`.
 
@@ -133,8 +134,9 @@ lab's `aviso` and never fails. The presenter files ship beside the runner in
 `presenter/`, the same layout as the lab's `tools/presenter/`.
 
 The runner never serves and never opens: file output only. Serving is the
-core's job, and the core opens a document asset itself in the system browser.
-The lab's `--open` flag stays out; `deck.presenter` has no equivalent.
+core's job: `facet preview` serves the asset through its viewer on
+`127.0.0.1`, and the PDF itself at `/asset/<name>`. The lab's
+`--open` flag stays out; `deck.presenter` has no equivalent.
 
 Its preview writes `<asset>.preview.json`: `document` for
 `<name>.present.html` with `page_count: 1` and an empty `pages` (a

@@ -1,0 +1,60 @@
+{
+  "record": 1,
+  "id": "sha256:41e22014447a6ea0239dfa0f1348a5a510a36b06ccb13391e824abe25c2868fe",
+  "name": "doc",
+  "path": "doc.pdf",
+  "kind": "document",
+  "mime": "application/pdf",
+  "bytes": 844,
+  "created": "2026-11-13T00:00:00Z",
+  "properties": {
+    "page_count": 2
+  },
+  "provenance": {
+    "facet": "0.1.0",
+    "registry": {
+      "commit": "0000000000000000000000000000000000000000",
+      "path": null
+    },
+    "capability": "deck.page",
+    "package": {
+      "name": "deck",
+      "version": "0.1.0"
+    },
+    "tool": {
+      "name": "chromium",
+      "version": "133.0.0"
+    },
+    "models": [],
+    "params": {
+      "source": "brief.html",
+      "prompt": "a one-page brief on the night surface",
+      "seed": 0
+    },
+    "params_sha256": "5a1e5f0cd8ee1d0e6f5fdb7c8b9c1a2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b",
+    "seed": 0,
+    "inputs": []
+  },
+  "verification": {
+    "status": "passed",
+    "metrics": {
+      "page_count": 2
+    },
+    "thresholds": {
+      "page_count_min": 1
+    },
+    "verifier": "chromium-pdfjs"
+  },
+  "license": {
+    "tools": [
+      {
+        "name": "Chromium",
+        "spdx": "BSD-3-Clause",
+        "commercial_use": true
+      }
+    ],
+    "models": [],
+    "commercial_use": true,
+    "accepted": []
+  }
+}

@@ -2,9 +2,9 @@
 /* Open every viewer example in light and dark at 1280x800 and 390x844, one
    case at a time, with the system Chrome: fail on any page error, console
    error, failed request or HTTP >= 400, exercise the interaction the viewer
-   exists for (audio click-to-seek, the CAD view dialog, the image
-   enlargement, the gallery's filter and its open link and back button), and
-   save a screenshot of each case under
+   exists for (audio click-to-seek, the CAD view dialog, the document's page
+   step and jump with its PDF link, the image enlargement, the gallery's filter
+   and its open link and back button), and save a screenshot of each case under
    viewers/_examples/<kind>/screens/
    (gitignored).
 
@@ -23,7 +23,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CHROME = process.env.CHROME_PATH || "/usr/bin/google-chrome";
 const KINDS = process.argv.slice(2).length > 0
   ? process.argv.slice(2)
-  : ["generic", "audio", "cad", "image", "video", "gallery"];
+  : ["generic", "audio", "cad", "document", "image", "video", "gallery"];
 //: The gallery example: the page must render every card this file describes.
 const GALLERY = JSON.parse(
   readFileSync(path.join(ROOT, "viewers", "_examples", "gallery.json"), "utf8"),
@@ -134,6 +134,43 @@ async function checkImageZoom(page, label, failures) {
   const open = await page.evaluate(() => document.getElementById("zoom").open);
   if (!open) failures.push(`${label}: clicking the still did not open the enlargement`);
   await page.evaluate(() => document.getElementById("zoom").close());
+}
+
+/** The document viewer: one thumbnail per page, the keys and a jump step it,
+    and the header action points at the PDF on the asset route. */
+async function checkDocument(page, label, failures) {
+  const preview = await page.evaluate(async () => {
+    const name = new URLSearchParams(window.location.search).get("asset") ?? "";
+    const response = await fetch(`/asset/${encodeURIComponent(name)}.preview.json`);
+    return response.json();
+  });
+  const thumbs = await page.locator("#thumbs button").count();
+  if (thumbs !== preview.page_count) {
+    failures.push(`${label}: ${thumbs} thumbnails, expected ${preview.page_count}`);
+  }
+  const source = () => page.evaluate(() => document.getElementById("page").getAttribute("src"));
+  if ((await source()) !== `/asset/${preview.pages[0]}`) {
+    failures.push(`${label}: the first page is ${await source()}`);
+  }
+  await page.keyboard.press("ArrowDown");
+  if ((await source()) !== `/asset/${preview.pages[1]}`) {
+    failures.push(`${label}: ArrowDown left the page at ${await source()}`);
+  }
+  await page.keyboard.press("1");
+  await page.keyboard.press("Enter");
+  if ((await source()) !== `/asset/${preview.pages[0]}`) {
+    failures.push(`${label}: "1" then Enter left the page at ${await source()}`);
+  }
+  const link = page.locator("#pdf-link");
+  if ((await link.getAttribute("href")) !== "/asset/doc.pdf") {
+    failures.push(`${label}: the PDF link is ${await link.getAttribute("href")}`);
+  }
+  if ((await link.getAttribute("target")) !== "_blank") {
+    failures.push(`${label}: the PDF link is not a new tab`);
+  }
+  await page.click("#fit");
+  const fitted = await page.evaluate(() => document.getElementById("stage").classList.contains("fit"));
+  if (!fitted) failures.push(`${label}: the fit toggle did nothing`);
 }
 
 /** The header names the folder and counts the assets. */
@@ -259,6 +296,7 @@ async function runCase(browser, url, kind, testCase, failures) {
   await page.waitForTimeout(600); // canvases draw, images and fonts settle
   if (kind === "audio") await checkAudioSeek(page, label, failures);
   if (kind === "cad") await checkCadZoom(page, label, failures);
+  if (kind === "document") await checkDocument(page, label, failures);
   if (kind === "image") await checkImageZoom(page, label, failures);
   if (kind === "gallery") await checkGallery(page, label, failures);
   const dir = path.join(ROOT, "viewers", "_examples", kind, "screens");

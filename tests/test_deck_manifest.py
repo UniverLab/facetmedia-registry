@@ -3,9 +3,10 @@
 The registry suite runs without the core, so every rule the core's
 ``manifest/node.py`` applies is asserted here as data: an npm name, a semver
 version, an SRI integrity, a ``registry.npmjs.org`` tarball computed from the
-name and version, and the first row as the entry package. The capability is the
-document kind with the generic viewer, and the index carries the entry facet
-loads packages from.
+name and version, and the first row as the entry package. ``slides`` and
+``presenter`` stay on the generic viewer; ``page`` writes a paginated PDF and
+names the document viewer. The index carries the entry facet loads packages
+from.
 """
 
 from __future__ import annotations
@@ -144,7 +145,8 @@ def test_the_capability_is_the_document_kind_with_the_slide_inputs() -> None:
 def test_the_page_capability_is_the_document_kind_with_the_piece_inputs() -> None:
     capability = MANIFEST["capabilities"]["page"]
     assert capability["kind"] == "document"
-    assert capability["preview"] == {"viewer": "generic"}
+    # The one-page PDF previews as pages: the document viewer, not generic.
+    assert capability["preview"] == {"viewer": "document"}
     inputs = capability["inputs"]
     assert set(inputs) == {"source", "prompt", "seed"}
     assert inputs["source"]["type"] == "path"

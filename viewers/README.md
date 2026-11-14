@@ -54,8 +54,8 @@ The six tokens are the only colours a viewer's CSS or JS may use; the check in
   `schemas/preview/` and its viewer here, in the same change as the first
   package that writes that kind — and the capability names that viewer, so the
   kind is what picks it. A kind the core previews itself needs neither: the
-  `document` kind (deck's paginated PDF) has no schema or viewer here because
-  the core opens the PDF in the system browser.
+  `document` kind (a paginated PDF plus one PNG per page) has no schema here,
+  and its viewer shows the pages the preview lists.
 
 ## Layout
 
@@ -82,8 +82,8 @@ open link and back button, fails on any console error, page error, failed
 request or HTTP status >= 400, and saves a screenshot of each case under
 `_examples/<kind>/screens/` (gitignored).
 
-Every viewer that renders one asset (`audio`, `cad`, `generic`, `image`,
-`video`) opens with the same header line, `_kit/header.js`:
+Every viewer that renders one asset (`audio`, `cad`, `document`, `generic`,
+`image`, `video`) opens with the same header line, `_kit/header.js`:
 `facetMedia · <capability id> · <asset name>` in Sometype Mono, with
 `facetMedia` in Hueso, and the verification verdict at the right — `✓ passed`
 in Señal, `✗ failed` in Hueso tenue — above a thin `--regla` rule. Below it:
@@ -98,7 +98,9 @@ The viewers here are `generic` (any preview: summary, fields, the asset),
 `gallery` (a whole folder from `facet preview <folder>`: one card per asset,
 filterable by kind, each opening its own viewer), `audio` (player, waveform
 with silences and the playhead, loudness against the target, speech
-alignment), `cad` (views that enlarge, solid and drawing measurements), `image`
-(the still itself, click to enlarge, with its prompt, seed and pixel size) and
-`video` (the clip in a player, with its motion prompt, seed, frame count and
-rate); each has a runnable example under `_examples/`.
+alignment), `cad` (views that enlarge, solid and drawing measurements),
+`document` (a paginated PDF page by page: thumbnails, the selected page, the
+PDF a click away), `image` (the still itself, click to enlarge, with its
+prompt, seed and pixel size) and `video` (the clip in a player, with its
+motion prompt, seed, frame count and rate); each has a runnable example under
+`_examples/`.

@@ -61,7 +61,8 @@ sheets with FreeCAD's bundled Qt (`QSvgRenderer` into `QPdfWriter` at
 sheets stay beside the PDF as editable sources. `facet preview <name>.pdf`
 renders the page PNGs from those sheets into `preview/page-NN.png` at
 150 dpi and writes `<name>.pdf.preview.json` in the core document shape
-`{preview, kind, summary, page_count, pages}` — no new schema or viewer.
+`{preview, kind, summary, page_count, pages}` — rendered by the `document`
+viewer, with no new schema.
 
 ## A piece
 

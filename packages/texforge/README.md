@@ -79,9 +79,9 @@ no new host dependency), into `preview/page-NN.png`, and writes
 {"preview": 1, "kind": "document", "summary": "tesis.pdf · 12 pages", "page_count": 12, "pages": ["preview/page-01.png", "preview/page-02.png"]}
 ```
 
-The person preview is the PDF itself, opened in the system browser; the
-page PNGs are for agents. A `document` capability uses the `generic`
-viewer, and no new schema or viewer is needed.
+The person preview is the `document` viewer: the pages page by page, with the
+PDF itself one click away at `/asset/<name>`. A `document` capability uses that
+viewer, and no new schema is needed.
 
 ## When to use
 

@@ -1,0 +1,136 @@
+/* Document viewer: the pages down the left, the selected page on the right.
+
+   The selected page fills the width by default; the fit toggle asks for the
+   page at its own size, inside a scroller. At phone width the pages become a
+   horizontal strip above the stage. */
+
+/* The header action: `open PDF`, on the line under the header with the summary. */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0.25rem 0 0.75rem;
+}
+
+#summary {
+  margin: 0;
+  color: var(--hueso-tenue);
+}
+
+#pdf-link {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.doc {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+#thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+#thumbs button {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+  padding: 0.25rem;
+  background: var(--panel);
+  border: 1px solid var(--regla);
+  border-left: 3px solid transparent;
+  color: var(--hueso-tenue);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+#thumbs button[aria-current="page"] {
+  border-left-color: var(--senal);
+  color: var(--hueso);
+}
+
+#thumbs img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--regla);
+  background: var(--fondo);
+}
+
+#thumbs .num {
+  font-size: 0.8rem;
+}
+
+#stage {
+  min-width: 0;
+}
+
+#stage img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border: 1px solid var(--regla);
+  background: var(--panel);
+}
+
+/* 1:1: the page at its own size, inside a scroller. */
+#stage.fit {
+  overflow: auto;
+}
+
+#stage.fit img {
+  width: auto;
+  max-width: none;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  align-items: baseline;
+  margin: 0.6rem 0;
+}
+
+#fit {
+  padding: 0.1rem 0.6rem;
+  background: var(--panel);
+  border: 1px solid var(--regla);
+  color: var(--hueso);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+@media (max-width: 40rem) {
+  .doc {
+    grid-template-columns: 1fr;
+  }
+
+  #thumbs {
+    flex-direction: row;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-right: 0;
+    padding-bottom: 0.25rem;
+  }
+
+  #thumbs button {
+    flex: 0 0 5rem;
+    width: auto;
+  }
+}

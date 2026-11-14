@@ -51,4 +51,4 @@ required = true
 description = "Document author, written to [document].author in the staged project.toml."
 
 [capabilities.document.preview]
-viewer = "generic"
+viewer = "document"

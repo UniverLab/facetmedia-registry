@@ -5,7 +5,7 @@ data: ``facet doctor`` builds the ``machine_cannot`` message and its
 ``facet config set`` fix from ``[engine.host_app]`` alone, so the manifest's
 four values are the whole contract. The minimum is pinned at FreeCAD
 ``1.1.4`` — the lab's FreeCAD build — and the capability is the document kind
-with the generic viewer, like the deck package's paginated documents.
+with the document viewer, like the deck package's paginated documents.
 """
 
 from __future__ import annotations
@@ -122,10 +122,10 @@ def test_the_index_carries_the_package_after_svganim() -> None:
     assert (PACKAGE / "package.toml").is_file()
 
 
-def test_the_capability_is_the_document_kind_with_the_generic_viewer() -> None:
-    """No document schema exists, so the generic viewer is the contract."""
+def test_the_capability_is_the_document_kind_with_the_document_viewer() -> None:
+    """The PDF previews as pages, so the pages the viewer draws are the contract."""
     assert CAPABILITY["kind"] == "document"
-    assert CAPABILITY["preview"] == {"viewer": "generic"}
+    assert CAPABILITY["preview"] == {"viewer": "document"}
     assert MANIFEST["capabilities"].keys() == {"drawing"}
 
 

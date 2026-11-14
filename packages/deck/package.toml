@@ -102,7 +102,7 @@ min = 0
 description = "Recorded seed; the one-page export is deterministic, so it labels the record."
 
 [capabilities.page.preview]
-viewer = "generic"
+viewer = "document"
 
 [capabilities.presenter]
 summary = "Attach one speaker note per slide and build a self-contained presenter file with speaker view and notes from the same deck"
