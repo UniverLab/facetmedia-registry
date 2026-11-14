@@ -106,28 +106,30 @@ carries its own `✓ verified` or `✗ failed`.
 The viewers here are `generic` (any preview: summary, fields, the asset — and a
 real branch for the text kinds: numbered lines for `text/plain`, pretty-printed
 `application/json`, a time-and-text cue list for `application/x-subrip` and
-`text/vtt`, and ASCII art at its natural width with a sideways scroll when the
-record carries `columns`, each with a copy button), `gallery` (a whole folder
+`text/vtt`, and ASCII art at its natural width with a sideways scroll for a
+`text/plain` record that carries `columns` — a picture whose record carries
+`columns` keeps the fields — each with a copy button), `gallery` (a whole folder
 from `facet preview <folder>`: one card per asset, filterable by kind, each
 opening its own viewer), `audio` (a play/pause button and space, a waveform with
 silences and the played part in Hueso over the rest in Hueso tenue, scrubbable
 by click and drag, the time in Sometype Mono with ←/→ seeking a second, the
 momentary loudness against its dashed target, the integrated LUFS, true peak,
-duration, sample rate and `peak_limited`, and the speech alignment), `cad`
-(every view the preview lists as a large panel that enlarges from a click or
-Enter, the solid's measures beside the volume and bounding box its parameters
-expected, the drawing's layers and audit), `document` (a paginated PDF page by page:
-thumbnails, the selected page, the PDF a click away), `image` (the still fitted
-by default, 1:1 pixels on a click or Z with a drag to pan, a checkerboard behind
-transparent PNGs, its pixels and file size), `video` (by the record's mime: a
-clip letterboxed on the slide black with play/pause, a scrub bar, the time and
-the frame number, `,`/`.` stepping a frame and F for full screen; a GIF looped
-on the same stage with its `GIF · loops · <frames> frames · <fps> fps` line; a
-file the browser cannot play falling back to the preview's first image or its
-kind, with the asset one click away; resolution, fps, frames, duration and any
-audio streams and loudness the record verifies) and `slides` (a deck's preview as
-its presentation player: the default surface with the current slide, a
-thumbnail strip and a `present` action; `?role=audience` for the full-screen
-audience window; `?role=presenter` for the current and next slides with notes,
-a counter and a clock, synced over a `BroadcastChannel`); each has a runnable
-example under `_examples/`.
+duration, sample rate, clipped samples, silences and `peak_limited`, and the
+speech alignment), `cad` (every view the preview lists as a large panel that
+enlarges from a click or Enter, the solid's measures beside the volume and
+bounding box its parameters expected, the drawing's layers and audit),
+`document` (a paginated PDF page by page: thumbnails, the selected page, the
+PDF a click away), `image` (the still fitted by default, 1:1 pixels on a click
+or Z with a drag to pan, a checkerboard behind transparent PNGs, its pixels and
+file size), `video` (by the record's mime: a clip letterboxed on the slide black
+with play/pause, a scrub bar, the time and the frame number, `,`/`.` stepping a
+frame while paused and F for full screen; a GIF looped on the same stage with
+its `GIF · loops · <frames> frames · <fps> fps` line; a file the browser cannot
+play falling back to the preview's first image or its kind, with the asset one
+click away; resolution, fps, frames, duration and any audio streams and
+loudness the record verifies) and `slides` (a deck's preview as its presentation
+player: the default surface with the current slide, a thumbnail strip and a
+`present` action; `?role=audience` for the full-screen audience window;
+`?role=presenter` for the current and next slides with notes, a counter and a
+clock, synced over a `BroadcastChannel`); each has a runnable example under
+`_examples/`.
