@@ -1,0 +1,12 @@
+# Still test: the same four descriptions and seeds in both models. The eight approvals (2026-10-13).
+# Usage: facet run comfy.still packages/comfy/examples/z-image-turbo/stills.toml
+capability = "comfy.still"
+
+[inputs]
+workflow = "z-image-turbo"
+image = [
+  { name = "video-still", seed = 11, width = 1344, height = 768, prompt = "Engraved illustration of a lone pine on a rocky outcrop at dawn, isometric object on a stone pedestal, sepia ink with a single garnet accent, fine hatch lines, large empty fog area on the left side. No lettering or symbols." },
+  { name = "editorial-illustration", seed = 12, width = 1344, height = 768, prompt = "Engraved illustration of a woman reading a book under a desk lamp, isometric scene on a pedestal, sepia ink with a single garnet accent, floating geometric shapes, fine hatch lines. No lettering or symbols." },
+  { name = "product-photo", seed = 13, width = 1344, height = 768, prompt = "Engraved illustration of a handmade matte ceramic cup on a stone pedestal, isometric, sepia ink with a single garnet accent, soft steam curls, fine hatch lines. No lettering or symbols." },
+  { name = "watercolor", seed = 14, width = 1344, height = 768, prompt = "Engraved illustration of a colonial street with wooden balconies, isometric, sepia ink with a single garnet accent, green mountains behind, fine hatch lines. No lettering or symbols." },
+]

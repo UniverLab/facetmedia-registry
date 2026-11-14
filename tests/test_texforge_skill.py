@@ -28,7 +28,7 @@ INSTALL_LINE = (
     "curl -fsSL https://raw.githubusercontent.com/UniverLab/texforge/main/scripts/install.sh | sh"
 )
 #: The one runnable piece the skill cites, by base name.
-EXAMPLE = "hola-mundo"
+EXAMPLE = "hello-world"
 #: A reference the skill cites, as ``references/<name>.md``.
 REFERENCE_RE = re.compile(r"references/([a-z0-9][a-z0-9-]*)\.md")
 #: The real keys the runner writes into the staged ``project.toml``.

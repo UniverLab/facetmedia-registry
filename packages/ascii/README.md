@@ -149,14 +149,14 @@ font = "Linguaholic Mini Block"
 name = "canopy-lingua"
 ```
 
-`examples/lamina.toml` converts a 512 px crop of one machine plate
-(`examples/lamina.png`, 165 KB) with shape matching on a dark source.
+`examples/plate.toml` converts a 512 px crop of one machine plate
+(`examples/plate.png`, 165 KB) with shape matching on a dark source.
 Its `name` differs from the source's stem, so the rendered
 `plate-ascii.png` lands beside the plate instead of over it.
 
 ```toml
 [inputs]
-image = "lamina.png"
+image = "plate.png"
 width = 100
 mode = "shape"
 invert = true
@@ -167,7 +167,7 @@ Its record (`plate-ascii.txt.facet.json`, beside the asset; abridged here,
 with the same extra sections as the banner's record above):
 
 ```json
-{"bytes": 5050, "id": "sha256:87d18776d1f2000ed91520cad4c900e9385f3af04aefb10869f1ad0920d72896", "kind": "text", "mime": "text/plain", "name": "plate-ascii", "properties": {"charset_size": 95, "columns": 100, "mode": "shape", "rows": 50}, "provenance": {"capability": "ascii.image", "params": {"color": "none", "image": "lamina.png", "invert": true, "mode": "shape", "name": "plate-ascii", "width": 100}, "package": {"name": "ascii", "version": "0.2.0"}, "tool": {"name": "facet ascii (Pillow, NumPy, pyfiglet)", "version": "0.2.0"}}, "verification": {"metrics": {"columns": 100, "ink_ratio": 0.7192, "rows": 50, "similarity": 0.9625421776568691}, "status": "passed", "thresholds": {"similarity_min": 0.55}, "verifier": "ascii-rerender"}}
+{"bytes": 5050, "id": "sha256:87d18776d1f2000ed91520cad4c900e9385f3af04aefb10869f1ad0920d72896", "kind": "text", "mime": "text/plain", "name": "plate-ascii", "properties": {"charset_size": 95, "columns": 100, "mode": "shape", "rows": 50}, "provenance": {"capability": "ascii.image", "params": {"color": "none", "image": "plate.png", "invert": true, "mode": "shape", "name": "plate-ascii", "width": 100}, "package": {"name": "ascii", "version": "0.2.0"}, "tool": {"name": "facet ascii (Pillow, NumPy, pyfiglet)", "version": "0.2.0"}}, "verification": {"metrics": {"columns": 100, "ink_ratio": 0.7192, "rows": 50, "similarity": 0.9625421776568691}, "status": "passed", "thresholds": {"similarity_min": 0.55}, "verifier": "ascii-rerender"}}
 ```
 
 `examples/fonts-facet.toml` lists every font with its source and renders
@@ -186,4 +186,4 @@ every file it names, into a fresh folder and runs it there:
 
 - `ascii.banner` — `examples/banner-canopy.toml`: `facet example ascii.banner --run`
 - `ascii.fonts` — `examples/fonts-facet.toml`: `facet example ascii.fonts --run`
-- `ascii.image` — `examples/lamina.toml`: `facet example ascii.image --run`
+- `ascii.image` — `examples/plate.toml`: `facet example ascii.image --run`

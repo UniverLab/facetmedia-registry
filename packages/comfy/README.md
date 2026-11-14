@@ -45,8 +45,8 @@ The fields below are what `facet describe comfy.still --json` reports.
 ```toml
 [inputs]
 image = [
-  { name = "fondo-video", prompt = "Misty pine forest at dawn, soft volumetric light through the trees, muted teal and amber palette, large empty area of fog on the left", seed = 11 },
-  { name = "acuarela", prompt = "Loose watercolor painting of a colonial street in a small Andean town, colorful facades with wooden balconies, cobblestones, green mountains", seed = 14, width = 1344, height = 768 },
+  { name = "video-still", prompt = "Misty pine forest at dawn, soft volumetric light through the trees, muted teal and amber palette, large empty area of fog on the left", seed = 11 },
+  { name = "watercolor", prompt = "Loose watercolor painting of a colonial street in a small Andean town, colorful facades with wooden balconies, cobblestones, green mountains", seed = 14, width = 1344, height = 768 },
 ]
 ```
 
@@ -90,14 +90,14 @@ guides every entry; a second reference image is a second piece.
 
 ```toml
 [inputs]
-source = "flux2-klein-4b/ilustracion-editorial.png"
+source = "flux2-klein-4b/editorial-illustration.png"
 image = [
-  { name = "iteracion-grabado", seed = 242, prompt = "Edit the reference image into a two-color linocut print in deep indigo and warm cream. Preserve the woman reading under the desk lamp, the framing, and the large geometric shapes. Use rough carved edges and visible paper grain. Do not add lettering or symbols." },
+  { name = "print-iteration", seed = 242, prompt = "Edit the reference image into a two-color linocut print in deep indigo and warm cream. Preserve the woman reading under the desk lamp, the framing, and the large geometric shapes. Use rough carved edges and visible paper grain. Do not add lettering or symbols." },
 ]
 ```
 
 That pair is the approved piece (`examples/img2img.toml`):
-`iteracion-grabado.png` came from `ilustracion-editorial.png` in 22.7 s at
+`print-iteration.png` came from `editorial-illustration.png` in 22.7 s at
 1344 × 768, keeping the character and framing while turning the picture into
 a blue and cream print.
 
@@ -147,7 +147,7 @@ accepts any integer; an off-form length reaches ComfyUI and fails the run as
 [inputs]
 workflow = "wan22-i2v"
 image = [
-  { name = "bosque-niebla", image = "fondo-video.png", seed = 51, prompt = "Fog drifting slowly between the pine trees at dawn, soft light rays shifting through the mist, very slow camera push in, calm and quiet, cinematic" },
+  { name = "pine-fog", image = "video-still.png", seed = 51, prompt = "Fog drifting slowly between the pine trees at dawn, soft light rays shifting through the mist, very slow camera push in, calm and quiet, cinematic" },
 ]
 ```
 
@@ -157,9 +157,9 @@ with the name the server answers, so one piece can animate several different
 stills. The log prints one `<file> uploaded as <name>` line per entry.
 
 Three approved clips (`examples/clips.toml`), two seconds each at 1280 × 704,
-about seven minutes per clip on a fully used GPU: `bosque-niebla.mp4` (fog
-drifting between pine trees), `taza-vapor.mp4` (steam rising from a ceramic
-cup, static camera) and `calle-acuarela.mp4` (a slow pan along a watercolor
+about seven minutes per clip on a fully used GPU: `pine-fog.mp4` (fog
+drifting between pine trees), `cup-steam.mp4` (steam rising from a ceramic
+cup, static camera) and `street-watercolor.mp4` (a slow pan along a watercolor
 street). The forest and the cup are the reliable pair: something visible
 inside the frame moves.
 
@@ -173,7 +173,7 @@ composition change — so it is for trying a movement, never a final render or
 a piece of an assembly. The runner names every draft output
 `<name>-borrador.mp4` and its record carries `properties.draft = true`, so
 no draft passes for a final. The approved draft sample is
-`examples/bosque-niebla-rapido.mp4`.
+`examples/pine-fog-fast.mp4`.
 
 ## The no-data rule
 
@@ -348,6 +348,6 @@ every file it names, into a fresh folder and runs it there:
 
 - `comfy.clip` — `examples/clips.toml`: `facet example comfy.clip --run`
 - `comfy.edit` — `examples/img2img.toml`: `facet example comfy.edit --run`
-- `comfy.still` — `examples/own-flow.toml`, `examples/z-image-turbo/imagenes.toml`: `facet example comfy.still --run`
+- `comfy.still` — `examples/own-flow.toml`, `examples/z-image-turbo/stills.toml`: `facet example comfy.still --run`
 
 The first run pulls ComfyUI and its models; the flows need a GPU.

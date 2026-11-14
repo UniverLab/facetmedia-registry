@@ -63,13 +63,13 @@ by listening or by reading the spectrogram.
 
 Seven effects were approved on the reference machine:
 
-- `cafe-ambiente`
-- `campana-notificacion`
-- `clic-interfaz`
-- `lluvia-ventana`
-- `pagina-libro`
-- `pasos-madera`
-- `whoosh-transicion`
+- `coffee-morning`
+- `bell-alert`
+- `ui-click`
+- `rain-window`
+- `page-turn`
+- `wood-steps`
+- `whoosh-sweep`
 
 ## Fallback
 
@@ -81,6 +81,6 @@ convincing, the fallback is a CC0 sound-effects library.
 `facet example <capability> --run` copies the capability's example, with
 every file it names, into a fresh folder and runs it there:
 
-- `moss.sfx` — `examples/cafe-ambiente.toml`, `examples/campana-notificacion.toml`, `examples/clic-interfaz.toml`, `examples/lluvia-ventana.toml`, `examples/pagina-libro.toml`, `examples/pasos-madera.toml`, `examples/whoosh-transicion.toml`: `facet example moss.sfx --run`
+- `moss.sfx` — `examples/coffee-morning.toml`, `examples/bell-alert.toml`, `examples/ui-click.toml`, `examples/rain-window.toml`, `examples/page-turn.toml`, `examples/wood-steps.toml`, `examples/whoosh-sweep.toml`: `facet example moss.sfx --run`
 
 The first run pulls the model; CPU only.

@@ -1,5 +1,5 @@
 name = "rembg"
-version = "0.1.2"
+version = "0.1.3"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "Daniel Gatis (rembg) · xuebinqin (U-2-Net)"

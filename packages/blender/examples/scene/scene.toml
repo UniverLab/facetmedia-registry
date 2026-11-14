@@ -5,4 +5,4 @@ capability = "blender.scene"
 
 [inputs]
 script = "build.py"
-name = "estudio-script"
+name = "study-script"

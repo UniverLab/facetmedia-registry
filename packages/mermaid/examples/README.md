@@ -1,7 +1,7 @@
 # The example files in this folder
 
-- `arquitectura.mmd` was already in this folder: the approved architecture
+- `architecture.mmd` was already in this folder: the approved architecture
   diagram, with its YAML header (theme, themeVariables, fontFamily).
-- `ciclo.mmd` and its renders are the package's other approved diagram.
-- `diagram.toml` is the piece; it names `arquitectura.mmd`, nothing outside
+- `cycle.mmd` and its renders are the package's other approved diagram.
+- `diagram.toml` is the piece; it names `architecture.mmd`, nothing outside
   this folder.

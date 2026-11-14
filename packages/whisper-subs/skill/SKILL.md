@@ -27,7 +27,7 @@ the file hyperframes.narrated burns into a narrated video.
 
 ```toml
 [inputs]
-source = "laboratorio.json"
+source = "laboratory.json"
 format = "srt"
 ```
 
@@ -58,7 +58,7 @@ verdict means the times were already monotonic at conversion.
 
 ## Pitfalls
 
-- The sidecar is the input: keep `laboratorio.json` where the piece names it,
+- The sidecar is the input: keep `laboratory.json` where the piece names it,
   and read its `segments`, not its transcript — a missing or empty `segments`
   fails with "the sidecar carries no segments".
 - Overlaps and regressions are rejected with the cue's index:

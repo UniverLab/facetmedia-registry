@@ -5,4 +5,4 @@ capability = "blender.animation"
 
 [inputs]
 script = "build.py"
-name = "estudio-animado"
+name = "study-animated"

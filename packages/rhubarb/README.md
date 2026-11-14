@@ -71,7 +71,7 @@ come out of the runner.
 
 ```toml
 [inputs]
-voice = "character/voz.wav"
+voice = "character/voice.wav"
 dialogue = "character/dialogue.txt"
 ```
 
@@ -122,7 +122,7 @@ as `10.3 s · 65 mouth cues · 8 mouths (XABCEFGH)` and the same fields plus
 
 ## Example
 
-The approved example is a fox SVG with eight mouths and a 10.32 s Spanish
+The approved example is a fox SVG with eight mouths and a 1.5 s English
 voice clip. Its `build.mjs`
 runs exactly the command above and inlines the resulting `mouthCues` into the
 HyperFrames composition; the character assembly itself is the `hyperframes`
@@ -132,7 +132,7 @@ A piece for that clip is only its two paths:
 
 ```toml
 [inputs]
-voice = "assets/voz.wav"
+voice = "assets/voice.wav"
 dialogue = "dialogue.txt"
 ```
 

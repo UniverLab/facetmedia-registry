@@ -9,8 +9,8 @@ The shared base shape:
 
 ```js
 const tl = gsap.timeline({ paused: true });
-tl.to('#contador', { textContent: 42, snap: 'textContent', duration: 2 }, 0.4);
-tl.from('#titulo', { opacity: 0, y: 24, duration: 0.6 }, 0);
+tl.to('#counter', { textContent: 42, snap: 'textContent', duration: 2 }, 0.4);
+tl.from('#title', { opacity: 0, y: 24, duration: 0.6 }, 0);
 window.__timelines['main'] = tl;
 tl.seek(0);
 ```
@@ -71,14 +71,14 @@ for the model to load:
 ```js
 function renderAt(t) {
   const o = DATA.orbit;
-  const angulo = o.start + (t / DATA.duration) * o.fraction * Math.PI * 2;
+  const angle = o.start + (t / DATA.duration) * o.fraction * Math.PI * 2;
   const [cx, cy, cz] = DATA.center;
-  camera.position.set(cx + o.radius * Math.cos(angulo), o.height, cz + o.radius * Math.sin(angulo));
+  camera.position.set(cx + o.radius * Math.cos(angle), o.height, cz + o.radius * Math.sin(angle));
   camera.lookAt(cx, cy, cz);
   renderer.render(scene, camera);
 }
 window.addEventListener('hf-seek', (event) => {
-  event.detail.waitUntil(listo.then(() => renderAt(event.detail.time)));
+  event.detail.waitUntil(ready.then(() => renderAt(event.detail.time)));
 });
 ```
 

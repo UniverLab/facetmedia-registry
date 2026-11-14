@@ -1,1 +1,1 @@
-Este ejemplo muestra cómo una pieza del registro convierte una idea en un archivo que se puede abrir y escuchar.
+This example shows how a registry piece turns an idea into a file you can open and listen to.

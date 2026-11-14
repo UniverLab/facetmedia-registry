@@ -38,38 +38,40 @@ how to judge them.
 
 ### explainer-video — the narrated explainer video
 
-1. `voicestudio.speak` → `voz.wav`. Verify: transcribe the voice and
+1. `voicestudio.speak` → `voice.wav`. Verify: transcribe the voice and
    measure the word error rate (`wer_max` 0.05). Kokoro is the documented
-   voice alternative here: `kokoro.speak` → `voz.wav`, same verification.
-2. `acestep.bed` → `cama.wav`. Verify: probe duration and peak.
-3. `ffmpeg.normalize` → `voz-normalizada.wav`, from `voz.wav` with
+   voice alternative here: `kokoro.speak` → `voice.wav`, same verification.
+2. `acestep.bed` → `bed.wav`. Verify: probe duration and peak.
+3. `ffmpeg.normalize` → `voice-normalized.wav`, from `voice.wav` with
    `target-lufs` -16.0 and `true-peak-db` -1.5. Verify: integrated loudness
    at -16 LUFS.
-4. `ffmpeg.mix` → `mezcla.wav`, voice `voz-normalizada.wav` over bed
-   `cama.wav` with `ducking` true, `duck-db` -12.0 and `target-lufs` -16.0.
-   `mezcla.wav` is the stand-alone audio deliverable, for a podcast or
+4. `ffmpeg.mix` → `mix.wav`, voice `voice-normalized.wav` over bed
+   `bed.wav` with `ducking` true, `duck-db` -12.0 and `target-lufs` -16.0.
+   `mix.wav` is the stand-alone audio deliverable, for a podcast or
    audio-only use, and is not an input of step 7.
    Verify: integrated loudness at -16 LUFS.
-5. `whisper.transcribe` → `guion.txt` + `guion.srt` + `guion.json`, from
-   `voz-normalizada.wav`. Verify: confidence and no-speech share.
-6. `whisper-subs.subtitles` → `guion.srt`, from `source` `guion.json`.
-   Verify: at least one cue, monotonic and non-overlapping.
+5. `whisper.transcribe` → `transcript.txt` + `transcript.srt` +
+   `transcript.json`, from `voice-normalized.wav`. Verify: confidence and
+   no-speech share.
+6. `whisper-subs.subtitles` → `transcript.srt`, from `source`
+   `transcript.json`. Verify: at least one cue, monotonic and
+   non-overlapping.
 7. `hyperframes.narrated` → `narrated.mp4`, with composition `narrated/`,
-   voice `voz-normalizada.wav`, music `cama.wav` and subtitles `guion.srt`.
-   Step 7 places the voices over `cama.wav` at `music-volume`; `mezcla.wav`
-   is not an input of this step.
+   voice `voice-normalized.wav`, music `bed.wav` and subtitles
+   `transcript.srt`. Step 7 places the voices over `bed.wav` at
+   `music-volume`; `mix.wav` is not an input of this step.
    Verify: check the MP4 with an ffprobe probe.
 
 ### architecture-render — the architectural render
 
-1. `cad.solid` → `estudio.step` + `estudio.stl` + `estudio.svg` +
-   `estudio.glb`, from a CadQuery `estudio.py`. Verify: volume and bounding
+1. `cad.solid` → `study.step` + `study.stl` + `study.svg` +
+   `study.glb`, from a CadQuery `study.py`. Verify: volume and bounding
    box.
-2. `blender.assets` → `estudio.assets.json`. Verify: the receipt's files
-   are all present.
-3. `blender.scene` → `estudio-photo.png`, with `script`
-   `study-photo/study_photo.py` (copied from `packages/blender/examples/`),
-   `name` `estudio`, 1600x1000 on Cycles and exposure -0.6. The script owns
+2. `blender.assets` → `study-dressing.assets.json`. Verify: the receipt's
+   files are all present.
+3. `blender.scene` → `study-photo.png`, with `script`
+   `study/study.py` (copied from `packages/blender/examples/`),
+   `name` `study`, 1600x1000 on Cycles and exposure -0.6. The script owns
    the light, the materials and the camera; facet owns the output. Verify:
    the PNG measures 1600x1000.
 4. `deck.page` → `architecture-render.pdf` + `page-01.png`, from
@@ -77,9 +79,9 @@ how to judge them.
 
 ### voice-material — voiced material with music
 
-1. `kokoro.speak` → `voz.wav`. Verify: transcribe the voice and measure the
-   word error rate.
-2. `acestep.bed` → `cama.wav`. Verify: probe duration and peak.
+1. `kokoro.speak` → `voice.wav` (voice `af_heart`, language `en-us`).
+   Verify: transcribe the voice and measure the word error rate.
+2. `acestep.bed` → `bed.wav`. Verify: probe duration and peak.
 3. `deck.slides` → `voice-material.pdf` + `page-01.png`, from
    `voice-material.html`. Verify: the page count and the page-01 PNG.
 
@@ -118,5 +120,5 @@ recipe and its step count and the fields `recipe`, `steps` and `packages`.
 - The architectural render is `blender.scene` plus a copied example script:
   there is no photo preset to reach for, and no `blender.people` or
   `blender.cars` capability.
-- `hyperframes.narrated` reads SubRip: hand it `guion.srt`, not the
+- `hyperframes.narrated` reads SubRip: hand it `transcript.srt`, not the
   whisper `.json` or `.vtt`.

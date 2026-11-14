@@ -31,7 +31,7 @@ One effect per piece: a `description` in English, `seconds` up to 30, a
 [inputs]
 description = "Rain falling on a window with distant thunder, steady and soft"
 seconds = 8
-name = "lluvia-ventana"
+name = "rain-window"
 steps = 100
 guidance = 4.0
 seed = 0
@@ -62,15 +62,15 @@ Event count is unreliable: asking for one click can give two, so listen
 to the WAV or read the spectrogram — loudness and duration verify, timbre
 is judged by ear.
 
-Seven effects are approved on the reference machine: `cafe-ambiente`,
-`campana-notificacion`, `clic-interfaz`, `lluvia-ventana`,
-`pagina-libro`, `pasos-madera` and `whoosh-transicion`.
+Seven effects are approved on the reference machine: `coffee-morning`,
+`bell-alert`, `ui-click`, `rain-window`,
+`page-turn`, `wood-steps` and `whoosh-sweep`.
 
 Each approved effect ships as a runnable piece with its WAV:
-`examples/cafe-ambiente.toml`, `examples/campana-notificacion.toml`,
-`examples/clic-interfaz.toml`, `examples/lluvia-ventana.toml`,
-`examples/pagina-libro.toml`, `examples/pasos-madera.toml` and
-`examples/whoosh-transicion.toml`. The seven descriptions, and the piece
+`examples/coffee-morning.toml`, `examples/bell-alert.toml`,
+`examples/ui-click.toml`, `examples/rain-window.toml`,
+`examples/page-turn.toml`, `examples/wood-steps.toml` and
+`examples/whoosh-sweep.toml`. The seven descriptions, and the piece
 shape, are in
 [references/descriptions.md](references/descriptions.md).
 

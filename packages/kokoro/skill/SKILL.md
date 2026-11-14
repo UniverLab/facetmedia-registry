@@ -23,34 +23,34 @@ writing the `audio` kind.
 
 ## Pieces
 
-The lab's reference text, one clip (`examples/laboratorio.toml`):
+The lab's reference text, one clip (`examples/laboratory.toml`):
 
 ```toml
 [inputs]
-voice = "ef_dora"
-language = "es"
+voice = "af_heart"
+language = "en-us"
 
 [[inputs.clip]]
-name = "laboratorio"
-text = "En este laboratorio probamos una voz en español generada localmente. Queremos medir si se entiende bien, cuánto tarda y cómo suena frente a las voces que ya usamos."
+name = "laboratory"
+text = "In this laboratory we test a locally generated English voice. We want to measure how clear it sounds, how long it takes, and how it compares with the voices we already use."
 ```
 
 Two clips mixing a per-clip `voice` and `speed` over the piece defaults:
 
 ```toml
 [inputs]
-voice = "ef_dora"
-language = "es"
+voice = "af_heart"
+language = "en-us"
 speed = 1.0
 
 [[inputs.clip]]
 name = "intro"
-text = "Bienvenido al laboratorio."
+text = "Welcome to the laboratory."
 
 [[inputs.clip]]
-name = "rapido"
-text = "Esta frase se dice más deprisa."
-voice = "em_alex"
+name = "quick"
+text = "This line is spoken more quickly."
+voice = "am_adam"
 speed = 1.3
 ```
 

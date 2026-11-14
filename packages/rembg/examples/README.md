@@ -1,13 +1,13 @@
-# Prueba de eliminación de fondo
+# Background removal test
 
-Usa U2NetP en CPU para generar una imagen PNG con alfa y una vista sobre checkerboard:
+Uses U2NetP on CPU to produce an alpha PNG and a checkerboard view:
 
 ```bash
-uv run remover.py
+uv run remove.py
 ```
 
-`medicion.json` registra tiempo, proveedor y porcentaje de píxeles transparentes. Revisar especialmente pelo, bordes finos y huecos antes de elegirlo para el catálogo.
+`measurement.json` records time, provider and transparent pixel share. Check hair, thin edges and holes especially before picking it for the catalogue.
 
-`cutout.toml` y `paper.toml` son las piezas de ejemplo: ambas usan `lamina.png`, una copia de la misma lámina de máquina que ya viaja en `packages/ascii/examples/lamina.png` (recorte de 512 px), para que cada ejemplo corra solo.
+`cutout.toml` and `paper.toml` are the example pieces: both use `plate.png`, a copy of the same machine plate that already ships in `packages/ascii/examples/plate.png` (512 px crop), so each example runs alone.
 
-El código de rembg es MIT ([repositorio](https://github.com/danielgatis/rembg)); los pesos U-2-Net son Apache-2.0 ([U-2-Net](https://github.com/xuebinqin/U-2-Net)). La prueba usa el modelo pequeño `u2netp` y CPU, no consume VRAM.
+The rembg code is MIT ([repository](https://github.com/danielgatis/rembg)); the U-2-Net weights are Apache-2.0 ([U-2-Net](https://github.com/xuebinqin/U-2-Net)). The test uses the small `u2netp` model and CPU, no VRAM.

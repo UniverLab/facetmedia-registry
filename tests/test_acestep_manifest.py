@@ -19,7 +19,7 @@ MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
 INDEX = tomllib.loads((ROOT / "index.toml").read_text(encoding="utf-8"))
 BED = MANIFEST["capabilities"]["bed"]
 INPUTS = BED["inputs"]
-EXAMPLE = PACKAGE / "examples" / "clasica-alegre.toml"
+EXAMPLE = PACKAGE / "examples" / "baroque-allegro.toml"
 
 #: The requirements and the cap the manifest declares.
 RAM_GB = 16

@@ -61,7 +61,7 @@ def _expected_tarball(name: str, version: str) -> str:
 
 def test_the_header_names_the_presentation_facet_and_the_pinned_contract() -> None:
     assert MANIFEST["name"] == "deck"
-    assert MANIFEST["version"] == "0.1.2"
+    assert MANIFEST["version"] == "0.1.3"
     assert MANIFEST["requires_facet"] == ">=0.1.0b1,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["provider"] == "facet"
@@ -225,7 +225,7 @@ def test_the_skill_names_the_presenter_capability() -> None:
 
 def test_the_examples_ship_the_approved_print_piece() -> None:
     for suffix in ("html", "pdf", "png"):
-        assert (PACKAGE / "examples" / f"modelos-de-lenguaje.{suffix}").is_file(), suffix
+        assert (PACKAGE / "examples" / f"language-models.{suffix}").is_file(), suffix
 
 
 def test_the_readme_documents_the_presenter_runner() -> None:

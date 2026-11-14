@@ -927,8 +927,8 @@ def test_the_animation_inputs_carry_frames_and_rate() -> None:
 def test_the_example_pieces_validate() -> None:
     """Both example pieces parse, use declared inputs, and ship the script."""
     for piece, capability, name in (
-        ("scene.toml", "scene", "estudio-script"),
-        ("animation.toml", "animation", "estudio-animado"),
+        ("scene.toml", "scene", "study-script"),
+        ("animation.toml", "animation", "study-animated"),
     ):
         data = tomllib.loads((SCENE_EXAMPLE / piece).read_text(encoding="utf-8"))
         declared = set(MANIFEST["capabilities"][capability]["inputs"])

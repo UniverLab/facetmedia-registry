@@ -144,7 +144,7 @@ def test_comfy_and_comfy_xl_ship_the_fast_flow_files() -> None:
 
 def test_rembg_ships_the_checkerboard_example() -> None:
     examples = ROOT / "packages" / "rembg" / "examples"
-    assert (examples / "vista-checkerboard.png").is_file()
+    assert (examples / "plate-checkerboard.png").is_file()
     assert not (examples / "vista-damero.png").exists()
-    reading = (examples / "medicion.json").read_text(encoding="utf-8")
-    assert "vista-checkerboard.png" in reading
+    reading = (examples / "measurement.json").read_text(encoding="utf-8")
+    assert "plate-checkerboard.png" in reading

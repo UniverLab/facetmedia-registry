@@ -1,7 +1,7 @@
 {
   "segments": [
-    { "start_s": 0.0, "end_s": 2.4, "text": "En este laboratorio probamos una voz en español." },
-    { "start_s": 2.4, "end_s": 5.8, "text": "Queremos medir si se entiende bien y cuánto tarda." },
-    { "start_s": 5.8, "end_s": 8.6, "text": "El resultado se convierte en subtítulos validados." }
+    { "start_s": 0.0, "end_s": 4.2, "text": "In this laboratory we test a locally generated English voice." },
+    { "start_s": 4.2, "end_s": 7.64, "text": "We want to measure how clear it sounds, how long it takes," },
+    { "start_s": 7.64, "end_s": 10.36, "text": "and how it compares with the voices we already use." }
   ]
 }

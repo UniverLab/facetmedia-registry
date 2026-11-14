@@ -26,7 +26,7 @@ serves and never opens anything; facet opens a document asset itself.
 The invocation shapes are in `references/render.md`, the `@page` snippets in
 `references/page.md` and the presenter file shapes in `references/presenter.md`.
 A complete approved one-page piece — HTML, PDF and PNG — is in
-`examples/modelos-de-lenguaje.*`.
+`examples/language-models.*`.
 
 ## When to use
 
@@ -40,7 +40,7 @@ A complete approved one-page piece — HTML, PDF and PNG — is in
 - **One-page piece** (`deck.page`) when the deliverable is an infographic or
   a poster: one page whose height the content decides, not a deck of slides.
   It is the same HTML + CSS + SVG as a slide, without `@page` and without
-  breaks. Start from `examples/modelos-de-lenguaje.html`.
+  breaks. Start from `examples/language-models.html`.
 - HTML + CSS + SVG on headless Chrome is one language for print, screen and
   video, diffable in git, and renders in a cycle of export, screenshot and
   correction, with nothing extra to install. Choose it when the piece is
@@ -134,8 +134,8 @@ through the content. Copy the snippets from `references/page.md`.
    overflow and hierarchy.
 3. For anything that is not an image — PDF pages, a deck, an assembled
    presenter file — turn it into images with the lab's
-   `tools/visualize.sh <archivo> [páginas]`, which leaves them in
-   `<archivo>.viz/`, and inspect those. If your harness cannot see images,
+   `tools/visualize.sh <file> [pages]`, which leaves them in
+   `<file>.viz/`, and inspect those. If your harness cannot see images,
    verify what is measurable (page count, file size, console errors) and ask a
    person to review.
 4. Correct and repeat from step 1. A figure that changed means re-exporting.

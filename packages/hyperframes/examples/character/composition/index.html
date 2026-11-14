@@ -1,33 +1,33 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
     <script src="./vendor/gsap.min.js"></script>
     <style>
-      @font-face { font-family: 'Ubuntu'; src: local('Ubuntu'); }
+      @font-face { font-family: 'Old Standard TT'; src: url('./assets/fonts/OldStandard-Regular.ttf'); font-weight: 400; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #f3efe6; }
-      #root { position: relative; width: 100%; height: 100%; font-family: 'Ubuntu', sans-serif; color: #2b2622; }
-      #zorro { position: absolute; left: 260px; top: 140px; width: 800px; height: 800px; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #222928; }
+      #root { position: relative; width: 100%; height: 100%; font-family: 'Old Standard TT', serif; color: #ecebe4; }
+      #fox { position: absolute; left: 260px; top: 140px; width: 800px; height: 800px; }
       .mouth { opacity: 0; } #mouth-X { opacity: 1; }  /* rest mouth at frame 0 */
-      #nombre { position: absolute; left: 1140px; top: 380px; font-size: 96px; font-weight: 500; letter-spacing: -0.02em; }
+      #name { position: absolute; left: 1140px; top: 380px; font-size: 96px; font-weight: 400; letter-spacing: -0.02em; color: #e6c84a; }
     </style>
   </head>
   <body>
     <div id="root" data-composition-id="main" data-start="0" data-duration="3" data-width="1920" data-height="1080" data-fps="24">
-      <svg id="zorro" class="clip" data-start="0" data-duration="3" data-track-index="0" viewBox="-400 -400 800 800">
-        <g id="cabeza">
-          <path d="M-250,-120 L-300,-360 L-110,-230 Z" fill="#e8742a" />
-          <path d="M250,-120 L300,-360 L110,-230 Z" fill="#e8742a" />
-          <path d="M0,-260 C190,-260 300,-120 300,20 C300,190 160,300 0,300 C-160,300 -300,190 -300,20 C-300,-120 -190,-260 0,-260 Z" fill="#e8742a" />
-          <path d="M0,40 C120,40 250,90 250,170 C200,260 110,300 0,300 C-110,300 -200,260 -250,170 C-250,90 -120,40 0,40 Z" fill="#fff6ea" />
-          <g id="ojos">
-            <ellipse cx="-115" cy="-60" rx="38" ry="46" fill="#2b2622" />
-            <ellipse cx="115" cy="-60" rx="38" ry="46" fill="#2b2622" />
+      <svg id="fox" class="clip" data-start="0" data-duration="3" data-track-index="0" viewBox="-400 -400 800 800">
+        <g id="head">
+          <path d="M-250,-120 L-300,-360 L-110,-230 Z" fill="#d9b878" />
+          <path d="M250,-120 L300,-360 L110,-230 Z" fill="#d9b878" />
+          <path d="M0,-260 C190,-260 300,-120 300,20 C300,190 160,300 0,300 C-160,300 -300,190 -300,20 C-300,-120 -190,-260 0,-260 Z" fill="#d9b878" />
+          <path d="M0,40 C120,40 250,90 250,170 C200,260 110,300 0,300 C-110,300 -200,260 -250,170 C-250,90 -120,40 0,40 Z" fill="#ecebe4" />
+          <g id="eyes">
+            <ellipse cx="-115" cy="-60" rx="38" ry="46" fill="#1a201f" />
+            <ellipse cx="115" cy="-60" rx="38" ry="46" fill="#1a201f" />
           </g>
-          <ellipse cx="0" cy="70" rx="34" ry="24" fill="#2b2622" />
-          <g id="mouth" transform="translate(0,170)" fill="#5b1f1f" stroke="#2b2622" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="0" cy="70" rx="34" ry="24" fill="#1a201f" />
+          <g id="mouth" transform="translate(0,170)" fill="#1a201f" stroke="#e6c84a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
             <path class="mouth" id="mouth-X" d="M-60,-6 Q0,26 60,-6" fill="none" />
             <path class="mouth" id="mouth-A" d="M-52,0 L52,0" fill="none" stroke-width="10" />
             <g class="mouth" id="mouth-B"><ellipse rx="54" ry="12" /></g>
@@ -40,8 +40,8 @@
           </g>
         </g>
       </svg>
-      <h1 id="nombre" class="clip" data-start="0" data-duration="3" data-track-index="1">Zorro</h1>
-      <audio id="voice" src="voz.wav" data-start="0.5" data-duration="1.2" data-track-index="2"></audio>
+      <h1 id="name" class="clip" data-start="0" data-duration="3" data-track-index="1">Fox</h1>
+      <audio id="voice" src="voice.wav" data-start="0.5" data-duration="1.5" data-track-index="2"></audio>
     </div>
     <script>
       const AUDIO_START = 0.5;
@@ -53,10 +53,10 @@
       });
       // Blinks at fixed, deterministic times.
       [1.4, 2.4].forEach(function (t) {
-        tl.to('#ojos', { scaleY: 0.1, transformOrigin: '50% 50%', duration: 0.07 }, t)
-          .to('#ojos', { scaleY: 1, duration: 0.09 }, t + 0.07);
+        tl.to('#eyes', { scaleY: 0.1, transformOrigin: '50% 50%', duration: 0.07 }, t)
+          .to('#eyes', { scaleY: 1, duration: 0.09 }, t + 0.07);
       });
-      tl.from('#nombre', { opacity: 0, x: -20, duration: 0.6 }, 0.2);
+      tl.from('#name', { opacity: 0, x: -20, duration: 0.6 }, 0.2);
       window.__timelines['main'] = tl;
       tl.seek(0);
     </script>

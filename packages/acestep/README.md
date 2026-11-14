@@ -70,8 +70,8 @@ does the rest.
 
 ## Approved tracks and the sung-music verdict
 
-The lab's approved beds are `clasica-alegre.wav` (Vivaldi-style allegro, 30 s)
-and `clasica-melancolica.wav` (solo piano and string quartet, 30 s): both
+The lab's approved beds are `baroque-allegro.wav` (Vivaldi-style allegro, 30 s)
+and `romantic-nocturne.wav` (solo piano and string quartet, 30 s): both
 acoustic, no percussion, and 2.5-16 % of their energy below 120 Hz. Both ship
 as pieces in `examples/`, each with its WAV.
 
@@ -102,21 +102,21 @@ dependencies include PyTorch (**BSD-3-Clause**) and soundfile
 
 ## Example
 
-`examples/clasica-alegre.toml`:
+`examples/baroque-allegro.toml`:
 
 ```toml
 [inputs]
 caption = "Lively, joyful Baroque chamber orchestra piece in the style of a Vivaldi allegro. Bright strings playing fast staccato and spiccato runs, harpsichord continuo, playful solo violin and flute melodies. Energetic, festive and elegant. Acoustic instruments only. No drums, no percussion, no bass beat, no synthesizers, no electronic sounds."
-name = "clasica-alegre"
+name = "baroque-allegro"
 duration = 30
 ```
 
 Run it with `scripts/try-package.sh acestep acestep.bed
-packages/acestep/examples/clasica-alegre.toml`.
+packages/acestep/examples/baroque-allegro.toml`.
 
 ## Bundled examples
 
 `facet example <capability> --run` copies the capability's example, with
 every file it names, into a fresh folder and runs it there:
 
-- `acestep.bed` — `examples/clasica-alegre.toml`, `examples/clasica-melancolica.toml`: `facet example acestep.bed --run`
+- `acestep.bed` — `examples/baroque-allegro.toml`, `examples/romantic-nocturne.toml`: `facet example acestep.bed --run`

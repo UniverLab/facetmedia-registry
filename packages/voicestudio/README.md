@@ -30,7 +30,7 @@ language = "es"          # the piece's language
 
 [[inputs.clip]]
 name = "intro"
-text = "En este laboratorio probamos una voz en español."
+text = "In this laboratory we test an English voice."
 seed = 7
 ```
 
@@ -127,7 +127,7 @@ language = "es"
 
 [[inputs.clip]]
 name = "mi-voz"
-text = "En este laboratorio probamos una voz en español."
+text = "In this laboratory we test an English voice."
 seed = 7
 ```
 
@@ -161,7 +161,7 @@ no profile is ever vendored.
 ```toml
 [inputs]
 name = "mi-voz"
-ref-audio = "samples/mi-voz.wav"   # relative to this piece file
+ref-audio = "samples/mi-voice.wav"   # relative to this piece file
 instruct = "male, low pitch"       # optional: the backend's design vocabulary
 language = "es"
 ```

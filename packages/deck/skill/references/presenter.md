@@ -11,13 +11,13 @@ One speaker note per slide, in `page` order, separated by a line holding only
 and order.
 
 ```markdown
-Bienvenida: qué vamos a ver y por qué importa.
+Welcome: what we will cover and why it matters.
 
 ---
 The main result; the figure comes from DATA and the footer carries its source.
 
 ---
-Cierre y preguntas.
+Wrap-up and questions.
 ```
 
 - No front matter, no headings required: each section is the raw note text.
@@ -32,7 +32,7 @@ injected before `</body>`:
 ```html
 …deck markup…
 <style>/* presenter/runner.css */</style>
-<script>window.__PZ_NOTES__=["nota 1","nota 2","nota 3"];</script>
+<script>window.__PZ_NOTES__=["note 1","note 2","note 3"];</script>
 <script>/* presenter/runner.js */</script>
 </body>
 ```

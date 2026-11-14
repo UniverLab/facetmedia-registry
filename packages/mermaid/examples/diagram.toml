@@ -3,4 +3,4 @@
 capability = "mermaid.diagram"
 
 [inputs]
-diagram = "arquitectura.mmd"
+diagram = "architecture.mmd"

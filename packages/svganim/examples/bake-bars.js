@@ -44,8 +44,8 @@ const bars = data.values.map((value, index) => {
   const label = labelPath(value, x + (barWidth - String(value).length * 36) / 2, baseline + 28, 6);
   return (
     `<g class="bar" style="animation-delay:${(index * 0.16).toFixed(2)}s">` +
-    `<rect x="${x}" y="${baseline - barHeight}" width="${barWidth}" height="${barHeight}" rx="6" fill="#8fbf9f"/>` +
-    `<path d="${label}" fill="none" stroke="#101215" stroke-width="2.4" stroke-linecap="square"/>` +
+    `<rect x="${x}" y="${baseline - barHeight}" width="${barWidth}" height="${barHeight}" rx="6" fill="#87222c"/>` +
+    `<path d="${label}" fill="none" stroke="#1d1510" stroke-width="2.4" stroke-linecap="square"/>` +
     "</g>"
   );
 });
@@ -55,8 +55,8 @@ process.stdout.write(
     `viewBox="0 0 ${width} ${height}">` +
     "<style>@keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}" +
     ".bar{transform-box:fill-box;transform-origin:center bottom;animation:grow 1.1s ease-out both}</style>" +
-    `<rect width="${width}" height="${height}" fill="#f6f3ec"/>` +
-    `<line x1="90" y1="${baseline}" x2="${width - 90}" y2="${baseline}" stroke="#101215" stroke-width="3"/>` +
+    `<rect width="${width}" height="${height}" fill="#f4f0ea"/>` +
+    `<line x1="90" y1="${baseline}" x2="${width - 90}" y2="${baseline}" stroke="#1d1510" stroke-width="3"/>` +
     bars.join("") +
     "</svg>",
 );

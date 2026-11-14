@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
-#: STL export tolerances the lab's escuadra.py itself uses.
+#: STL export tolerances the lab's bracket.py itself uses.
 STL_TOLERANCE = 0.05
 STL_ANGULAR_TOLERANCE = 0.2
 #: SVG line view: the lab's projection direction and canvas.

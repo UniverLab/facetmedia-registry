@@ -125,7 +125,7 @@ Lambert-shaded, returned to the agent as an image because the shape is
 judged visually). `facet preview <name>.dxf` writes `drawing` — `units`,
 `entities`, `layers` with entity counts and the `audit` result — and shows
 the PNG plan view. A summary reads like
-`escuadra · valid · 20 806 mm³ · 2 holes Ø6.5`.
+`bracket · valid · 20 806 mm³ · 2 holes Ø6.5`.
 
 `facet doctor cad` runs the package's own checks, each `{name, ok, detail,
 fix}`:
@@ -166,24 +166,24 @@ VTK ship every extension module. Later runs are offline.
 
 ## Example
 
-`examples/escuadra.py` and `examples/escuadra.toml`: the lab's escuadra de
+`examples/bracket.py` and `examples/bracket.toml`: the lab's bracket de
 montaje (L bracket, CadQuery 2.8.0), verified by its volume:
 
 ```toml
 [inputs]
-script = "escuadra.py"
-name = "escuadra"
+script = "bracket.py"
+name = "bracket"
 expect-volume-mm3 = 20805
 ```
 
-`examples/plano-estudio.py` and `examples/plano-estudio.toml`: the lab's
+`examples/floor-plan.py` and `examples/floor-plan.toml`: the lab's
 6 × 4.5 m study plan (ezdxf 1.4.4 + matplotlib), verified by its five layers
 and a clean audit:
 
 ```toml
 [inputs]
-script = "plano-estudio.py"
-name = "plano-estudio"
+script = "floor-plan.py"
+name = "floor-plan"
 expect-layers = [
   { layer = "muros" },
   { layer = "aberturas" },
@@ -194,14 +194,14 @@ expect-layers = [
 ```
 
 Run them with `scripts/try-package.sh cad solid
-packages/cad/examples/escuadra.toml` and `scripts/try-package.sh cad drawing
-packages/cad/examples/plano-estudio.toml`; the script prints the run, the
+packages/cad/examples/bracket.toml` and `scripts/try-package.sh cad drawing
+packages/cad/examples/floor-plan.toml`; the script prints the run, the
 preview, the doctor report and the skill. The records land beside the assets
-as `escuadra.step.facet.json` and its siblings.
+as `bracket.step.facet.json` and its siblings.
 
 The lab's runs (24 October 2026, 12 cores, no GPU): `facet run cad.solid`
 took 6.1 s and `facet run cad.drawing` 3.2 s with the environment already
-pulled; the escuadra measured 20 805.5
+pulled; the bracket measured 20 805.5
 mm³ — 0.0025 % off the piece's 20 805, far inside the 0.1 % tolerance — and
 its two Ø6.5 holes sit at (45, 20, 2.5) and (2.5, 20, 35), exactly the
 hand-checked centres. A variant with `expect-volume-mm3 = 30000` exits 3
@@ -211,14 +211,14 @@ file also carries the bytes, creation time, licence section, registry
 provenance, params digest and the other two assets' records):
 
 ```json
-{"id": "sha256:1480c0c3e727fc2c32ba6ddc9267b6d95a44caac1419f019ab8358ad5f13fb86", "kind": "cad", "mime": "model/step", "name": "escuadra", "path": "escuadra.step", "properties": {"bbox_mm": [60.0, 40.0, 50.0], "faces": 11, "solids": 1, "volume_mm3": 20805.514451}, "provenance": {"capability": "cad.solid", "inputs": [{"id": "sha256:bd1acd2f9c9e97e183bb641796c8ce043fc05bee16346c381181c0e217768223"}], "models": [], "package": {"lock_sha256": "377db64843a34f8583109bcd5c2046dbaf1d9780b853bdd1e0a6b457a50786a8", "name": "cad", "version": "0.1.0"}, "params": {"bbox-abs-tol-mm": 0.01, "expect-volume-mm3": 20805, "name": "escuadra", "volume-rel-tol": 0.001}, "seed": null, "tool": {"name": "cadquery", "version": "2.8.0"}}, "record": 1, "verification": {"metrics": {"bbox_mm": [60.0, 40.0, 50.0], "faces": 11, "holes": [{"axis": [1.0, 0.0, 0.0], "center_mm": [2.5, 20.0, 35.0], "diameter_mm": 6.5}, {"axis": [0.0, 0.0, 1.0], "center_mm": [45.0, 20.0, 2.5], "diameter_mm": 6.5}], "solids": 1, "volume_diff_rel": 2.5e-05, "volume_mm3": 20805.514451}, "status": "passed", "thresholds": {"bbox_abs_tol_mm": null, "volume_rel_tol": 0.001}, "verifier": "cadquery"}}
+{"id": "sha256:1480c0c3e727fc2c32ba6ddc9267b6d95a44caac1419f019ab8358ad5f13fb86", "kind": "cad", "mime": "model/step", "name": "bracket", "path": "bracket.step", "properties": {"bbox_mm": [60.0, 40.0, 50.0], "faces": 11, "solids": 1, "volume_mm3": 20805.514451}, "provenance": {"capability": "cad.solid", "inputs": [{"id": "sha256:bd1acd2f9c9e97e183bb641796c8ce043fc05bee16346c381181c0e217768223"}], "models": [], "package": {"lock_sha256": "377db64843a34f8583109bcd5c2046dbaf1d9780b853bdd1e0a6b457a50786a8", "name": "cad", "version": "0.1.0"}, "params": {"bbox-abs-tol-mm": 0.01, "expect-volume-mm3": 20805, "name": "bracket", "volume-rel-tol": 0.001}, "seed": null, "tool": {"name": "cadquery", "version": "2.8.0"}}, "record": 1, "verification": {"metrics": {"bbox_mm": [60.0, 40.0, 50.0], "faces": 11, "holes": [{"axis": [1.0, 0.0, 0.0], "center_mm": [2.5, 20.0, 35.0], "diameter_mm": 6.5}, {"axis": [0.0, 0.0, 1.0], "center_mm": [45.0, 20.0, 2.5], "diameter_mm": 6.5}], "solids": 1, "volume_diff_rel": 2.5e-05, "volume_mm3": 20805.514451}, "status": "passed", "thresholds": {"bbox_abs_tol_mm": null, "volume_rel_tol": 0.001}, "verifier": "cadquery"}}
 ```
 
 The plan: 22 entities, 7 defined layers, audit 0 errors 0
 fixes, every `expect-layers` layer present, and its PNG and SVG views
 completed by the runner. `facet preview` summarises the part as
-`escuadra · valid · 20 806 mm³ · 2 holes Ø6.5` and the plan as
-`plano-estudio · 22 entities · 5 layers · audit clean`; both previews pass
+`bracket · valid · 20 806 mm³ · 2 holes Ø6.5` and the plan as
+`floor-plan · 22 entities · 5 layers · audit clean`; both previews pass
 `schemas/preview/cad.schema.json` and open in the CAD viewer.
 `facet doctor cad --json` reports `healthy: true` after the pull (5 package
 checks at `full` depth, the `host_libs` readiness check loading all seven
@@ -230,5 +230,5 @@ machine's state.
 `facet example <capability> --run` copies the capability's example, with
 every file it names, into a fresh folder and runs it there:
 
-- `cad.drawing` — `examples/plano-estudio.toml`: `facet example cad.drawing --run`
-- `cad.solid` — `examples/escuadra.toml`: `facet example cad.solid --run`
+- `cad.drawing` — `examples/floor-plan.toml`: `facet example cad.drawing --run`
+- `cad.solid` — `examples/bracket.toml`: `facet example cad.solid --run`

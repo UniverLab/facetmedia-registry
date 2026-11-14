@@ -33,13 +33,13 @@ def _material(name, color):
 bpy.ops.mesh.primitive_plane_add(size=20.0, location=(0.0, 0.0, 0.0))
 
 bpy.ops.mesh.primitive_cube_add(size=2.0, location=(-2.0, 0.0, 1.0))
-bpy.context.active_object.data.materials.append(_material("rojo", (0.8, 0.1, 0.1)))
+bpy.context.active_object.data.materials.append(_material("gold", (0.851, 0.722, 0.471)))
 
 bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, location=(1.5, -1.0, 1.0))
-bpy.context.active_object.data.materials.append(_material("verde", (0.1, 0.6, 0.2)))
+bpy.context.active_object.data.materials.append(_material("brass", (0.902, 0.784, 0.29)))
 
 bpy.ops.mesh.primitive_cone_add(radius1=1.0, depth=2.0, location=(1.5, 2.0, 1.0))
-bpy.context.active_object.data.materials.append(_material("azul", (0.1, 0.3, 0.8)))
+bpy.context.active_object.data.materials.append(_material("sage", (0.357, 0.396, 0.376)))
 
 area = bpy.data.lights.new("area", type="AREA")
 area.energy = 500.0

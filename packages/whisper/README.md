@@ -77,7 +77,7 @@ cues and the sidecar.
 
 `facet preview <name>.txt` writes `<name>.txt.preview.json` (the generic
 schema) with a one-line `summary` such as
-`9.6 s · es (0.99) · 28 words · WER 0 %` and `fields` holding the properties
+`10.6 s · en (1.00) · 32 words · WER 0 %` and `fields` holding the properties
 and the metrics. The timed segments stay in `<name>.json`; the preview never
 copies them. The sidecar must sit beside the transcript for the preview to
 read it.
@@ -119,38 +119,37 @@ is a core concern for later.
 
 ## Example
 
-`examples/laboratorio.flac` is a 9.64 s Spanish voice clip converted to
-16 kHz mono FLAC (159 KB), and `examples/laboratorio.toml` transcribes it in
-Spanish with the reference text:
+`examples/laboratory.flac` is a 10.56 s English voice clip converted to
+16 kHz mono FLAC (175 KB), and `examples/laboratory.toml` transcribes it in
+English with the reference text:
 
 ```toml
 [inputs]
-audio = "laboratorio.flac"
-language = "es"
-name = "laboratorio"
-expect-text = "En este laboratorio probamos una voz en español generada localmente. Queremos medir si se entiende bien, cuánto tarda y cómo suena frente a las voces que ya usamos."
+audio = "laboratory.flac"
+language = "en"
+name = "laboratory"
+expect-text = "In this laboratory we test a locally generated English voice. We want to measure how clear it sounds, how long it takes, and how it compares with the voices we already use."
 ```
 
 Run it with `scripts/try-package.sh whisper whisper.transcribe
-packages/whisper/examples/laboratorio.toml`; the script prints the run, the
+packages/whisper/examples/laboratory.toml`; the script prints the run, the
 preview, the doctor report and the skill. The records land beside the assets
-as `laboratorio.txt.facet.json` and its two siblings.
+as `laboratory.txt.facet.json` and its two siblings.
 
-The lab's run (24 October 2026, 12 cores, no GPU) took **19.3 s** wall for
-`facet run`, the 486 MB pull and the environment included, and its transcript
-record reads (abridged: the file also carries the creation time, the registry
+The English re-take was transcribed on CPU (model already pulled), and its
+transcript record reads (abridged: the file also carries the creation time, the registry
 and lock provenance, the params digest, the facet version and the licence
 section):
 
 ```json
-{"bytes": 168, "id": "sha256:f94aa24df5eeeec4938b07a0546fbd0904a711a9d8da3e6e6ad33b261ca95acc", "kind": "text", "mime": "text/plain", "name": "laboratorio", "path": "laboratorio.txt", "properties": {"duration_s": 9.641, "language": "es", "language_probability": 1.0, "segments": 3, "words": 28}, "provenance": {"capability": "whisper.transcribe", "inputs": [{"id": "sha256:7512a5213f524ac57e269a5dbaf8e72c00ba5caeaef95ff2194afe5d3e8ced16"}], "models": [{"bytes": 486212372, "hf_repo": "Systran/faster-whisper-small", "id": "faster-whisper-small-transcribe", "revision": "536b0662742c02347bc0e980a01041f333bce120"}], "package": {"lock_sha256": "ba9716018f0a3aac1c7ca3d3294f73a64352cfa9c75ffca33551c59041acb9bc", "name": "whisper", "version": "0.1.1"}, "params": {"audio": "laboratorio.flac", "expect-text": "En este laboratorio probamos una voz en español generada localmente. Queremos medir si se entiende bien, cuánto tarda y cómo suena frente a las voces que ya usamos.", "language": "es", "name": "laboratorio"}, "seed": null, "tool": {"name": "faster-whisper", "version": "1.2.1"}}, "record": 1, "verification": {"metrics": {"avg_logprob": -0.1722, "language": "es", "language_probability": 1.0, "no_speech_share": 0.0, "wer": 0.0, "words": 28, "words_per_minute": 174}, "status": "passed", "thresholds": {"max_no_speech_share": 0.2, "min_avg_logprob": -1.0, "wer_max": 0.1}, "verifier": "faster-whisper-small@536b0662"}}
+{"bytes": 174, "id": "sha256:9859ae8e513c7cf5da39057ff05a19b0c4425d4fac99bc7b2af6e7bdc08a6292", "kind": "text", "mime": "text/plain", "name": "laboratory", "path": "laboratory.txt", "properties": {"duration_s": 10.558, "language": "en", "language_probability": 1.0, "segments": 3, "words": 32}, "provenance": {"capability": "whisper.transcribe", "inputs": [{"id": "sha256:98d2be06053d939ae0c073b0cca870cd05b2a92ad2cffeed05e2cf29e05415c"}], "models": [{"bytes": 486212372, "hf_repo": "Systran/faster-whisper-small", "id": "faster-whisper-small-transcribe", "revision": "536b0662742c02347bc0e980a01041f333bce120"}], "package": {"lock_sha256": "ba9716018f0a3aac1c7ca3d3294f73a64352cfa9c75ffca33551c59041acb9bc", "name": "whisper", "version": "0.1.4"}, "params": {"audio": "laboratory.flac", "expect-text": "In this laboratory we test a locally generated English voice. We want to measure how clear it sounds, how long it takes, and how it compares with the voices we already use.", "language": "en", "name": "laboratory"}, "seed": null, "tool": {"name": "faster-whisper", "version": "1.2.1"}}, "record": 1, "verification": {"metrics": {"avg_logprob": -0.1871, "language": "en", "language_probability": 1.0, "no_speech_share": 0.0, "wer": 0.0, "words": 32, "words_per_minute": 182}, "status": "passed", "thresholds": {"max_no_speech_share": 0.2, "min_avg_logprob": -1.0, "wer_max": 0.1}, "verifier": "faster-whisper-small@536b0662"}}
 ```
 
 The transcript is the reference text word for word (WER 0), split into three
-segments, with mean `avg_logprob` −0.1722 and no segment the model thought
+segments, with mean `avg_logprob` −0.1871 and no segment the model thought
 was non-speech. The `.srt` carries those three cues (00:00:00,000 →
-00:00:03,780; 00:00:04,180 → 00:00:08,760; 00:00:08,760 → 00:00:09,280), and
-the preview summarises the transcript as `9.6 s · es (1.00) · 28 words ·
+00:00:04,200; 00:00:04,200 → 00:00:07,640; 00:00:07,640 → 00:00:10,360), and
+the preview summarises the transcript as `10.6 s · en (1.00) · 32 words ·
 WER 0 %`. `facet doctor whisper --json` reports `healthy: true` after that
 pull (2.4 s, all three checks, the full-depth one included).
 
@@ -159,6 +158,6 @@ pull (2.4 s, all three checks, the full-depth one included).
 `facet example <capability> --run` copies the capability's example, with
 every file it names, into a fresh folder and runs it there:
 
-- `whisper.transcribe` — `examples/laboratorio.toml`: `facet example whisper.transcribe --run`
+- `whisper.transcribe` — `examples/laboratory.toml`: `facet example whisper.transcribe --run`
 
 The first run pulls the transcription model; CPU only.

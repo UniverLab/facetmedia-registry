@@ -7,5 +7,5 @@ true-peak-db = -1.5
 sample-rate-hz = "48000"
 
 [[inputs.clip]]
-name = "voz-a-16"
-audio = "voz.flac"
+name = "voice-at-16"
+audio = "voice.flac"

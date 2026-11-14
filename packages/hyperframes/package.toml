@@ -1,5 +1,5 @@
 name = "hyperframes"
-version = "0.1.2"
+version = "0.1.3"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "HeyGen (hyperframes)"
@@ -602,7 +602,7 @@ description = "Frame rate passed as --fps; the composition's own data-fps applie
 [capabilities.diagram.inputs.diagram-svg]
 type = "path"
 required = true
-description = "Mermaid SVG file as produced by tools/mermaid.sh (for example ciclo.svg or arquitectura.svg), resolved relative to the piece; the runner inserts it at `<!-- DIAGRAM -->` in index.html, decoding `&gt;` inside `<style>` and stripping xmlns attributes."
+description = "Mermaid SVG file as produced by tools/mermaid.sh (for example cycle.svg or architecture.svg), resolved relative to the piece; the runner inserts it at `<!-- DIAGRAM -->` in index.html, decoding `&gt;` inside `<style>` and stripping xmlns attributes."
 
 [capabilities.diagram.inputs.animation]
 type = "array"

@@ -122,8 +122,8 @@ short: each of the three examples runs in a few seconds.
 
 ## Examples
 
-`examples/voz.flac` is the lab's reference voice clip (the same 16 kHz
-mono FLAC whisper transcribes); `examples/fondo.flac` is a 15 s pink
+`examples/voice.flac` is the lab's reference voice clip (the same 16 kHz
+mono FLAC whisper transcribes); `examples/bed.flac` is a 15 s pink
 noise bed, low-passed at 800 Hz and laid at −30 dBFS, generated once
 with the bundled ffmpeg (`anoisesrc`), 117 KB.
 
@@ -132,10 +132,10 @@ with the bundled ffmpeg (`anoisesrc`), 117 KB.
 packages/ffmpeg/examples/normalize.toml`. The record:
 
 ```json
-{"bytes": 925584, "id": "sha256:cc150f5826d1dfd498fe32f5618ba026a4ec864bd3f592833316ee2065c65a14", "kind": "audio", "mime": "audio/wav", "name": "voz-a-16", "path": "voz-a-16.wav", "properties": {"channels": 1, "duration_s": 9.641, "lufs": -16.8, "peak_dbfs": -1.5, "sample_rate_hz": 48000}, "provenance": {"capability": "ffmpeg.normalize", "package": {"name": "ffmpeg", "version": "0.1.1"}, "seed": null, "tool": {"name": "ffmpeg", "version": "ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers"}}, "record": 1, "verification": {"metrics": {"duration_error_s": 0.0, "duration_s": 9.641, "lufs": -16.8, "peak_dbfs": -1.5}, "status": "passed", "thresholds": {"lufs_tol": 1.0}, "verifier": "ffmpeg 7.0.2-static loudnorm"}}
+{"bytes": 1013646, "id": "sha256:1854684e5c6af4b42b16aca9be2605d94abae7b39bbcf57d179c75346d08fac6", "kind": "audio", "mime": "audio/wav", "name": "voice-at-16", "path": "voice-at-16.wav", "properties": {"channels": 1, "duration_s": 10.558, "lufs": -16.9, "peak_dbfs": -1.5, "sample_rate_hz": 48000}, "provenance": {"capability": "ffmpeg.normalize", "package": {"name": "ffmpeg", "version": "0.1.4"}, "seed": null, "tool": {"name": "ffmpeg", "version": "ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers"}}, "record": 1, "verification": {"metrics": {"duration_error_s": 0.0, "duration_s": 10.558, "lufs": -16.9, "peak_dbfs": -1.5}, "status": "passed", "thresholds": {"lufs_tol": 1.0}, "verifier": "ffmpeg 7.0.2-static loudnorm"}}
 ```
 
-The loudness stopped at −16.8 rather than −16.0 because this clip's peak
+The loudness stopped at −16.9 rather than −16.0 because this clip's peak
 already sits high: the true-peak ceiling engaged, which is the other half
 of "without clipping".
 
@@ -143,23 +143,23 @@ of "without clipping".
 2 s, ducking on, `target-lufs = -16`:
 
 ```json
-{"bytes": 2880078, "id": "sha256:8635d2de048be74cd1b88183ce8cf97df7181dd0155a921cd48f4c2a60cf698a", "kind": "audio", "mime": "audio/wav", "name": "voz-sobre-fondo", "path": "voz-sobre-fondo.wav", "properties": {"channels": 2, "duration_s": 15.0, "lufs": -16.21, "peak_dbfs": -1.5, "sample_rate_hz": 48000}, "provenance": {"capability": "ffmpeg.mix", "package": {"name": "ffmpeg", "version": "0.1.1"}, "seed": null, "tool": {"name": "ffmpeg", "version": "ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers"}}, "record": 1, "verification": {"metrics": {"duration_error_s": 0.0, "duration_s": 15.0, "lufs": -16.21, "peak_dbfs": -1.5}, "status": "passed", "thresholds": {"lufs_tol": 1.0}, "verifier": "ffmpeg 7.0.2-static loudnorm"}}
+{"bytes": 2880078, "id": "sha256:8635d2de048be74cd1b88183ce8cf97df7181dd0155a921cd48f4c2a60cf698a", "kind": "audio", "mime": "audio/wav", "name": "voice-over-bed", "path": "voice-over-bed.wav", "properties": {"channels": 2, "duration_s": 15.0, "lufs": -16.21, "peak_dbfs": -1.5, "sample_rate_hz": 48000}, "provenance": {"capability": "ffmpeg.mix", "package": {"name": "ffmpeg", "version": "0.1.4"}, "seed": null, "tool": {"name": "ffmpeg", "version": "ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers"}}, "record": 1, "verification": {"metrics": {"duration_error_s": 0.0, "duration_s": 15.0, "lufs": -16.21, "peak_dbfs": -1.5}, "status": "passed", "thresholds": {"lufs_tol": 1.0}, "verifier": "ffmpeg 7.0.2-static loudnorm"}}
 ```
 
 The mix lasts 15.0 s — the bed's own length — even though the voice ends
-near 11.6 s, because the padded sidechain key keeps holding the bed down
+near 12.6 s, because the padded sidechain key keeps holding the bed down
 after the voice stops. Its preview summarises it as `mix · 15.0 s ·
 -16.2 LUFS · peak -1.5 dBFS · bed ducked -12 dB`, and the momentary
 curve shows the bed alone at about −40 LUFS for the first 2 s, the whole
 mix at about −17 LUFS while the voice speaks, and the ducked bed alone
-again at the tail; `facet preview voz-sobre-fondo.wav` serves it in the
+again at the tail; `facet preview voice-over-bed.wav` serves it in the
 audio viewer.
 
 `examples/convert.toml` cuts the first 5 s of the voice to Ogg Opus at
 128 kbps:
 
 ```json
-{"bytes": 88071, "id": "sha256:b6f356bb07a5a…", "kind": "audio", "mime": "audio/ogg", "name": "voz-ogg", "path": "voz-ogg.ogg", "properties": {"channels": 1, "duration_s": 5.0, "lufs": -26.0, "peak_dbfs": -6.33, "sample_rate_hz": 48000}, "record": 1, "verification": {"metrics": {"duration_error_s": 0.0, "duration_s": 5.0, "lufs": -26.0, "peak_dbfs": -6.33}, "status": "passed", "thresholds": {}, "verifier": "ffmpeg 7.0.2-static loudnorm"}}
+{"bytes": 85620, "id": "sha256:7b0198b6616a8cacdcf8e5857006203fdfcb06215e2fa98871ffd9ad7a93705e", "kind": "audio", "mime": "audio/ogg", "name": "voice-ogg", "path": "voice-ogg.ogg", "properties": {"channels": 1, "duration_s": 5.0, "lufs": -24.9, "peak_dbfs": -8.9, "sample_rate_hz": 48000}, "record": 1, "verification": {"metrics": {"duration_error_s": 0.0, "duration_s": 5.0, "lufs": -26.0, "peak_dbfs": -6.33}, "status": "passed", "thresholds": {}, "verifier": "ffmpeg 7.0.2-static loudnorm"}}
 ```
 
 The ogg decodes at 48 kHz whatever the source was (libopus always runs

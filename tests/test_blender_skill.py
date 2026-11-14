@@ -26,7 +26,7 @@ DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
 #: The examples the skill presents as starting points, folder and piece.
 EXAMPLES_SHIPPED = (
-    ("study-photo", "study-photo.toml", "study_photo.py"),
+    ("study", "study.toml", "study.py"),
     ("product", "product.toml", "product.py"),
     ("tour", "tour.toml", "tour.py"),
 )

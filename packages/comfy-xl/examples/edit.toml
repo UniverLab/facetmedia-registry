@@ -1,9 +1,9 @@
 # Needs a 24 GB card: the qwen-image-edit flow does not fit on a smaller GPU.
-# Replace acuarela.png with your own reference and rewrite the instruction.
+# Replace watercolor.png with your own reference and rewrite the instruction.
 capability = "comfy-xl.edit"
 
 [inputs]
-source = "acuarela.png"
+source = "watercolor.png"
 image = [
-  { name = "acuarela-grabado", seed = 242, width = 1344, height = 768, prompt = "Edit the reference image into a two-color linocut print in deep indigo and warm cream. Preserve the colonial street, the wooden balconies and the framing. Use rough carved edges and visible paper grain." },
+  { name = "watercolor-print", seed = 242, width = 1344, height = 768, prompt = "Edit the reference image into a two-color linocut print in deep indigo and warm cream. Preserve the colonial street, the wooden balconies and the framing. Use rough carved edges and visible paper grain. No lettering or symbols." },
 ]

@@ -28,7 +28,7 @@ the CLI runs: a missing `theme` or a `fontFamily` that is a list or
 
 ```toml
 [inputs]
-diagram = "ciclo.mmd"
+diagram = "cycle.mmd"
 ```
 
 `diagram` names the `.mmd` file resolved relative to the piece. Its YAML
@@ -38,15 +38,19 @@ the Excalidraw-style drawing. `run` writes `<name>.svg` and `<name>.png`
 beside each other in the output directory; `verify` checks the SVG element
 and the PNG signature; `preview` writes the image kind's preview file.
 
-Copy the header verbatim from `references/headers.md`: `ciclo.mmd` uses
-`theme: base` with `primaryColor`, `primaryBorderColor`, `lineColor`,
-`fontFamily: "Ubuntu"` and `fontSize: "22px"`; `arquitectura.mmd` uses the
-same theme with `fontFamily: "Ubuntu"` and `fontSize: "18px"`, plus the
+Copy the header verbatim from `references/headers.md`: `cycle.mmd` uses
+`theme: base` with the night palette (`primaryColor` `"#222928"`,
+`primaryBorderColor` `"#d9b878"`, `primaryTextColor` `"#ecebe4"`,
+`lineColor` `"#b9bdb5"`), `fontFamily: "Ubuntu"` and `fontSize: "22px"`;
+`architecture.mmd` uses the same theme with the day palette
+(`primaryColor` `"#f4f0ea"`, `primaryBorderColor` `"#8a6a2c"`,
+`primaryTextColor` `"#1d1510"`, `lineColor` `"#6b5a43"`),
+`fontFamily: "Ubuntu"` and `fontSize: "18px"`, plus the
 `look: handDrawn` snippet. The full `architecture-beta` body — groups,
 services, `L`/`R`/`T`/`B` ports, `cloud`/`database`/`disk`/`internet`/`server`
 icons, Iconify `logos:`/`mdi:` icons and the `junction` split — is in
 `references/architecture.md`. The approved diagrams ship as
-`examples/ciclo.mmd` and `examples/arquitectura.mmd`, each with its SVG and
+`examples/cycle.mmd` and `examples/architecture.mmd`, each with its SVG and
 PNG beside it.
 
 **Animating the SVG in HyperFrames.** Mermaid's SVG carries stable ids:
@@ -75,7 +79,7 @@ signature. `preview` writes the image kind's fields — `preview`, `kind`,
 from the diagram type line and a constant seed. A person then looks at the
 PNG: overlaps, cut text and icon placement are judged by eye. Compare against
 the approved diagrams in `examples/`, and use the hand-drawn render at
-`examples/ciclo-mano.png` as the reference for `look: handDrawn`.
+`examples/cycle-hand.png` as the reference for `look: handDrawn`.
 
 ## Pitfalls
 
@@ -86,7 +90,7 @@ the approved diagrams in `examples/`, and use the hand-drawn render at
 - **`fontSize` for video.** The default is small at 1080p; the approved
   patterns use `fontSize: "22px"`.
 - **A bottom port arrow crosses the service label.** Split the exit through a
-  `junction`, as `arquitectura.mmd` does with `reparto`.
+  `junction`, as `architecture.mmd` does with `dispatch`.
 - **Chromium is pinned.** `facet pull mermaid` installs it once (~200 MB,
   shared by the three packages); the runner reads `FACET_BROWSER` and sets
   `PUPPETEER_SKIP_DOWNLOAD=1`.

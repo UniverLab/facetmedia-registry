@@ -512,7 +512,7 @@ def test_a_clip_piece_with_a_negative_validates() -> None:
     _assert_valid_clip_entry(
         {
             "name": "texforge-anim-c",
-            "image": "texforge-lamina.png",
+            "image": "texforge-plate.png",
             "prompt": PLATE_PROMPT,
             "negative": PLATE_NEGATIVE,
             "seed": 11,
@@ -557,7 +557,7 @@ def test_the_skill_plate_example_validates() -> None:
     ]
     assert len(matches) == 1
     entry = matches[0]
-    assert entry["image"] == "texforge-lamina.png"
+    assert entry["image"] == "texforge-plate.png"
     assert entry["prompt"] == PLATE_PROMPT
     assert entry["negative"] == PLATE_NEGATIVE
     assert (entry["seed"], entry["width"], entry["height"], entry["length"]) == (11, 1280, 736, 49)
@@ -772,22 +772,22 @@ def test_the_skill_documents_the_flows_and_the_server() -> None:
 
 
 EXAMPLE_FILES = (
-    "examples/z-image-turbo/imagenes.toml",
-    "examples/z-image-turbo/fondo-video.png",
-    "examples/z-image-turbo/ilustracion-editorial.png",
-    "examples/z-image-turbo/foto-producto.png",
-    "examples/z-image-turbo/acuarela.png",
+    "examples/z-image-turbo/stills.toml",
+    "examples/z-image-turbo/video-still.png",
+    "examples/z-image-turbo/editorial-illustration.png",
+    "examples/z-image-turbo/product-photo.png",
+    "examples/z-image-turbo/watercolor.png",
     "examples/img2img.toml",
-    "examples/iteracion-grabado.png",
+    "examples/print-iteration.png",
     "examples/README-img2img.md",
-    "examples/comparacion.jpg",
-    "examples/flux2-klein-4b/ilustracion-editorial.png",
-    "examples/flux2-klein-4b/acuarela.png",
+    "examples/comparison.jpg",
+    "examples/flux2-klein-4b/editorial-illustration.png",
+    "examples/flux2-klein-4b/watercolor.png",
     "examples/clips.toml",
-    "examples/bosque-niebla.mp4",
-    "examples/taza-vapor.mp4",
-    "examples/calle-acuarela.mp4",
-    "examples/bosque-niebla-rapido.mp4",
+    "examples/pine-fog.mp4",
+    "examples/cup-steam.mp4",
+    "examples/street-watercolor.mp4",
+    "examples/pine-fog-fast.mp4",
     "examples/own-flow.json",
     "examples/own-flow.toml",
 )

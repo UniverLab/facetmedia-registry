@@ -5,5 +5,5 @@ capability = "comfy-xl.clip"
 [inputs]
 workflow = "wan22-i2v-14b"
 image = [
-  { name = "fondo-video", image = "fondo-video.png", seed = 51, width = 1280, height = 704, length = 49, prompt = "Fog drifting slowly between the pine trees at dawn, soft light rays shifting through the mist, very slow camera push in, calm and quiet, cinematic" },
+  { name = "video-still", image = "video-still.png", seed = 51, width = 1280, height = 704, length = 49, prompt = "Fog drifting slowly between the pine trees at dawn, soft light rays shifting through the mist, very slow camera push in, calm and quiet, cinematic. No lettering or symbols." },
 ]

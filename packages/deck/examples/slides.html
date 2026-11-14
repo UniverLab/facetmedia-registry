@@ -1,15 +1,19 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Una pieza, una salida</title>
+<title>One piece, one deliverable</title>
 <style>
+@font-face { font-family: 'Old Standard TT'; src: url('./fonts/OldStandard-Regular.ttf'); font-weight: 400; }
+@font-face { font-family: 'Old Standard TT'; src: url('./fonts/OldStandard-Italic.ttf'); font-style: italic; }
+@font-face { font-family: 'EB Garamond'; src: url('./fonts/EBGaramond[wght].ttf'); }
+@font-face { font-family: 'Sometype Mono'; src: url('./fonts/SometypeMono[wght].ttf'); }
 @page { size: 1280px 720px; margin: 0; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body {
-  background: #101215;
-  color: #f2efe9;
-  font-family: "DejaVu Sans", system-ui, sans-serif;
+  background: #f4f0ea;
+  color: #1d1510;
+  font-family: "EB Garamond", Georgia, serif;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
@@ -22,22 +26,23 @@ html, body {
   justify-content: center;
   padding: 88px 112px 128px;
   position: relative;
-  background: #101215;
+  background: #f4f0ea;
 }
 .slide:last-child { break-after: auto; }
 .kicker {
+  font-family: "Sometype Mono", monospace;
   font-size: 17px;
   letter-spacing: 7px;
   text-transform: uppercase;
-  color: #8fbf9f;
+  color: #87222c;
   margin-bottom: 30px;
 }
-h1 { font-size: 96px; line-height: 0.98; letter-spacing: -3px; }
-h2 { font-size: 64px; line-height: 1.04; letter-spacing: -2px; margin-bottom: 34px; }
-p { font-size: 30px; line-height: 1.5; color: #c9c4ba; max-width: 960px; }
+h1 { font-family: "Old Standard TT", Georgia, serif; font-weight: 400; font-size: 96px; line-height: 0.98; letter-spacing: -3px; }
+h2 { font-family: "Old Standard TT", Georgia, serif; font-weight: 400; font-size: 64px; line-height: 1.04; letter-spacing: -2px; margin-bottom: 34px; }
+p { font-size: 30px; line-height: 1.5; color: #6b5a43; max-width: 960px; }
 p + p { margin-top: 22px; }
 ul { list-style: none; display: grid; gap: 22px; }
-li { font-size: 29px; line-height: 1.4; padding-left: 52px; position: relative; color: #d8d3c9; }
+li { font-size: 29px; line-height: 1.4; padding-left: 52px; position: relative; color: #1d1510; }
 li::before {
   content: "";
   position: absolute;
@@ -45,13 +50,13 @@ li::before {
   top: 16px;
   width: 26px;
   height: 4px;
-  background: #8fbf9f;
+  background: #8a6a2c;
 }
 code {
-  font-family: "DejaVu Sans Mono", monospace;
+  font-family: "Sometype Mono", monospace;
   font-size: 0.88em;
-  background: #1c2024;
-  border: 1px solid #2f353a;
+  background: #eee7dc;
+  border: 1px solid #8a6a2c;
   border-radius: 6px;
   padding: 2px 10px;
 }
@@ -60,40 +65,41 @@ footer {
   left: 112px;
   right: 112px;
   bottom: 46px;
-  border-top: 1px solid #343a40;
+  border-top: 1px solid #8a6a2c;
   padding-top: 16px;
+  font-family: "Sometype Mono", monospace;
   font-size: 15px;
   line-height: 1.45;
-  color: #8b9298;
+  color: #6b5a43;
 }
 </style>
 </head>
 <body>
 
 <section class="slide">
-  <div class="kicker">facetmedia · ejemplo</div>
-  <h1>Una pieza,<br>una salida.</h1>
-  <p>Cada capacidad del registro hace una cosa, recibe un archivo TOML y devuelve un entregable que se puede abrir y juzgar.</p>
-  <footer>Fuentes: contrato de piezas de facetmedia; manifiestos del registro, 2026.</footer>
+  <div class="kicker">facetmedia · example</div>
+  <h1>One piece,<br>one deliverable.</h1>
+  <p>Each registry capability does one thing, takes one TOML file, and returns a deliverable you can open and judge.</p>
+  <footer>Sources: the facetmedia piece contract; registry manifests, 2026.</footer>
 </section>
 
 <section class="slide">
-  <div class="kicker">el flujo</div>
-  <h2>Copiar, correr, mirar.</h2>
+  <div class="kicker">the flow</div>
+  <h2>Copy, run, look.</h2>
   <ul>
-    <li><code>facet example deck.slides</code> copia la pieza y cada archivo que nombra.</li>
-    <li><code>facet run deck.slides slides.toml</code> exporta el PDF y un PNG por página.</li>
-    <li><code>facet preview</code> sirve el entregable para una persona.</li>
+    <li><code>facet example deck.slides</code> copies the piece and every file it names.</li>
+    <li><code>facet run deck.slides slides.toml</code> exports the PDF and one PNG per page.</li>
+    <li><code>facet preview</code> serves the deliverable to a person.</li>
   </ul>
-  <footer>Fuentes: documento de diseño de <code>facet example</code>; ejemplos empaquetados en este registro.</footer>
+  <footer>Sources: the <code>facet example</code> design note; packaged examples in this registry.</footer>
 </section>
 
 <section class="slide">
-  <div class="kicker">qué buscar</div>
-  <h2>El ejemplo es el contrato.</h2>
-  <p>Un ejemplo que corre solo enseña la forma de la pieza mejor que cualquier descripción: las entradas, los archivos que viajan con ella y la verificación que debe pasar.</p>
-  <p>Si el ejemplo funciona, la capacidad funciona.</p>
-  <footer>Fuentes: guía de paquetes del registro; verificación de capacidades, 2026.</footer>
+  <div class="kicker">what to look for</div>
+  <h2>The example is the contract.</h2>
+  <p>A self-contained example teaches the piece's shape better than any description: the inputs, the files that travel with it, and the verification it must pass.</p>
+  <p>If the example works, the capability works.</p>
+  <footer>Sources: the registry packaging guide; capability verification, 2026.</footer>
 </section>
 
 </body>

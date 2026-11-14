@@ -1,5 +1,0 @@
-capability = "freecad.drawing"
-
-[inputs]
-script = "plano-escuadra.py"
-part = "escuadra.step"

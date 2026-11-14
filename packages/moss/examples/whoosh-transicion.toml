@@ -1,6 +1,0 @@
-capability = "moss.sfx"
-
-[inputs]
-description = "A fast cinematic whoosh transition, a swish of air passing quickly from left to right, clean, no music"
-name = "whoosh-transicion"
-seconds = 2

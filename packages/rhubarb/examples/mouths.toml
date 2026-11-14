@@ -1,4 +1,4 @@
-# A drawn character speaking one short Spanish line: the mouth cues follow
+# A drawn character speaking one short English line: the mouth cues follow
 # narration.wav and its dialogue text.
 capability = "rhubarb.mouths"
 

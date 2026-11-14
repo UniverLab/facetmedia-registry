@@ -8,6 +8,6 @@ model = "voxcpm2"
 language = "es"
 
 [[inputs.clip]]
-name = "narracion"
-text = "En este laboratorio probamos una voz clonada que corre en la máquina de la persona, sin enviar nada a un servidor."
+name = "narration"
+text = "In this laboratory we test a cloned voice running on the person's own machine, without sending anything to a server."
 seed = 3

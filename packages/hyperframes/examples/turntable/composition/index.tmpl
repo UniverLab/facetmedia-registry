@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
@@ -9,22 +9,22 @@
                      "three/addons/": "./vendor/three/addons/" } }
     </script>
     <style>
-      @font-face { font-family: 'Ubuntu'; src: local('Ubuntu'); }
+      @font-face { font-family: 'Old Standard TT'; src: url('./assets/fonts/OldStandard-Regular.ttf'); font-weight: 400; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #eef0f2; }
-      #root { position: relative; width: 100%; height: 100%; font-family: 'Ubuntu', sans-serif; color: #22252a; }
-      #escena { position: absolute; inset: 0; width: 1920px; height: 1080px; }
-      #titulo { position: absolute; left: 110px; top: 90px; font-size: 64px; font-weight: 500; letter-spacing: -0.02em; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #222928; }
+      #root { position: relative; width: 100%; height: 100%; font-family: 'Old Standard TT', serif; color: #ecebe4; }
+      #scene { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+      #title { position: absolute; left: 110px; top: 90px; font-size: 64px; font-weight: 400; letter-spacing: -0.02em; }
     </style>
   </head>
   <body>
     <div id="root" data-composition-id="main" data-start="0" data-duration="8" data-width="1920" data-height="1080" data-fps="24">
-      <canvas id="escena" class="clip" data-start="0" data-duration="8" data-track-index="0" width="1920" height="1080"></canvas>
-      <h1 id="titulo" class="clip" data-start="0" data-duration="8" data-track-index="1">Estudio</h1>
+      <canvas id="scene" class="clip" data-start="0" data-duration="8" data-track-index="0" width="1920" height="1080"></canvas>
+      <h1 id="title" class="clip" data-start="0" data-duration="8" data-track-index="1">Study</h1>
     </div>
     <script>
       const tl = gsap.timeline({ paused: true });
-      tl.from('#titulo', { opacity: 0, y: 20, duration: 0.6 }, 0.3);
+      tl.from('#title', { opacity: 0, y: 20, duration: 0.6 }, 0.3);
       window.__timelines['main'] = tl;
       tl.seek(0);
     </script>
@@ -35,24 +35,24 @@
       const GLB = /* GLB */"";
       const DATA = {
         /* TURNTABLE */
-        colores: { muros: 0xecebe6, piso: 0x8a5c3a, vidrio: 0xbfdcef },
+        colors: { walls: 0xecebe4, floor: 0xd9b878, glass: 0xbfdcef },
       };
 
-      const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('escena'), antialias: true, preserveDrawingBuffer: true });
+      const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('scene'), antialias: true, preserveDrawingBuffer: true });
       renderer.setSize(1920, 1080, false);
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xeef0f2);
+      scene.background = new THREE.Color(0x222928);
       const camera = new THREE.PerspectiveCamera(30, 1920 / 1080, 0.1, 100);
-      scene.add(new THREE.HemisphereLight(0xdfe8f5, 0x8a7f72, 1.4));
-      const suelo = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0xe2e4e6, roughness: 1 }));
-      suelo.rotation.x = -Math.PI / 2;
-      suelo.position.y = -0.121;
-      suelo.receiveShadow = true;
-      scene.add(suelo);
+      scene.add(new THREE.HemisphereLight(0xecebe4, 0x5b6560, 1.4));
+      const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0x1a201f, roughness: 1 }));
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = -0.121;
+      ground.receiveShadow = true;
+      scene.add(ground);
 
       const bytes = Uint8Array.from(atob(GLB), (c) => c.charCodeAt(0));
-      const listo = new GLTFLoader().parseAsync(bytes.buffer, '').then((gltf) => {
+      const ready = new GLTFLoader().parseAsync(bytes.buffer, '').then((gltf) => {
         gltf.scene.scale.setScalar(0.001);
         scene.add(gltf.scene);
       });
@@ -60,16 +60,16 @@
       // Pure function of time: HyperFrames seeks every frame.
       function renderAt(t) {
         const o = DATA.orbit;
-        const angulo = o.start + (t / DATA.duration) * o.fraction * Math.PI * 2;
+        const angle = o.start + (t / DATA.duration) * o.fraction * Math.PI * 2;
         const [cx, cy, cz] = DATA.center;
-        camera.position.set(cx + o.radius * Math.cos(angulo), o.height, cz + o.radius * Math.sin(angulo));
+        camera.position.set(cx + o.radius * Math.cos(angle), o.height, cz + o.radius * Math.sin(angle));
         camera.lookAt(cx, cy, cz);
         renderer.render(scene, camera);
       }
       window.addEventListener('hf-seek', (event) => {
-        event.detail.waitUntil(listo.then(() => renderAt(event.detail.time)));
+        event.detail.waitUntil(ready.then(() => renderAt(event.detail.time)));
       });
-      listo.then(() => renderAt(0));
+      ready.then(() => renderAt(0));
     </script>
   </body>
 </html>

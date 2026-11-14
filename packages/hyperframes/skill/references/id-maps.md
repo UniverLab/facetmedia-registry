@@ -12,7 +12,7 @@ The composition's own ids are the map. The timeline is registered under the
 
 ```html
 <div id="root" data-composition-id="main" data-start="0" data-duration="3">
-  <h1 id="titulo" class="clip" data-start="0" data-duration="3" data-track-index="0">HyperFrames</h1>
+  <h1 id="title" class="clip" data-start="0" data-duration="3" data-track-index="0">HyperFrames</h1>
 </div>
 ```
 

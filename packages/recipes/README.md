@@ -21,7 +21,7 @@ when you need one asset.
 | Recipe | What it builds | Steps |
 |--------|----------------|-------|
 | `explainer-video` | A narrated explainer video: voice, music bed, normalize and mix, transcript, subtitles, HyperFrames composition | `voicestudio.speak` · `acestep.bed` · `ffmpeg.normalize` · `ffmpeg.mix` · `whisper.transcribe` · `whisper-subs.subtitles` · `hyperframes.narrated` |
-| `architecture-render` | An architectural render: a CAD solid, Poly Haven assets, a daylight scene from the study-photo example, a one-page deck | `cad.solid` · `blender.assets` · `blender.scene` · `deck.page` |
+| `architecture-render` | An architectural render: a CAD solid, Poly Haven assets, a daylight scene from the study example, a one-page deck | `cad.solid` · `blender.assets` · `blender.scene` · `deck.page` |
 | `voice-material` | Voiced material with music: narration, a music bed, a slide deck | `kokoro.speak` · `acestep.bed` · `deck.slides` |
 | `tool-demo` | A tool demo: a recorded terminal demo and a slide deck | `demostage.demo` · `deck.slides` |
 
@@ -45,7 +45,7 @@ the directory):
     {
       "step": 1,
       "capability": "kokoro.speak",
-      "handoff": "voz.wav (clip, voice ef_dora, language es)",
+      "handoff": "voice.wav (clip, voice af_heart, language en-us)",
       "verify": "Transcribe the voice: verify measures the word error rate (wer_max 0.05)."
     }
   ]

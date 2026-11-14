@@ -25,9 +25,9 @@ DATA = {
     "look": "AgX - Medium High Contrast",
     # A dark world: the metal shows the softboxes against it, which is what
     # reads as metal. A bright, even world turns brushed metal into grey plastic.
-    "world": {"color": (0.02, 0.02, 0.025), "strength": 1.0},
-    "metal": {"color": (0.80, 0.81, 0.83), "metallic": 1.0, "roughness": 0.22},
-    "floor": {"size": 1.2, "color": (0.12, 0.12, 0.13), "roughness": 0.3, "drop": 0.0005},
+    "world": {"color": (0.007, 0.010, 0.010), "strength": 1.0},
+    "metal": {"color": (0.843, 0.836, 0.782), "metallic": 1.0, "roughness": 0.22},
+    "floor": {"size": 1.2, "color": (0.012, 0.018, 0.017), "roughness": 0.3, "drop": 0.0005},
     "lights": [
         {
             "name": "softbox-key",
@@ -133,7 +133,7 @@ def studio_floor(data, centre, lowest_z):
 
 def world(data):
     """The studio's light grey world: what the metal reflects between lights."""
-    block = bpy.data.worlds.new("estudio")
+    block = bpy.data.worlds.new("study")
     bpy.context.scene.world = block
     block.use_nodes = True
     background = block.node_tree.nodes["Background"]

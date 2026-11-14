@@ -1,0 +1,9 @@
+capability = "kokoro.speak"
+
+[inputs]
+voice = "af_heart"
+language = "en-us"
+
+[[inputs.clip]]
+name = "laboratory"
+text = "In this laboratory we test a locally generated English voice. We want to measure how clear it sounds, how long it takes, and how it compares with the voices we already use."

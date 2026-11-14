@@ -6,5 +6,5 @@ capability = "comfy.still"
 [inputs]
 flow = "own-flow.json"
 image = [
-  { name = "own-flow-cup", seed = 21, width = 1344, height = 768, prompt = "Studio product photograph of a handmade matte ceramic coffee cup on a raw concrete surface, soft window light from the left, shallow depth of field, 85mm lens, steam rising" },
+  { name = "own-flow-cup", seed = 21, width = 1344, height = 768, prompt = "Engraved illustration of a handmade matte ceramic cup on a stone pedestal, isometric, sepia ink with a single garnet accent, soft steam curls, fine hatch lines. No lettering or symbols." },
 ]

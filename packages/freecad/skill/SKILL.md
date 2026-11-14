@@ -23,8 +23,8 @@ file.
 
 ```toml
 [inputs]
-script = "plano-escuadra.py"
-part = "escuadra.step"
+script = "bracket-plan.py"
+part = "bracket.step"
 ```
 
 `script` is a FreeCAD Python script run as `<script> <out_dir>/<name> <part>`,
@@ -33,8 +33,8 @@ where `<name>` is the script's stem; it must write `<name>-01.svg`,
 `width` and `height` in millimetres on its `<svg>` tag. `part` is the part
 file the script opens, both resolved relative to the piece. `run` renders the
 sheets into `<name>.pdf` with FreeCAD's bundled Qt and returns the PDF plus
-the sheets as assets. Copy `examples/plano-escuadra.py`, which draws the
-`escuadra.step` bracket on one A3 landscape sheet.
+the sheets as assets. Copy `examples/bracket-plan.py`, which draws the
+`bracket.step` bracket on one A3 landscape sheet.
 
 ## Judging the result
 

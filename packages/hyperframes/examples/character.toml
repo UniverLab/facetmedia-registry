@@ -2,8 +2,8 @@ capability = "hyperframes.character"
 
 [inputs]
 composition = "character/composition"
-character-svg = "character/zorro.svg"
-voice = "character/voz.wav"
+character-svg = "character/fox.svg"
+voice = "character/voice.wav"
 mouths = "character/mouths.json"
 audio-start = 0.5
 prompt = "A drawn fox speaks a short greeting"

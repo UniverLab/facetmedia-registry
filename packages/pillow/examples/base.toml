@@ -3,7 +3,7 @@
 capability = "pillow.base"
 
 [inputs]
-image = "lamina.png"
+image = "plate.png"
 
 [[inputs.operations]]
 op = "resize"

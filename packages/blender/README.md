@@ -61,7 +61,7 @@ working directory. The script's globals carry:
 - `FACET_ASSETS`: the Poly Haven root `blender.assets` fills, so fetched skies,
   textures and models arrive without a download inside the script.
 - `FACET_PIECE_DIR`: the script's directory, which is how an example finds the
-  glb or stl beside it, e.g. `f"{FACET_PIECE_DIR}/estudio.glb"`.
+  glb or stl beside it, e.g. `f"{FACET_PIECE_DIR}/study.glb"`.
 
 The script must leave `scene.camera` set. A run without one fails loudly, and so
 does a script that raises: the message names the script, the exception type and
@@ -88,10 +88,10 @@ STEP:
 ```python
 import cadquery as cq
 
-estudio = cq.Assembly(name="estudio")
-estudio.add(piso, name="piso")
-estudio.add(muros, name="muros")
-estudio.export("estudio.glb")  # glTF binary: one element per piece, with its name
+study = cq.Assembly(name="study")
+study.add(piso, name="piso")
+study.add(muros, name="muros")
+study.export("study.glb")  # glTF binary: one element per piece, with its name
 ```
 
 - **Never STEP.** Blender does not open STEP without an extra plugin, and a
@@ -114,16 +114,16 @@ piece TOML plus a Python script, and each keeps every creative choice in one
 `DATA` dict at the top — light positions and power, materials, camera framing
 and path — so editing values is enough.
 
-### `examples/study-photo/` — the daylight architectural photo
+### `examples/study/` — the daylight architectural photo
 
-`study-photo.toml` (`blender.scene`, Cycles at 1600x1000, exposure -0.6) and
-`study_photo.py`, over the study `estudio.glb` that `estudio.py` (shipped
+`study.toml` (`blender.scene`, Cycles at 1600x1000, exposure -0.6) and
+`study.py`, over the study `study.glb` that `study_model.py` (shipped
 beside it) exports from CadQuery:
 
 ```toml
 [inputs]
-script = "study_photo.py"
-name = "estudio"
+script = "study.py"
+name = "study"
 width = 1600
 height = 1000
 engine = "cycles"
@@ -157,7 +157,7 @@ a part a few centimetres across under 30 W burns to white.
 ### `examples/tour/` — the study on a camera orbit
 
 `tour.toml` (`blender.animation`, Eevee at 1280x720, 240 frames at 24 fps,
-exposure -0.4) and `tour.py`, which imports `../study-photo/estudio.glb`. The
+exposure -0.4) and `tour.py`, which imports `../study/study.glb`. The
 scene is the study photo's look; the camera glides from the move's start triple
 (azimuth -75°, elevation 55°, distance 14 m) to its end triple (-15°, 40°,
 10.5 m) with the lab's smoothstep `t*t*(3-2*t)`, so it leaves and arrives
@@ -181,7 +181,7 @@ textures and models, all CC0. A piece gives a required `name` — the receipt is
 
 ```toml
 [inputs]
-name = "estudio-dressing"
+name = "study-dressing"
 assets = [
   { id = "kloppenheim_06_puresky", res = "2k" },
   { id = "aerial_grass_rock", res = "2k" },
@@ -239,7 +239,7 @@ arrive into the models dir and are re-verified on every fetch.
 ## Running an example
 
 ```sh
-facet run blender.scene packages/blender/examples/study-photo/study-photo.toml --out build/
+facet run blender.scene packages/blender/examples/study/study.toml --out build/
 facet run blender.scene packages/blender/examples/product/product.toml --out build/
 facet run blender.animation packages/blender/examples/tour/tour.toml --out build/
 ```
@@ -255,6 +255,6 @@ every file it names, into a fresh folder and runs it there:
 
 - `blender.animation` — `examples/scene/animation.toml`, `examples/tour/tour.toml`: `facet example blender.animation --run`
 - `blender.assets` — `examples/assets.toml`: `facet example blender.assets --run`
-- `blender.scene` — `examples/product/product.toml`, `examples/scene/scene.toml`, `examples/study-photo/study-photo.toml`: `facet example blender.scene --run`
+- `blender.scene` — `examples/product/product.toml`, `examples/scene/scene.toml`, `examples/study/study.toml`: `facet example blender.scene --run`
 
 The scripted examples ship their own `.glb` and `.stl`; `assets` needs network on its first run.

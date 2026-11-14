@@ -29,12 +29,12 @@ to `sys.argv[1]` plus the extension. Nothing is passed in beyond that stem.
 
 ## Pieces
 
-The lab's escuadra (L bracket) with its volume pinned (`examples/escuadra.toml`):
+The lab's L bracket with its volume pinned (`examples/bracket.toml`):
 
 ```toml
 [inputs]
-script = "escuadra.py"
-name = "escuadra"
+script = "bracket.py"
+name = "bracket"
 expect-volume-mm3 = 20805
 ```
 
@@ -57,18 +57,18 @@ cq.exporters.export(part, str(out.with_suffix(".step")))
 ```
 
 A 6 × 4.5 m study plan with its layers pinned
-(`examples/plano-estudio.toml`):
+(`examples/floor-plan.toml`):
 
 ```toml
 [inputs]
-script = "plano-estudio.py"
-name = "plano-estudio"
+script = "floor-plan.py"
+name = "floor-plan"
 expect-layers = [
-  { layer = "muros" },
-  { layer = "aberturas" },
-  { layer = "mobiliario" },
-  { layer = "cotas" },
-  { layer = "textos" },
+  { layer = "walls" },
+  { layer = "openings" },
+  { layer = "furniture" },
+  { layer = "dimensions" },
+  { layer = "labels" },
 ]
 ```
 
@@ -81,9 +81,9 @@ from pathlib import Path
 import ezdxf
 
 doc = ezdxf.new("R2018", setup=True, units=6)  # 6 = metres
-doc.layers.add("muros")
+doc.layers.add("walls")
 msp = doc.modelspace()
-msp.add_lwpolyline([(0, 0), (6, 0), (6, 4.5), (0, 4.5)], close=True, dxfattribs={"layer": "muros"})
+msp.add_lwpolyline([(0, 0), (6, 0), (6, 4.5), (0, 4.5)], close=True, dxfattribs={"layer": "walls"})
 
 out = Path(sys.argv[1])
 doc.saveas(out.with_suffix(".dxf"))
@@ -99,14 +99,14 @@ required file is fine.
 Blender reads glTF, not STEP. When the model is headed for blender, have the
 script also export an `Assembly` to `<out>.glb` in millimetres, Y-up, with
 one named element per piece. A scene script dresses each piece by the start
-of its element name; the study-photo example uses `muros`, `piso`,
+of its element name; the study example uses `muros`, `piso`,
 `vidrio-*`, `cama`, `almohada`, `mesa` and `sillas` (see the blender skill's
-`examples/study-photo/`):
+`examples/study/`):
 
 ```python
 import cadquery as cq
 
-assembly = cq.Assembly(name="estudio")
+assembly = cq.Assembly(name="study")
 assembly.add(muros, name="muros")
 assembly.add(losa, name="losa")
 assembly.export(str(out.with_suffix(".glb")))
@@ -142,7 +142,7 @@ piece; it never generates one itself.
 - Place holes and features in **absolute coordinates** (a
   `cq.Solid.makeCylinder` at a known point, then `cut`): a hole positioned
   relative to a face that shifts does not change the volume, so nothing
-  betrays it — the lab's rule after measuring the escuadra by hand.
+  betrays it — the lab's rule after measuring the bracket by hand.
 - The script runs with the caller's rights, exactly as `uv run` would: it
   is your code, chosen by you, and facet does not sandbox it further.
 - A missing host library (the GL/X stack the OCP kernel links against)

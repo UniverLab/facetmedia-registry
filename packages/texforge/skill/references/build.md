@@ -25,7 +25,7 @@ bibliography = "refs.bib"
   from the piece's `name`, `author` from its `author`, and `template` is always
   `general`.
 - `[build]` has `entry`, the main file's own name as it sits in the stage —
-  `main.tex` above, or `hola-mundo.tex` when `main` names that file.
+  `main.tex` above, or `hello-world.tex` when `main` names that file.
 - `bibliography` is written only when a `.bib` file sits beside the piece; with
   no `.bib` beside it the key is absent and no bibliography is read.
 - `texforge init` never runs: it is interactive and would overwrite the file

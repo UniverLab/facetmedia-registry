@@ -3,4 +3,4 @@
 capability = "rembg.paper"
 
 [inputs]
-plate = "lamina.png"
+plate = "plate.png"

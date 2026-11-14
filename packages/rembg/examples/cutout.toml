@@ -2,4 +2,4 @@
 capability = "rembg.cutout"
 
 [inputs]
-photo = "lamina.png"
+photo = "plate.png"

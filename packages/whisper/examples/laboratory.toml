@@ -1,0 +1,7 @@
+capability = "whisper.transcribe"
+
+[inputs]
+audio = "laboratory.flac"
+language = "en"
+name = "laboratory"
+expect-text = "In this laboratory we test a locally generated English voice. We want to measure how clear it sounds, how long it takes, and how it compares with the voices we already use."

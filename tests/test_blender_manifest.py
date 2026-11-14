@@ -232,7 +232,7 @@ def test_the_presets_are_gone() -> None:
 def test_the_examples_are_named_by_the_docs() -> None:
     """The docs point an agent at the three examples it copies and edits."""
     for folder, piece in (
-        ("study-photo", "study-photo.toml"),
+        ("study", "study.toml"),
         ("product", "product.toml"),
         ("tour", "tour.toml"),
     ):

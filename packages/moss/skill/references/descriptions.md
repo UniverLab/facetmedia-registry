@@ -9,7 +9,7 @@ length never goes into the text.
 ```toml
 [inputs]
 description = "English effect description, no duration in the text"
-name = "cafe-ambiente"
+name = "coffee-morning"
 seconds = 12
 steps = 100
 guidance = 4.0
@@ -37,88 +37,88 @@ A piece that sets none of the last three generates exactly as it did
 before they existed: the values above are the defaults, so the seed is
 reproducible whenever one is pinned.
 
-## Approved: `cafe-ambiente`
+## Approved: `coffee-morning`
 
 Morning cafe ambience, approved by the person on 2026-10-13. Ships as
-`examples/cafe-ambiente.toml` and `.wav`.
+`examples/coffee-morning.toml` and `.wav`.
 
 ```toml
 [inputs]
 description = "Ambience of a quiet cafe in the morning, indistinct distant chatter, cups and saucers clinking, an espresso machine hissing"
-name = "cafe-ambiente"
+name = "coffee-morning"
 seconds = 12
 ```
 
-## Approved: `campana-notificacion`
+## Approved: `bell-alert`
 
 A rising two-tone notification chime, approved by the person on 2026-10-13.
-Ships as `examples/campana-notificacion.toml` and `.wav`.
+Ships as `examples/bell-alert.toml` and `.wav`.
 
 ```toml
 [inputs]
 description = "A bright, pleasant notification chime, two short bell tones rising in pitch"
-name = "campana-notificacion"
+name = "bell-alert"
 seconds = 2
 ```
 
-## Approved: `clic-interfaz`
+## Approved: `ui-click`
 
 A single soft UI click, approved by the person on 2026-10-13. Ships as
-`examples/clic-interfaz.toml` and `.wav`.
+`examples/ui-click.toml` and `.wav`.
 
 ```toml
 [inputs]
 description = "A single soft, clean user interface click, short and subtle, like tapping a modern touchscreen button"
-name = "clic-interfaz"
+name = "ui-click"
 seconds = 1
 ```
 
-## Approved: `lluvia-ventana`
+## Approved: `rain-window`
 
 Steady rain on a window at night, approved by the person on 2026-10-13.
-Ships as `examples/lluvia-ventana.toml` and `.wav`.
+Ships as `examples/rain-window.toml` and `.wav`.
 
 ```toml
 [inputs]
 description = "Gentle steady rain falling on a window pane at night, soft drops on glass, distant rolling thunder, calm ambience"
-name = "lluvia-ventana"
+name = "rain-window"
 seconds = 12
 ```
 
-## Approved: `pagina-libro`
+## Approved: `page-turn`
 
 Close-up page turns, approved by the person on 2026-10-13. The lab piece
 omitted `seconds`, so it took the lab default of 3. Ships as
-`examples/pagina-libro.toml` and `.wav`.
+`examples/page-turn.toml` and `.wav`.
 
 ```toml
 [inputs]
 description = "Close-up sound of turning the pages of a paper book, crisp paper rustle, quiet room"
-name = "pagina-libro"
+name = "page-turn"
 seconds = 3
 ```
 
-## Approved: `pasos-madera`
+## Approved: `wood-steps`
 
 Slow footsteps on old boards, approved by the person on 2026-10-13. Ships as
-`examples/pasos-madera.toml` and `.wav`.
+`examples/wood-steps.toml` and `.wav`.
 
 ```toml
 [inputs]
 description = "Slow footsteps of one person walking on an old wooden floor, boards creaking under the weight, indoors"
-name = "pasos-madera"
+name = "wood-steps"
 seconds = 6
 ```
 
-## Approved: `whoosh-transicion`
+## Approved: `whoosh-sweep`
 
 A fast cinematic whoosh, approved by the person on 2026-10-13. Ships as
-`examples/whoosh-transicion.toml` and `.wav`.
+`examples/whoosh-sweep.toml` and `.wav`.
 
 ```toml
 [inputs]
 description = "A fast cinematic whoosh transition, a swish of air passing quickly from left to right, clean, no music"
-name = "whoosh-transicion"
+name = "whoosh-sweep"
 seconds = 2
 ```
 

@@ -108,42 +108,41 @@ files and the 486 MB whisper model); later runs are offline.
 
 ## Example
 
-`examples/laboratorio.toml` narrates the lab's reference text as one
+`examples/laboratory.toml` narrates the lab's reference text as one
 clip:
 
 ```toml
 [inputs]
-voice = "ef_dora"
-language = "es"
+voice = "af_heart"
+language = "en-us"
 
 [[inputs.clip]]
-name = "laboratorio"
-text = "En este laboratorio probamos una voz en español generada localmente. Queremos medir si se entiende bien, cuánto tarda y cómo suena frente a las voces que ya usamos."
+name = "laboratory"
+text = "In this laboratory we test a locally generated English voice. We want to measure how clear it sounds, how long it takes, and how it compares with the voices we already use."
 ```
 
 Run it with `scripts/try-package.sh kokoro kokoro.speak
-packages/kokoro/examples/laboratorio.toml`; the script prints the run,
+packages/kokoro/examples/laboratory.toml`; the script prints the run,
 the preview, the doctor report and the skill. The record lands beside
-the asset as `laboratorio.wav.facet.json` and carries its `properties`,
+the asset as `laboratory.wav.facet.json` and carries its `properties`,
 its `provenance` (the capability, the clip's params under their
 manifest names, the model revisions, the package version) and the
 `verification` verdict.
 
-The lab's run (24 October 2026, 12 cores, no GPU) took **33.7 s** wall
-for `facet run`, the first pull included, and its record reads
+The English re-take was generated with kokoro-onnx on CPU (voice `af_heart`, models already pulled), and its record reads
 (abridged: the file also carries the creation time, the registry and
 lock provenance, the params digest and the licence section):
 
 ```json
-{"bytes": 462796, "id": "sha256:de2279a6dbc67308bbd2c5d8a634086adeb2f0a4e49753243f38672c1482f256", "kind": "audio", "mime": "audio/wav", "name": "laboratorio", "path": "laboratorio.wav", "properties": {"duration_s": 9.641, "language": "es", "lufs": -20.72, "peak_dbfs": -1.0, "sample_rate_hz": 24000, "voice": "ef_dora"}, "provenance": {"capability": "kokoro.speak", "models": [{"id": "kokoro-82m-v1.0-onnx", "sha256": "beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a"}, {"id": "kokoro-voices-v1.0", "sha256": "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d"}, {"hf_repo": "Systran/faster-whisper-small", "id": "faster-whisper-small", "revision": "536b0662742c02347bc0e980a01041f333bce120"}], "package": {"name": "kokoro", "version": "0.1.1"}, "params": {"language": "es", "name": "laboratorio", "speed": 1.0, "target-lufs": -16.0, "text": "En este laboratorio probamos una voz en español generada localmente. Queremos medir si se entiende bien, cuánto tarda y cómo suena frente a las voces que ya usamos.", "voice": "ef_dora"}, "seed": null, "tool": {"name": "kokoro-onnx", "version": "0.6.1"}}, "record": 1, "verification": {"metrics": {"lufs": -20.72, "peak_dbfs": -1.0, "transcript": "En este laboratorio probamos una voz en español generada localmente. Queremos medir si se entiende bien, cuánto tarda y cómo suena frente a las voces que ya usamos.", "wer": 0.0, "words": 28, "words_per_minute": 174}, "status": "passed", "thresholds": {"wer_max": 0.05}, "verifier": "faster-whisper-small@536b0662"}}
+{"bytes": 506828, "id": "sha256:49982675ea55b0ebf1722841292cad5f042241061294235eb8491b2876c1600b", "kind": "audio", "mime": "audio/wav", "name": "laboratory", "path": "laboratory.wav", "properties": {"duration_s": 10.558, "language": "en-us", "lufs": -25.84, "peak_dbfs": -8.0, "sample_rate_hz": 24000, "voice": "af_heart"}, "provenance": {"capability": "kokoro.speak", "models": [{"id": "kokoro-82m-v1.0-onnx", "sha256": "beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a"}, {"id": "kokoro-voices-v1.0", "sha256": "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d"}, {"hf_repo": "Systran/faster-whisper-small", "id": "faster-whisper-small", "revision": "536b0662742c02347bc0e980a01041f333bce120"}], "package": {"name": "kokoro", "version": "0.1.4"}, "params": {"language": "en-us", "name": "laboratory", "speed": 1.0, "target-lufs": -16.0, "text": "In this laboratory we test a locally generated English voice. We want to measure how clear it sounds, how long it takes, and how it compares with the voices we already use.", "voice": "af_heart"}, "seed": null, "tool": {"name": "kokoro-onnx", "version": "0.6.1"}}, "record": 1, "verification": {"metrics": {"lufs": -25.84, "peak_dbfs": -8.0, "transcript": "In this laboratory, we test a locally generated English voice. We want to measure how clear it sounds, how long it takes, and how it compares with the voices we already use.", "wer": 0.0, "words": 32, "words_per_minute": 182}, "status": "passed", "thresholds": {"wer_max": 0.05}, "verifier": "faster-whisper-small@536b0662"}}
 ```
 
 The transcript is the text word for word, so the WER is 0. The loudness
 stopped at −20.7 LUFS rather than −16 because Kokoro's own peak already
 sat near full scale: the −1.0 dBFS cap engaged, which is the other half
 of the acceptance rule. The preview of the same clip summarises it as
-`9.6 s · -20.7 LUFS · WER 0 % · ef_dora`, and `facet preview
-laboratorio.wav` serves it in the audio viewer. `facet doctor kokoro --json`
+`10.6 s · -25.8 LUFS · WER 0 % · af_heart`, and `facet preview
+laboratory.wav` serves it in the audio viewer. `facet doctor kokoro --json`
 reports `healthy: true` after that pull (under 4 s, full depth).
 
 ## Bundled examples
@@ -151,6 +150,6 @@ reports `healthy: true` after that pull (under 4 s, full depth).
 `facet example <capability> --run` copies the capability's example, with
 every file it names, into a fresh folder and runs it there:
 
-- `kokoro.speak` — `examples/laboratorio.toml`: `facet example kokoro.speak --run`
+- `kokoro.speak` — `examples/laboratory.toml`: `facet example kokoro.speak --run`
 
 The first run pulls the Kokoro weights and the verification model; CPU only.

@@ -42,7 +42,7 @@ live in `references/composition.md`, `references/timeline.md`,
 composition = "video"
 prompt = "A calm product teaser with a slow push in"
 seed = 0
-audio = [{ clip = "assets/voz.wav" }]
+audio = [{ clip = "assets/voice.wav" }]
 ```
 
 `composition` names the directory holding `hyperframes.json`, `index.tmpl`,

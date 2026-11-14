@@ -47,7 +47,7 @@ The fields below are what `facet describe comfy-xl.still --json` reports.
 ```toml
 [inputs]
 image = [
-  { name = "fondo-video", prompt = "Misty pine forest at dawn, soft volumetric light through the trees, muted teal and amber palette, large empty area of fog on the left", seed = 11 },
+  { name = "video-still", prompt = "Misty pine forest at dawn, soft volumetric light through the trees, muted teal and amber palette, large empty area of fog on the left", seed = 11 },
 ]
 ```
 
@@ -132,7 +132,7 @@ accepts any integer; an off-form length reaches ComfyUI and fails the run as
 [inputs]
 workflow = "wan22-i2v-14b"
 image = [
-  { name = "bosque-niebla", image = "fondo-video.png", seed = 51, prompt = "Fog drifting slowly between the pine trees at dawn, soft light rays shifting through the mist, very slow camera push in, calm and quiet, cinematic" },
+  { name = "pine-fog", image = "video-still.png", seed = 51, prompt = "Fog drifting slowly between the pine trees at dawn, soft light rays shifting through the mist, very slow camera push in, calm and quiet, cinematic" },
 ]
 ```
 

@@ -20,13 +20,13 @@ DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
 CITED_REFERENCES = {"headers", "architecture"}
 EXAMPLE_FILES = (
-    "ciclo.mmd",
-    "ciclo.svg",
-    "ciclo.png",
-    "arquitectura.mmd",
-    "arquitectura.svg",
-    "arquitectura.png",
-    "ciclo-mano.png",
+    "cycle.mmd",
+    "cycle.svg",
+    "cycle.png",
+    "architecture.mmd",
+    "architecture.svg",
+    "architecture.png",
+    "cycle-hand.png",
 )
 STABLE_ID_TOKENS = (
     "my-svg-flowchart-",
@@ -93,8 +93,8 @@ def test_the_skill_pins_the_stable_ids() -> None:
 def test_the_approved_examples_ship() -> None:
     """The skill cites the two approved pieces and all their files are present."""
     body = _body()
-    assert "examples/ciclo.mmd" in body
-    assert "examples/arquitectura.mmd" in body
+    assert "examples/cycle.mmd" in body
+    assert "examples/architecture.mmd" in body
     examples_dir = PACKAGE / "examples"
     for name in EXAMPLE_FILES:
         example = examples_dir / name

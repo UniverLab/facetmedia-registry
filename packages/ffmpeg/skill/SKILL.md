@@ -35,8 +35,8 @@ true-peak-db = -1.5
 sample-rate-hz = "48000"
 
 [[inputs.clip]]
-name = "voz-a-16"
-audio = "voz.flac"
+name = "voice-at-16"
+audio = "voice.flac"
 ```
 
 Lay the voice over a pink-noise ambience bed, the bed ducked 12 dB while
@@ -44,18 +44,18 @@ the voice sounds (`examples/mix.toml`):
 
 ```toml
 [inputs]
-name = "voz-sobre-fondo"
+name = "voice-over-bed"
 ducking = true
 duck-db = -12.0
 target-lufs = -16.0
 
 [[inputs.layer]]
-audio = "voz.flac"
+audio = "voice.flac"
 role = "voice"
 start-s = 2.0
 
 [[inputs.layer]]
-audio = "fondo.flac"
+audio = "bed.flac"
 role = "bed"
 ```
 
@@ -63,8 +63,8 @@ Cut the first 5 seconds to Ogg Opus (`examples/convert.toml`):
 
 ```toml
 [inputs]
-audio = "voz.flac"
-name = "voz-ogg"
+audio = "voice.flac"
+name = "voice-ogg"
 format = "ogg"
 start-s = 0.0
 end-s = 5.0

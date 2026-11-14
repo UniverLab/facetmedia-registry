@@ -10,6 +10,6 @@ model = "cosyvoice"
 language = "es"
 
 [[inputs.clip]]
-name = "clon"
-text = "Esta línea se dice con la voz clonada que registré en mi propia máquina."
+name = "clone"
+text = "This line is spoken with the cloned voice I registered on my own machine."
 seed = 1

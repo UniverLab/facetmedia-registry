@@ -3,6 +3,6 @@
 capability = "deck.page"
 
 [inputs]
-source = "modelos-de-lenguaje.html"
+source = "language-models.html"
 prompt = "A one-page infographic of the language-model timeline, 2017 to 2026."
 seed = 0

@@ -67,17 +67,17 @@ the runner.
   renders serif (above).
 - **`direction` inside a subgraph linked from outside is ignored.** To keep a
   subgraph's boxes in a row, chain them with invisible links:
-  `a ~~~ b ~~~ c`, as `ciclo.mmd` does.
+  `a ~~~ b ~~~ c`, as `cycle.mmd` does.
 - **`fontSize` for video.** The default is small at 1080p; the approved
   patterns use `fontSize: "22px"`.
 - **A bottom (`B`) port arrow crosses the service label.** Split a service's
-  exit through a `junction` (`reparto` in `arquitectura.mmd`), then fan out
+  exit through a `junction` (`reparto` in `architecture.mmd`), then fan out
   with `R`/`L`/`B` ports.
 - **`architecture-beta`** gives groups (`group ... in ...`), services with
   icons and port arrows; the bundled icons are `cloud`, `database`, `disk`,
   `internet`, `server`, plus Iconify `logos:`/`mdi:`.
 - **`look: handDrawn`** gives the Excalidraw-style drawing approved as
-  `ciclo-mano.png`.
+  `cycle-hand.png`.
 
 ## Rejected alternatives
 
@@ -88,9 +88,9 @@ SVG this package writes, using its stable `my-svg-*` ids).
 
 ## Approved references
 
-- `ciclo.mmd` → `ciclo.svg` + `ciclo.png`, and the hand-drawn
-  `ciclo-mano.png`, under `examples/`.
-- `arquitectura.mmd` → `arquitectura.svg` + `arquitectura.png`, same folder.
+- `cycle.mmd` → `cycle.svg` + `cycle.png`, and the hand-drawn
+  `cycle-hand.png`, under `examples/`.
+- `architecture.mmd` → `architecture.svg` + `architecture.png`, same folder.
 
 ## Environment
 

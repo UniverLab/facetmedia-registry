@@ -67,12 +67,12 @@ language = "es"
 
 [[inputs.clip]]
 name = "intro"
-text = "En este laboratorio probamos una voz en español."
+text = "In this laboratory we test an English voice."
 seed = 7
 
 [[inputs.clip]]
-name = "cierre"
-text = "La hipótesis quedó verificada."
+name = "outro"
+text = "The hypothesis held up."
 seed = 11
 ```
 

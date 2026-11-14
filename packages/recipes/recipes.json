@@ -5,57 +5,57 @@
       "steps": [
         {
           "capability": "voicestudio.speak",
-          "handoff": "voz.wav",
+          "handoff": "voice.wav",
           "verify": "Transcribe the voice."
         },
         {
           "capability": "acestep.bed",
-          "handoff": "cama.wav",
+          "handoff": "bed.wav",
           "verify": "Probe duration and peak."
         },
         {
           "capability": "ffmpeg.normalize",
-          "handoff": "voz-normalizada.wav (clip voz.wav, target-lufs -16.0, true-peak-db -1.5)",
+          "handoff": "voice-normalized.wav (clip voice.wav, target-lufs -16.0, true-peak-db -1.5)",
           "verify": "Integrated loudness at -16 LUFS."
         },
         {
           "capability": "ffmpeg.mix",
-          "handoff": "mezcla.wav (voice voz-normalizada.wav, bed cama.wav, ducking true, duck-db -12.0, target-lufs -16.0)",
+          "handoff": "mix.wav (voice voice-normalized.wav, bed bed.wav, ducking true, duck-db -12.0, target-lufs -16.0)",
           "verify": "Integrated loudness at -16 LUFS."
         },
         {
           "capability": "whisper.transcribe",
-          "handoff": "guion.txt + guion.srt + guion.json (audio voz-normalizada.wav)",
+          "handoff": "transcript.txt + transcript.srt + transcript.json (audio voice-normalized.wav)",
           "verify": "Confidence and no-speech share."
         },
         {
           "capability": "whisper-subs.subtitles",
-          "handoff": "guion.srt (source guion.json, format srt)",
+          "handoff": "transcript.srt (source transcript.json, format srt)",
           "verify": "At least one cue, monotonic and non-overlapping."
         },
         {
           "capability": "hyperframes.narrated",
-          "handoff": "narrated.mp4 (composition narrated/, voice voz-normalizada.wav, music cama.wav, subtitles guion.srt)",
+          "handoff": "narrated.mp4 (composition narrated/, voice voice-normalized.wav, music bed.wav, subtitles transcript.srt)",
           "verify": "Check the MP4 with an ffprobe probe."
         }
       ]
     },
     "architecture-render": {
-      "summary": "Architectural render: a CAD solid, its Poly Haven assets, a daylight scene from the study-photo example, and a one-page deck.",
+      "summary": "Architectural render: a CAD solid, its Poly Haven assets, a daylight scene from the study example, and a one-page deck.",
       "steps": [
         {
           "capability": "cad.solid",
-          "handoff": "estudio.step + estudio.stl + estudio.svg + estudio.glb (script estudio.py, name estudio)",
+          "handoff": "study.step + study.stl + study.svg + study.glb (script study.py, name study)",
           "verify": "Volume and bounding box."
         },
         {
           "capability": "blender.assets",
-          "handoff": "estudio.assets.json (name estudio)",
+          "handoff": "study-dressing.assets.json (name study-dressing)",
           "verify": "The receipt's files are all present."
         },
         {
           "capability": "blender.scene",
-          "handoff": "estudio-photo.png (script study-photo/study_photo.py, name estudio, width 1600, height 1000, engine cycles, exposure -0.6)",
+          "handoff": "study-photo.png (script study/study.py, name study, width 1600, height 1000, engine cycles, exposure -0.6)",
           "verify": "The PNG measures 1600x1000."
         },
         {
@@ -70,12 +70,12 @@
       "steps": [
         {
           "capability": "kokoro.speak",
-          "handoff": "voz.wav (clip, voice ef_dora, language es)",
+          "handoff": "voice.wav (clip, voice af_heart, language en-us)",
           "verify": "Transcribe the voice."
         },
         {
           "capability": "acestep.bed",
-          "handoff": "cama.wav",
+          "handoff": "bed.wav",
           "verify": "Probe duration and peak."
         },
         {

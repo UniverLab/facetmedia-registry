@@ -30,7 +30,7 @@ optional `seed`, `steps`, `guidance`, `bpm`, `key` and `time-signature`.
 ```toml
 [inputs]
 caption = "Lively, joyful Baroque chamber orchestra piece in the style of a Vivaldi allegro. Bright strings playing fast staccato and spiccato runs, harpsichord continuo, playful solo violin and flute melodies. Energetic, festive and elegant. Acoustic instruments only. No drums, no percussion, no bass beat, no synthesizers, no electronic sounds."
-name = "clasica-alegre"
+name = "baroque-allegro"
 duration = 30
 ```
 
@@ -45,8 +45,8 @@ as `key_scale`, for example `C major`) and `time-signature` (sent as
 sends nothing so the server keeps its own default.
 
 Both approved pieces ship as examples, each with its WAV:
-`examples/clasica-alegre.toml` (major, Vivaldi-style allegro) and
-`examples/clasica-melancolica.toml` (minor, solo piano and string quartet).
+`examples/baroque-allegro.toml` (major, Vivaldi-style allegro) and
+`examples/romantic-nocturne.toml` (minor, solo piano and string quartet).
 Their captions, and the piece shape above, are in
 [references/captions.md](references/captions.md).
 
@@ -63,7 +63,7 @@ The lab's verdict on the audio decides what to accept:
 - **Rejected:** lo-fi and Latin pop, both ~60 % of the energy below 120 Hz,
   with the "instrumental" one sounding like synthetic lo-fi hip-hop.
 - **Approved:** acoustic classical, no percussion, 2.5-16 % low energy. The
-  approved tracks are `clasica-alegre.wav` and `clasica-melancolica.wav`,
+  approved tracks are `baroque-allegro.wav` and `romantic-nocturne.wav`,
   which ship beside their pieces in `examples/`.
 - **Discarded forever:** sung music.
 

@@ -23,7 +23,7 @@ HEADINGS = ("## When to use", "## Pieces", "## Judging the result", "## Pitfalls
 DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
 #: The approved pieces that ship, each as a ``.toml`` and a ``.wav``.
-APPROVED = ("clasica-alegre", "clasica-melancolica")
+APPROVED = ("baroque-allegro", "romantic-nocturne")
 #: The line the caption ends with, verbatim, plus the lab's electronic-sounds tail.
 NO_DRUMS = "No drums, no percussion, no bass beat, no synthesizers"
 #: A reference the skill cites, as ``references/<name>.md``.

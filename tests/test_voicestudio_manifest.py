@@ -51,7 +51,7 @@ MODEL_ENTRIES = 2
 def test_the_engine_is_python_311_with_a_managed_server() -> None:
     assert MANIFEST["name"] == "voicestudio"
     assert MANIFEST["facet"] == "voice"
-    assert MANIFEST["version"] == "0.1.2"
+    assert MANIFEST["version"] == "0.1.3"
     assert MANIFEST["engine"]["type"] == "python-env"
     assert MANIFEST["engine"]["python"] == "3.11"
     assert MANIFEST["engine"]["server"] == {

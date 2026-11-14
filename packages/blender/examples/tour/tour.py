@@ -5,7 +5,7 @@ is here — the light, the materials, the orbit, the lens — and facet owns onl
 the output (resolution, engine, samples, exposure, seed, frame range and rate),
 which the piece TOML carries.
 
-The script imports the study ``../study-photo/estudio.glb``, dresses it the
+The script imports the study ``../study/study.glb``, dresses it the
 way the study photo does, then keyframes the camera once per frame from the
 move's start triple to its end triple with a smoothstep, so it leaves and
 arrives gently like a crane. It sets Eevee's screen-space ray tracing, fast GI
@@ -19,27 +19,27 @@ import math
 import bpy
 
 DATA = {
-    "model": "../study-photo/estudio.glb",
+    "model": "../study/study.glb",
     "scale": 0.001,
     "look": "AgX - Medium High Contrast",
     "sky": {"strength": 0.2},
     "sun": {"azimuth": 210.0, "elevation": 32.0, "strength": 3.0, "angle": 2.0},
-    "floor": {"size": 60.0, "drop": 0.001, "color": (0.80, 0.80, 0.78), "roughness": 0.95},
+    "floor": {"size": 60.0, "drop": 0.001, "color": (0.007, 0.010, 0.010), "roughness": 0.95},
     "materials": {
-        "muros": {"color": (0.92, 0.91, 0.88), "roughness": 0.9},
-        "piso": {"color": (0.50, 0.34, 0.21), "roughness": 0.45},
+        "muros": {"color": (0.843, 0.836, 0.782), "roughness": 0.9},
+        "piso": {"color": (0.701, 0.488, 0.190), "roughness": 0.45},
         "vidrio": {
-            "color": (0.85, 0.93, 1.0),
+            "color": (0.925, 0.922, 0.894),
             "roughness": 0.02,
             # See-through by alpha, not refraction: Eevee draws refraction
             # without ray-traced transmission as a dark panel. Cycles agrees.
             "alpha": 0.2,
             "blended": True,
         },
-        "cama": {"color": (0.23, 0.33, 0.52), "roughness": 0.85},
-        "almohada": {"color": (0.95, 0.95, 0.94), "roughness": 0.8},
-        "mesa": {"color": (0.40, 0.26, 0.15), "roughness": 0.4},
-        "sillas": {"color": (0.90, 0.40, 0.18), "roughness": 0.55},
+        "cama": {"color": (0.493, 0.517, 0.470), "roughness": 0.85},
+        "almohada": {"color": (0.843, 0.836, 0.782), "roughness": 0.8},
+        "mesa": {"color": (0.012, 0.018, 0.017), "roughness": 0.4},
+        "sillas": {"color": (0.797, 0.573, 0.066), "roughness": 0.55},
     },
     "move": {
         "azimuth": (-75.0, -15.0),

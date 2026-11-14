@@ -28,8 +28,8 @@ and that exact command when it is missing or older than 5.2.
 - When you want a starting point rather than a blank file: the three examples
   here are scripts you **copy and edit**. Each keeps every creative choice in
   one `DATA` dict at the top, so you change values, not code:
-  - `examples/study-photo/` — the daylight architectural photo of the study
-    (`study-photo.toml`, `study_photo.py`, `estudio.glb`).
+  - `examples/study/` — the daylight architectural photo of the study
+    (`study.toml`, `study.py`, `study.glb`).
   - `examples/product/` — one metal part under three softboxes in a dark
     studio (`product.toml`, `product.py`, `part.stl`).
   - `examples/tour/` — the study on a camera orbit, in Eevee
@@ -49,7 +49,7 @@ A scripted still, the minimal form:
 ```toml
 [inputs]
 script = "build.py"
-name = "estudio-script"
+name = "study-script"
 ```
 
 An animation from the same script:
@@ -57,7 +57,7 @@ An animation from the same script:
 ```toml
 [inputs]
 script = "build.py"
-name = "estudio-animado"
+name = "study-animated"
 frames = 240
 fps = 24
 ```
@@ -74,8 +74,8 @@ its `DATA` and run the TOML beside it:
 
 ```toml
 [inputs]
-script = "study_photo.py"
-name = "estudio"
+script = "study.py"
+name = "study"
 width = 1600
 height = 1000
 engine = "cycles"
@@ -96,7 +96,7 @@ Fetched assets come first, as their own piece:
 
 ```toml
 [inputs]
-name = "estudio-dressing"
+name = "study-dressing"
 assets = [
   { id = "kloppenheim_06_puresky", res = "2k" },
   { id = "aerial_grass_rock", res = "2k" },

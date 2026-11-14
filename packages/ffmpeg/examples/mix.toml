@@ -2,16 +2,16 @@
 capability = "ffmpeg.mix"
 
 [inputs]
-name = "voz-sobre-fondo"
+name = "voice-over-bed"
 ducking = true
 duck-db = -12.0
 target-lufs = -16.0
 
 [[inputs.layer]]
-audio = "voz.flac"
+audio = "voice.flac"
 role = "voice"
 start-s = 2.0
 
 [[inputs.layer]]
-audio = "fondo.flac"
+audio = "bed.flac"
 role = "bed"

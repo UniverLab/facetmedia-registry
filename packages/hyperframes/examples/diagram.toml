@@ -8,57 +8,57 @@ seed = 0
 fps = 24
 
 [[inputs.animation]]
-selector = "#my-svg-flowchart-datos-0"
+selector = "#my-svg-flowchart-data-0"
 at = 0.3
 kind = "show"
 
 [[inputs.animation]]
-selector = "#my-svg-L_datos_pieza_0"
+selector = "#my-svg-L_data_piece_0"
 at = 0.6
 kind = "draw"
 dur = 0.4
 
 [[inputs.animation]]
-selector = "#my-svg-flowchart-pieza-1"
+selector = "#my-svg-flowchart-piece-1"
 at = 1.0
 kind = "show"
 
 [[inputs.animation]]
-selector = "#my-svg-L_pieza_exportar_0"
+selector = "#my-svg-L_piece_export__0"
 at = 1.2
 kind = "draw"
 dur = 0.3
 
 [[inputs.animation]]
-selector = "#my-svg-flowchart-exportar-3"
+selector = "#my-svg-flowchart-export_-3"
 at = 1.5
 kind = "show"
 
 [[inputs.animation]]
-selector = "#my-svg-L_exportar_revisar_0"
+selector = "#my-svg-L_export__review_0"
 at = 1.7
 kind = "draw"
 dur = 0.3
 
 [[inputs.animation]]
-selector = "#my-svg-flowchart-revisar-5"
+selector = "#my-svg-flowchart-review-5"
 at = 2.0
 kind = "show"
 
 [[inputs.animation]]
-selector = "#my-svg-L_revisar_entrega_0"
+selector = "#my-svg-L_review_deliver_0"
 at = 2.2
 kind = "draw"
 dur = 0.3
 
 [[inputs.animation]]
-selector = '.edgeLabels [data-id="L_revisar_entrega_0"]'
+selector = '.edgeLabels [data-id="L_review_deliver_0"]'
 at = 2.3
 kind = "fade"
 dur = 0.3
 
 [[inputs.animation]]
-selector = "#my-svg-flowchart-entrega-11"
+selector = "#my-svg-flowchart-deliver-11"
 at = 2.5
 kind = "show"
 

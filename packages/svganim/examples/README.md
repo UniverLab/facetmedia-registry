@@ -7,3 +7,5 @@
 - `bars.json` is authored for this example: four bar values and the canvas
   size. Change the values and re-run; the labels follow.
 - `bake.toml` is the piece.
+- `fonts/` carries the vendored UniverLab faces with their OFL texts. The
+  shipped labels use none of them: every label is a 7-segment `<path>`.

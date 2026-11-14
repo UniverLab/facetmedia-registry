@@ -378,7 +378,7 @@ def _preview_step(req: Request, path: Path) -> tuple[dict[str, Any], list[str]]:
 
 
 def _solid_summary(name: str, fields: Mapping[str, Any]) -> str:
-    """``escuadra · valid · 20 806 mm³ · 2 holes Ø6.5``."""
+    """``bracket · valid · 20 806 mm³ · 2 holes Ø6.5``."""
     volume = f"{float(fields['volume_mm3']):,.0f}".replace(",", " ")
     parts = [name, "valid" if fields["valid"] else "invalid", f"{volume} mm³"]
     holes = fields["holes"]
@@ -410,7 +410,7 @@ def _preview_dxf(req: Request, path: Path) -> tuple[dict[str, Any], list[str]]:
 
 
 def _drawing_summary(name: str, drawing: Mapping[str, Any]) -> str:
-    """``plano-estudio · 27 entities · 5 layers · audit clean``."""
+    """``floor-plan · 27 entities · 5 layers · audit clean``."""
     audit = drawing["audit"]
     verdict = (
         "audit clean"

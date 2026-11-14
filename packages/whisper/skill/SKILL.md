@@ -22,15 +22,15 @@ CUDA is ever imported.
 
 ## Pieces
 
-The lab's reference clip, transcribed in Spanish with its text as the
-reference (`examples/laboratorio.toml`):
+The lab's reference clip, transcribed in English with its text as the
+reference (`examples/laboratory.toml`):
 
 ```toml
 [inputs]
-audio = "laboratorio.flac"
-language = "es"
-name = "laboratorio"
-expect-text = "En este laboratorio probamos una voz en español generada localmente. Queremos medir si se entiende bien, cuánto tarda y cómo suena frente a las voces que ya usamos."
+audio = "laboratory.flac"
+language = "en"
+name = "laboratory"
+expect-text = "In this laboratory we test a locally generated English voice. We want to measure how clear it sounds, how long it takes, and how it compares with the voices we already use."
 ```
 
 An interview in an unknown language, without a reference text — the WER is
@@ -38,9 +38,9 @@ simply not measured:
 
 ```toml
 [inputs]
-audio = "entrevista.m4a"
+audio = "interview.m4a"
 language = "auto"
-name = "entrevista"
+name = "interview"
 ```
 
 Run a piece with `facet run whisper.transcribe <piece.toml> --out build/`;
@@ -70,7 +70,7 @@ that failed: a low `avg_logprob` or a high `no_speech_prob` names the exact
 seconds to listen to, and the words show what the model substituted.
 
 `facet preview <name>.txt` writes `<name>.txt.preview.json` (generic viewer)
-with a summary like `9.6 s · es (0.99) · 28 words · WER 0 %` and the same
+with a summary like `9.6 s · en (0.99) · 28 words · WER 0 %` and the same
 metrics as fields. The sidecar must sit beside the transcript.
 
 ## Pitfalls

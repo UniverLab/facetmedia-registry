@@ -3,7 +3,7 @@
 capability = "blender.assets"
 
 [inputs]
-name = "estudio-dressing"
+name = "study-dressing"
 assets = [
   { id = "kloppenheim_06_puresky", res = "2k" },
   { id = "aerial_grass_rock", res = "2k" },

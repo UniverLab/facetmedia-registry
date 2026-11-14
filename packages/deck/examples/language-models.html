@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Language models · 2017 → 2026</title>
+<style>
+@font-face { font-family: 'Old Standard TT'; src: url('./fonts/OldStandard-Regular.ttf'); font-weight: 400; }
+@font-face { font-family: 'Old Standard TT'; src: url('./fonts/OldStandard-Italic.ttf'); font-style: italic; }
+@font-face { font-family: 'EB Garamond'; src: url('./fonts/EBGaramond[wght].ttf'); }
+@font-face { font-family: 'EB Garamond'; src: url('./fonts/EBGaramond-Italic[wght].ttf'); font-style: italic; }
+@font-face { font-family: 'Sometype Mono'; src: url('./fonts/SometypeMono[wght].ttf'); }
+</style>
+<style>
+:root{
+  --bg:#f4f0ea; --surface:#eee7dc; --border:#8a6a2c; --border-strong:#6b5a43;
+  --ink:#1d1510; --ink2:#6b5a43; --ink3:#6b5a43; --ink4:#6b5a43;
+  /* era identity = reference categorical slots 1–6 (validated) */
+  --e1:#87222c; --e2:#8a6a2c; --e3:#6b5a43; --e4:#1d1510; --e5:#000000; --e6:#8a6a2c;
+  --before:#6b5a43; --after:#87222c;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--ink);font-family:'EB Garamond',sans-serif;font-size:12px;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.page{width:1060px;margin:0 auto;padding:36px 36px 40px;}
+em{font-style:italic;}
+.mono{font-family:'Sometype Mono',monospace;}
+
+/* HEADER */
+.header{text-align:center;padding-bottom:22px;border-bottom:2px solid var(--ink);display:flex;flex-direction:column;align-items:center;gap:8px;}
+.kicker{font-family:'Sometype Mono',monospace;font-size:9px;letter-spacing:4px;text-transform:uppercase;color:var(--ink3);}
+.title{font-family:'Old Standard TT',serif;font-weight:400;font-size:60px;line-height:1;letter-spacing:-1.5px;}
+.title em{color:var(--ink3);}
+.accent{display:flex;gap:3px;margin-top:2px;}
+.accent i{display:block;width:22px;height:4px;border-radius:2px;}
+.lede{max-width:700px;font-size:13.5px;color:var(--ink2);line-height:1.55;}
+
+/* SECTION LABEL */
+.sec{font-family:'Sometype Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--ink3);text-transform:uppercase;display:flex;align-items:center;gap:12px;margin:30px 0 14px;}
+.sec::before,.sec::after{content:'';flex:1;height:1px;background:var(--border-strong);}
+.sec b{font-weight:500;color:var(--ink);}
+
+/* STAT STRIP */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border:1.5px solid var(--ink);border-radius:6px;background:var(--surface);margin-top:22px;box-shadow:4px 4px 0 var(--border);}
+.stat{padding:14px 16px;border-right:1px solid var(--border);}
+.stat:last-child{border-right:none;}
+.stat .n{font-family:'Old Standard TT',serif;font-size:32px;line-height:1.05;letter-spacing:-.5px;}
+.stat .n small{font-size:17px;color:var(--ink3);}
+.stat .l{font-size:11px;color:var(--ink2);margin-top:4px;line-height:1.4;}
+.stat .s{font-family:'Sometype Mono',monospace;font-size:8.5px;color:var(--ink4);letter-spacing:.5px;margin-top:5px;text-transform:uppercase;}
+
+/* TIMELINE */
+.era{display:grid;grid-template-columns:200px 1fr;gap:16px;position:relative;padding:14px 0;border-bottom:1px dashed var(--border-strong);}
+.era:last-child{border-bottom:none;}
+.era-meta{padding-left:14px;border-left:5px solid var(--c);}
+.era-num{font-family:'Sometype Mono',monospace;font-size:8.5px;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);}
+.era-name{font-family:'Old Standard TT',serif;font-size:21px;line-height:1.1;margin:3px 0 4px;}
+.era-years{font-family:'Sometype Mono',monospace;font-size:10px;color:var(--ink2);font-weight:500;}
+.era-thesis{font-size:11px;font-style:italic;color:var(--ink3);margin-top:8px;line-height:1.45;}
+.events{display:grid;grid-template-columns:repeat(var(--cols,3),1fr);gap:9px;}
+.ev{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:9px 11px 10px;position:relative;}
+.ev.key{border:1.5px solid var(--ink);box-shadow:3px 3px 0 var(--c);}
+.ev .d{font-family:'Sometype Mono',monospace;font-size:8.5px;letter-spacing:1px;text-transform:uppercase;color:var(--ink3);display:flex;align-items:center;gap:6px;}
+.ev .d::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--c);flex:none;}
+.ev h4{font-family:'Old Standard TT',serif;font-weight:400;font-size:15.5px;line-height:1.15;margin:4px 0 3px;}
+.ev p{font-size:10.5px;color:var(--ink2);line-height:1.45;}
+.ev .who{font-size:10px;color:var(--ink3);font-style:italic;}
+.tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;}
+.tag{font-family:'Sometype Mono',monospace;font-size:7.5px;letter-spacing:1px;text-transform:uppercase;padding:1.5px 5px;border-radius:3px;border:1px solid var(--border-strong);color:var(--ink2);}
+.tag.open{background:var(--ink);color:#f4f0ea;border-color:var(--ink);}
+.tag.reason{border-style:dashed;border-color:var(--ink2);}
+.legend-tags{display:flex;justify-content:center;gap:18px;font-size:10px;color:var(--ink3);margin:-4px 0 6px;}
+.legend-tags span{display:flex;align-items:center;gap:6px;}
+
+/* PLAYERS */
+.players{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.panel{background:var(--surface);border:1.5px solid var(--ink);border-radius:6px;padding:16px 18px;box-shadow:4px 4px 0 var(--border);}
+.panel h3{font-family:'Old Standard TT',serif;font-weight:400;font-size:20px;line-height:1.15;}
+.panel .sub{font-size:11px;color:var(--ink3);font-style:italic;margin:2px 0 10px;}
+.roster{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;}
+.player{display:grid;grid-template-columns:38px 1fr;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--border);}
+.player .y{font-family:'Sometype Mono',monospace;font-size:10px;font-weight:500;color:var(--ink);}
+.player .y.y23{background:var(--ink);color:#f4f0ea;border-radius:3px;padding:0 4px;text-align:center;}
+.player b{font-weight:600;font-size:11.5px;}
+.player span{display:block;font-size:10px;color:var(--ink3);}
+.note{font-size:10.5px;color:var(--ink2);margin-top:10px;line-height:1.45;}
+.note b{font-weight:600;}
+
+/* CHARTS */
+.chart-title{font-family:'Sometype Mono',monospace;font-size:8.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3);margin:10px 0 2px;}
+.chart-legend{display:flex;gap:14px;font-size:10px;color:var(--ink2);margin:6px 0 2px;}
+.chart-legend span{display:flex;align-items:center;gap:5px;}
+.chart-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;}
+svg text{font-family:'EB Garamond',sans-serif;}
+
+/* DIALS */
+.dials{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;}
+.dials .panel{display:flex;flex-direction:column;}
+.dials .panel > .callout:last-child{margin-top:auto;}
+.dials .formula{margin-bottom:12px;}
+.temp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px;}
+.temp-cell h5{font-family:'Sometype Mono',monospace;font-weight:500;font-size:10px;color:var(--ink);}
+.temp-cell .cap{font-size:9.5px;color:var(--ink3);font-style:italic;margin-bottom:4px;}
+.prompt-line{font-size:12px;color:var(--ink2);margin-top:4px;}
+.prompt-line code{font-family:'Sometype Mono',monospace;background:var(--bg);border:1px solid var(--border);padding:1px 6px;border-radius:3px;}
+.knobs{display:flex;flex-direction:column;gap:8px;}
+.knob{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.knob:last-child{border-bottom:none;}
+.knob .k{font-family:'Sometype Mono',monospace;font-size:10px;font-weight:500;}
+.knob .k small{display:block;font-weight:400;color:var(--ink3);font-size:8.5px;margin-top:2px;}
+.knob p{font-size:10.5px;color:var(--ink2);line-height:1.45;}
+.effort{display:flex;gap:4px;margin-top:5px;}
+.effort div{flex:1;border:1px solid var(--border-strong);border-radius:3px;padding:3px 5px;font-size:9px;color:var(--ink2);}
+.effort div b{display:block;font-family:'Sometype Mono',monospace;font-size:8.5px;font-weight:500;color:var(--ink);text-transform:uppercase;letter-spacing:1px;}
+.effort .bar{height:4px;background:var(--ink);border-radius:2px;margin-top:3px;}
+.ctx{display:flex;align-items:flex-end;gap:6px;margin-top:6px;}
+.ctx div{flex:1;text-align:center;font-size:8.5px;color:var(--ink3);}
+.ctx div b{display:block;font-family:'Sometype Mono',monospace;font-size:10px;color:var(--ink);font-weight:500;}
+.ctx .col{background:var(--ink2);border-radius:3px 3px 0 0;margin:3px auto 3px;width:70%;}
+.formula{margin-top:14px;display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;padding:12px 14px;border:1px dashed var(--border-strong);border-radius:5px;}
+.formula .eq{font-family:'Old Standard TT',serif;font-size:19px;white-space:nowrap;}
+.formula .eq sub,.formula .eq sup{font-size:11px;}
+.formula p{font-size:10.5px;color:var(--ink2);line-height:1.45;}
+.callout{margin-top:12px;padding:10px 12px;border-left:4px solid var(--ink);background:var(--bg);font-size:11px;color:var(--ink2);line-height:1.45;}
+.callout b{color:var(--ink);}
+
+/* PARROT */
+.parrot{display:grid;grid-template-columns:1fr 1.15fr 1.15fr;gap:12px;}
+.pcol{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;}
+.pcol.thesis{border:1.5px solid var(--ink);}
+.pcol h4{font-family:'Sometype Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);margin-bottom:6px;}
+.pcol h3{font-family:'Old Standard TT',serif;font-weight:400;font-size:19px;line-height:1.15;margin-bottom:8px;}
+.pcol blockquote{font-family:'Old Standard TT',serif;font-style:italic;font-size:14px;line-height:1.35;color:var(--ink2);border-left:3px solid var(--border-strong);padding-left:10px;margin:8px 0;}
+.pcol p{font-size:10.5px;color:var(--ink2);line-height:1.45;}
+.pcol .side{font-family:'Old Standard TT',serif;font-size:17px;color:var(--ink);margin:-2px 0 4px;line-height:1.2;}
+.pitem{padding:7px 0;border-bottom:1px solid var(--border);}
+.pitem:last-child{border-bottom:none;}
+.pitem .t{font-weight:600;font-size:11px;}
+.pitem .t span{font-family:'Sometype Mono',monospace;font-weight:400;font-size:8.5px;color:var(--ink3);margin-left:4px;}
+.pitem p{margin-top:1px;}
+.verdict{margin-top:12px;display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;background:var(--ink);color:#f4f0ea;border-radius:6px;padding:16px 20px;}
+.verdict .vk{font-family:'Sometype Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#eee7dc;}
+.verdict .vt{font-family:'Old Standard TT',serif;font-size:24px;line-height:1.1;}
+.verdict p{font-size:11.5px;color:#eee7dc;line-height:1.5;}
+.verdict p b{color:#f4f0ea;}
+
+/* FOOTER */
+.footer{margin-top:28px;padding-top:12px;border-top:2px solid var(--ink);display:grid;grid-template-columns:1fr auto;gap:20px;}
+.sources{font-size:9px;color:var(--ink3);line-height:1.55;}
+.sources b{font-family:'Sometype Mono',monospace;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink2);font-size:8.5px;}
+.sign{font-family:'Sometype Mono',monospace;font-size:8.5px;color:var(--ink4);text-align:right;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ═════════ HEADER ═════════ -->
+<header class="header">
+  <div class="kicker">Infographic · Language models · 2017 → 2026</div>
+  <h1 class="title">From <em>attention</em> to agents</h1>
+  <div class="accent"><i style="background:var(--e1)"></i><i style="background:var(--e2)"></i><i style="background:var(--e3)"></i><i style="background:var(--e4)"></i><i style="background:var(--e5)"></i><i style="background:var(--e6)"></i></div>
+  <p class="lede">Nine years separate a Google paper on machine translation from systems that now write code, reason, and operate computers for hours. This is the story in six stages: who entered the game, how the gap between open and closed models closed, which knobs control their behaviour, and what is left of the <em>stochastic parrot</em>.</p>
+</header>
+
+<div class="stats">
+  <div class="stat"><div class="n">2017</div><div class="l"><em>Attention Is All You Need</em>: 8 Google authors propose the Transformer.</div><div class="s">Vaswani et al. · NeurIPS</div></div>
+  <div class="stat"><div class="n">175<small> mil M</small></div><div class="l">GPT-3 parameters, the leap that showed scale alone unlocks abilities.</div><div class="s">OpenAI · May 2020</div></div>
+  <div class="stat"><div class="n">~2<small> months</small></div><div class="l">How long ChatGPT took to reach 100 million users.</div><div class="s">UBS estimate · Jan 2023</div></div>
+  <div class="stat"><div class="n">8.0<small>%</small> → 1.7<small>%</small></div><div class="l">Lead of the best closed model over the best open one on Chatbot Arena.</div><div class="s">Jan 2024 → Feb 2025 · AI Index</div></div>
+</div>
+
+<!-- ═════════ TIMELINE ═════════ -->
+<div class="sec"><b>01</b> The timeline</div>
+<div class="legend-tags">
+  <span><span class="tag open">open</span> downloadable weights</span>
+  <span><span class="tag">closed</span> API / app only</span>
+  <span><span class="tag reason">reasoner</span> thinks before answering</span>
+  <span><span class="tag">multimodal</span> text + image / audio</span>
+</div>
+
+<section class="era" style="--c:var(--e1);--cols:4">
+  <div class="era-meta">
+    <div class="era-num">Stage 1</div>
+    <div class="era-name">The foundations</div>
+    <div class="era-years">2017 – 2019</div>
+    <div class="era-thesis">An architecture that parallelises on GPU changes what can be trained.</div>
+  </div>
+  <div class="events">
+    <div class="ev key"><div class="d">Jun 2017</div><h4>Attention Is All You Need</h4><p>It removes recurrence: attention only. The <b>Transformer</b> is born, the base of everything after.</p><div class="who">Vaswani et al. · Google</div></div>
+    <div class="ev"><div class="d">Jun 2018</div><h4>GPT-1</h4><p>Pre-train on unlabelled text, then fine-tune: the <em>generative pre-trained</em> pattern.</p><div class="who">OpenAI</div></div>
+    <div class="ev"><div class="d">Oct 2018</div><h4>BERT</h4><p>A bidirectional Transformer; it masters text understanding and reaches Google search in 2019.</p><div class="who">Google</div><div class="tags"><span class="tag open">open</span></div></div>
+    <div class="ev"><div class="d">Feb 2019</div><h4>GPT-2</h4><p>1.5 B parameters. OpenAI withholds the full version over misuse risk: the first public safety debate.</p><div class="who">OpenAI · fully released Nov 2019</div><div class="tags"><span class="tag open">open</span></div></div>
+  </div>
+</section>
+
+<section class="era" style="--c:var(--e2)">
+  <div class="era-meta">
+    <div class="era-num">Stage 2</div>
+    <div class="era-name">The scale bet</div>
+    <div class="era-years">2020 – 2022</div>
+    <div class="era-thesis">More data, more parameters, more compute: error falls predictably.</div>
+  </div>
+  <div class="events">
+    <div class="ev"><div class="d">Jan 2020</div><h4>Scaling laws</h4><p>Loss falls as a power law with model size, data, and compute.</p><div class="who">Kaplan et al. · OpenAI</div></div>
+    <div class="ev key"><div class="d">May 2020</div><h4>GPT-3</h4><p>175 B parameters. It learns tasks from a few examples in the prompt (<em>few-shot</em>), without retraining.</p><div class="who">OpenAI</div><div class="tags"><span class="tag">closed</span></div></div>
+    <div class="ev"><div class="d">2021</div><h4>Anthropic is founded</h4><p>Ex-OpenAI members, with Dario and Daniela Amodei, found a safety-centred lab.</p><div class="who">San Francisco</div></div>
+    <div class="ev"><div class="d">Mar 2021</div><h4>«Stochastic Parrots»</h4><p>It warns of form without meaning, inherited biases, and environmental cost. It names the <em>stochastic parrot</em>.</p><div class="who">Bender, Gebru, McMillan-Major, Mitchell</div></div>
+    <div class="ev"><div class="d">Mar 2022</div><h4>InstructGPT · Chinchilla</h4><p>RLHF teaches instruction-following; Chinchilla shows data, not parameters, was missing.</p><div class="who">OpenAI · DeepMind</div></div>
+  </div>
+</section>
+
+<section class="era" style="--c:var(--e3)">
+  <div class="era-meta">
+    <div class="era-num">Stage 3</div>
+    <div class="era-name">The explosion</div>
+    <div class="era-years">Nov 2022 – 2023</div>
+    <div class="era-thesis">A chat interface turns a lab technology into a mass product. Everyone joins the race.</div>
+  </div>
+  <div class="events">
+    <div class="ev key"><div class="d">30 Nov 2022</div><h4>ChatGPT</h4><p>A chat over RLHF-tuned GPT-3.5. ~100 M users in two months.</p><div class="who">OpenAI</div><div class="tags"><span class="tag">closed</span></div></div>
+    <div class="ev"><div class="d">Feb 2023</div><h4>LLaMA</h4><p>Meta shares it with researchers; the weights leak in days and the open community takes off.</p><div class="who">Meta</div><div class="tags"><span class="tag open">open</span></div></div>
+    <div class="ev"><div class="d">14 Mar 2023</div><h4>GPT-4 and Claude</h4><p>The same day: GPT-4 takes images as input; Anthropic launches its first Claude.</p><div class="who">OpenAI · Anthropic</div><div class="tags"><span class="tag">closed</span><span class="tag">multimodal</span></div></div>
+    <div class="ev"><div class="d">Jul 2023</div><h4>Llama 2</h4><p>Open weights with a commercial-use licence: companies can build on top.</p><div class="who">Meta</div><div class="tags"><span class="tag open">open</span></div></div>
+    <div class="ev"><div class="d">Sep 2023</div><h4>Mistral 7B</h4><p>A French startup, Apache 2.0 licence. A small model that beats 13 B Llama 2.</p><div class="who">Mistral AI · Paris</div><div class="tags"><span class="tag open">open</span></div></div>
+    <div class="ev"><div class="d">Dec 2023</div><h4>Gemini 1.0</h4><p>Natively trained on text, image, audio, and video from the start.</p><div class="who">Google DeepMind</div><div class="tags"><span class="tag">closed</span><span class="tag">multimodal</span></div></div>
+  </div>
+</section>
+
+<section class="era" style="--c:var(--e4)">
+  <div class="era-meta">
+    <div class="era-num">Stage 4</div>
+    <div class="era-name">See, hear… and think</div>
+    <div class="era-years">2024</div>
+    <div class="era-thesis">Models stop being text-only, and a new lever appears: spending compute while answering.</div>
+  </div>
+  <div class="events">
+    <div class="ev"><div class="d">Mar 2024</div><h4>Claude 3</h4><p>Haiku · Sonnet · Opus family: vision and 200 K tokens of context.</p><div class="who">Anthropic</div><div class="tags"><span class="tag">closed</span><span class="tag">multimodal</span></div></div>
+    <div class="ev"><div class="d">May 2024</div><h4>GPT-4o</h4><p><em>Omni</em>: voice, image, and text in one model; real-time voice conversation.</p><div class="who">OpenAI</div><div class="tags"><span class="tag">closed</span><span class="tag">multimodal</span></div></div>
+    <div class="ev"><div class="d">Jul 2024</div><h4>Llama 3.1 405B</h4><p>The first open model to compete head-to-head with the closed frontier.</p><div class="who">Meta</div><div class="tags"><span class="tag open">open</span></div></div>
+    <div class="ev key"><div class="d">Sep 2024</div><h4>o1: the first reasoner</h4><p>It generates a chain of thought before answering. New law: <b>more inference compute, better answers</b>.</p><div class="who">OpenAI</div><div class="tags"><span class="tag">closed</span><span class="tag reason">reasoner</span></div></div>
+    <div class="ev"><div class="d">Dec 2024</div><h4>DeepSeek-V3</h4><p>A 671 B mixture of experts (37 B active). Final training reported at ~USD 5.6 M of compute.</p><div class="who">DeepSeek · Hangzhou</div><div class="tags"><span class="tag open">open</span></div></div>
+  </div>
+</section>
+
+<section class="era" style="--c:var(--e5)">
+  <div class="era-meta">
+    <div class="era-num">Stage 5</div>
+    <div class="era-name">Reasoning opens up</div>
+    <div class="era-years">2025</div>
+    <div class="era-thesis">A Chinese lab publishes a cheap open reasoner. The frontier lead is now measured in months.</div>
+  </div>
+  <div class="events">
+    <div class="ev key"><div class="d">20 Jan 2025</div><h4>DeepSeek-R1</h4><p>An o1-level reasoner with open weights (MIT). On 27 January Nvidia loses ~USD 590 B on the stock market in a day.</p><div class="who">DeepSeek</div><div class="tags"><span class="tag open">open</span><span class="tag reason">reasoner</span></div></div>
+    <div class="ev"><div class="d">Feb 2025</div><h4>Claude 3.7 Sonnet</h4><p>Hybrid reasoning: the same model answers fast or “thinks” on a user-set budget.</p><div class="who">Anthropic</div><div class="tags"><span class="tag">closed</span><span class="tag reason">reasoner</span></div></div>
+    <div class="ev"><div class="d">Apr 2025</div><h4>Qwen3</h4><p>An open family (Apache 2.0) with a thinking mode that switches on or off.</p><div class="who">Alibaba</div><div class="tags"><span class="tag open">open</span><span class="tag reason">reasoner</span></div></div>
+    <div class="ev"><div class="d">Jul 2025</div><h4>Kimi K2 · IMO gold</h4><p>Moonshot opens a 1-trillion-parameter model for agents. OpenAI and DeepMind models reach gold level at the Mathematics Olympiad.</p><div class="who">Moonshot · OpenAI · DeepMind</div></div>
+    <div class="ev"><div class="d">Aug 2025</div><h4>GPT-5 and gpt-oss</h4><p>GPT-5 routes between fast and reasoner modes. gpt-oss: OpenAI’s first open weights since GPT-2.</p><div class="who">OpenAI</div><div class="tags"><span class="tag reason">reasoner</span><span class="tag open">open (oss)</span></div></div>
+    <div class="ev"><div class="d">Nov 2025</div><h4>Gemini 3</h4><p>Google tops the preference rankings at launch; the summit changes hands every few weeks.</p><div class="who">Google DeepMind</div><div class="tags"><span class="tag">closed</span><span class="tag">multimodal</span></div></div>
+  </div>
+</section>
+
+<section class="era" style="--c:var(--e6)">
+  <div class="era-meta">
+    <div class="era-num">Stage 6</div>
+    <div class="era-name">From answering to doing</div>
+    <div class="era-years">2026</div>
+    <div class="era-thesis">The focus shifts to autonomous work: hour-long tasks, programming, and computer use.</div>
+  </div>
+  <div class="events">
+    <div class="ev"><div class="d">Apr 2026</div><h4>DeepSeek V4</h4><p>A 1.6-trillion-parameter mixture of experts, 1 M tokens of context, MIT licence. Its self-estimate: 3–6 months behind the closed frontier.</p><div class="who">DeepSeek</div><div class="tags"><span class="tag open">open</span><span class="tag reason">reasoner</span></div></div>
+    <div class="ev"><div class="d">Jun – Sep 2026</div><h4>Claude 5 generation</h4><p>Fable 5, Sonnet 5, Opus 5, and Opus 5.5: models built for long-running agentic work.</p><div class="who">Anthropic</div><div class="tags"><span class="tag">closed</span><span class="tag reason">reasoner</span></div></div>
+    <div class="ev"><div class="d">Sep 2026</div><h4>GPT-6 Astra</h4><p>Staged rollout from 3 September; emphasis on computer use, software engineering, and cybersecurity.</p><div class="who">OpenAI</div><div class="tags"><span class="tag">closed</span><span class="tag reason">reasoner</span></div></div>
+  </div>
+</section>
+
+<!-- ═════════ PLAYERS + GAP ═════════ -->
+<div class="sec"><b>02</b> The players and the gap</div>
+<div class="players">
+  <div class="panel">
+    <h3>Who entered, and when</h3>
+    <div class="sub">Founding year of the lab (or of the team behind its model family)</div>
+    <div class="roster">
+      <div class="player"><span class="y">2010</span><div><b>Google DeepMind</b><span>Gemini · Gemma · merged with Brain in 2023</span></div></div>
+      <div class="player"><span class="y">2015</span><div><b>OpenAI</b><span>GPT · o-series · gpt-oss</span></div></div>
+      <div class="player"><span class="y">2021</span><div><b>Anthropic</b><span>Claude</span></div></div>
+      <div class="player"><span class="y y23">2023</span><div><b>Meta</b><span>Llama · the open one that opened the door</span></div></div>
+      <div class="player"><span class="y y23">2023</span><div><b>Mistral AI</b><span>France · Mistral, Mixtral</span></div></div>
+      <div class="player"><span class="y y23">2023</span><div><b>xAI</b><span>Grok</span></div></div>
+      <div class="player"><span class="y y23">2023</span><div><b>DeepSeek</b><span>China · V3, R1, V4</span></div></div>
+      <div class="player"><span class="y y23">2023</span><div><b>Alibaba · Qwen</b><span>China · Qwen, open since 2023</span></div></div>
+      <div class="player"><span class="y y23">2023</span><div><b>Moonshot AI</b><span>China · Kimi</span></div></div>
+    </div>
+    <p class="note"><b>2023 was the entry year:</b> six of these nine teams were born or launched their first LLM in the twelve months after ChatGPT. The frontier stopped belonging to a single lab.</p>
+  </div>
+  <div class="panel">
+    <h3>The gap closes</h3>
+    <div class="sub">Gap between the leader and its chaser · before and after</div>
+    <div class="chart-legend"><span><i style="background:var(--before)"></i>before (Jan 2024 / end 2023)</span><span><i style="background:var(--after)"></i>after (Feb 2025 / end 2024)</span></div>
+    <div class="chart-title">Chatbot Arena · leader lead (%)</div>
+    <svg id="gap-arena" width="100%" height="62"></svg>
+    <div class="chart-title">US vs China · benchmark lead (percentage points)</div>
+    <svg id="gap-country" width="100%" height="106"></svg>
+    <p class="note">Source: Stanford HAI, <em>AI Index 2025</em>. In 2026 the best open model (DeepSeek V4) sits, by its own estimate, 3–6 months from the closed frontier.</p>
+  </div>
+</div>
+
+<!-- ═════════ DIALS ═════════ -->
+<div class="sec"><b>03</b> The knobs: how a model is controlled</div>
+<div class="dials">
+  <div class="panel">
+    <h3>Temperature</h3>
+    <div class="sub">The model does not pick a word: it produces a probability distribution over the next one. Temperature flattens or sharpens it before sampling.</div>
+    <div class="prompt-line">Next word for <code>The sky is ___</code></div>
+    <div class="temp-grid" id="temp-grid"></div>
+    <div class="formula">
+      <div class="eq">p<sub>i</sub> = e<sup>z<sub>i</sub> / T</sup> &nbsp;/&nbsp; Σ<sub>j</sub> e<sup>z<sub>j</sub> / T</sup></div>
+      <p><b>z</b> are the <em>logits</em>, the raw score the model gives each candidate word. Dividing them by <b>T</b> before the <em>softmax</em> stretches the differences (T &lt; 1: the favourite almost always wins) or shrinks them (T &gt; 1: rare options gain ground). As T → 0 sampling turns <em>greedy</em>: always the likeliest word.</p>
+    </div>
+    <div class="callout"><b>Rule of thumb:</b> low temperature (0–0.3) to extract data, classify, or program; medium (0.7–1) to chat; high (&gt;1) to brainstorm, with a risk of incoherence. The model is the same: what changes is how its options are picked.</div>
+  </div>
+  <div class="panel">
+    <h3>The other knobs</h3>
+    <div class="sub">Parameters set on each API call</div>
+    <div class="knobs">
+      <div class="knob"><div class="k">top-p<small>nucleus sampling</small></div><p>Only the likeliest tokens are considered until they sum to probability <em>p</em> (e.g. 0.9). It cuts the tail of absurd options.</p></div>
+      <div class="knob"><div class="k">top-k</div><p>Only the <em>k</em> likeliest tokens enter the draw. Coarser than top-p.</p></div>
+      <div class="knob"><div class="k">max tokens</div><p>A cap on the answer length, and hence on its cost.</p></div>
+      <div class="knob"><div class="k">effort<small>reasoning effort</small></div><div><p>In reasoning models, how many “thinking” tokens it spends before answering.</p>
+        <div class="effort">
+          <div><b>low</b>fast, cheap<div class="bar" style="width:25%"></div></div>
+          <div><b>medium</b>balanced<div class="bar" style="width:55%"></div></div>
+          <div><b>high</b>precise, slow<div class="bar" style="width:100%"></div></div>
+        </div></div></div>
+      <div class="knob"><div class="k">context<small>visible tokens</small></div><div><p>How much text the model “sees” at once. It grew ~2,000×:</p>
+        <div class="ctx" id="ctx"></div></div></div>
+    </div>
+    <div class="callout"><b>The 2024–2025 shift:</b> in reasoners temperature usually arrives fixed or is ignored. The knob that matters becomes <b>effort</b>: how much it thinks, not how randomly it picks.</div>
+  </div>
+</div>
+
+<!-- ═════════ PARROT ═════════ -->
+<div class="sec"><b>04</b> The stochastic parrot: did it die?</div>
+<div class="parrot">
+  <div class="pcol thesis">
+    <h4>The thesis · 2021</h4>
+    <h3>“A stochastic parrot”</h3>
+    <blockquote>A system that stitches sequences of linguistic forms observed in its data, on probabilistic information, without any reference to meaning.</blockquote>
+    <p>Bender, Gebru, McMillan-Major, and Mitchell (FAccT 2021). Beyond the conceptual critique, the paper warned of inherited data biases, environmental cost, and the <b>illusion of understanding</b> in the reader.</p>
+    <p style="margin-top:8px">In December 2022, Sam Altman replied: <em>“i am a stochastic parrot, and so r u”</em>.</p>
+  </div>
+  <div class="pcol">
+    <h4>Blows against the parrot</h4><p class="side">Evidence against the thesis</p>
+    <div class="pitem"><div class="t">Othello-GPT <span>Li et al. · 2023</span></div><p>Trained only on move sequences, the model forms an internal board representation that can be read and edited.</p></div>
+    <div class="pitem"><div class="t">It plans before speaking <span>Anthropic · 2025</span></div><p>Interpretability shows Claude picks the word that will rhyme <em>before</em> writing the line, and chains intermediate steps on multi-hop questions.</p></div>
+    <div class="pitem"><div class="t">Olympiad mathematics <span>IMO · 2025</span></div><p>Proofs written in natural language, at gold-medal level, on unseen problems.</p></div>
+    <div class="pitem"><div class="t">Reasoners <span>2024 →</span></div><p>More thinking compute improves answers: behaviour hard to explain as mere repetition.</p></div>
+  </div>
+  <div class="pcol">
+    <h4>What is still alive</h4><p class="side">Evidence for the thesis</p>
+    <div class="pitem"><div class="t">Hallucinations</div><p>False claims in full fluency. They shrink, but do not vanish.</p></div>
+    <div class="pitem"><div class="t">The reversal curse <span>Berglund et al. · 2023</span></div><p>Learning “A is B” does not imply knowing that “B is A”.</p></div>
+    <div class="pitem"><div class="t">Unfaithful thinking <span>Anthropic · 2025</span></div><p>The visible reasoning chain does not always reflect what truly determined the answer.</p></div>
+    <div class="pitem"><div class="t">Out-of-distribution fragility <span>Apple · 2025</span></div><p><em>The Illusion of Thinking</em>: performance collapses as puzzle complexity rises. A debated result.</p></div>
+  </div>
+</div>
+<div class="verdict">
+  <div><div class="vk">Verdict</div><div class="vt">Not dead:<br>it got more precise</div></div>
+  <p>The strong version, <b>“there is nothing inside, only surface statistics”</b>, does not survive the interpretability evidence: there are internal representations and planning. The weak version, <b>“its reasoning is fragile and its explanation is not always faithful to its computation”</b>, stays open. Today the useful question is not <em>whether</em> the model understands, but <em>where</em> and <em>when</em> it can be trusted.</p>
+</div>
+
+<!-- ═════════ FOOTER ═════════ -->
+<footer class="footer">
+  <div class="sources"><b>Sources</b> · Vaswani et al. (2017) <em>Attention Is All You Need</em> · Kaplan et al. (2020) <em>Scaling Laws for Neural Language Models</em> · Bender et al. (2021) <em>On the Dangers of Stochastic Parrots</em> · Hoffmann et al. (2022) <em>Chinchilla</em> · Li et al. (2023) <em>Emergent World Representations</em> · Berglund et al. (2023) <em>The Reversal Curse</em> · DeepSeek-AI (2024–2026) V3, R1, V4 technical reports · Anthropic (2025) <em>Tracing the thoughts of a large language model</em> and <em>Reasoning models don't always say what they think</em> · Shojaee et al. (2025) <em>The Illusion of Thinking</em> · Stanford HAI (2025) <em>AI Index Report</em> · 2026 dates checked against announcements and the specialist press (Oct 2026).</div>
+  <div class="sign">UniverLab<br>October 2026</div>
+</footer>
+</div>
+
+<script>
+// Data-driven parts of the page: rendered before the PDF snapshot.
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+function el(tag, attrs, text) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function drawDumbbell(svgId, rows, maxValue) {
+  const svg = document.getElementById(svgId);
+  const width = svg.getBoundingClientRect().width;
+  const labelWidth = 118, right = 36, rowHeight = 22, top = 16;
+  const x = (v) => labelWidth + (v / maxValue) * (width - labelWidth - right);
+  const ink3 = css('--ink3'), border = css('--border');
+
+  for (let tick = 0; tick <= maxValue; tick += maxValue / 4) {
+    svg.append(el('line', { x1: x(tick), x2: x(tick), y1: top - 4, y2: top + rows.length * rowHeight - 6, stroke: border, 'stroke-width': 1 }));
+  }
+  rows.forEach((row, index) => {
+    const y = top + index * rowHeight + 6;
+    svg.append(el('text', { x: 0, y: y + 3.5, 'font-size': 10.5, fill: css('--ink2') }, row.label));
+    svg.append(el('line', { x1: x(row.after), x2: x(row.before), y1: y, y2: y, stroke: css('--border-strong'), 'stroke-width': 2 }));
+    svg.append(el('circle', { cx: x(row.before), cy: y, r: 5, fill: css('--before'), stroke: '#f4f0ea', 'stroke-width': 2 }));
+    svg.append(el('circle', { cx: x(row.after), cy: y, r: 5, fill: css('--after'), stroke: '#f4f0ea', 'stroke-width': 2 }));
+    svg.append(el('text', { x: x(row.before) + 9, y: y + 3.5, 'font-size': 9.5, fill: ink3, 'font-family': 'Sometype Mono' }, row.before.toLocaleString('en')));
+    const afterLabelX = row.after < 2 ? x(row.after) + 9 : x(row.after) - 9;
+    const anchor = row.after < 2 ? 'start' : 'end';
+    if (row.after >= 2) svg.append(el('text', { x: afterLabelX, y: y + 3.5, 'font-size': 9.5, fill: css('--ink'), 'font-family': 'Sometype Mono', 'text-anchor': anchor, 'font-weight': 500 }, row.after.toLocaleString('en')));
+    else svg.append(el('text', { x: x(row.after), y: y - 8, 'font-size': 9.5, fill: css('--ink'), 'font-family': 'Sometype Mono', 'text-anchor': 'middle', 'font-weight': 500 }, row.after.toLocaleString('en')));
+  });
+}
+
+drawDumbbell('gap-arena', [
+  { label: 'Closed vs open', before: 8.04, after: 1.7 },
+  { label: 'Top 1 vs top 10', before: 11.9, after: 5.4 },
+], 12);
+
+drawDumbbell('gap-country', [
+  { label: 'MMLU (knowledge)', before: 17.5, after: 0.3 },
+  { label: 'MMMU (multimodal)', before: 13.5, after: 8.1 },
+  { label: 'MATH', before: 24.3, after: 1.6 },
+  { label: 'HumanEval (code)', before: 31.6, after: 3.7 },
+], 32);
+
+// Temperature: softmax(logits / T) over the same five candidate words.
+const CANDIDATES = [['blue', 4.0], ['gray', 2.6], ['clear', 2.2], ['boundless', 1.2], ['green', 0.2]];
+const TEMPERATURES = [
+  { t: 0.2, caption: 'nearly deterministic' },
+  { t: 1.0, caption: 'original distribution' },
+  { t: 1.8, caption: 'more diversity, more rarity' },
+];
+
+function softmax(logits, temperature) {
+  const scaled = logits.map((logit) => logit / temperature);
+  const peak = Math.max(...scaled);
+  const exps = scaled.map((value) => Math.exp(value - peak));
+  const total = exps.reduce((a, b) => a + b, 0);
+  return exps.map((value) => value / total);
+}
+
+const tempGrid = document.getElementById('temp-grid');
+for (const { t, caption } of TEMPERATURES) {
+  const probabilities = softmax(CANDIDATES.map(([, logit]) => logit), t);
+  const cell = document.createElement('div');
+  cell.className = 'temp-cell';
+  cell.innerHTML = `<h5>T = ${t.toLocaleString('en')}</h5><div class="cap">${caption}</div>`;
+  const svg = el('svg', { width: '100%', height: CANDIDATES.length * 19 + 2 });
+  cell.append(svg);
+  tempGrid.append(cell);
+  const width = svg.getBoundingClientRect().width;
+  const labelWidth = 58, valueWidth = 30;
+  probabilities.forEach((p, index) => {
+    const y = index * 19;
+    const barWidth = Math.max(2, p * (width - labelWidth - valueWidth));
+    svg.append(el('text', { x: labelWidth - 6, y: y + 11, 'font-size': 10, 'text-anchor': 'end', fill: css('--ink2') }, CANDIDATES[index][0]));
+    svg.append(el('rect', { x: labelWidth, y: y + 3, width: barWidth, height: 11, rx: 2, fill: index === 0 ? css('--ink') : css('--border-strong') }));
+    svg.append(el('text', { x: labelWidth + barWidth + 4, y: y + 12, 'font-size': 9, fill: css('--ink3'), 'font-family': 'Sometype Mono' }, `${Math.round(p * 100)}%`));
+  });
+}
+
+// Context window growth, log-scaled heights.
+const CONTEXT = [['GPT-1', 2018, 512, '512'], ['GPT-3', 2020, 2048, '2 K'], ['GPT-4', 2023, 32768, '32 K'], ['Claude 2.1', 2023, 200000, '200 K'], ['Gemini 1.5', 2024, 1000000, '1 M']];
+const ctx = document.getElementById('ctx');
+const logMin = Math.log10(256), logMax = Math.log10(1000000);
+for (const [name, year, tokens, label] of CONTEXT) {
+  const height = 6 + ((Math.log10(tokens) - logMin) / (logMax - logMin)) * 34;
+  ctx.insertAdjacentHTML('beforeend', `<div><b>${label}</b><div class="col" style="height:${height}px"></div>${name}<br>${year}</div>`);
+}
+</script>
+</body>
+</html>

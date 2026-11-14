@@ -2,8 +2,8 @@
 capability = "ffmpeg.convert"
 
 [inputs]
-audio = "voz.flac"
-name = "voz-ogg"
+audio = "voice.flac"
+name = "voice-ogg"
 format = "ogg"
 start-s = 0.0
 end-s = 5.0

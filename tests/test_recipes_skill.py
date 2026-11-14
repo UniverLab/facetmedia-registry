@@ -5,7 +5,7 @@ what a person reads: the front matter, the four headings the core requires
 in order, one recipe per complete piece with the same chains the data file
 carries, and that every named capability resolves against the packages in
 this registry. The architectural render names ``blender.scene`` and the
-study-photo example, never a photo preset, and no references directory ships.
+study example, never a photo preset, and no references directory ships.
 """
 
 from __future__ import annotations
@@ -111,7 +111,7 @@ def test_the_architectural_render_names_the_scripted_capability() -> None:
     for old in ("blender.photo", "blender.product", "blender.tour"):
         assert old not in body, old
     assert "blender.scene" in body
-    assert "study-photo/study_photo.py" in body
+    assert "study/study.py" in body
 
 
 def test_the_skill_names_kokoro_only_as_the_video_alternative() -> None:

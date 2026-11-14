@@ -197,12 +197,12 @@ def test_the_video_recipe_carries_the_decided_handoffs(tmp_path: Path) -> None:
     assert done.returncode == 0, done.stdout + done.stderr
     plan = json.loads((out / "explainer-video.plan.json").read_text(encoding="utf-8"))
     handoffs = [step["handoff"] for step in plan["steps"]]
-    assert "voz.wav" in handoffs[0]
-    assert "voz-normalizada.wav" in handoffs[2] and "target-lufs -16.0" in handoffs[2]
+    assert "voice.wav" in handoffs[0]
+    assert "voice-normalized.wav" in handoffs[2] and "target-lufs -16.0" in handoffs[2]
     assert "true-peak-db -1.5" in handoffs[2]
     assert "ducking true" in handoffs[3] and "duck-db -12.0" in handoffs[3]
     assert "duck-db -12.0" in handoffs[3] and "target-lufs -16.0" in handoffs[3]
-    assert "guion.srt" in handoffs[5] and "guion.json" in handoffs[5]
+    assert "transcript.srt" in handoffs[5] and "transcript.json" in handoffs[5]
     assert "narrated.mp4" in handoffs[6]
     assert "composition narrated/" in handoffs[6]
 

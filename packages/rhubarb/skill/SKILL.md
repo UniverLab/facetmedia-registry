@@ -23,7 +23,7 @@ One capability, one `text` asset.
 
 ```toml
 [inputs]
-voice = "character/voz.wav"
+voice = "character/voice.wav"
 dialogue = "character/dialogue.txt"
 ```
 
@@ -37,8 +37,8 @@ rhubarb -r phonetic -f json --dialogFile <dialogue> <voice.wav> -o mouths.json
 `-r phonetic` is not optional. Rhubarb's default recognizer is English-only
 (pocketSphinx), so a **Spanish** dialog without that flag gets English mouth
 shapes that do not match the voice; the runner refuses such an argv and facet
-reports `runner_failed`. The approved reference is a fox SVG, a 10.32 s
-Spanish clip, 65 cues in its `mouths.json`.
+reports `runner_failed`. The approved reference is a fox SVG, a 1.5 s
+English clip, 10 cues in its `mouths.json`.
 
 ### The mouth map
 
@@ -62,7 +62,7 @@ Port of the lab's table, one shape per Rhubarb letter:
 every `value` is one of `XABCDEFGH`, and the cues are in time order. Metrics:
 `duration_s`, `cues`, `mouths` and `ordered`. `facet preview mouths.json` writes
 the generic `mouths.json.preview.json` with a summary such as
-`10.3 s · 65 mouth cues · 8 mouths (XABCEFGH)`. Read the cue list itself when
+`1.5 s · 10 mouth cues · 6 mouths (BCDEGX)`. Read the cue list itself when
 the mouths look wrong: a run of `A` under a vowel, or `X` while sound plays,
 means the wrong recognizer or a `dialogue` that does not match the audio.
 

@@ -94,6 +94,6 @@ slide deck — stay in `deck`.
 `facet example <capability> --run` copies the capability's example, with
 every file it names, into a fresh folder and runs it there:
 
-- `texforge.document` — `examples/hola-mundo.toml`: `facet example texforge.document --run`
+- `texforge.document` — `examples/hello-world.toml`: `facet example texforge.document --run`
 
 Needs a person-installed texforge.

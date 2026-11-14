@@ -48,11 +48,11 @@ name = "fonts"
 
 It writes `fonts.txt` (`<name> (<source>)` per font) and `fonts.png`.
 
-Image to ASCII with shape matching (`examples/lamina.toml`):
+Image to ASCII with shape matching (`examples/plate.toml`):
 
 ```toml
 [inputs]
-image = "lamina.png"
+image = "plate.png"
 width = 100
 mode = "shape"
 invert = true

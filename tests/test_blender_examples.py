@@ -23,15 +23,15 @@ MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
 
 #: Folder -> (piece TOML, script, capability) for the three examples.
 CASES = {
-    "study-photo": ("study-photo.toml", "study_photo.py", "scene"),
+    "study": ("study.toml", "study.py", "scene"),
     "product": ("product.toml", "product.py", "scene"),
     "tour": ("tour.toml", "tour.py", "animation"),
 }
 #: The models each example must ship beside its piece.
 MODELS = {
-    "study-photo": "estudio.glb",
+    "study": "study.glb",
     "product": "part.stl",
-    "tour": "../study-photo/estudio.glb",
+    "tour": "../study/study.glb",
 }
 #: The approved study photo, ported from the removed photo preset.
 APPROVED_SUN = {"azimuth": 210.0, "elevation": 32.0, "strength": 3.0}
@@ -39,7 +39,7 @@ APPROVED_CAMERA = {"azimuth": -40.0, "elevation": 48.0}
 #: The approved still's frame: the orthographic fit needs its aspect.
 APPROVED_ASPECT = 1000 / 1600
 #: The two scripts that dress the study and therefore carry glass.
-STUDY_FOLDERS = ("study-photo", "tour")
+STUDY_FOLDERS = ("study", "tour")
 #: The imports a script may carry: Blender's module and the standard library.
 ALLOWED_IMPORTS = {"bpy", "math"}
 #: The glass the study scripts must draw see-through.
@@ -150,11 +150,11 @@ def test_the_study_scripts_render_glass_see_through() -> None:
 
 def test_the_study_photo_keeps_the_approved_look() -> None:
     """The approved still's sun, sky, camera and output, ported from the preset."""
-    inputs = _piece("study-photo")
+    inputs = _piece("study")
     assert inputs["engine"] == "cycles"
     assert (inputs["width"], inputs["height"]) == (1600, 1000)
     assert inputs["exposure"] == STUDY_EXPOSURE
-    data = _data("study-photo")
+    data = _data("study")
     assert {key: data["sun"][key] for key in APPROVED_SUN} == APPROVED_SUN
     assert data["sky"]["strength"] == SKY_STRENGTH
     assert data["camera"]["azimuth"] == APPROVED_CAMERA["azimuth"]

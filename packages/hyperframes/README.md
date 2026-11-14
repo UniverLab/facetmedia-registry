@@ -92,8 +92,8 @@ same `check` first, same `--workers 2` cap, same vendored-assets rule — with a
 `hyperframes.diagram` renders a checked composition with a Mermaid SVG inserted
 into it and a GSAP timeline that draws the diagram. It runs the same
 `check`-then-`render` path as `hyperframes.render`, with these inputs on top:
-`diagram-svg` (the SVG produced by `tools/mermaid.sh`, for example `ciclo.svg`
-or `arquitectura.svg`) and `animation`, an array of `{ selector, at, kind, dur }`
+`diagram-svg` (the SVG produced by `tools/mermaid.sh`, for example `cycle.svg`
+or `architecture.svg`) and `animation`, an array of `{ selector, at, kind, dur }`
 steps where `kind` is `show`, `draw` or `fade` and `dur` defaults to `0.4`.
 
 The runner validates every `animation[].selector`
@@ -146,7 +146,7 @@ Both shapes pass `check`:
   and the `my-svg-gpu` singleton.
 - the same path draws an architecture SVG with groups, services and
   `polygon.arrow` arrowheads (see
-  `packages/mermaid/examples/arquitectura.svg`).
+  `packages/mermaid/examples/architecture.svg`).
 
 ## 3D turns
 

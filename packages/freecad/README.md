@@ -55,7 +55,7 @@ failure (`UtilAcceptVsock`). A real script failure surfaces as
 lab's output-prefix convention: the script must write its sheets as
 `<name>-01.svg`, `<name>-02.svg`, … beside it — consecutive two-digit numbers
 from 01, each sheet carrying `width` and `height` in millimetres on its
-`<svg>` tag (see `examples/plano-escuadra.py`). The runner then renders the
+`<svg>` tag (see `examples/bracket-plan.py`). The runner then renders the
 sheets with FreeCAD's bundled Qt (`QSvgRenderer` into `QPdfWriter` at
 300 dpi) and returns `<name>.pdf` plus one image asset per sheet, so the
 sheets stay beside the PDF as editable sources. `facet preview <name>.pdf`
@@ -68,13 +68,13 @@ viewer, with no new schema.
 
 ```toml
 [inputs]
-script = "plano-escuadra.py"
-part = "escuadra.step"
+script = "bracket-plan.py"
+part = "bracket.step"
 ```
 
 `script` is a FreeCAD script that opens `part`, builds the TechDraw views
 with `TechDraw.projectToSVG` and writes one SVG sheet per page;
-`examples/plano-escuadra.py` draws the `escuadra.step` bracket on one A3
+`examples/bracket-plan.py` draws the `bracket.step` bracket on one A3
 landscape sheet and is the model to copy. `part` is the STEP or FreeCAD
 document it opens. Both are resolved relative to the piece.
 
@@ -95,6 +95,6 @@ photo or a tour, use `blender`.
 `facet example <capability> --run` copies the capability's example, with
 every file it names, into a fresh folder and runs it there:
 
-- `freecad.drawing` — `examples/plano.toml`: `facet example freecad.drawing --run`
+- `freecad.drawing` — `examples/plan.toml`: `facet example freecad.drawing --run`
 
 Needs a person-installed FreeCAD and `freecadcmd`.

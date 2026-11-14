@@ -1,8 +1,0 @@
-capability = "ascii.image"
-
-[inputs]
-image = "lamina.png"
-width = 100
-mode = "shape"
-invert = true
-name = "plate-ascii"

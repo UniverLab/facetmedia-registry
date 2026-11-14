@@ -2,7 +2,7 @@ capability = "hyperframes.turntable"
 
 [inputs]
 composition = "turntable/composition"
-model-glb = "turntable/estudio.glb"
+model-glb = "turntable/study.glb"
 prompt = "Turn the study model on a slow camera orbit"
 seed = 0
 fps = 24

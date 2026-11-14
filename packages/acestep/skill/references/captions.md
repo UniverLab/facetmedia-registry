@@ -10,7 +10,7 @@ set in a piece.
 ```toml
 [inputs]
 caption = "English style caption, acoustic instruments, ending in the no-drums line"
-name = "clasica-alegre"
+name = "baroque-allegro"
 duration = 30
 ```
 
@@ -21,15 +21,15 @@ duration = 30
   randomly-named server output to `<name>.wav`.
 - `duration` — required, seconds of music, at most 30.
 
-## Approved: `clasica-alegre`
+## Approved: `baroque-allegro`
 
 Major key, joyful and lively; approved by the person as a background bed on
-2026-10-13. Ships as `examples/clasica-alegre.toml` and `.wav`.
+2026-10-13. Ships as `examples/baroque-allegro.toml` and `.wav`.
 
 ```toml
 [inputs]
 caption = "Lively, joyful Baroque chamber orchestra piece in the style of a Vivaldi allegro. Bright strings playing fast staccato and spiccato runs, harpsichord continuo, playful solo violin and flute melodies. Energetic, festive and elegant. Acoustic instruments only. No drums, no percussion, no bass beat, no synthesizers, no electronic sounds."
-name = "clasica-alegre"
+name = "baroque-allegro"
 duration = 30
 ```
 
@@ -37,15 +37,15 @@ The lab's piece also carried `bpm = 132`, `keyscale = "G major"`,
 `timesignature = "4"`, `seed = 22` and `config_path = "acestep-v15-turbo"`.
 Those are not `acestep.bed` inputs; the caption is what reproduces the style.
 
-## Approved: `clasica-melancolica`
+## Approved: `romantic-nocturne`
 
 Minor key, melancholic; approved by the person as a background bed on
-2026-10-13. Ships as `examples/clasica-melancolica.toml` and `.wav`.
+2026-10-13. Ships as `examples/romantic-nocturne.toml` and `.wav`.
 
 ```toml
 [inputs]
 caption = "Melancholic classical piece for solo piano and string quartet, Romantic era style. Slow tempo, expressive legato violin melody over gentle piano arpeggios and sustained cello notes. Intimate, sorrowful, reflective. Acoustic instruments only. No drums, no percussion, no bass beat, no synthesizers, no electronic sounds."
-name = "clasica-melancolica"
+name = "romantic-nocturne"
 duration = 30
 ```
 

@@ -1,0 +1,6 @@
+capability = "texforge.document"
+
+[inputs]
+main = "hello-world.tex"
+name = "hello-world"
+author = "Ada Lovelace"

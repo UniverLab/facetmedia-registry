@@ -40,7 +40,7 @@ One entry per image, each with its own seed and size:
 ```toml
 [inputs]
 image = [
-  { name = "fondo-video", prompt = "Misty pine forest at dawn, soft volumetric light through the trees, muted teal and amber palette, large empty area of fog on the left", seed = 11 },
+  { name = "video-still", prompt = "Misty pine forest at dawn, soft volumetric light through the trees, muted teal and amber palette, large empty area of fog on the left", seed = 11 },
 ]
 ```
 
@@ -142,7 +142,7 @@ a piece of an assembly. The runner names every draft output
 `<name>-borrador.mp4` and its record carries `properties.draft = true`, so
 no draft passes for a final. Wan2.2-TI2V-5B-Turbo was rejected (no declared
 licence) and LTX-2 was rejected (own licence, quantized-only at 8 GB); the
-lab's approved draft sample is `examples/bosque-niebla-rapido.mp4`.
+lab's approved draft sample is `examples/pine-fog-fast.mp4`.
 
 ## Animating an engraved plate
 
@@ -165,7 +165,7 @@ workflow = "wan22-i2v"
 
 [[inputs.image]]
 name = "texforge-anim-c"
-image = "texforge-lamina.png"
+image = "texforge-plate.png"
 prompt = "The large spoked flywheel of the antique printing press spins clockwise continuously, making several full turns, its spokes clearly rotating; the foot treadle pumps up and down again and again; the round ink disc on top keeps turning. Constant steady mechanical motion through the whole clip. The image stays a 19th-century copperplate engraving: fine black ink hatching on flat cream paper, identical drawing style in every frame. Static camera, nothing else changes."
 negative = "static, still image, frozen, motionless, no movement, 3D render, CGI, photorealistic, metallic reflections, glossy metal, smooth shading, gradients, color change, oversaturated, camera movement, zoom, blur, text, subtitles, paper sheet, new objects, deformed machine, melting, morphing"
 seed = 11
@@ -187,10 +187,10 @@ A clip is a `video` kind: each entry writes `<name>.mp4`, and `verify` probes
 it with FFmpeg and passes when its resolution, 24 fps and frame count (`49`
 by default, about 2 s) equal the entry. In its preview, `length` is the frame
 count and `fps` the rate. The lab's verdict on the three approved clips:
-`bosque-niebla.mp4` (fog drifting between pine trees) and `taza-vapor.mp4`
+`pine-fog.mp4` (fog drifting between pine trees) and `cup-steam.mp4`
 (steam rising from a ceramic cup, static camera) are the reliable pair —
-something visible inside the frame moves — while `calle-acuarela.mp4`'s slow
-pan barely registered. All are in `examples/`, with `comparacion.jpg` for
+something visible inside the frame moves — while `street-watercolor.mp4`'s slow
+pan barely registered. All are in `examples/`, with `comparison.jpg` for
 the two still models and `README-img2img.md` for the edit.
 
 ## Licences

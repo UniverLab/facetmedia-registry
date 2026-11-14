@@ -27,7 +27,7 @@ asset, `<plate-stem>-paper.png` (RGB).
 
 ```toml
 [inputs]
-photo = "entrada.png"
+photo = "photo.png"
 ```
 
 `photo` is the photo, resolved relative to the piece file. `run` writes
@@ -56,11 +56,11 @@ seed 0 — the cutout is deterministic given the weights, so the seed only
 labels the record. A person judges the edges on the checkerboard asset: a halo,
 a eaten edge or a leftover background patch is caught by eye.
 
-A 1344×768 test photo (`entrada.png`, not shipped) cut out in 1.48 s on CPU with rembg
+A 1344×768 test photo (`photo.png`, not shipped) cut out in 1.48 s on CPU with rembg
 2.0.67's U2NetP and left 66.59 % of pixels transparent; the checkerboard view
 kept the figure, the book and the lamp. The package ships that lab run:
-`examples/remover.py` (the script), `examples/medicion.json` (its record),
-`examples/vista-checkerboard.png` (the checkerboard) and `examples/README.md`.
+`examples/remove.py` (the script), `examples/measurement.json` (its record),
+`examples/plate-checkerboard.png` (the checkerboard) and `examples/README.md`.
 
 ## Pitfalls
 

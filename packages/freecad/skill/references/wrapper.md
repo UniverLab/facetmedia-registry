@@ -46,7 +46,7 @@ script's `if __name__ == "__main__":` block is true here.
 
 The script's argv is `<script> <out_dir>/<name> <part>`: the script itself, the
 output prefix, and the part file. `<name>` is the sanitized stem of the script,
-so `plano-escuadra.py` names the output `plano-escuadra`. The script writes
+so `bracket-plan.py` names the output `bracket-plan`. The script writes
 one SVG sheet per page at that prefix — `<name>-01.svg`, `<name>-02.svg`, …
 with consecutive two-digit numbers from 01, each sheet carrying `width` and
 `height` in millimetres on its `<svg>` tag — and the runner renders them into

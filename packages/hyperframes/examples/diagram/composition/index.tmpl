@@ -1,26 +1,28 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
     <script src="./vendor/gsap.min.js"></script>
     <style>
+      @font-face { font-family: 'Old Standard TT'; src: url('./assets/fonts/OldStandard-Regular.ttf'); font-weight: 400; }
+      @font-face { font-family: 'EB Garamond'; src: url('./assets/fonts/EBGaramond[wght].ttf'); }
       /* The system Ubuntu, the same font mermaid-cli measured the labels with:
          another build of it overflows the boxes by about 2px and check fails. */
       @font-face { font-family: 'Ubuntu'; src: local('Ubuntu'); }
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #ffffff; }
-      #root { position: relative; width: 100%; height: 100%; font-family: 'Ubuntu', sans-serif; color: #1d1d1f; }
-      #title { position: absolute; top: 70px; left: 120px; font-size: 64px; font-weight: 500; letter-spacing: -0.02em; }
-      #subtitle { position: absolute; top: 160px; left: 122px; font-size: 30px; color: #5f5e58; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #222928; }
+      #root { position: relative; width: 100%; height: 100%; font-family: 'EB Garamond', serif; color: #ecebe4; }
+      #title { position: absolute; top: 70px; left: 120px; font-size: 64px; font-weight: 400; font-family: 'Old Standard TT', serif; letter-spacing: -0.02em; }
+      #subtitle { position: absolute; top: 160px; left: 122px; font-size: 30px; color: #b9bdb5; }
       #diagram { position: absolute; left: 120px; right: 120px; top: 250px; bottom: 60px; display: flex; align-items: center; justify-content: center; }
       #diagram svg { width: 100%; height: 100%; max-width: none !important; }
     </style>
   </head>
   <body>
     <div id="root" data-composition-id="main" data-start="0" data-duration="4" data-width="1920" data-height="1080" data-fps="24">
-      <h1 id="title" class="clip" data-start="0" data-duration="4" data-track-index="0">Cómo se hace una pieza</h1>
-      <p id="subtitle" class="clip" data-start="0" data-duration="4" data-track-index="1">Un diagrama de flujo de Mermaid, dibujado paso a paso</p>
+      <h1 id="title" class="clip" data-start="0" data-duration="4" data-track-index="0">How a piece is made</h1>
+      <p id="subtitle" class="clip" data-start="0" data-duration="4" data-track-index="1">A Mermaid flow diagram, drawn step by step</p>
       <div id="diagram" class="clip" data-start="0" data-duration="4" data-track-index="2"><!-- DIAGRAM --></div>
     </div>
     <!-- The runner appends the paused diagram timeline here after validating

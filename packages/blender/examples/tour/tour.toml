@@ -2,7 +2,7 @@ capability = "blender.animation"
 
 [inputs]
 script = "tour.py"
-name = "estudio-recorrido"
+name = "study-tour"
 width = 1280
 height = 720
 engine = "eevee"

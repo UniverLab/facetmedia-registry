@@ -1,9 +1,9 @@
-# Img2img con FLUX.2 klein
+# Img2img with FLUX.2 klein
 
 ```bash
 facet run comfy.edit packages/comfy/examples/img2img.toml
 ```
 
-El flujo `tools/comfy/flux2-klein-img2img.json` sube una image de referencia y usa `ReferenceLatent` para guiar una edición por instrucciones. La prueba produjo `iteracion-grabado.png` desde `flux2-klein-4b/ilustracion-editorial.png` en 22,7 s a 1344 × 768. Conserva personaje y encuadre y cambia la image a un grabado azul/crema. El grano y las líneas son ásperos, acordes al estilo pedido.
+The `tools/comfy/flux2-klein-img2img.json` flow uploads one reference image and uses `ReferenceLatent` to guide an instruction edit. The test produced `print-iteration.png` from `flux2-klein-4b/editorial-illustration.png` in 22.7 s at 1344 × 768. It keeps the character and framing and turns the image into an indigo-and-cream engraving. The grain and lines are rough, as the style asks.
 
-Este flujo sirve para iterar mediante instrucciones; no ofrece el control clásico de fuerza de denoise. Si se necesita controlar cuánto se conserva en una transformación gradual, hay que sumar un flujo latent img2img con denoise ajustable y compararlo por separado.
+This flow serves to iterate by instruction; it offers no classic denoise strength. To control how much is kept in a gradual transformation, add a latent img2img flow with adjustable denoise and compare it separately.

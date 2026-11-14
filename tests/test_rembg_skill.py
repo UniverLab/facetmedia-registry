@@ -20,7 +20,7 @@ HEADINGS = ("## When to use", "## Pieces", "## Judging the result", "## Pitfalls
 DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
 #: The lab pieces that ship, each cited in the skill body.
-EXAMPLE_FILES = ("remover.py", "medicion.json", "vista-checkerboard.png", "README.md")
+EXAMPLE_FILES = ("remove.py", "measurement.json", "plate-checkerboard.png", "README.md")
 #: The lab run recorded in ``medicion.json``; the skill states the same numbers.
 LAB_SIZE = [1344, 768]
 LAB_SECONDS = 1.48
@@ -90,8 +90,8 @@ def test_the_approved_examples_ship_and_are_non_empty() -> None:
 
 def test_the_example_record_carries_the_ported_measurements() -> None:
     """The skill's numbers match the record byte-for-byte, not a summary."""
-    record = json.loads((EXAMPLES / "medicion.json").read_text(encoding="utf-8"))
+    record = json.loads((EXAMPLES / "measurement.json").read_text(encoding="utf-8"))
     assert record["size"] == LAB_SIZE
     assert record["elapsed_seconds"] == LAB_SECONDS
     assert record["transparent_pixels_percent"] == LAB_TRANSPARENT
-    assert record["preview"] == "vista-checkerboard.png"
+    assert record["preview"] == "plate-checkerboard.png"

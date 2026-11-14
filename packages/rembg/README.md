@@ -16,7 +16,7 @@ arrives through `facet pull rembg` and is checked by sha256 in `doctor`.
 
 `run` writes two assets into the output directory: `<photo-stem>.png`,
 the RGBA cutout, and `<photo-stem>-checkerboard.png`, the cutout pasted over a
-white-and-grey checkerboard (32 px tiles, the lab's `vista-checkerboard.png`
+white-and-grey checkerboard (32 px tiles, the lab's `plate-checkerboard.png`
 recipe). Both records carry the photo's stem as their name, seed 0 — the
 cutout is deterministic given the weights, so the seed only labels the
 record — and `properties` with the measured `width`/`height` (the
@@ -69,9 +69,9 @@ Every failing check names `facet pull rembg` as its fix.
 
 ## Lab measurements
 
-Measured with `examples/remover.py`
+Measured with `examples/remove.py`
 (`new_session("u2netp", providers=["CPUExecutionProvider"])`): on the
-a 1344×768 test photo (`entrada.png`, not shipped) rembg 2.0.67's U2NetP cutout took 1.48 s on
+a 1344×768 test photo (`photo.png`, not shipped) rembg 2.0.67's U2NetP cutout took 1.48 s on
 CPU, 66.59 % of pixels transparent, and the checkerboard view kept the figure,
 the book and the lamp — the three subjects the photo was shot for. The
 package pins rembg 2.0.86, the newest release the dependency audit

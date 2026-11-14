@@ -45,7 +45,7 @@ One entry per image, each with its own seed and size:
 ```toml
 [inputs]
 image = [
-  { name = "fondo-video", prompt = "Misty pine forest at dawn, soft volumetric light through the trees, muted teal and amber palette, large empty area of fog on the left", seed = 11 },
+  { name = "video-still", prompt = "Misty pine forest at dawn, soft volumetric light through the trees, muted teal and amber palette, large empty area of fog on the left", seed = 11 },
 ]
 ```
 

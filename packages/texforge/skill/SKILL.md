@@ -39,7 +39,7 @@ name, author = author, template = "general"`, `[build] entry` = the main
 file's name, plus `bibliography` when a `.bib` sits beside the piece). It
 never runs the interactive `texforge init`. The real keys and the exact
 invocations are in [references/build.md](references/build.md). A runnable
-piece is `examples/hola-mundo.toml`, with `hola-mundo.tex` beside it. Mermaid,
+piece is `examples/hello-world.toml`, with `hello-world.tex` beside it. Mermaid,
 D2 and Graphviz blocks in the source render inside the document, in pure Rust,
 with no browser or external diagram binary.
 

@@ -24,23 +24,23 @@ DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
 #: The approved pieces that ship, each as a ``.toml`` and a ``.wav``.
 APPROVED = (
-    "cafe-ambiente",
-    "campana-notificacion",
-    "clic-interfaz",
-    "lluvia-ventana",
-    "pagina-libro",
-    "pasos-madera",
-    "whoosh-transicion",
+    "coffee-morning",
+    "bell-alert",
+    "ui-click",
+    "rain-window",
+    "page-turn",
+    "wood-steps",
+    "whoosh-sweep",
 )
 #: The lab's ``seconds`` per piece; pagina-libro omits it and took the default 3.
 SEGUNDOS = {
-    "cafe-ambiente": 12,
-    "campana-notificacion": 2,
-    "clic-interfaz": 1,
-    "lluvia-ventana": 12,
-    "pagina-libro": 3,
-    "pasos-madera": 6,
-    "whoosh-transicion": 2,
+    "coffee-morning": 12,
+    "bell-alert": 2,
+    "ui-click": 1,
+    "rain-window": 12,
+    "page-turn": 3,
+    "wood-steps": 6,
+    "whoosh-sweep": 2,
 }
 #: A reference the skill cites, as ``references/<name>.md``.
 REFERENCE_RE = re.compile(r"references/([a-z0-9][a-z0-9-]*)\.md")
