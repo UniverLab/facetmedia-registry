@@ -42,14 +42,60 @@ bed. `seed` defaults to 0 and is always sent with `use_random_seed = false`;
 `steps` defaults to 8 and `guidance` to 7.0. `bpm` (30 to 300), `key` (sent
 as `key_scale`, for example `C major`) and `time-signature` (one of `2/4`,
 `3/4`, `4/4`, `6/8`; sent as `time_signature` as its beats-per-bar number) are
-unset by default, and an unset one sends nothing so the server keeps its own
-default.
+unset by default, and an unset one sends nothing: the server decides, keeping
+its own default or reading a value out of the caption.
 
 Both approved pieces ship as examples, each with its WAV:
 `examples/baroque-allegro.toml` (major, Vivaldi-style allegro) and
 `examples/romantic-nocturne.toml` (minor, solo piano and string quartet).
 Their captions, and the piece shape above, are in
 [references/captions.md](references/captions.md).
+
+## Writing the caption
+
+The caption is a tag list, not a sentence: lead with the genre, then the
+instruments, then the mood, then the tempo, 3 to 7 comma-separated units in
+that order. Front-load the words that carry the control, keep to one or two
+genres plus one mood, and turn exclusions into negatives at the end where
+the no-drums line already sits (`no guitars`, `no harsh distortion`). Never
+write a `no vocals` tag: `vocal` and `voice` are refused words, and the
+`[Instrumental]` lyric the runner always sends is what keeps the bed
+instrumental. The approved captions below read longer than seven tags, but
+their units are still genre, instruments, mood and exclusions; adding
+adjectives inside a unit is fine, inventing a second genre is not.
+
+Name the tempo in the caption text as well as in `bpm` (`slow tempo`,
+`95 BPM`): the caption's tempo words and the numeric field both steer the
+beat, and a bed that states its tempo twice lands closer to the intent.
+Never pair tags that contradict each other — `ambient, metal`, `lofi,
+orchestral` — because the model splits the difference and lands on
+neither. For a fusion, name one primary genre and one secondary influence
+(`jazz, light bossa nova`) and stop there; more words never repair a
+caption that fights itself.
+
+The runner sends `thinking = false`, which stops the 5 Hz language model
+writing the audio codes; it does not switch the caption pass off. The
+server's CoT caption step runs by default and may rewrite or enhance the
+caption, and a missing `bpm`, `key` or `time-signature` is a gap that same
+model can fill from the caption. Write the caption as the final text you
+want, and set `bpm` and `key` whenever the piece has a known tempo or key: a
+value the piece sets always wins, and an omitted one may not stay omitted.
+
+The pinned checkpoint is the turbo one, so `steps` is 8 by default and 8 is
+the recommended count. `guidance` has no effect on the turbo checkpoint and
+is kept only for the other checkpoints: raising it on this package changes
+nothing. The 32-64 step range and a guidance value that matters belong to
+the base and SFT checkpoints, which `acestep.bed` does not pin.
+
+Seeds are how a caption is iterated: keep one approved `seed` fixed while
+the caption changes, so each edit is the only moving part; pin the seed of
+the take you approve, so the bed can be regenerated; and step the seed only
+to explore alternatives. The two approved pieces in `references/` record the
+seeds the lab rendered them at.
+
+Divergence: public ACE-Step guides tune songs of up to ten minutes on the
+base checkpoint; facet caps a piece at 30 s and pins the turbo checkpoint,
+because a bed only has to sit under a narration line.
 
 ## Judging the result
 
@@ -88,3 +134,6 @@ bed with `ducking = true`, `duck-db = -12.0` and `target-lufs = -16.0`, as in
   under 120 Hz and ~60 % of the energy there; the caption decides the style.
 - Measure loudness and peak, but judge timbre by ear: a bed can sit at the
   right level and still be the wrong instrument.
+
+The guidance above draws on public sources listed in
+[references/sources.md](references/sources.md).

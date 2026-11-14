@@ -48,6 +48,36 @@ rougher — the ~40 s per effect is the 100-step figure; `guidance` (0 to
 the effect reproducible, the same seed giving the same effect. The asset
 records the values used in `params` and the seed in `seed`.
 
+## Writing the description
+
+Describe one scene, not a label: name the material, the action and the
+setting together (`rain drumming on a tin roof`, `a van braking on wet
+asphalt`, `keys turning in a stiff lock`). A bare noun — `whoosh`,
+`click` — gives the model nothing to build from, and a described physical
+source (a bell struck, a button pressed, a door pulled shut) lands closer to
+the intent than the abstract label for the sound.
+
+Five families cover the work: natural (rain, wind, fire, water), urban
+(streets, engines, doors, appliances), animals and creatures, human actions
+(footsteps, typing, page turns), and short musical or percussive clips. The
+last is the weakest: a chime or a click carries little material for the
+model to render, so name the thing that makes the sound and expect to try
+more than one seed.
+
+One scene per effect and one language per description: English and Chinese
+both work, never mixed in the same text. Divergence: the model is
+bilingual, but every facet piece is written, checked and documented in
+English, so write English and keep a Chinese description for a manual
+experiment outside the registry.
+
+Never write the duration into the description: the pipeline prepends the
+duration tag the model was trained on, and a competing number in the prose
+promises a length the trim then cuts.
+
+Cost per effect is flat — about 40 s at 100 `steps` whatever the length —
+so draft at a low `steps` (30 to 50 is enough to hear whether the scene is
+right) and render the final at 100.
+
 ## Judging the result
 
 `verify` measures the WAV's integrated loudness and passes while it sits
@@ -76,8 +106,20 @@ shape, are in
 
 ## Pitfalls
 
-- Descriptions are in English; the pipeline appends `duration: <s>s`
-  itself, so do not write the duration into the text.
+- Descriptions stay in English and never state the duration: the pipeline
+  appends `duration: <s>s` itself.
 - `seconds` above 30 is refused: the model generates at most 30 s.
+- The first effect after `facet pull moss` takes minutes, not seconds: the
+  ~11 GB model has to load and the card warms up. The runner sets
+  `TORCHDYNAMO_DISABLE=1` before it imports the pipeline, which keeps
+  `torch.compile` and its Triton CUDA graphs out of the path; on a manual
+  `MOSS_DIR` run a Triton or compile error is fixed with that same variable,
+  not by reinstalling the model.
+- The official pipeline also applies `sigma_shift = 5.0`. `moss.sfx` does
+  not expose it and always runs at that value, so tune rougher versus
+  cleaner with `steps` and `guidance`, not with a knob that is not there.
 - If MOSS stops convincing, the fallback is a CC0 sound-effects library;
   Stable Audio Open stays out (licence plus acceptance).
+
+The guidance above draws on public sources listed in
+[references/sources.md](references/sources.md).

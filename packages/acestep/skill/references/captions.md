@@ -21,6 +21,39 @@ duration = 30
   randomly-named server output to `<name>.wav`.
 - `duration` — required, seconds of music, at most 30.
 
+## Caption anatomy
+
+Four units, in this order, 3 to 7 comma-separated tags in total, then the
+exclusions:
+
+1. **genre** — one, at most two (`Baroque chamber orchestra`, `solo piano
+   and string quartet`);
+2. **instruments** — what is playing and how (`harpsichord continuo`,
+   `bright strings playing fast staccato runs`);
+3. **mood** — one mood, in two or three adjectives (`energetic, festive and
+   elegant`);
+4. **tempo** — stated in words (`allegro`, `slow tempo`, `95 BPM`) and, when
+   the piece sets it, repeated in `bpm`.
+
+The exclusions come last and as negatives: `Acoustic instruments only. No
+drums, no percussion, no bass beat, no synthesizers, no electronic sounds.`
+A voice word is not an exclusion here: `no vocals` is refused, and the
+`[Instrumental]` lyric the runner sends is what keeps the bed instrumental.
+
+- **Never contradict a tag.** `ambient, metal` or `lofi, orchestral` pulls
+  the model in two directions and it lands on neither; pick one. A fusion
+  is one primary genre plus one secondary influence (`jazz, light bossa
+  nova`), never two equals and never a list.
+- **Put the tempo in the text, not only in `bpm`.** The caption's tempo
+  words steer the beat; the numeric field alone leaves the model free to
+  read the mood as faster or slower than intended.
+- **Make the words and the numbers agree.** `bpm = 66` under a caption that
+  says `fast and driving` fights itself; a table of tags that disagree with
+  the fields is worse than a sparse caption.
+- **Front-load the control words.** Genre, instruments and mood in the
+  first lines; exclusions at the end. A caption that opens with a story and
+  names the instruments last buries its own controls.
+
 ## Approved: `baroque-allegro`
 
 Major key, joyful and lively; approved by the person as a background bed on

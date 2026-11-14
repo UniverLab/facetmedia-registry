@@ -74,6 +74,44 @@ bitrate-kbps = 128
 Run any of them with `facet run ffmpeg.mix <piece.toml> --out build/`; the
 asset lands as `<name>.wav` (or `<name>.<ext>` for convert) with its record.
 
+## Before you normalise
+
+Normalise in two passes, never one: the first measures the clip through the
+same compressor the second applies, the second applies the gain in linear
+mode. A single pass pumps and drifts, and the destination level is only
+right on average.
+
+Normalised is not unclipped. Raising quiet material raises its peaks with
+it, so read the true peak **after** the gain change: `verify` re-meters
+every asset and fails a `normalize` whose peak goes over `true-peak-db` +
+0.1 dB. A clip that cannot reach the target without crossing the ceiling
+wants a lower `target-lufs`, not a higher `true-peak-db`: a pass that
+clipped is never shipped.
+
+Never raise deep ambience to a speech target. A bed sitting around -40 LUFS
+or quieter is doing its job, and pushing it to -16 turns wind into a hiss
+laid over the voice. Normalise the voice, mix the bed under it, and let the
+mix's loudness be the loudness that matters.
+
+Loudness is the last step of a chain and it comes **before** any lossy
+encode: colour, cut, join and silence the clip first, normalise it second,
+encode mp3 or ogg last. A lossy re-encode moves loudness slightly, so
+normalising after it measures the wrong thing.
+
+Pick the target by destination: about -14 LUFS for streaming platforms,
+-16 for web and podcasts, -23 for EBU broadcast, -24 for Japanese broadcast.
+The runner pins the loudness range at 11 LU in both passes and exposes no
+input for it: no piece can widen or narrow that band.
+
+A mix already ends in a limiter set to -1 dBFS, and `verify` wants the peak
+at or below -0.9 dBFS. When a mix lands over the ceiling, the fix is the
+bed, not the limiter: lower that layer's `gain-db` or deepen `duck-db` and
+re-run.
+
+Divergence: facet's default target is -16 LUFS rather than the streaming
+-14, because the clip here is a voice under narration with a bed beneath
+it, not a song in a player.
+
 ## Judging the result
 
 `verify` re-measures every asset by decoding it with the bundled binary and
@@ -109,3 +147,6 @@ and re-run; if the bed vanishes, raise them.
   pull (`facet pull ffmpeg`) is the fix for a broken binary.
 - The bundled binary runs as a separate process with its own licence (see
   the package README); it never touches a system ffmpeg.
+
+The guidance above draws on public sources listed in
+[references/sources.md](references/sources.md).
