@@ -1,5 +1,5 @@
 name = "acestep"
-version = "0.1.3"
+version = "0.1.4"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "ace-step (ACE-Step 1.5)"
@@ -112,9 +112,10 @@ required = false
 description = "Musical key, for example \"C major\"; omitting it keeps the server default."
 
 [capabilities.bed.inputs.time-signature]
-type = "string"
+type = "enum"
+values = ["2/4", "3/4", "4/4", "6/8"]
 required = false
-description = "Metre, for example \"4/4\"; omitting it keeps the server default."
+description = "Metre (2/4, 3/4, 4/4 or 6/8); omitting it keeps the server default."
 
 [capabilities.bed.verify]
 thresholds = { duration_tolerance_s = 1.0, peak_dbfs_min = -40.0 }

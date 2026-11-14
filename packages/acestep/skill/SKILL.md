@@ -40,9 +40,10 @@ duration = 30
 A bed is reproducible from its `seed`: the same seed regenerates the same
 bed. `seed` defaults to 0 and is always sent with `use_random_seed = false`;
 `steps` defaults to 8 and `guidance` to 7.0. `bpm` (30 to 300), `key` (sent
-as `key_scale`, for example `C major`) and `time-signature` (sent as
-`time_signature`, for example `4/4`) are unset by default, and an unset one
-sends nothing so the server keeps its own default.
+as `key_scale`, for example `C major`) and `time-signature` (one of `2/4`,
+`3/4`, `4/4`, `6/8`; sent as `time_signature` as its beats-per-bar number) are
+unset by default, and an unset one sends nothing so the server keeps its own
+default.
 
 Both approved pieces ship as examples, each with its WAV:
 `examples/baroque-allegro.toml` (major, Vivaldi-style allegro) and

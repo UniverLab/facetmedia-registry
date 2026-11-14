@@ -56,6 +56,8 @@ DURATION_TOLERANCE_S = 1.0
 DEFAULT_SEED = 0
 DEFAULT_STEPS = 8
 DEFAULT_GUIDANCE = 7.0
+#: Beats per bar the pinned server accepts, keyed by the metre a piece writes.
+TIME_SIGNATURE_BEATS = {"2/4": "2", "3/4": "3", "4/4": "4", "6/8": "6"}
 #: The caption words that ask for sung music; the lab discards it forever.
 VOICE_WORDS = re.compile(
     r"\b(voice|vocal|vocalist|sing|singer|singing|sung|choir|lyrics|rap|chant|speech)\b",
@@ -176,7 +178,7 @@ def _submit(caption: str, duration: float, sent: dict[str, Any]) -> str:
     if "key" in sent:
         body["key_scale"] = sent["key"]
     if "time-signature" in sent:
-        body["time_signature"] = sent["time-signature"]
+        body["time_signature"] = TIME_SIGNATURE_BEATS[sent["time-signature"]]
     data = _data(_post("/release_task", body))
     task_id = data.get("task_id") if isinstance(data, dict) else None
     if not isinstance(task_id, str) or not task_id:

@@ -607,7 +607,7 @@ def test_the_cycle_sends_every_set_input(tmp_path: Path) -> None:
     assert body["use_random_seed"] is False
     assert body["bpm"] == FULL_BPM
     assert body["key_scale"] == FULL_KEY
-    assert body["time_signature"] == FULL_TIME_SIGNATURE
+    assert body["time_signature"] == "4"
     assert body["inference_steps"] == FULL_STEPS
     assert body["guidance_scale"] == FULL_GUIDANCE
 

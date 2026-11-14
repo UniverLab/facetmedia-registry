@@ -130,7 +130,8 @@ def test_the_bed_inputs_are_caption_name_and_duration() -> None:
     assert INPUTS["key"]["type"] == "string"
     assert INPUTS["key"]["required"] is False
     assert "default" not in INPUTS["key"]
-    assert INPUTS["time-signature"]["type"] == "string"
+    assert INPUTS["time-signature"]["type"] == "enum"
+    assert INPUTS["time-signature"]["values"] == ["2/4", "3/4", "4/4", "6/8"]
     assert INPUTS["time-signature"]["required"] is False
     assert "default" not in INPUTS["time-signature"]
 

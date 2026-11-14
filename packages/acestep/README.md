@@ -42,7 +42,7 @@ and never comes out of this refusal.
 | `guidance` | number | no (default 7.0) | guidance scale, sent as `guidance_scale` |
 | `bpm` | integer | no | tempo, 30 to 300; unset sends nothing |
 | `key` | string | no | musical key such as `C major`, sent as `key_scale`; unset sends nothing |
-| `time-signature` | string | no | metre such as `4/4`, sent as `time_signature`; unset sends nothing |
+| `time-signature` | enum | no | metre, one of `2/4`, `3/4`, `4/4`, `6/8`, sent as its beats-per-bar number as `time_signature`; unset sends nothing |
 
 ## Timings and verification
 
