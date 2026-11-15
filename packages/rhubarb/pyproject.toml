@@ -1,0 +1,11 @@
+[project]
+name = "facet-rhubarb"
+version = "0.1.1"
+description = "Mouth cues for a drawn character from a voice clip and its text, with Rhubarb Lip Sync 1.14.0."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[tool.uv]
+package = false

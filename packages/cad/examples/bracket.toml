@@ -1,0 +1,6 @@
+capability = "cad.solid"
+
+[inputs]
+script = "bracket.py"
+name = "bracket"
+expect-volume-mm3 = 20805

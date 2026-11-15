@@ -1,0 +1,601 @@
+/* Shared design tokens and layout for every facet viewer.
+
+   facet's night surface, from the brand manual (brand/facet v0.4, 2026-11-13):
+   a terminal in a night gallery. One ground, one text colour, one accent for
+   what is verified, the lab's three faces, and the fine grain. There is no
+   light variant: every viewer wears the night. The seven colours below are the
+   only ones any viewer's CSS or JS may use. `--slide-black` is reserved for
+   the letterbox behind a slide deck or a clip: the slides and video viewers
+   only, and nowhere else. */
+
+:root {
+  --fondo: #161616;
+  --hueso: #e7ded1;
+  --hueso-tenue: #9a938a;
+  --senal: #e8c547;
+  --regla: rgba(231, 222, 209, 0.16);
+  --panel: rgba(231, 222, 209, 0.04);
+  --slide-black: #000;
+  --font-title: "Old Standard TT", Georgia, "Times New Roman", serif;
+  --font-text: "EB Garamond", Georgia, "Times New Roman", serif;
+  --font-mono: "Sometype Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* The three faces are vendored (google/fonts, OFL) under /kit/fonts/. Every
+   url() is quoted: a variable face's file name carries [wght], and an unquoted
+   CSS url token cannot hold brackets. */
+
+@font-face {
+  font-family: "Old Standard TT";
+  src: url("/kit/fonts/oldstandardtt/OldStandard-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Old Standard TT";
+  src: url("/kit/fonts/oldstandardtt/OldStandard-Italic.ttf") format("truetype");
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "EB Garamond";
+  src: url("/kit/fonts/ebgaramond/EBGaramond[wght].ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "EB Garamond";
+  src: url("/kit/fonts/ebgaramond/EBGaramond-Italic[wght].ttf") format("truetype");
+  font-style: italic;
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sometype Mono";
+  src: url("/kit/fonts/sometypemono/SometypeMono[wght].ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--hueso);
+  font-family: var(--font-text);
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+/* The grain sits behind the content and never over the text. */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 3rem;
+}
+
+h1,
+h2,
+summary {
+  font-family: var(--font-title);
+  font-weight: 400;
+}
+
+h1 {
+  font-size: 1.35rem;
+  margin: 0.25rem 0;
+}
+
+h2 {
+  font-size: 1.05rem;
+  margin: 1.75rem 0 0.5rem;
+  border-bottom: 1px solid var(--regla);
+  padding-bottom: 0.25rem;
+}
+
+/* A link is a line under Hueso, never the accent: Señal marks what passed. */
+a {
+  color: var(--hueso);
+  text-decoration-color: var(--hueso-tenue);
+  text-underline-offset: 0.18em;
+}
+
+/* Every label, metric, file name, capability id, number and date. */
+.num,
+td.num,
+th.num,
+.mono,
+th,
+dd,
+dt {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--hueso-tenue);
+}
+
+/* ---- header ---- */
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.head h1.mark {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--hueso-tenue);
+  overflow-wrap: anywhere;
+}
+
+.head .brand {
+  color: var(--hueso);
+}
+
+/* The verdict is the only place Señal appears in the header. */
+.verdict {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.verdict.passed {
+  color: var(--senal);
+}
+
+.verdict.failed,
+.verdict.skipped {
+  color: var(--hueso-tenue);
+}
+
+hr.rule {
+  border: 0;
+  border-top: 1px solid var(--regla);
+  margin: 0.45rem 0 0.9rem;
+}
+
+/* ---- status pill ---- */
+
+.pill {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  padding: 0;
+}
+
+.pill.passed {
+  color: var(--senal);
+}
+
+.pill.failed,
+.pill.skipped {
+  color: var(--hueso-tenue);
+}
+
+/* The header's verification block (verdict + metrics table). */
+.verify {
+  margin: 0.5rem 0 0.9rem;
+}
+
+/* A metric value is Señal only when that metric passed. */
+td.num.verified {
+  color: var(--senal);
+}
+
+.badge-nc {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--hueso-tenue);
+  border: 1px solid var(--regla);
+  padding: 0.05rem 0.4rem;
+  margin-left: 0.5rem;
+}
+
+/* ---- error box (load.js) ---- */
+
+.error-box {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--regla);
+  border-left: 6px solid var(--hueso-tenue);
+  background: var(--panel);
+  color: var(--hueso);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+}
+
+.error-box:empty {
+  display: none;
+}
+
+/* ---- tables ---- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5rem 0 1rem;
+  font-size: 0.92rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.3rem 0.6rem;
+  border-bottom: 1px solid var(--regla);
+  vertical-align: top;
+}
+
+th {
+  color: var(--hueso-tenue);
+  font-weight: 400;
+}
+
+td.v,
+td.num {
+  text-align: right;
+}
+
+/* A hole's coordinates stay on one line: wrapped, "20 × 20 × 1.5" reads as
+   two rows at phone width. Headers still wrap, and the tighter padding keeps
+   the four columns inside 390 px. */
+.holes td.num {
+  white-space: nowrap;
+}
+
+.holes th,
+.holes td {
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+}
+
+/* The row number is a label, not a value: keep it off the header's text. */
+.holes tbody th {
+  text-align: right;
+}
+
+/* ---- misc blocks ---- */
+
+details {
+  margin: 0.5rem 0;
+  border: 1px solid var(--regla);
+  padding: 0.4rem 0.75rem;
+  background: var(--panel);
+}
+
+summary {
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: var(--hueso-tenue);
+}
+
+dl.kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.15rem 1rem;
+  margin: 0.5rem 0;
+}
+
+dl.kv dt {
+  color: var(--hueso-tenue);
+}
+
+dl.kv dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+figure {
+  margin: 0;
+}
+
+figcaption {
+  color: var(--hueso-tenue);
+  font-size: 0.85rem;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  touch-action: manipulation;
+}
+
+audio {
+  width: 100%;
+}
+
+dialog {
+  border: 1px solid var(--regla);
+  background: var(--fondo);
+  color: var(--hueso);
+  padding: 1rem;
+  max-width: min(92vw, 60rem);
+}
+
+dialog::backdrop {
+  background: var(--fondo);
+  opacity: 0.88;
+}
+
+dialog img {
+  max-width: 100%;
+  max-height: 80vh;
+  display: block;
+  margin: 0 auto;
+}
+
+.views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.views figure {
+  flex: 1 1 16rem;
+}
+
+.views img {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--regla);
+  background: var(--panel);
+  cursor: zoom-in;
+}
+
+/* ---- speech alignment ---- */
+
+.speech p {
+  margin: 0.4rem 0;
+}
+
+.w-ok {
+  color: var(--hueso);
+}
+
+.w-sub {
+  background: var(--panel);
+  color: var(--hueso);
+  text-decoration: underline;
+  text-decoration-color: var(--hueso-tenue);
+}
+
+.w-del {
+  color: var(--hueso-tenue);
+  text-decoration: line-through;
+}
+
+.w-ins {
+  background: var(--panel);
+  color: var(--hueso);
+}
+
+/* ---- media stages (video, image) ---- */
+
+/* A CAD preview may list one view or a dozen: each one is a large panel of
+   its own, never a thumbnail. */
+.views.panels figure {
+  flex: 1 1 100%;
+}
+
+.views.panels img {
+  max-height: 78vh;
+  object-fit: contain;
+}
+
+/* A view is a button: it enlarges from a click or from Enter and space, and
+   the ring says where the focus is. */
+.views.panels img:focus-visible {
+  outline: 2px solid var(--hueso);
+  outline-offset: 2px;
+}
+
+/* One box for the asset itself: the clip is fitted into it, the still is
+   fitted by default and pans at 1:1. The video viewer paints its own stage on
+   the slide black; this one stays on the surface. */
+.stage {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  max-height: 72vh;
+  margin: 0.5rem 0;
+  border: 1px solid var(--regla);
+  background: var(--panel);
+}
+
+.stage img,
+.stage video {
+  display: block;
+  max-width: 100%;
+  max-height: 72vh;
+  width: auto;
+  height: auto;
+}
+
+/* A hidden element stays hidden: the display above would otherwise show it. */
+.stage [hidden] {
+  display: none;
+}
+
+/* The image viewer: fitted by default; 1:1 shows the pixels and the stage
+   scrolls, so a drag can pan it. */
+#image .stage {
+  display: block;
+  overflow: auto;
+  cursor: zoom-in;
+}
+
+#image .stage:not(.fit) {
+  cursor: grab;
+}
+
+#image .stage:not(.fit) img {
+  max-width: none;
+  max-height: none;
+  margin: 0;
+}
+
+/* ---- controls ---- */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  align-items: center;
+  margin: 0.4rem 0 0.8rem;
+}
+
+.controls button {
+  padding: 0.1rem 0.6rem;
+  background: var(--panel);
+  border: 1px solid var(--regla);
+  color: var(--hueso);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.controls .num,
+#time,
+#frame {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.scrub {
+  flex: 1 1 8rem;
+  min-width: 6rem;
+  width: 100%;
+  accent-color: var(--hueso);
+}
+
+#wave {
+  touch-action: none;
+  cursor: pointer;
+}
+
+/* ---- a checkerboard behind a transparent still (image viewer) ---- */
+
+.checker {
+  background-color: var(--fondo);
+  background-image:
+    linear-gradient(
+      45deg,
+      var(--regla) 25%,
+      transparent 25%,
+      transparent 75%,
+      var(--regla) 75%
+    ),
+    linear-gradient(
+      45deg,
+      var(--regla) 25%,
+      transparent 25%,
+      transparent 75%,
+      var(--regla) 75%
+    );
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
+
+/* ---- text (generic viewer) ---- */
+
+.copy {
+  padding: 0.05rem 0.5rem;
+  background: var(--panel);
+  border: 1px solid var(--regla);
+  color: var(--hueso);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.linenums {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem 0.5rem 3.25rem;
+  border: 1px solid var(--regla);
+  background: var(--panel);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.linenums li {
+  white-space: pre;
+}
+
+/* A blank line is a line: an empty li has no content and would collapse,
+   so a zero-width space gives it its line box. The copy button copies the
+   original text, never this glyph. */
+.linenums li:empty::after {
+  content: "\200B";
+}
+
+.linenums li::marker {
+  color: var(--hueso-tenue);
+}
+
+/* ASCII art keeps its natural width and scrolls sideways: wrapped, the
+   picture stops being the picture. */
+.ascii {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--regla);
+  background: var(--panel);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.15;
+  white-space: pre;
+  overflow-x: auto;
+  max-height: 70vh;
+}
+
+/* Every viewer honours the preference: nothing moves on its own. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,27 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#f4f0ea"
+    primaryBorderColor: "#8a6a2c"
+    primaryTextColor: "#1d1510"
+    lineColor: "#6b5a43"
+    fontFamily: "Ubuntu"
+    fontSize: "18px"
+---
+architecture-beta
+  group lab(cloud)[Local lab]
+  group gpu(server)[Local GPU] in lab
+
+  service agent(logos:claude-icon)[Agent] in lab
+  service toml(disk)[Piece toml] in lab
+  service voice(mdi:microphone)[VoiceStudio] in gpu
+  service comfy(mdi:image-filter-hdr)[ComfyUI] in gpu
+  service output(database)[WAV and PNG] in lab
+  junction dispatch in lab
+
+  agent:R --> L:toml
+  toml:R -- L:dispatch
+  dispatch:R --> L:voice
+  dispatch:B --> L:comfy
+  voice:R --> L:output

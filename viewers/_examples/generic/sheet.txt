@@ -1,0 +1,7 @@
+  +------------------------------------+
+  |  facet · ascii contact sheet       |
+  |  40 columns, never wrapped:        |
+  |  a narrow window scrolls, it       |
+  |  keeps the cells on the line       |
+  |  one cell is one character         |
+  +------------------------------------+

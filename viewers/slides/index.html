@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>facet — slides viewer</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/kit/base.css" />
+    <link rel="stylesheet" href="./slides.css" />
+    <script type="module" src="/kit/grain.js"></script>
+  </head>
+  <body>
+    <div class="wrap">
+      <div id="error" class="error-box" role="alert" hidden></div>
+      <header id="header"></header>
+      <main id="view-default">
+        <div class="bar">
+          <p id="summary"></p>
+          <div class="actions">
+            <button id="present" type="button">present</button>
+            <a id="pdf-link" href="#" target="_blank" rel="noopener">open PDF</a>
+          </div>
+        </div>
+        <section id="stage-default">
+          <img id="slide" alt="" />
+        </section>
+        <nav id="thumbs" aria-label="slides"></nav>
+        <h2>slides</h2>
+        <dl class="kv" id="slides-kv"></dl>
+      </main>
+      <main id="view-audience" hidden>
+        <section id="aud-frame">
+          <img id="aud-img" alt="" />
+        </section>
+        <div id="aud-black" hidden></div>
+        <p id="aud-hint" hidden></p>
+      </main>
+      <main id="view-presenter" hidden>
+        <div class="pres-grid">
+          <section id="pres-stage">
+            <img id="pres-current" alt="" />
+          </section>
+          <aside id="pres-side">
+            <img id="pres-next" alt="" />
+            <p id="pres-next-end" hidden>end</p>
+            <p id="pres-count" class="num"></p>
+            <p id="pres-clock" class="num">00:00</p>
+            <p id="pres-notes"></p>
+            <div class="pres-buttons">
+              <button id="btn-prev" type="button">previous</button>
+              <button id="btn-next" type="button">next</button>
+              <button id="btn-black" type="button">black</button>
+              <button id="btn-audience" type="button">audience full screen</button>
+            </div>
+          </aside>
+        </div>
+        <div id="pres-black" hidden></div>
+      </main>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

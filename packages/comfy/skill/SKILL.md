@@ -1,0 +1,301 @@
+---
+name: comfy
+description: Stills, reference-guided edits and short clips with ComfyUI, checked by pixel size and video probe.
+---
+# ComfyUI
+
+Turn prompts into still illustrations with the lab's ComfyUI flows, iterate
+one by instruction from a reference image, and animate a still into a short
+clip. The capabilities write the `image` and `video` kinds and are checked by
+pixel size and by probing the MP4.
+
+## When to use
+
+- `comfy.still` for illustration, backgrounds or mood: a scene, an object,
+  an editorial drawing, a watercolor. Pick the flow with the piece's
+  `workflow` input: `z-image-turbo` (the default) for photographic realism,
+  about 8 s per 1344 × 768 image; `flux2-klein-4b` for palette, composition
+  and empty space, about 6 s.
+- `comfy.edit` to change an image you already have while keeping its framing
+  and character: another style, palette or mood. It runs `flux2-klein-img2img`,
+  guided by reference image with no denoise slider — reference-guided, not
+  strength-guided. About 23 s per 1344 × 768 edit.
+- `comfy.clip` to animate what is inside a still — fog advancing, steam
+  rising, water rippling. `wan22-i2v` is movement-only: the prompt describes
+  what moves inside the frame, never a camera move over a flat image. About
+  7 minutes per two-second clip. `wan22-i2v-fast` is the draft variant,
+  about half the time, and it drifts.
+- A camera move over a still — a zoom, a pan, a slow push — belongs to
+  HyperFrames with GSAP first: seconds instead of minutes, reproducible
+  frame by frame. Reach for Wan only when something inside the picture has
+  to move. Even then a subtle camera move, even one the prompt names, barely
+  registers; do not spend seven minutes on a move GSAP draws in one second.
+- Never for anything a person must read. Text, numbers, labels, charts and
+  logos belong in HTML or SVG; a generated image carries image content only.
+
+## Pieces
+
+One entry per image, each with its own seed and size:
+
+```toml
+[inputs]
+image = [
+  { name = "video-still", prompt = "Misty pine forest at dawn, soft volumetric light through the trees, muted teal and amber palette, large empty area of fog on the left", seed = 11 },
+]
+```
+
+`width` defaults to 1344 and `height` to 768, each between 64 and 2048 and a
+multiple of 64; say both per entry to change the shape. `workflow` picks the
+still flow (`"z-image-turbo"` or `"flux2-klein-4b"`, omitting it uses
+`"z-image-turbo"`) or the clip flow (`"wan22-i2v"` or `"wan22-i2v-fast"`,
+omitting it uses `"wan22-i2v"`); an edit has no `workflow` input —
+it always uses `flux2-klein-img2img`. Any of the three takes `flow` instead:
+a path to the piece's own flow file, exclusive with `workflow`. An entry
+may also set `steps`, `cfg`, `sampler`, `scheduler` and `shift`; each
+defaults to the flow's own value — the Flows section lists every flow's
+defaults — so a piece that sets none renders exactly as before. Each entry
+writes `<name>.png` — or `<name>.mp4` for a clip — beside the piece file,
+so `--out build/` keeps generated assets away from sources.
+
+The prompt is English and carries the manifest's guard: a whole word from
+this list fails piece validation with `invalid_input` — caption, captions,
+chart, graph, label, labels, letter, letters, logo, sign, text, title, word,
+words. A refused word is refused even negated ("no text") and inside a
+phrase ("folded letter"): the pattern scans the words, not the intent.
+Digits are fine ("85mm lens"). The no-data rule holds for a still prompt, an
+edit instruction and a clip's motion prompt alike: a generated frame carries
+no lettering either.
+
+### Edits
+
+`comfy.edit` takes exactly one reference image, `source`, at the `[inputs]`
+level — one for the whole piece, not one per entry. Each `[[inputs.image]]`
+entry carries its own `name`, `seed`, `width`, `height` and `prompt`, and
+never an `image` key (piece validation refuses one):
+
+```toml
+[inputs]
+source = "editorial-illustration.png"
+
+[[inputs.image]]
+name = "linocut"
+seed = 242
+width = 1344
+height = 768
+prompt = "Edit the reference image into a two-color linocut print in deep indigo and warm cream, preserving the framing and the large geometric shapes"
+```
+
+A clip is the mirror image: it takes no `source`, and `image` goes inside
+each entry as that clip's first frame — `[[inputs.image]]` with
+`image = "video-still.png"` beside its `prompt`, `seed`, `width` and
+`height`. The engraved-plate recipe below is a full clip example.
+
+## Prompting
+
+Word order changes the picture: the model weighs the start of the prompt most,
+so lead with what matters. The order that works across these flows is
+**subject → action or style → context → lighting → camera**. Lighting carries
+the most quality weight; name one light and one lens instead of piling on
+style words.
+
+`z-image-turbo` runs 8 steps at CFG 1: with guidance that low the negative
+side is switched off, and the flow exposes no negative input at all, so an
+"avoid X" clause buys nothing. Say what should be there instead — "sharp
+focus", "neutral backdrop", "window light from the side", "natural skin
+texture, visible pores", "85mm lens, shallow depth of field". Lock the seed
+and change exactly one dial per run (steps, CFG or one prompt clause) to learn
+what the prompt is doing; run three seeds and keep the best.
+
+The FLUX.2 klein flows expose no negative knob either, which matches the
+model vendor's guidance that FLUX takes no negative prompt: describe the image
+you want. facet's no-lettering rule is a deliberate product divergence, not a
+model limit — the frames carry no type, so public FLUX advice about quoted
+brand words and hex colours does not apply here.
+
+For an edit, write the instruction in three parts — **target, change,
+preservation** — in one sentence or three: "Replace the jacket's colour with
+deep indigo. Preserve its cut, folds, lighting and position. Keep the face,
+background and camera framing unchanged." One operation per run: a second
+change applied on top of the first compounds drift. If unrelated detail moves,
+restart from the original reference, never from the damaged output.
+
+For a clip, describe motion, not content: **subject → motion → camera →
+scene**. Name the movement with concrete verbs, one scene per clip, and only
+what is visible in the first frame — the image already decides what appears.
+Keep "static, still image, frozen, motionless, no movement" in a custom
+negative (see the engraved-plate recipe). On `wan22-i2v-fast`, CFG 1 makes the
+negative inert, so a fast draft tells you nothing about prompt-following.
+
+`references/prompting.md` has the full skeletons and cue lists.
+
+## Flows
+
+A **flow** is a ComfyUI API graph whose inputs written as `"$key"` are
+filled, in order, from the flow's own `params`, then the entry — the
+registry's form of the lab's `"$clave"`. The package ships five, copied from
+the lab's `tools/comfy/` — all unchanged except the edit flow, whose params
+open to 1344 × 768 (the lab's default 1024 × 1024); `references/flows.md`
+documents
+each graph's placeholders, params and uploads.
+
+| Flow | Capability | Pick it for |
+|------|------------|-------------|
+| `z-image-turbo` | `still` | photographic realism, ~8 s |
+| `flux2-klein-4b` | `still` | palette, composition and empty space, ~6 s |
+| `flux2-klein-img2img` | `edit` | editing a reference image by instruction, ~23 s |
+| `wan22-i2v` | `clip` | movement inside a still: fog, steam, ~7 min per 2 s |
+| `wan22-i2v-fast` | `clip` | motion drafts in half the time |
+
+Each flow's sampling knobs and their defaults. An entry may set any of them
+and wins over the flow; omitting one keeps this value, so a piece that sets
+none renders exactly as before. Every flow takes `steps`, `cfg` and
+`sampler`; a `—` is a knob that flow does not carry, and setting it there
+fails with the client's unknown-key error before the server starts:
+
+| Flow | `steps` | `cfg` | `sampler` | `scheduler` | `shift` |
+|------|---------|-------|-----------|-------------|---------|
+| `z-image-turbo` | 8 | 1 | `res_multistep` | `simple` | 3 |
+| `flux2-klein-4b` | 4 | 1 | `euler` | — | — |
+| `flux2-klein-img2img` | 4 | 1 | `euler` | — | — |
+| `wan22-i2v` | 20 | 5 | `uni_pc` | `simple` | 8 |
+| `wan22-i2v-fast` | 4 | 1 | `euler` | `simple` | 8 |
+
+For clips, `length` is frames at 24 fps and must be `4n+1` — 49 ≈ 2 s,
+121 ≈ 5 s — because the Wan latent keeps one frame plus groups of four. A
+clip is 1280 × 704 at 24 fps and fills the GPU: about 7.8 GB of VRAM and
+6.5 GB of RAM, with nothing else on the card. The machine needs 16 GB of
+RAM and 40 GB of disk for the pull.
+
+facet treats ComfyUI as an `[engine.server]`: `facet pull comfy` clones the
+pinned revision `3c1b7a17fdf239d35ce98cc777756f572d089795`, builds its venv
+from `requirements.txt` and downloads the ten models; for the duration of a
+verb facet starts
+
+```
+python main.py --listen 127.0.0.1 --port <port> --disable-pinned-memory
+```
+
+and the runner reaches it through `FACET_SERVER_URL`. `--disable-pinned-memory`
+is package-wide, not per-flow: the Wan flow peaked at 18 of 19 GB of RAM
+without it, and it changes nothing for the still flows.
+`references/server.md` has the full launch and health details;
+`references/seeds.md` the seed behavior.
+
+## Your own flow
+
+A still, an edit or a clip can run the piece's own flow file instead of a
+package flow: `flow = "own-flow.json"` in `[inputs]`, resolved relative
+to the piece. The file has the package shape — `about`, `params` with the
+defaults, and `graph` with `"$key"` placeholders — and an edit or clip flow
+keeps `"uploads": ["image"]`, or the reference never reaches the server.
+Copy a package flow from `packages/comfy/flows/`; `examples/own-flow.toml`
+runs such a copy of `z-image-turbo` with steps 10. `flow` and `workflow`
+together fail before the server starts. Every model file the graph names
+(any `*_name` loader input) must be one of the manifest's pinned files, or
+the run fails naming it and listing the allowed ones. Unknown node classes
+fail with ComfyUI's own error; facet installs no custom nodes. VRAM is the
+author's: an 8 GB card runs the package flows.
+
+When you author an edit graph, derive the sampler's latent from the scaled
+source rather than from an empty latent at another size: an edit inherits its
+geometry from the reference, and a mismatched empty latent silently
+resynthesises a plastic-looking image instead of failing. Validate node
+schemas with `/object_info`, match IMAGE (`[B,H,W,C]` float) against MASK
+(`[B,H,W]`) across every link, and keep a save or preview sink on the terminal
+node.
+
+## Drafts
+
+`workflow = "wan22-i2v-fast"` runs the same Wan graph with FastWan's
+`Wan2_2_5B_FastWanFullAttn_lora_rank_128_bf16.safetensors` LoRA, four steps
+and a CFG of 1, so a clip takes about half the time. It is a **draft**:
+halfway through it drifts from the input image — the light and the
+composition change — so it is for trying a movement, never a final render or
+a piece of an assembly. The runner names every draft output
+`<name>-borrador.mp4` and its record carries `properties.draft = true`, so
+no draft passes for a final. Wan2.2-TI2V-5B-Turbo was rejected (no declared
+licence) and LTX-2 was rejected (own licence, quantized-only at 8 GB); the
+lab's approved draft sample is `examples/pine-fog-fast.mp4`.
+
+## Animating an engraved plate
+
+The lab's winning recipe for animating an engraved plate — a still that must
+stay a 19th-century copperplate engraving while something mechanical moves
+inside it — runs on the full `wan22-i2v` flow, never rapido: at cfg 1 rapido
+ignores the negative and drifts halfway through. Describe the motion first,
+explicitly and constant through the whole clip ("spins clockwise
+continuously", "up and down again and again", "keeps turning", "constant
+steady mechanical motion through the whole clip"), then the style sentence
+(the engraving, the hatching, the identical drawing style, the static
+camera). The trap is the negative: Wan's default keeps invented hands and new
+objects out, but a custom negative that drops "static" barely moves — keep
+"static, still image, frozen, motionless, no movement" in it even though the
+shot itself is a static camera.
+
+```toml
+[inputs]
+workflow = "wan22-i2v"
+
+[[inputs.image]]
+name = "texforge-anim-c"
+image = "texforge-plate.png"
+prompt = "The large spoked flywheel of the antique printing press spins clockwise continuously, making several full turns, its spokes clearly rotating; the foot treadle pumps up and down again and again; the round ink disc on top keeps turning. Constant steady mechanical motion through the whole clip. The image stays a 19th-century copperplate engraving: fine black ink hatching on flat cream paper, identical drawing style in every frame. Static camera, nothing else changes."
+negative = "static, still image, frozen, motionless, no movement, 3D render, CGI, photorealistic, metallic reflections, glossy metal, smooth shading, gradients, color change, oversaturated, camera movement, zoom, blur, text, subtitles, paper sheet, new objects, deformed machine, melting, morphing"
+seed = 11
+width = 1280
+height = 736
+length = 49
+```
+
+## Judging the result
+
+`verify` opens every `<name>.png` with Pillow and passes when its pixel size
+equals the entry's `width` and `height`, reporting both. Read the image
+preview's `name`, `prompt`, `seed`, `width` and `height`, and open the PNG
+in the image viewer to look at it: the size says the flow ran, the picture
+says whether the prompt worked. About 8 s per 1344 × 768 image on
+z-image-turbo, about 6 s on flux2-klein-4b, about 23 s per edit.
+
+A clip is a `video` kind: each entry writes `<name>.mp4`, and `verify` probes
+it with FFmpeg and passes when its resolution, 24 fps and frame count (`49`
+by default, about 2 s) equal the entry. In its preview, `length` is the frame
+count and `fps` the rate. The lab's verdict on the three approved clips:
+`pine-fog.mp4` (fog drifting between pine trees) and `cup-steam.mp4`
+(steam rising from a ceramic cup, static camera) are the reliable pair —
+something visible inside the frame moves — while `street-watercolor.mp4`'s slow
+pan barely registered. All are in `examples/`, with `comparison.jpg` for
+the two still models and `README-img2img.md` for the edit.
+
+## Licences
+
+The tool is ComfyUI (GPL-3.0-or-later); the runner's own dependencies are
+Pillow (MIT-CMU) and imageio-ffmpeg (BSD-2-Clause). The ten manifest models —
+the Z-Image Turbo unet, the FLUX.2 klein 4B unet, the Wan 2.2 TI2V 5B unet,
+their three VAEs, the Qwen clip the still and edit flows share (one file,
+listed for both), the UMT5 clip Wan loads and the FastWan LoRA — are
+Apache-2.0, commercial use allowed, and no acceptance is needed. Both still
+models and the Wan fp8 unet are Apache-2.0.
+
+## Pitfalls
+
+- One heavy job at a time. Check `nvidia-smi` first: a second model on the
+  same GPU overflows memory and takes minutes.
+- The ComfyUI checkout and its models come from `facet pull comfy`; a
+  missing checkout fails with `facet pull comfy` as its fix.
+- Seeds are part of the result: change only the prompt to explore, then keep
+  the seed of the image you approved.
+- Either klein flow carries no scheduler and no shift: setting either knob
+  there fails with the client's unknown-key error before the server starts.
+  Set `steps`, `cfg` and `sampler` on a klein entry; all five knobs work on
+  the Wan flows.
+- Generated images hold no text or data: no caption, captions, chart, graph,
+  label, labels, letter, letters, logo, sign, text, title, word, words — even
+  negated ("no text") or inside a phrase ("folded letter"). The prompt
+  pattern refuses those words anywhere, any case; digits stay allowed, so
+  "85mm lens" passes.
+- The edit and clip flows upload the reference or each first frame to the
+  server's `/upload/image` before running; the log prints one
+  `<file> uploaded as <name>` line per upload.
+
+Sources for these rules, with their licences, are in
+`skill/references/sources.md`.

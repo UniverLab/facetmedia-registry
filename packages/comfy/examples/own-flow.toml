@@ -1,0 +1,10 @@
+# Still with your own flow: a copy of the z-image-turbo package flow with
+# steps raised from 8 to 10 (see own-flow.json next to this piece).
+# Usage: facet run comfy.still packages/comfy/examples/own-flow.toml
+capability = "comfy.still"
+
+[inputs]
+flow = "own-flow.json"
+image = [
+  { name = "own-flow-cup", seed = 21, width = 1344, height = 768, prompt = "Engraved illustration of a handmade matte ceramic cup on a stone pedestal, isometric, sepia ink with a single garnet accent, soft steam curls, fine hatch lines. No lettering or symbols." },
+]

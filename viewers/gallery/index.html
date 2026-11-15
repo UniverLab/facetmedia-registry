@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>facet — gallery</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/kit/base.css" />
+    <link rel="stylesheet" href="./gallery.css" />
+    <script type="module" src="/kit/grain.js"></script>
+  </head>
+  <body>
+    <div class="wrap">
+      <div id="error" class="error-box" role="alert" hidden></div>
+      <header id="gal-head">
+        <div class="head">
+          <h1 id="gal-mark" class="mark"><span class="brand">facetMedia</span> · gallery · <span id="gal-folder"></span></h1>
+          <span id="gal-verified" class="verdict passed"></span>
+        </div>
+        <hr class="rule" />
+        <p id="gal-count" class="muted mono"></p>
+      </header>
+      <nav id="filters" aria-label="filter by kind">
+        <input id="search" type="search" aria-label="search name or capability" />
+      </nav>
+      <main id="grid"></main>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

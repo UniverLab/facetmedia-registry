@@ -1,0 +1,13 @@
+# Narration through the person's VoiceStudio backend. The voice profile
+# `narradora` must already be registered there.
+capability = "voicestudio.speak"
+
+[inputs]
+voice = "narradora"
+model = "voxcpm2"
+language = "es"
+
+[[inputs.clip]]
+name = "narration"
+text = "In this laboratory we test a cloned voice running on the person's own machine, without sending anything to a server."
+seed = 3

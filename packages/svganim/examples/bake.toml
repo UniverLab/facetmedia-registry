@@ -1,0 +1,6 @@
+# Bars growing to their data values, every label drawn as a path.
+capability = "svganim.bake"
+
+[inputs]
+script = "bake-bars.js"
+data = "bars.json"

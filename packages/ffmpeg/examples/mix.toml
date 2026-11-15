@@ -1,0 +1,17 @@
+# The voice over a pink-noise ambience bed, the bed ducked under the voice.
+capability = "ffmpeg.mix"
+
+[inputs]
+name = "voice-over-bed"
+ducking = true
+duck-db = -12.0
+target-lufs = -16.0
+
+[[inputs.layer]]
+audio = "voice.flac"
+role = "voice"
+start-s = 2.0
+
+[[inputs.layer]]
+audio = "bed.flac"
+role = "bed"

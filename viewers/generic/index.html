@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>facet — generic viewer</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/kit/base.css" />
+    <script type="module" src="/kit/grain.js"></script>
+  </head>
+  <body>
+    <div class="wrap">
+      <div id="error" class="error-box" role="alert" hidden></div>
+      <header id="header"></header>
+      <main>
+        <p id="summary"></p>
+        <section id="text-section" hidden>
+          <h2>text <button id="copy-text" class="copy" type="button">copy</button></h2>
+          <ol id="lines" class="linenums"></ol>
+        </section>
+        <section id="json-section" hidden>
+          <h2>json <button id="copy-json" class="copy" type="button">copy</button></h2>
+          <pre id="json" class="ascii"></pre>
+        </section>
+        <section id="cues-section" hidden>
+          <h2>cues <button id="copy-cues" class="copy" type="button">copy</button></h2>
+          <table id="cues">
+            <thead>
+              <tr>
+                <th class="num">time</th>
+                <th>text</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+        <section id="ascii-section" hidden>
+          <h2>ascii <button id="copy-ascii" class="copy" type="button">copy</button></h2>
+          <pre id="ascii" class="ascii"></pre>
+        </section>
+        <h2>fields</h2>
+        <table id="fields">
+          <thead>
+            <tr>
+              <th>field</th>
+              <th class="num">value</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p><a id="asset-link" href="#">open the asset</a></p>
+      </main>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

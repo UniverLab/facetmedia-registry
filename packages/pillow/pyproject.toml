@@ -1,0 +1,13 @@
+[project]
+name = "facet-pillow"
+version = "0.1.0"
+description = "Base image operations with Pillow: convert, resize and contact sheets on CPU."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "pillow==13.0.0",
+]
+
+[tool.uv]
+package = false

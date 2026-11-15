@@ -1,0 +1,54 @@
+name = "texforge"
+version = "0.1.4"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "facet"
+tool_name = "texforge"
+description = "Long LaTeX documents built to a verified PDF with real pagination, footnotes, indexes, bibliography and math, through the person-installed texforge binary"
+facet = "text"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 0.2
+exclusive = false
+platforms = ["linux"]
+host_hint = "curl -fsSL https://raw.githubusercontent.com/UniverLab/texforge/main/scripts/install.sh | sh"
+
+[[licenses]]
+subject = "texforge"
+spdx = "Apache-2.0"
+
+[capabilities.document]
+summary = "Long LaTeX document: a verified PDF with per-page PNGs, built by the person-installed texforge binary"
+kind = "document"
+
+[capabilities.document.i18n.es]
+summary = "Documento LaTeX largo: un PDF verificado con PNG por página, construido con el binario texforge instalado por la persona"
+
+[capabilities.document.inputs.main]
+type = "path"
+required = true
+description = "Main .tex file, resolved relative to the piece; its sibling sources beside it are staged with it."
+
+[capabilities.document.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name: writes <name>.pdf and its per-page preview PNGs."
+
+[capabilities.document.inputs.author]
+type = "string"
+required = true
+description = "Document author, written to [document].author in the staged project.toml."
+
+[capabilities.document.preview]
+viewer = "document"

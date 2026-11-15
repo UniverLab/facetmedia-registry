@@ -1,0 +1,12 @@
+{
+  "preview": 1,
+  "kind": "video",
+  "summary": "loop · 160×90 · 8 frames · 10 fps",
+  "name": "loop",
+  "prompt": "A terminal demo gif: a cursor walking along a command line, exported from a demo.toml score.",
+  "seed": 0,
+  "width": 160,
+  "height": 90,
+  "length": 8,
+  "fps": 10
+}

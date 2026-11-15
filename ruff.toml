@@ -1,0 +1,32 @@
+# Repository tooling config: covers packages/*/runner.py and scripts/*.py
+# (and tests/, when packages bring their own) from the root. packages/*/examples
+# is excluded: those scripts are byte-identical copies of the lab's own and
+# must not be reformatted.
+line-length = 100
+target-version = "py312"
+exclude = [
+    ".venv",
+    ".univerlab-workflows",
+    "packages/*/examples",
+]
+
+[lint]
+select = [
+    "E",     # pycodestyle errors
+    "F",     # pyflakes
+    "I",     # isort
+    "N",     # pep8-naming
+    "UP",    # pyupgrade
+    "B",     # flake8-bugbear
+    "SIM",   # flake8-simplify
+    "C90",   # mccabe complexity
+    "PL",    # pylint
+]
+
+[lint.mccabe]
+max-complexity = 15
+
+[lint.pylint]
+max-args = 7
+max-branches = 15
+max-nested-blocks = 5

@@ -1,0 +1,5 @@
+capability = "freecad.drawing"
+
+[inputs]
+script = "bracket-plan.py"
+part = "bracket.step"

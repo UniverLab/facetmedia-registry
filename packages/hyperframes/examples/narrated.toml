@@ -1,0 +1,10 @@
+capability = "hyperframes.narrated"
+
+[inputs]
+composition = "narrated/composition"
+voice = [{ clip = "narrated/voice-a.wav" }, { clip = "narrated/voice-b.wav", start = 2.0 }]
+music = "narrated/music.wav"
+subtitles = "narrated/subtitles.srt"
+prompt = "A two-line narrated piece with burned-in subtitles"
+seed = 0
+fps = 24

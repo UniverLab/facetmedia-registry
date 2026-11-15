@@ -1,0 +1,51 @@
+name = "whisper-subs"
+version = "0.1.4"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "UniverLab (whisper-subs)"
+tool_name = "whisper-subs"
+description = "Validated SRT and VTT subtitles from a whisper JSON sidecar, checked for monotonic non-overlapping times"
+facet = "voice"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 0.1
+exclusive = false
+platforms = ["linux"]
+
+[[licenses]]
+subject = "whisper-subs"
+spdx = "MIT"
+
+[capabilities.subtitles]
+summary = "Convert a whisper sidecar's timed segments into a validated SRT or VTT subtitle file"
+kind = "text"
+
+[capabilities.subtitles.i18n.es]
+summary = "Convierte los segmentos temporizados de un sidecar whisper en un archivo de subtítulos SRT o VTT validado"
+
+[capabilities.subtitles.inputs.source]
+type = "path"
+required = true
+description = "A whisper <name>.json sidecar with segments carrying start_s/end_s/text, resolved relative to the piece; its cues must run in order (touching boundaries allowed) and the subtitle file is written beside the piece."
+
+[capabilities.subtitles.inputs.format]
+type = "enum"
+values = ["srt", "vtt"]
+default = "srt"
+description = "Subtitle format: srt (default) renders cues HH:MM:SS,mmm, vtt renders the WEBVTT header with cues HH:MM:SS.mmm; both outputs are <source-stem>.<format>."
+
+[capabilities.subtitles.verify]
+thresholds = { cues_min = 1 }
+
+[capabilities.subtitles.preview]
+viewer = "generic"

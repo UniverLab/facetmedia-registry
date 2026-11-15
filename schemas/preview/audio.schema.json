@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://univerlab.org/facetmedia-registry/schemas/preview/audio.schema.json",
+  "title": "Audio preview",
+  "description": "Preview file (<asset>.preview.json) for the audio kind.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "preview",
+    "kind",
+    "summary",
+    "duration_s",
+    "sample_rate_hz",
+    "channels",
+    "waveform",
+    "loudness",
+    "silences",
+    "clipped_samples"
+  ],
+  "properties": {
+    "preview": {
+      "const": 1,
+      "description": "Preview format version."
+    },
+    "kind": {
+      "const": "audio",
+      "description": "Asset kind."
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 160,
+      "description": "One-line summary for an agent."
+    },
+    "duration_s": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Audio duration in seconds."
+    },
+    "sample_rate_hz": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "Sample rate in hertz."
+    },
+    "channels": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "Channel count."
+    },
+    "waveform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bins", "min", "max"],
+      "properties": {
+        "bins": {
+          "const": 1200,
+          "description": "Peak bin count."
+        },
+        "min": {
+          "type": "array",
+          "minItems": 1200,
+          "maxItems": 1200,
+          "items": {"type": "number", "minimum": -1, "maximum": 1},
+          "description": "Per-bin minimum peak in [-1, 1]."
+        },
+        "max": {
+          "type": "array",
+          "minItems": 1200,
+          "maxItems": 1200,
+          "items": {"type": "number", "minimum": -1, "maximum": 1},
+          "description": "Per-bin maximum peak in [-1, 1]."
+        }
+      }
+    },
+    "loudness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["integrated_lufs", "peak_dbfs", "target_lufs", "momentary"],
+      "properties": {
+        "integrated_lufs": {
+          "type": "number",
+          "description": "Integrated loudness in LUFS."
+        },
+        "peak_dbfs": {
+          "type": "number",
+          "description": "True peak in dBFS."
+        },
+        "target_lufs": {
+          "type": ["number", "null"],
+          "description": "Normalisation target in LUFS, null when not normalised."
+        },
+        "momentary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["step_s", "window_s", "lufs"],
+          "properties": {
+            "step_s": {
+              "const": 0.1,
+              "description": "Momentary measurement step in seconds."
+            },
+            "window_s": {
+              "const": 0.4,
+              "description": "Momentary measurement window in seconds."
+            },
+            "lufs": {
+              "type": "array",
+              "items": {"type": ["number", "null"]},
+              "description": "Momentary loudness in LUFS, null for silent windows below -70 LUFS."
+            }
+          }
+        }
+      }
+    },
+    "silences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["start_s", "end_s"],
+        "properties": {
+          "start_s": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Silence start in seconds."
+          },
+          "end_s": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Silence end in seconds."
+          }
+        }
+      },
+      "description": "Stretches longer than 1 s below -50 dBFS."
+    },
+    "clipped_samples": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Samples at or above -0.1 dBFS."
+    },
+    "speech": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "transcript", "wer", "alignment"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Reference narration text."
+        },
+        "transcript": {
+          "type": "string",
+          "description": "Recognised transcript of the narration."
+        },
+        "wer": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Word error rate of the transcript."
+        },
+        "alignment": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ref", "hyp", "op"],
+            "properties": {
+              "ref": {
+                "type": ["string", "null"],
+                "description": "Reference word, null for insertions."
+              },
+              "hyp": {
+                "type": ["string", "null"],
+                "description": "Hypothesis word, null for deletions."
+              },
+              "op": {
+                "enum": ["ok", "sub", "del", "ins"],
+                "description": "Word alignment operation."
+              }
+            }
+          },
+          "description": "Word alignment from the WER computation."
+        }
+      },
+      "description": "Narration speech data, for narration assets."
+    }
+  }
+}

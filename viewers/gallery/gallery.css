@@ -1,0 +1,176 @@
+/* Gallery viewer: one line per asset under its facet, drawn on the kit's
+   tokens so the whole gallery sits on the night surface. A facet is a line,
+   never a coloured card; the verdict is the only Señal, from the kit. */
+
+#gal-mark {
+  overflow-wrap: anywhere;
+}
+
+#gal-count {
+  font-family: var(--font-mono);
+}
+
+/* ---- filter bar ---- */
+
+#filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.75rem 0 1rem;
+}
+
+#search {
+  flex: 1 1 16rem;
+  padding: 0.15rem 0.75rem;
+  border: 1px solid var(--regla);
+  background: var(--panel);
+  color: var(--hueso);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+#search:focus-visible {
+  outline: 2px solid var(--hueso);
+  outline-offset: 1px;
+}
+
+.filter {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.15rem 0.75rem;
+  border: 1px solid var(--regla);
+  background: var(--panel);
+  color: var(--hueso);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.filter .glyph {
+  color: var(--hueso-tenue);
+  font-family: var(--font-mono);
+}
+
+.filter[aria-pressed="true"] {
+  border-color: var(--hueso);
+  color: var(--hueso);
+}
+
+.filter[aria-pressed="false"] {
+  color: var(--hueso-tenue);
+  text-decoration: line-through;
+}
+
+/* ---- one group per facet, in the manual's order ---- */
+
+.group {
+  margin: 1.5rem 0;
+}
+
+/* ---- one line per asset ---- */
+
+.card {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 0.25rem 0.75rem;
+  align-items: center;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--regla);
+  color: var(--hueso);
+  text-decoration: none;
+}
+
+a.card:hover .card-name {
+  text-decoration: underline;
+  text-decoration-color: var(--hueso-tenue);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--hueso);
+  outline-offset: 2px;
+}
+
+.thumb {
+  grid-column: 1;
+  grid-row: 1 / span 3;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  background: var(--fondo);
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.kind-icon {
+  padding: 0 0.1rem;
+  color: var(--hueso-tenue);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.card-name {
+  grid-column: 2;
+  grid-row: 1;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.capability {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.fix {
+  grid-column: 2;
+  grid-row: 3;
+  margin: 0;
+  color: var(--hueso-tenue);
+  font-size: 0.8rem;
+}
+
+.fix code {
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  grid-column: 3;
+  grid-row: 1;
+  font-size: 0.82rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.created {
+  grid-column: 3;
+  grid-row: 2;
+  font-size: 0.82rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pill {
+  grid-column: 3;
+  grid-row: 3;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.card[hidden],
+.group[hidden] {
+  display: none;
+}

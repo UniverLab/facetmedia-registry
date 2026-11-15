@@ -1,0 +1,7 @@
+# A three-cue sidecar in the shape whisper.transcribe writes. Exporting VTT
+# shows the format whisper itself does not write.
+capability = "whisper-subs.subtitles"
+
+[inputs]
+source = "lab-segments.json"
+format = "vtt"

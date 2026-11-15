@@ -1,0 +1,4 @@
+The voice is copied into the composition root by the runner; the character SVG and
+mouths.json are the piece's own inputs. No other media ships with this sample.
+
+The voice was generated with facet's kokoro.speak (voice af_heart, Apache-2.0).

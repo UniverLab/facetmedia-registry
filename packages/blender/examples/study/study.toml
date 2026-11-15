@@ -1,0 +1,10 @@
+capability = "blender.scene"
+
+[inputs]
+script = "study.py"
+name = "study"
+width = 1600
+height = 1000
+engine = "cycles"
+samples = 128
+exposure = -0.6

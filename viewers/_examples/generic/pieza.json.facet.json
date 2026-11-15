@@ -1,0 +1,55 @@
+{
+  "record": 1,
+  "id": "sha256:251e2ffa7c9169cabc503747b84d6e8cf2bce4082bb5062d461ad44e0edd710a",
+  "name": "pieza",
+  "path": "pieza.json",
+  "kind": "text",
+  "mime": "application/json",
+  "bytes": 110,
+  "created": "2026-11-14T00:00:00Z",
+  "properties": {},
+  "provenance": {
+    "facet": "text",
+    "registry": {
+      "commit": "0000000000000000000000000000000000000000",
+      "path": null
+    },
+    "capability": "json",
+    "package": {
+      "name": "example",
+      "version": "0.1.0"
+    },
+    "tool": {
+      "name": "example",
+      "version": "0.1.0"
+    },
+    "models": [],
+    "params": {},
+    "params_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "seed": null,
+    "inputs": []
+  },
+  "verification": {
+    "status": "passed",
+    "metrics": {
+      "objects": 1,
+      "keys": 4
+    },
+    "thresholds": {
+      "objects": 1
+    },
+    "verifier": "example"
+  },
+  "license": {
+    "tools": [
+      {
+        "name": "example",
+        "spdx": "MIT",
+        "commercial_use": true
+      }
+    ],
+    "models": [],
+    "commercial_use": true,
+    "accepted": []
+  }
+}

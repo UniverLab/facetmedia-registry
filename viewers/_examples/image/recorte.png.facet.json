@@ -1,0 +1,75 @@
+{
+  "record": 1,
+  "id": "sha256:9158fadbfa88178d36fc842e20dbb6b4e65dd3f144d6c932d04e15b22c2472bb",
+  "name": "recorte",
+  "path": "recorte.png",
+  "kind": "image",
+  "mime": "image/png",
+  "bytes": 948,
+  "created": "2026-11-14T00:00:00Z",
+  "properties": {
+    "width": 320,
+    "height": 200,
+    "seed": 0
+  },
+  "provenance": {
+    "facet": "image",
+    "registry": {
+      "commit": "0000000000000000000000000000000000000000",
+      "path": null
+    },
+    "capability": "image.cutout",
+    "package": {
+      "name": "rembg",
+      "version": "0.1.0"
+    },
+    "tool": {
+      "name": "rembg",
+      "version": "0.1.0"
+    },
+    "models": [
+      {
+        "id": "u2net",
+        "spdx": "Apache-2.0",
+        "commercial_use": true
+      }
+    ],
+    "params": {
+      "name": "recorte"
+    },
+    "params_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "seed": 0,
+    "inputs": []
+  },
+  "verification": {
+    "status": "passed",
+    "metrics": {
+      "width": 320,
+      "height": 200
+    },
+    "thresholds": {
+      "width": 320,
+      "height": 200
+    },
+    "verifier": "pillow"
+  },
+  "license": {
+    "tools": [
+      {
+        "name": "rembg",
+        "spdx": "MIT",
+        "commercial_use": true
+      }
+    ],
+    "models": [
+      {
+        "id": "u2net",
+        "spdx": "Apache-2.0",
+        "commercial_use": true,
+        "requires_acceptance": false
+      }
+    ],
+    "commercial_use": true,
+    "accepted": []
+  }
+}

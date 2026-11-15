@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>One piece, one deliverable</title>
+<style>
+@font-face { font-family: 'Old Standard TT'; src: url('./fonts/OldStandard-Regular.ttf'); font-weight: 400; }
+@font-face { font-family: 'Old Standard TT'; src: url('./fonts/OldStandard-Italic.ttf'); font-style: italic; }
+@font-face { font-family: 'EB Garamond'; src: url('./fonts/EBGaramond[wght].ttf'); }
+@font-face { font-family: 'Sometype Mono'; src: url('./fonts/SometypeMono[wght].ttf'); }
+@page { size: 1280px 720px; margin: 0; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  background: #f4f0ea;
+  color: #1d1510;
+  font-family: "EB Garamond", Georgia, serif;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.slide {
+  width: 1280px;
+  height: 720px;
+  break-after: page;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 88px 112px 128px;
+  position: relative;
+  background: #f4f0ea;
+}
+.slide:last-child { break-after: auto; }
+.kicker {
+  font-family: "Sometype Mono", monospace;
+  font-size: 17px;
+  letter-spacing: 7px;
+  text-transform: uppercase;
+  color: #87222c;
+  margin-bottom: 30px;
+}
+h1 { font-family: "Old Standard TT", Georgia, serif; font-weight: 400; font-size: 96px; line-height: 0.98; letter-spacing: -3px; }
+h2 { font-family: "Old Standard TT", Georgia, serif; font-weight: 400; font-size: 64px; line-height: 1.04; letter-spacing: -2px; margin-bottom: 34px; }
+p { font-size: 30px; line-height: 1.5; color: #6b5a43; max-width: 960px; }
+p + p { margin-top: 22px; }
+ul { list-style: none; display: grid; gap: 22px; }
+li { font-size: 29px; line-height: 1.4; padding-left: 52px; position: relative; color: #1d1510; }
+li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 16px;
+  width: 26px;
+  height: 4px;
+  background: #8a6a2c;
+}
+code {
+  font-family: "Sometype Mono", monospace;
+  font-size: 0.88em;
+  background: #eee7dc;
+  border: 1px solid #8a6a2c;
+  border-radius: 6px;
+  padding: 2px 10px;
+}
+footer {
+  position: absolute;
+  left: 112px;
+  right: 112px;
+  bottom: 46px;
+  border-top: 1px solid #8a6a2c;
+  padding-top: 16px;
+  font-family: "Sometype Mono", monospace;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #6b5a43;
+}
+</style>
+</head>
+<body>
+
+<section class="slide">
+  <div class="kicker">facetmedia · example</div>
+  <h1>One piece,<br>one deliverable.</h1>
+  <p>Each registry capability does one thing, takes one TOML file, and returns a deliverable you can open and judge.</p>
+  <footer>Sources: the facetmedia piece contract; registry manifests, 2026.</footer>
+</section>
+
+<section class="slide">
+  <div class="kicker">the flow</div>
+  <h2>Copy, run, look.</h2>
+  <ul>
+    <li><code>facet example deck.slides</code> copies the piece and every file it names.</li>
+    <li><code>facet run deck.slides slides.toml</code> exports the PDF and one PNG per page.</li>
+    <li><code>facet preview</code> serves the deliverable to a person.</li>
+  </ul>
+  <footer>Sources: the <code>facet example</code> design note; packaged examples in this registry.</footer>
+</section>
+
+<section class="slide">
+  <div class="kicker">what to look for</div>
+  <h2>The example is the contract.</h2>
+  <p>A self-contained example teaches the piece's shape better than any description: the inputs, the files that travel with it, and the verification it must pass.</p>
+  <p>If the example works, the capability works.</p>
+  <footer>Sources: the registry packaging guide; capability verification, 2026.</footer>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,84 @@
+name = "pillow"
+version = "0.1.4"
+requires_facet = ">=0.1.0b1,<0.2"
+protocol = 1
+provider = "Jeffrey A. Clark and contributors (Pillow)"
+tool_name = "Pillow"
+description = "Base image operations on CPU with Pillow: convert between PNG, JPEG and WebP, resize with or without aspect, and contact sheets with dividers"
+facet = "image"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 0.2
+exclusive = false
+platforms = ["linux"]
+
+[[licenses]]
+subject = "pillow"
+spdx = "MIT-CMU"
+
+[capabilities.base]
+summary = "Convert a still between PNG, JPEG and WebP, resize it exact or aspect-preserving, or lay a contact sheet of it, one op per table applied in order"
+kind = "image"
+
+[capabilities.base.i18n.es]
+summary = "Convierte una imagen fija entre PNG, JPEG y WebP, la redimensiona exacta o con proporción, o arma una hoja de contactos, una op por tabla aplicada en orden"
+
+[capabilities.base.inputs.image]
+type = "path"
+required = true
+description = "Source image (PNG, JPEG, WebP or any Pillow-readable format), resolved relative to the piece file; every op applies to it in order and writes <image-stem>-<i>-<op>.<ext> beside the piece."
+
+[capabilities.base.inputs.operations]
+type = "array"
+min_items = 1
+required = true
+description = "One table per operation, applied in order in memory starting from image; each writes one file named <image-stem>-<i>-<op>.<ext> where i is the 1-based op position."
+
+[capabilities.base.inputs.operations.items.op]
+type = "enum"
+values = ["convert", "resize", "sheet"]
+required = true
+description = "The operation: convert re-encodes the format, resize resizes, sheet lays a contact sheet."
+
+[capabilities.base.inputs.operations.items.format]
+type = "enum"
+values = ["png", "jpeg", "webp"]
+description = "convert only, required there: the output format; writes .png, .jpg or .webp."
+
+[capabilities.base.inputs.operations.items.mode]
+type = "enum"
+values = ["RGB", "RGBA", "L"]
+description = "convert only: the output mode; jpeg output is always RGB, and RGBA with jpeg is rejected."
+
+[capabilities.base.inputs.operations.items.width]
+type = "integer"
+min = 1
+description = "resize only: target width; with height it resizes exact (aspect may change), alone it preserves aspect."
+
+[capabilities.base.inputs.operations.items.height]
+type = "integer"
+min = 1
+description = "resize only: target height; at least one of width or height is required."
+
+[capabilities.base.inputs.operations.items.columns]
+type = "integer"
+min = 1
+description = "sheet only, required there: number of tile columns."
+
+[capabilities.base.inputs.operations.items.rows]
+type = "integer"
+min = 1
+description = "sheet only, required there: number of tile rows."
+
+[capabilities.base.preview]
+viewer = "image"

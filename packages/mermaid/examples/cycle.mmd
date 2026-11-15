@@ -1,0 +1,26 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#222928"
+    primaryBorderColor: "#d9b878"
+    primaryTextColor: "#ecebe4"
+    lineColor: "#b9bdb5"
+    fontFamily: "Ubuntu"
+    fontSize: "22px"
+---
+flowchart LR
+  data["Source data"] --> piece["Piece<br/>code or .toml"]
+  piece --> export_["Export<br/>by CLI"]
+  export_ --> review{"Look and sound<br/>right?"}
+  review -- "no" --> fix["Fix"]
+  fix --> piece
+  review -- "yes" --> deliver(["Deliver<br/>PDF · MP4 · WAV"])
+  subgraph gpu["Local GPU · one at a time"]
+    voice["voice.py"]
+    music["music.py"]
+    effects["effects.py"]
+    image["comfy.py"]
+    voice ~~~ music ~~~ effects ~~~ image
+  end
+  piece -.-> gpu

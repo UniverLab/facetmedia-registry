@@ -1,0 +1,6 @@
+capability = "moss.sfx"
+
+[inputs]
+description = "A single soft, clean user interface click, short and subtle, like tapping a modern touchscreen button"
+name = "ui-click"
+seconds = 1

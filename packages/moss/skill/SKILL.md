@@ -1,0 +1,125 @@
+---
+name: moss
+description: Described sound effects with MOSS-SoundEffect v2 on the staged CPU/GPU path, normalised to a loudness target.
+---
+# MOSS-SoundEffect v2
+
+Generate a sound effect from an English description with MOSS-SoundEffect
+v2 (**Apache-2.0**, commercial use allowed). One capability, `moss.sfx`,
+writing the `audio` kind at 48 kHz mono.
+
+## When to use
+
+- `moss.sfx` for a described effect — an ambience bed, a notification
+  chime, a UI click, a whoosh — described in English, at most 30 s.
+- The machine needs an NVIDIA GPU and about 19 GB of RAM: the model loads
+  on the CPU and only the active stage moves to the card, because a full
+  GPU load (~9 GB) does not fit the 8 GB card. One heavy job at a time.
+- About 40 s per effect at the default 100 steps, whatever its length: the
+  pipeline always denoises 30 s of audio and trims to `seconds`. Fewer
+  `steps` are faster but rougher.
+- `facet pull moss` fetches MOSS-TTS at the pinned commit (about 15 MB of
+  code) plus the model (about 11 GB): never clone it by hand. `MOSS_DIR`
+  is only for a manual run outside facet.
+
+## Pieces
+
+One effect per piece: a `description` in English, `seconds` up to 30, a
+`name` matching `[a-z0-9][a-z0-9-]*` and an optional `target-lufs`.
+
+```toml
+[inputs]
+description = "Rain falling on a window with distant thunder, steady and soft"
+seconds = 8
+name = "rain-window"
+steps = 100
+guidance = 4.0
+seed = 0
+```
+
+`name` writes `<name>.wav` beside the piece. `target-lufs` defaults to
+-23.0, the level for beds under voice; pass a louder target (up to -10)
+for hits that must cut through.
+
+The last three lines are optional and show the defaults: `steps` (1 to
+200) is sent as `num_inference_steps` and fewer steps are faster but
+rougher — the ~40 s per effect is the 100-step figure; `guidance` (0 to
+20) is sent as `cfg_scale`, 0 being no guidance; `seed` (0 or more) makes
+the effect reproducible, the same seed giving the same effect. The asset
+records the values used in `params` and the seed in `seed`.
+
+## Writing the description
+
+Describe one scene, not a label: name the material, the action and the
+setting together (`rain drumming on a tin roof`, `a van braking on wet
+asphalt`, `keys turning in a stiff lock`). A bare noun — `whoosh`,
+`click` — gives the model nothing to build from, and a described physical
+source (a bell struck, a button pressed, a door pulled shut) lands closer to
+the intent than the abstract label for the sound.
+
+Five families cover the work: natural (rain, wind, fire, water), urban
+(streets, engines, doors, appliances), animals and creatures, human actions
+(footsteps, typing, page turns), and short musical or percussive clips. The
+last is the weakest: a chime or a click carries little material for the
+model to render, so name the thing that makes the sound and expect to try
+more than one seed.
+
+One scene per effect and one language per description: English and Chinese
+both work, never mixed in the same text. Divergence: the model is
+bilingual, but every facet piece is written, checked and documented in
+English, so write English and keep a Chinese description for a manual
+experiment outside the registry.
+
+Never write the duration into the description: the pipeline prepends the
+duration tag the model was trained on, and a competing number in the prose
+promises a length the trim then cuts.
+
+Cost per effect is flat — about 40 s at 100 `steps` whatever the length —
+so draft at a low `steps` (30 to 50 is enough to hear whether the scene is
+right) and render the final at 100.
+
+## Judging the result
+
+`verify` measures the WAV's integrated loudness and passes while it sits
+within 1 LU of `target-lufs`. A transient-heavy effect may sit below the
+target, held at the -1 dBFS peak ceiling; `verify` accepts it and records
+`peak_limited: true`. No limiter is added. The run normalises every
+effect to that target and records `duration_s`, `sample_rate_hz`, `lufs`,
+`peak_dbfs` and `peak_limited`; `facet preview <name>.wav --json` writes
+the waveform and momentary loudness for the audio viewer.
+
+Event count is unreliable: asking for one click can give two, so listen
+to the WAV or read the spectrogram — loudness and duration verify, timbre
+is judged by ear.
+
+Seven effects are approved on the reference machine: `coffee-morning`,
+`bell-alert`, `ui-click`, `rain-window`,
+`page-turn`, `wood-steps` and `whoosh-sweep`.
+
+Each approved effect ships as a runnable piece with its WAV:
+`examples/coffee-morning.toml`, `examples/bell-alert.toml`,
+`examples/ui-click.toml`, `examples/rain-window.toml`,
+`examples/page-turn.toml`, `examples/wood-steps.toml` and
+`examples/whoosh-sweep.toml`. The seven descriptions, and the piece
+shape, are in
+[references/descriptions.md](references/descriptions.md).
+
+## Pitfalls
+
+- Descriptions stay in English and never state the duration: the pipeline
+  appends `duration: <s>s` itself.
+- `seconds` above 30 is refused: the model generates at most 30 s.
+- The first effect after `facet pull moss` takes minutes, not seconds: the
+  ~11 GB model has to load and the card warms up. The runner sets
+  `TORCHDYNAMO_DISABLE=1` before it imports the pipeline, which keeps
+  `torch.compile` and its Triton CUDA graphs out of the path; on a manual
+  `MOSS_DIR` run a Triton or compile error is fixed with that same variable,
+  not by reinstalling the model.
+- The official pipeline also applies `sigma_shift = 5.0`. `moss.sfx` does
+  not expose it and always runs at that value, so tune rougher versus
+  cleaner with `steps` and `guidance`, not with a knob that is not there.
+- If MOSS stops convincing, the fallback is a CC0 sound-effects library;
+  Stable Audio Open stays out (licence plus acceptance).
+
+The guidance above draws on public sources listed in
+[references/sources.md](references/sources.md).

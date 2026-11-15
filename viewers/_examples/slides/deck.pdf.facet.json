@@ -1,0 +1,60 @@
+{
+  "record": 1,
+  "id": "sha256:72f4f6a93f8b5b4c2b8e4a1d9c3f5e6a7b8c9d0e1f2a3b4c5d6e7f80910213",
+  "name": "deck",
+  "path": "deck.pdf",
+  "kind": "document",
+  "mime": "application/pdf",
+  "bytes": 182,
+  "created": "2026-11-13T00:00:00Z",
+  "properties": {
+    "page_count": 3
+  },
+  "provenance": {
+    "facet": "0.1.0",
+    "registry": {
+      "commit": "0000000000000000000000000000000000000000",
+      "path": null
+    },
+    "capability": "deck.slides",
+    "package": {
+      "name": "deck",
+      "version": "0.1.2"
+    },
+    "tool": {
+      "name": "Chromium",
+      "version": "133.0.0"
+    },
+    "models": [],
+    "params": {
+      "source": "slides.html",
+      "prompt": "Explain in three slides what a facet piece is",
+      "seed": 0
+    },
+    "params_sha256": "5a1e5f0cd8ee1d0e6f5fdb9c8b9c1a2d3e4f5a6b7c8d9e2a3b4c5d6e7f80910",
+    "seed": 0,
+    "inputs": []
+  },
+  "verification": {
+    "status": "passed",
+    "metrics": {
+      "page_count": 3
+    },
+    "thresholds": {
+      "page_count_min": 1
+    },
+    "verifier": "chromium-pdfjs"
+  },
+  "license": {
+    "tools": [
+      {
+        "name": "Chromium",
+        "spdx": "BSD-3-Clause",
+        "commercial_use": true
+      }
+    ],
+    "models": [],
+    "commercial_use": true,
+    "accepted": []
+  }
+}

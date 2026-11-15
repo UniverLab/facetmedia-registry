@@ -1,0 +1,14 @@
+[project]
+name = "facet-rembg"
+version = "0.1.0"
+description = "Background removal from photos with rembg's U2NetP on CPU, alpha PNG plus a checkerboard preview."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "rembg[cpu]==2.0.86",
+  "pillow==13.0.0",
+]
+
+[tool.uv]
+package = false

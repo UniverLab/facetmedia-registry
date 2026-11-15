@@ -1,0 +1,12 @@
+capability = "cad.drawing"
+
+[inputs]
+script = "floor-plan.py"
+name = "floor-plan"
+expect-layers = [
+  { layer = "walls" },
+  { layer = "openings" },
+  { layer = "furniture" },
+  { layer = "dimensions" },
+  { layer = "labels" },
+]

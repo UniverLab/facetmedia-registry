@@ -1,0 +1,31 @@
+# The score the demo CLI records and exports: a short typed terminal session.
+[demo]
+name = "facet-example"
+output_dir = "./dist"
+
+[typing]
+seed = 42
+
+[layout]
+width = 1280
+height = 720
+fps = 15
+font_family = "DejaVu Sans Mono"
+
+[[timeline]]
+action = "focus"
+
+[[timeline]]
+action = "type"
+text = "facet --help"
+
+[[timeline]]
+action = "keypress"
+key = "enter"
+
+[[timeline]]
+action = "wait_for_stdout"
+match = "Usage"
+
+[[timeline]]
+action = "terminate"

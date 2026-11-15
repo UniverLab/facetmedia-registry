@@ -45,6 +45,11 @@ __pycache__/
 *.facet.json
 *.preview.html
 
+# …but the viewer examples ship their record and preview files,
+# and the hand-run checker's screenshots stay local
+!viewers/_examples/**/*.facet.json
+viewers/_examples/*/screens/
+
 # instruction files stay committable
 !.claude/CLAUDE.md
 !.continue/rules/

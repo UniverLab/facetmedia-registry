@@ -1,0 +1,5 @@
+capability = "ascii.fonts"
+
+[inputs]
+text = "facet"
+name = "fonts"

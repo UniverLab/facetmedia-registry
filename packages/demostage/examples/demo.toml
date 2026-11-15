@@ -1,0 +1,6 @@
+# A hand-written score: the demo CLI records a typed `facet --help`, waits for
+# the Usage line and exits, then exports a GIF and an animated SVG.
+capability = "demostage.demo"
+
+[inputs]
+score = "demo/score.toml"

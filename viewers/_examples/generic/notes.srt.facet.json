@@ -1,0 +1,54 @@
+{
+  "record": 1,
+  "id": "sha256:8cb5dc3efcbfadc8af7f4f08c0f2df139db63008df773a063dbf4c150bfc69c8",
+  "name": "notes",
+  "path": "notes.srt",
+  "kind": "text",
+  "mime": "application/x-subrip",
+  "bytes": 150,
+  "created": "2026-11-14T00:00:00Z",
+  "properties": {},
+  "provenance": {
+    "facet": "text",
+    "registry": {
+      "commit": "0000000000000000000000000000000000000000",
+      "path": null
+    },
+    "capability": "subs",
+    "package": {
+      "name": "ascii",
+      "version": "0.1.0"
+    },
+    "tool": {
+      "name": "ascii",
+      "version": "0.1.0"
+    },
+    "models": [],
+    "params": {},
+    "params_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "seed": null,
+    "inputs": []
+  },
+  "verification": {
+    "status": "passed",
+    "metrics": {
+      "cues": 2
+    },
+    "thresholds": {
+      "cues": 2
+    },
+    "verifier": "subs"
+  },
+  "license": {
+    "tools": [
+      {
+        "name": "ascii",
+        "spdx": "MIT",
+        "commercial_use": true
+      }
+    ],
+    "models": [],
+    "commercial_use": true,
+    "accepted": []
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "record": 1,
+  "id": "sha256:0a86050fb37a4def36885da9557f5b22a9e191767a80e7a4a2415410a4462b68",
+  "name": "hello",
+  "path": "hello.txt",
+  "kind": "text",
+  "mime": "text/plain",
+  "bytes": 10,
+  "created": "2026-10-24T00:00:00Z",
+  "properties": {},
+  "provenance": {
+    "facet": "text",
+    "registry": {
+      "commit": "0000000000000000000000000000000000000000",
+      "path": null
+    },
+    "capability": "echo",
+    "package": {
+      "name": "example",
+      "version": "0.1.0"
+    },
+    "tool": {
+      "name": "example",
+      "version": "0.1.0"
+    },
+    "models": [],
+    "params": {},
+    "params_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "seed": null,
+    "inputs": []
+  },
+  "verification": {
+    "status": "passed",
+    "metrics": {
+      "chars": 10
+    },
+    "thresholds": {
+      "chars": 10
+    },
+    "verifier": "example"
+  },
+  "license": {
+    "tools": [
+      {
+        "name": "example",
+        "spdx": "Apache-2.0",
+        "commercial_use": true
+      }
+    ],
+    "models": [],
+    "commercial_use": true,
+    "accepted": []
+  }
+}

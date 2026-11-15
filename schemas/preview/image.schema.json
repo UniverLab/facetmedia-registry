@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://univerlab.org/facetmedia-registry/schemas/preview/image.schema.json",
+  "title": "Image preview",
+  "description": "Preview file (<asset>.preview.json) for the image kind.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["preview", "kind", "summary", "name", "prompt", "seed", "width", "height"],
+  "properties": {
+    "preview": {
+      "const": 1,
+      "description": "Preview format version."
+    },
+    "kind": {
+      "const": "image",
+      "description": "Asset kind."
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 160,
+      "description": "One-line summary for an agent."
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "Asset base name."
+    },
+    "prompt": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The prompt the image was generated from."
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Sampling seed."
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Image width in pixels."
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Image height in pixels."
+    }
+  }
+}

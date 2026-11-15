@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://univerlab.org/facetmedia-registry/schemas/preview/cad.schema.json",
+  "title": "CAD preview",
+  "description": "Preview file (<asset>.preview.json) for the cad kind.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["preview", "kind", "summary", "views"],
+  "properties": {
+    "preview": {
+      "const": 1,
+      "description": "Preview format version."
+    },
+    "kind": {
+      "const": "cad",
+      "description": "Asset kind."
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 160,
+      "description": "One-line summary for an agent."
+    },
+    "solid": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["valid", "volume_mm3", "bbox_mm", "faces", "solids", "holes"],
+      "properties": {
+        "valid": {
+          "type": "boolean",
+          "description": "Whether the solid is valid."
+        },
+        "volume_mm3": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Solid volume in cubic millimetres."
+        },
+        "bbox_mm": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {"type": "number"},
+          "description": "Bounding box [x, y, z] in millimetres."
+        },
+        "faces": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Face count."
+        },
+        "solids": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Solid count."
+        },
+        "holes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["center_mm", "diameter_mm", "axis"],
+            "properties": {
+              "center_mm": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {"type": "number"},
+                "description": "Hole centre [x, y, z] in millimetres."
+              },
+              "diameter_mm": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Hole diameter in millimetres."
+              },
+              "axis": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {"type": "number"},
+                "description": "Hole axis vector."
+              }
+            }
+          },
+          "description": "Cylindrical faces, deduplicated by axis and centre."
+        }
+      },
+      "description": "Solid data, when the asset has a solid."
+    },
+    "drawing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["units", "entities", "layers", "audit"],
+      "properties": {
+        "units": {
+          "type": "string",
+          "description": "Drawing units."
+        },
+        "entities": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Entity count."
+        },
+        "layers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "entities"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Layer name."
+              },
+              "entities": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Entity count on this layer."
+              }
+            }
+          },
+          "description": "Per-layer entity counts."
+        },
+        "audit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["errors", "fixes"],
+          "properties": {
+            "errors": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Audit error count."
+            },
+            "fixes": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Audit fix count."
+            }
+          },
+          "description": "Drawing audit result."
+        }
+      },
+      "description": "Drawing data, when the asset has a drawing."
+    },
+    "views": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "label"],
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "View file beside the asset (PNG/SVG)."
+          },
+          "label": {
+            "type": "string",
+            "description": "View label."
+          }
+        }
+      },
+      "description": "Rendered views beside the asset."
+    }
+  }
+}

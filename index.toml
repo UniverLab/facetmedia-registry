@@ -1,0 +1,114 @@
+# facetmedia-registry index — read by `facet update` from a pinned commit.
+version = 1
+
+[[packages]]
+name = "ascii"
+
+[[packages]]
+name = "blender"
+
+[[packages]]
+name = "cad"
+
+[[packages]]
+name = "comfy"
+
+[[packages]]
+name = "comfy-xl"
+
+[[packages]]
+name = "ffmpeg"
+
+[[packages]]
+name = "hyperframes"
+
+[[packages]]
+name = "kokoro"
+
+[[packages]]
+name = "whisper"
+
+[[packages]]
+name = "voicestudio"
+
+[[packages]]
+name = "deck"
+
+[[packages]]
+name = "acestep"
+
+[[packages]]
+name = "moss"
+
+[[packages]]
+name = "texforge"
+
+[[packages]]
+name = "mermaid"
+
+[[packages]]
+name = "rhubarb"
+
+[[packages]]
+name = "svganim"
+
+[[packages]]
+name = "freecad"
+
+[[packages]]
+name = "demostage"
+
+[[packages]]
+name = "rembg"
+
+[[packages]]
+name = "pillow"
+
+[[packages]]
+name = "whisper-subs"
+
+[[packages]]
+name = "recipes"
+
+
+[facets.voice]
+label = "Voice"
+
+[facets.voice.i18n.es]
+label = "Voz"
+
+[facets.audio]
+label = "Audio"
+
+[facets.audio.i18n.es]
+label = "Audio"
+
+[facets.image]
+label = "Image"
+
+[facets.image.i18n.es]
+label = "Imagen"
+
+[facets.video]
+label = "Video"
+
+[facets.video.i18n.es]
+label = "Video"
+
+[facets.cad]
+label = "CAD"
+
+[facets.cad.i18n.es]
+label = "CAD"
+
+[facets.text]
+label = "Text"
+
+[facets.text.i18n.es]
+label = "Texto"
+
+[facets.presentation]
+label = "Presentation"
+
+[facets.presentation.i18n.es]
+label = "Presentación"

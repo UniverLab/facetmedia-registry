@@ -1,0 +1,29 @@
+[project]
+name = "facet-moss"
+version = "0.1.0"
+description = "Described sound effects with MOSS-SoundEffect v2, normalised to a loudness target."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "torch==2.13.0",
+  "transformers==5.15.0",
+  "diffusers==0.38.0",
+  "einops==0.8.2",
+  "safetensors==0.8.0",
+  "ftfy==6.3.1",
+  "regex==2026.4.4",
+  "tqdm==4.67.3",
+  "descript-audiotools==0.7.2",
+  "pillow==13.0.0",
+  "protobuf==5.29.6",
+  "numpy==1.26.4",
+  "soundfile==0.13.1",
+  "pyloudnorm==0.2.0",
+]
+
+[tool.uv]
+package = false
+# descript-audiotools caps protobuf<3.20, whose release line has known
+# advisories; the codec path never touches protobuf, so the floor wins.
+override-dependencies = ["protobuf>=5.29.6"]

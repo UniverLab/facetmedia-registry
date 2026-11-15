@@ -1,0 +1,6 @@
+capability = "moss.sfx"
+
+[inputs]
+description = "Ambience of a quiet cafe in the morning, indistinct distant chatter, cups and saucers clinking, an espresso machine hissing"
+name = "coffee-morning"
+seconds = 12
