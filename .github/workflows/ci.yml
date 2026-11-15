@@ -57,6 +57,9 @@ jobs:
       - name: Package locks and audits
         run: |
           set -euo pipefail
+          # setup-uv exports UV_PYTHON (3.12) for the root; each package pins
+          # its own interpreter (voicestudio needs 3.11), so drop it here.
+          unset UV_PYTHON
           for f in packages/*/pyproject.toml; do
             [ -e "$f" ] || continue
             p=$(dirname "$f")
