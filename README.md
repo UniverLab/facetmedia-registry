@@ -1,4 +1,13 @@
-# facetmedia-registry
+<p align="center">
+  <img src="https://raw.githubusercontent.com/UniverLab/.github/main/assets/banner-facetmedia-registry.svg" alt="facetMedia Registry"/>
+</p>
+
+<p align="center">
+  <a href="https://github.com/UniverLab/facetmedia-registry/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/UniverLab/facetmedia-registry/ci.yml?branch=main&style=for-the-badge&label=CI" alt="CI"/></a>
+  <img src="https://img.shields.io/badge/Status-Beta-E8C547?style=for-the-badge" alt="Status"/>
+  <a href="https://github.com/UniverLab/facetmedia"><img src="https://img.shields.io/badge/Core-facetMedia-E8C547?style=for-the-badge" alt="Core"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache--2.0-2E8B57?style=for-the-badge" alt="License"/></a>
+</p>
 
 This repository holds facetMedia's **packages** and **viewers** apart from the
 core ([UniverLab/facetmedia](https://github.com/UniverLab/facetmedia)), so a new
