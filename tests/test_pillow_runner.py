@@ -40,6 +40,8 @@ OPAQUE_RED = (255, 0, 0, 255)
 #: JPEG is lossy: channel dominance, not exact values, judges the flatten.
 CHANNEL_HIGH = 200
 CHANNEL_LOW = 40
+#: EXIF tag id for orientation; value 6 means the pixels are stored rotated.
+EXIF_ORIENTATION_TAG = 274
 
 #: The pull-time SDK surface the runner touches; the real one is copied in.
 STUB_SDK = """
@@ -175,6 +177,61 @@ def _run(
     request = _request("run", out, piece, {"image": "foto.png", "operations": ops})
     done, result = _call(stub_dir, "run", request, tmp_path, tag)
     return done, result, out
+
+
+def _piece_exif6(tmp_path: Path, name: str = "foto6.jpg") -> Path:
+    """A piece dir whose 8x6 JPEG has EXIF orientation 6, red left, green right."""
+    piece = tmp_path / "piece-exif6"
+    piece.mkdir(exist_ok=True)
+    image = PIL.Image.new("RGB", (WIDTH, HEIGHT))
+    pixels = image.load()
+    assert pixels is not None
+    for y in range(HEIGHT):
+        for x in range(WIDTH):
+            pixels[x, y] = (255, 0, 0) if x < WIDTH // 2 else (0, 255, 0)
+    exif = PIL.Image.Exif()
+    exif[EXIF_ORIENTATION_TAG] = 6
+    image.save(piece / name, exif=exif)
+    return piece
+
+
+def _run_on_piece(
+    tmp_path: Path,
+    piece: Path,
+    image_name: str,
+    ops: list[dict[str, object]],
+    tag: str,
+) -> tuple[subprocess.CompletedProcess[str], dict[str, Any] | None, Path]:
+    """One ``run`` against an explicit piece dir and image name."""
+    stub_dir = _stub_dir(tmp_path)
+    out = tmp_path / f"out-{tag}"
+    out.mkdir(exist_ok=True)
+    request = _request("run", out, piece, {"image": image_name, "operations": ops})
+    done, result = _call(stub_dir, "run", request, tmp_path, tag)
+    return done, result, out
+
+
+def test_run_applies_exif_orientation_6(tmp_path: Path) -> None:
+    """Orientation 6 is transposed before the ops: 8x6 stored reads as 6x8 upright."""
+    piece = _piece_exif6(tmp_path)
+    ops: list[dict[str, object]] = [{"op": "convert", "format": "png"}]
+    done, _result, out = _run_on_piece(tmp_path, piece, "foto6.jpg", ops, tag="exif6")
+    assert done.returncode == 0, done.stdout + done.stderr
+    path = out / "foto6-1-convert.png"
+    assert path.is_file()
+    with PIL.Image.open(path) as image:
+        assert image.size == (HEIGHT, WIDTH)
+        assert EXIF_ORIENTATION_TAG not in image.getexif()
+        top_right = image.getpixel((HEIGHT - 1, 0))
+    assert top_right[0] > CHANNEL_HIGH and top_right[1] < CHANNEL_LOW
+
+
+def test_run_without_exif_unchanged(tmp_path: Path) -> None:
+    """A tagless image keeps its stored size: the transpose is a no-op for it."""
+    done, _result, out = _run(tmp_path, [{"op": "convert", "format": "png"}])
+    assert done.returncode == 0, done.stdout + done.stderr
+    with PIL.Image.open(out / "foto-1-convert.png") as image:
+        assert image.size == (WIDTH, HEIGHT)
 
 
 def test_run_applies_the_ops_in_order_with_per_op_files(tmp_path: Path) -> None:

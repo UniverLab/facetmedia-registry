@@ -57,11 +57,11 @@ bottom are dropped — and reassembles them row-major into one sheet with
 
 ## Working on a photo
 
-The runner opens the source once and never rotates it: EXIF orientation is
-ignored today, so a phone JPEG keeps the orientation its pixels were stored
-in and can come out sideways even though a viewer shows it upright. There is
-no orientation input — check the photo before the piece, and rotate the source
-yourself if the result must be upright.
+The runner opens the source once and applies its EXIF orientation first via
+`ImageOps.exif_transpose`, so a phone JPEG comes out the way a viewer shows
+it — upright — and the output carries no orientation tag that would rotate
+it again. Images without EXIF behave exactly as before. There is no
+orientation input because the tag itself is the instruction.
 
 Ops chain in memory and each output is written once. That is deliberate: every
 JPEG re-encode loses a little detail, so a chain that re-read its own files
@@ -101,8 +101,9 @@ record, `width`/`height` measured from the file.
   a source with a flat border tiles with that border inside every tile. Trim
   it before the piece: `getbbox()` on an RGBA conversion gives the content box
   to crop to.
-- **A sideways phone photo stays sideways.** The runner never transposes by
-  EXIF orientation; rotate the source before the piece when upright matters.
+- **Phone photos come out upright.** The runner applies EXIF orientation on
+  open via `ImageOps.exif_transpose`, so an orientation-tagged JPEG is
+  transposed before any op and the output carries no orientation tag.
 
 Sources for these rules, with their licences, are in
 `skill/references/sources.md`.

@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import PIL
 from facet_runner_sdk import Request, Runner
-from PIL import Image
+from PIL import Image, ImageOps
 
 runner = Runner()
 
@@ -216,7 +216,7 @@ def _apply_ops(req: Request) -> tuple[Path, list[Produced]]:
     ops = _ops(params)
     ext = source_path.suffix.lower() if source_path.suffix.lower() in MIME else ".png"
     with Image.open(source_path) as source:
-        current = source.copy()
+        current = ImageOps.exif_transpose(source.copy())
     produced: list[Produced] = []
     for index, op in enumerate(ops, start=1):
         current, ext = _apply_op(current, op, index, ext)
