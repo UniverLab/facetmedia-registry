@@ -1,0 +1,97 @@
+name = "x"
+version = "0.1.0"
+requires_facet = ">=0.1.0b2,<0.2"
+protocol = 1
+provider = "X Corp · X API v2"
+tool_name = "X"
+description = "Posts text, images, video and threads to the lab's X brand account through the X API v2, with the cost shown before the send and a read-back check."
+facet = "publish"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 0.2
+exclusive = false
+platforms = ["linux"]
+
+[[licenses]]
+subject = "X API (X Corp)"
+spdx = "LicenseRef-X-API-Terms"
+
+[[secrets]]
+name = "consumer-key"
+description = "The developer app's API key (consumer key), shown once when the app is created"
+required = true
+
+[[secrets]]
+name = "consumer-secret"
+description = "The developer app's API secret (consumer secret), shown once with the key"
+required = true
+
+[[secrets]]
+name = "access-token"
+description = "The brand account's access token, generated after the app's permission is set to read and write"
+required = true
+
+[[secrets]]
+name = "access-token-secret"
+description = "The brand account's access token secret, generated with the access token"
+required = true
+
+[capabilities.post]
+summary = "Post text with images or video to the lab's X brand account, one post or a thread, then read it back — the cost shown before the send."
+kind = "post"
+outward = true
+
+[capabilities.post.i18n.es]
+summary = "Publica texto con imágenes o vídeo en la cuenta de X del laboratorio, un post o un hilo, y lo vuelve a leer — con el coste antes del envío."
+
+[capabilities.post.inputs.posts]
+type = "array"
+required = true
+min_items = 1
+description = "The posts in thread order; every post after the first is sent as a reply to the previous one."
+
+[capabilities.post.inputs.posts.items.text]
+type = "string"
+required = true
+description = "The post's text, at most 280 weighted characters; every URL counts as 23 characters."
+
+[capabilities.post.inputs.posts.items.video]
+type = "path"
+description = "One video for this post, resolved relative to the piece; refused together with images or a GIF on the same post."
+
+[capabilities.post.inputs.posts.items.gif]
+type = "path"
+description = "One GIF for this post, resolved relative to the piece; refused together with images or a video on the same post."
+
+[capabilities.post.inputs.images]
+type = "array"
+description = "The images the posts carry, each naming its post by 1-based position; at most four per post, each with alt text."
+
+[capabilities.post.inputs.images.items.post]
+type = "integer"
+required = true
+min = 1
+description = "1-based position of the post in posts this image attaches to."
+
+[capabilities.post.inputs.images.items.path]
+type = "path"
+required = true
+description = "The image file, resolved relative to the piece."
+
+[capabilities.post.inputs.images.items.alt]
+type = "string"
+required = true
+description = "The image's alt text; an image without alt text is refused."
+
+[capabilities.post.preview]
+viewer = "post"

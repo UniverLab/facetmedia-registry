@@ -109,7 +109,7 @@ def test_the_root_readme_lists_bluesky_under_the_publish_facet() -> None:
 def test_the_registry_indexes_the_package() -> None:
     names = [entry["name"] for entry in INDEX["packages"]]
     assert "bluesky" in names
-    assert names.index("bluesky") == len(names) - 1
     assert names.index("recipes") == names.index("bluesky") - 1
+    assert names.index("bluesky") == names.index("x") - 1
     assert INDEX["facets"]["publish"]["label"] == "Publish"
     assert INDEX["facets"]["publish"]["i18n"]["es"]["label"] == "Publicación"

@@ -55,6 +55,7 @@ the core:
 | video | hyperframes | MP4 clips, looping GIFs and alpha-channel MOVs from checked HTML+GSAP compositions with the pinned HyperFrames CLI, optionally with Mermaid diagrams animated by GSAP, a Three.js scene that turns an embedded CAD model on a camera orbit, a hand-drawn SVG character that speaks with Rhubarb mouths timed to the voice, or a narrated piece assembled from voice clips that start at their own times, a music bed at a set volume under them and whisper subtitles; checked first and verified by an ffprobe probe, which fails a narrated or speaking-character video with no audio stream; the runner brings those two to a loudness target (default -14 LUFS) that verify re-measures, within ±1 LU with true peak at or below -0.5 dBTP; ffmpeg comes from facet's pinned GPL-3.0 build |
 | video | rhubarb | Mouth cues X..H for a drawn character, timed to a voice clip from the text it says, with the phonetic recognizer of Rhubarb Lip Sync 1.14.0, writing mouths.json checked by cue count, mouth letters and time order; the pinned Linux ELF zip; about a second for a 10 s clip |
 | publish | bluesky | Text, images, video and threads on the lab's Bluesky brand account through the AT Protocol, with a read-back check after the send |
+| publish | x | Text, images, video and threads on the lab's X brand account through the X API v2, with the cost shown before the send and a read-back check |
 
 ## How facet uses this repository
 

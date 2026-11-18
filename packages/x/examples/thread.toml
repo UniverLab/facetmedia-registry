@@ -1,0 +1,15 @@
+# A two-post thread: the first post carries the bench photo with alt text,
+# the second replies with the catalogue link, priced above a text-only post.
+# Dry-run only: facet run thread.toml --dry-run sends nothing.
+capability = "x.post"
+
+[[inputs.posts]]
+text = "La escuadra del laboratorio, recién salida del banco. #taller"
+
+[[inputs.posts]]
+text = "El plano queda en el catálogo https://univerlab.org/catalogo/escuadra"
+
+[[inputs.images]]
+post = 1
+path = "banco.png"
+alt = "La escuadra de aluminio sobre la mesa, con sus dos agujeros a la vista."
