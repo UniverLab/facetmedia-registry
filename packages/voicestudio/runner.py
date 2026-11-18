@@ -31,6 +31,7 @@ doctor report *which* import fails instead of dying on a top-level import.
 
 from __future__ import annotations
 
+import contextlib
 import importlib
 import importlib.metadata
 import json
@@ -47,6 +48,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import clipcache
 from facet_lib import textnorm  # noqa: E402  (path insert must run first)
 from facet_runner_sdk import Request, Runner  # noqa: E402
 
@@ -60,6 +62,8 @@ CPS_ES = 15.5
 #: A clip's duration must fall inside this multiple of its expected duration.
 DUR_MIN = 0.5
 DUR_MAX = 2.0
+#: A dropout longer than this, inside speech, fails verification.
+DROPOUT_MAX_MS = 200.0
 #: What verification measures with, named for the record.
 VERIFIER = "faster-whisper-small@536b0662"
 #: The transcriber the package itself embeds (its manifest model id; the
@@ -260,6 +264,7 @@ def _clips(params: dict[str, Any]) -> list[dict[str, Any]]:
         "language": str(params.get("language", "es")),
         "num_step": None if num_step_raw is None else int(num_step_raw),
         "guidance_scale": guidance_scale,
+        "cache": bool(params.get("cache", True)),
     }
     return [_clip(word, piece) for word in params.get("clip", [])]
 
@@ -292,6 +297,7 @@ def _params(clip: dict[str, Any], seed: int) -> dict[str, Any]:
         "language": clip["language"],
         "num-step": clip.get("num_step"),
         "guidance-scale": clip.get("guidance_scale"),
+        "cache": bool(clip.get("cache", True)),
     }
 
 
@@ -314,7 +320,13 @@ def _wav_shape(path: Path) -> tuple[float, int]:
 
 
 def _asset(
-    clip: dict[str, Any], path: Path, seed: int, score: float, transcript: str, tries: int
+    clip: dict[str, Any],
+    path: Path,
+    seed: int,
+    score: float,
+    transcript: str,
+    tries: int,
+    cached: bool,
 ) -> dict[str, Any]:
     """One clip's record: the written WAV, its engine details and its seed."""
     duration, rate = _wav_shape(path)
@@ -333,6 +345,7 @@ def _asset(
             "transcript": transcript,
             "wer": round(score, 4),
             "attempts": tries,
+            "cached": cached,
         },
         "params": _params(clip, seed),
         "seed": seed,
@@ -347,37 +360,64 @@ def _score(clip: dict[str, Any], transcript: str) -> tuple[float, list[str]]:
     return textnorm.wer(reference, heard), reference
 
 
-def _try_clip(
-    whisper: Any, base_url: str, clip: dict[str, Any], seed: int, out_dir: Path
-) -> tuple[str, float]:
-    """One synthesis attempt: speak, transcribe the clip back, score it."""
-    data = _post_speak(base_url, clip["name"], _speak_body(clip, seed))
-    path = out_dir / f"{clip['name']}.wav"
-    path.write_bytes(data)
+def _measure_attempt(
+    whisper: Any, audio: Any, path: Path, clip: dict[str, Any]
+) -> tuple[str, float, float, bool, float, bool]:
     transcript = _transcribe(whisper, path, clip["language"])
     score, _reference = _score(clip, transcript)
-    return transcript, score
+    duration, _rate = _wav_shape(path)
+    expected = _expected_s(clip)
+    duration_ok = _duration_ok(duration, expected)
+    samples, rate = audio.read_wav(path)
+    dropout = float(audio.digital_dropout_ms(samples, rate))
+    passed = score <= WER_MAX and duration_ok and dropout <= DROPOUT_MAX_MS
+    return transcript, score, duration, duration_ok, dropout, passed
+
+
+def _fail_kind(score: float, duration_ok: bool, dropout: float) -> str:
+    """Which check failed, for the regenerate log line."""
+    if not duration_ok:
+        return "duration outside 0.5x-2.0x of expected"
+    if dropout > DROPOUT_MAX_MS:
+        return f"digital dropout {dropout:.0f} ms > {DROPOUT_MAX_MS:.0f} ms"
+    return f"wer {score:.3f} > {WER_MAX:.2f}"
 
 
 def _narrate(whisper: Any, base_url: str, clip: dict[str, Any], out_dir: Path) -> dict[str, Any]:
     """One clip, verified; a failing clip regenerates with seed + 1."""
+    audio = _audio()
     seed = clip["seed"]
     path = out_dir / f"{clip['name']}.wav"
     transcript = ""
     score = 1.0
     tries = 0
-    expected = _expected_s(clip)
-    duration = 0.0
     duration_ok = False
-    fail_kind = "wer"
+    dropout = 0.0
+    cache_enabled = clipcache.enabled(clip)
     while True:
         tries += 1
-        transcript, score = _try_clip(whisper, base_url, clip, seed, out_dir)
-        duration, _rate = _wav_shape(path)
-        duration_ok = _duration_ok(duration, expected)
-        if score <= WER_MAX and duration_ok:
-            break
-        fail_kind = _fail_kind(score, duration_ok)
+        digest = clipcache.attempt_key(clip, seed, TOOL["version"])
+        cached_hit = cache_enabled and clipcache.lookup(digest, path)
+        if not cached_hit:
+            data = _post_speak(base_url, clip["name"], _speak_body(clip, seed))
+            path.write_bytes(data)
+        transcript, score, _duration, duration_ok, dropout, passed = _measure_attempt(
+            whisper, audio, path, clip
+        )
+        if passed:
+            if cached_hit:
+                return _asset(clip, path, seed, score, transcript, tries, cached=True)
+            if cache_enabled:
+                clipcache.store(digest, path)
+            return _asset(clip, path, seed, score, transcript, tries, cached=False)
+        fail_kind = _fail_kind(score, duration_ok, dropout)
+        if cached_hit:
+            # A cached clip failed verification: drop the stale cache entry.
+            with contextlib.suppress(OSError):
+                (clipcache.cache_dir() / f"{digest}.wav").unlink()
+            if tries < MAX_TRIES:
+                with contextlib.suppress(OSError):
+                    path.unlink()
         if tries >= MAX_TRIES:
             print(
                 f"REGENERATE {clip['name']}: still {fail_kind} "
@@ -390,14 +430,7 @@ def _narrate(whisper: Any, base_url: str, clip: dict[str, Any], out_dir: Path) -
             f"REGENERATE {clip['name']}: {fail_kind}, retrying with seed {seed}",
             flush=True,
         )
-    return _asset(clip, path, seed, score, transcript, tries)
-
-
-def _fail_kind(score: float, duration_ok: bool) -> str:
-    """Which check failed, for the regenerate log line."""
-    if not duration_ok:
-        return "duration outside 0.5x-2.0x of expected"
-    return f"wer {score:.3f} > {WER_MAX:.2f}"
+    return _asset(clip, path, seed, score, transcript, tries, cached=False)
 
 
 def _profile_module() -> Any:
@@ -548,21 +581,25 @@ def verify(req: Request) -> dict[str, Any]:
 
 
 def _verify_clip(whisper: Any, path: Path, clip: dict[str, Any]) -> dict[str, Any]:
-    """One asset's verdict: word error and duration against the clip's text."""
+    """One asset's verdict: word error, duration and dropout against the clip's text."""
+    audio = _audio()
     transcript = _transcribe(whisper, path, clip["language"])
     score, reference = _score(clip, transcript)
     duration, _rate = _wav_shape(path)
     expected = _expected_s(clip)
     duration_ok = _duration_ok(duration, expected)
+    samples, rate = audio.read_wav(path)
+    dropout = float(audio.digital_dropout_ms(samples, rate))
     return {
         "file": path.name,
-        "passed": score <= WER_MAX and duration_ok,
+        "passed": score <= WER_MAX and duration_ok and dropout <= DROPOUT_MAX_MS,
         "metrics": {
             "wer": round(score, 4),
             "words": len(reference),
             "transcript": transcript,
             "duration_s": round(duration, 3),
             "expected_duration_s": round(expected, 3),
+            "digital_silence_run_ms": round(dropout, 3),
         },
         "thresholds": {
             "wer_max": WER_MAX,

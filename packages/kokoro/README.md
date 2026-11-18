@@ -30,6 +30,7 @@ checked by transcription:
 | `language` | enum | no | `es` | `es`, `en-us`, `en-gb` |
 | `speed` | number | no | 1.0 | 0.5 to 2.0, speaking rate |
 | `target-lufs` | number | no | −16.0 | −30 to −10, normalisation target |
+| `cache` | boolean | no | `true` | reuse a verified clip from the cache; `false` bypasses it |
 | `clip` | array | yes | — | at least one clip: `name`, `text`, optional per-clip `voice` and `speed` |
 
 Each clip's `name` matches `[a-z0-9][a-z0-9-]*` and becomes `<name>.wav`.
@@ -45,10 +46,25 @@ each clip with `beam_size=5` and a VAD filter. The word error rate is
 word-level Levenshtein over normalised tokens: lowercase, accents
 stripped, thousands dots dropped, and — for Spanish only — numbers
 spelled into words, because Whisper writes "2026" where the text says
-"dos mil veintiséis". A clip passes while `wer ≤ 0.05` and its peak sits
-above −40 dBFS (silence can never pass), reporting `wer`, `words`,
-`words_per_minute`, `lufs`, `peak_dbfs` and `transcript` under
-`verifier = "faster-whisper-small@536b0662"`.
+"dos mil veintiséis". A clip passes while `wer ≤ 0.05`, its peak sits
+above −40 dBFS (silence can never pass), and it holds no run of digital
+silence (all-zero samples) longer than 200 ms between its first and last
+non-silent sample (a dropout, not a pause). Verify reports `wer`, `words`,
+`words_per_minute`, `lufs`, `peak_dbfs`, `digital_silence_run_ms` and
+`transcript` under `verifier = "faster-whisper-small@536b0662"`.
+
+## Clip cache
+
+Verified clips are cached under `<FACET_HOME|~/.facet>/data/kokoro/clip-cache`,
+keyed by the engine and model version, voice, exact text and every audio
+parameter. An identical request reuses the cached clip instead of
+synthesizing it, but verification still runs on every clip, cached or not.
+Only a clip that passed verification when it was made is stored. The run
+record marks each clip's origin in `properties.cached`.
+
+The cache is capped at 1 GiB per package (oldest evicted first). Set
+`cache = false` on the piece to bypass it. Delete the cache directory by
+hand to clear it; `facet clean` does not sweep it.
 
 `facet check <name>.wav` re-verifies one clip from the params its run
 record stored — the run record keeps the asset's own clip flat, not the

@@ -333,6 +333,7 @@ def _fake_audio() -> Any:
         momentary=lambda _samples, _rate: [None],
         silences=lambda _samples, _rate: [],
         clipped_samples=lambda _samples: 0,
+        digital_dropout_ms=lambda _samples, _rate: 0.0,
     )
 
 
@@ -362,6 +363,97 @@ def _free_port() -> int:
         return int(sock.getsockname()[1])
 
 
+STUB_AUDIOPREVIEW = r"""
+from __future__ import annotations
+
+import math
+import wave
+from pathlib import Path
+
+import numpy
+
+
+def read_wav(path: Path) -> tuple[numpy.ndarray, int]:
+    with wave.open(str(path), "rb") as reader:
+        rate = reader.getframerate()
+        frames = reader.getnframes()
+        channels = reader.getnchannels()
+        width = reader.getsampwidth()
+        raw = reader.readframes(frames)
+    if width == 2:
+        data = numpy.frombuffer(raw, dtype=numpy.int16).astype(numpy.float64) / 32768.0
+    elif width == 1:
+        data = (numpy.frombuffer(raw, dtype=numpy.uint8).astype(numpy.float64) - 128.0) / 128.0
+    else:
+        data = numpy.frombuffer(raw, dtype=numpy.int16).astype(numpy.float64) / 32768.0
+    if channels > 1:
+        data = data.reshape(-1, channels)
+    return data, int(rate)
+
+
+def duration_s(samples: numpy.ndarray, rate: int) -> float:
+    return len(samples) / rate if rate else 0.0
+
+
+def _mono(samples: numpy.ndarray) -> numpy.ndarray:
+    if samples.ndim == 1:
+        return samples
+    return samples.mean(axis=1)
+
+
+def peak_dbfs(samples: numpy.ndarray) -> float:
+    peak = float(numpy.max(numpy.abs(samples))) if len(samples) else 0.0
+    if peak <= 0.0:
+        return -160.0
+    return max(20.0 * math.log10(peak), -160.0)
+
+
+def waveform(_samples):
+    return {"bins": 1200, "min": [0.0] * 1200, "max": [0.0] * 1200}
+
+
+def integrated_lufs(_samples, _rate):
+    return -70.0
+
+
+def momentary(_samples, _rate):
+    return [None]
+
+
+def silences(_samples, _rate):
+    return []
+
+
+def clipped_samples(_samples):
+    return 0
+
+
+def digital_dropout_ms(samples: numpy.ndarray, rate: int) -> float:
+    if rate <= 0:
+        return 0.0
+    mono = _mono(samples)
+    nonzero = numpy.flatnonzero(mono)
+    if nonzero.size == 0:
+        return 0.0
+    first = int(nonzero[0])
+    last = int(nonzero[-1])
+    if last - first <= 1:
+        return 0.0
+    interior = mono[first + 1 : last]
+    zeros = interior == 0
+    if not zeros.any():
+        return 0.0
+    padded = numpy.concatenate(([False], zeros, [False]))
+    diff = numpy.diff(padded.astype(numpy.int8))
+    starts = numpy.flatnonzero(diff == 1)
+    ends = numpy.flatnonzero(diff == -1)
+    if starts.size == 0:
+        return 0.0
+    longest = int(numpy.max(ends - starts))
+    return longest * 1000.0 / rate
+"""
+
+
 def _stub_dir(tmp_path: Path) -> Path:
     """The PYTHONPATH stub: SDK, whisper, and the facet_lib name with textnorm."""
     folder = tmp_path / "stub"
@@ -374,6 +466,7 @@ def _stub_dir(tmp_path: Path) -> Path:
     (facet_lib / "textnorm.py").write_text(
         (ROOT / "lib" / "textnorm.py").read_text(encoding="utf-8"), encoding="utf-8"
     )
+    (facet_lib / "audiopreview.py").write_text(STUB_AUDIOPREVIEW, encoding="utf-8")
     return folder
 
 
@@ -512,6 +605,7 @@ def _run_piece(
             "FACET_SERVER_URL": url,
             "STUB_CALLS": str(calls),
             "STUB_HEARD": json.dumps(heard),
+            "FACET_HOME": str(tmp_path / "facet-home"),
         }
         return subprocess.run(
             [

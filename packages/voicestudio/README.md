@@ -223,17 +223,36 @@ no bytes and no source, and the doctor reports it as
 synthesis the runner transcribes the
 clip back, folds tildes (NFKD: `hipótesis` → `hipotesis`) and spells
 numbers below a million in words (Whisper writes `2026` where the text
-says `dos mil veintiséis`), then compares word sequences. Over 5 % of
-words wrong → `REGENERATE` printed and `seed + 1` tried, at most three
-attempts per clip. A clip still over the threshold after those attempts is
-not dropped: the runner keeps the last attempt's WAV, seed and transcript,
-and the `verify` verb reports that asset with `passed: false`, its `wer`
-and the `wer_max` threshold. The core turns that verdict into the record's
-failed verification status and `facet run` exits 3 (`verification_failed`).
+says `dos mil veintiséis`), then compares word sequences and checks the
+clip's duration and silence. Over 5 % of words wrong, outside 0.5x-2.0x of
+its expected duration, or holding a run of digital silence (all-zero
+samples) longer than 200 ms between its first and last non-silent sample →
+`REGENERATE` printed and `seed + 1` tried, at most three attempts per clip.
+A clip still failing after those attempts is not dropped: the runner keeps
+the last attempt's WAV, seed and transcript, and the `verify` verb reports
+that asset with `passed: false`, its metrics (including
+`digital_silence_run_ms`) and the thresholds. The core turns that verdict
+into the record's failed verification status and `facet run` exits 3
+(`verification_failed`).
 
-There is no piece-level skip: the piece inputs stay voice, model, language
-and clip. The only opt-out is the core's `facet run --no-verify` flag,
-which skips the verify verb; it never skips this run-time loop.
+There is no piece-level skip: the piece inputs stay voice, model, language,
+clip, generation parameters and cache. The only opt-out is the core's
+`facet run --no-verify` flag, which skips the verify verb; it never skips
+this run-time loop.
+
+## Clip cache
+
+`voicestudio.speak` and `voicestudio.clone` keep verified clips under
+`<FACET_HOME|~/.facet>/data/voicestudio/clip-cache`, keyed by the engine and
+model version, the voice or reference profile, the exact text and every
+audio parameter (including the attempt seed). An identical request reuses the
+cached clip instead of synthesizing it, but verification still runs on every
+clip, cached or not. Only a clip that passed verification when it was made
+is stored, and the record marks each clip's origin in `properties.cached`.
+
+The cache is capped at 1 GiB per package (oldest evicted first). Set
+`cache = false` on a `speak` or `clone` piece to bypass it. Delete the cache
+directory by hand to clear it; `facet clean` does not sweep it.
 
 ## Preview
 

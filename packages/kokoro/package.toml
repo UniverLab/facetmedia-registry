@@ -1,5 +1,5 @@
 name = "kokoro"
-version = "0.1.5"
+version = "0.2.0"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "hexgrad (model) · thewh1teagle (kokoro-onnx)"
@@ -163,6 +163,11 @@ default = -16.0
 min = -30
 max = -10
 description = "Normalisation target in LUFS, capped so the peak stays at or below -1.0 dBFS."
+
+[capabilities.speak.inputs.cache]
+type = "boolean"
+default = true
+description = "reuse verified clip; false bypasses"
 
 [capabilities.speak.inputs.clip]
 type = "array"

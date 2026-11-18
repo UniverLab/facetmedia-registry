@@ -84,11 +84,13 @@ apply to `es` — it is the Spanish voice.
 
 `verify` transcribes each clip with faster-whisper `small` (CPU, int8) and
 reports `wer`, the word error rate against the text. A clip passes while
-`wer` stays at or under `wer_max = 0.05` (one wrong word in twenty) **and**
-its peak sits above −40 dBFS, so silence can never pass as narration. The
-loudness target (`target-lufs`, default −16.0) is what `run` normalises to,
-capped so the peak never exceeds −1.0 dBFS; the record reports the `lufs`
-actually measured after normalisation.
+`wer` stays at or under `wer_max = 0.05` (one wrong word in twenty), its
+peak sits above −40 dBFS, and it holds no run of digital silence (all-zero
+samples) longer than 200 ms between its first and last non-silent sample
+(a dropout, not a pause). The metric `digital_silence_run_ms` reports the
+longest such run. The loudness target (`target-lufs`, default −16.0) is
+what `run` normalises to, capped so the peak never exceeds −1.0 dBFS; the
+record reports the `lufs` actually measured after normalisation.
 
 `facet check <clip>.wav` re-verifies a clip already on disk from the params
 its run record stored, with no piece rerun.
@@ -106,6 +108,17 @@ Then, in order of preference:
   and re-run the piece — verified clips are re-synthesised, so shorten the
   piece to just the failing clip when the rest already passed.
 
+## Clip cache
+
+Identical requests reuse a verified clip from
+`<FACET_HOME|~/.facet>/data/kokoro/clip-cache` (keyed by engine/model
+version, voice, text and audio parameters) instead of synthesizing again.
+Only clips that passed verification when made are cached; verification still
+runs on every clip, cached or not, and `properties.cached` records the
+origin. The cache is capped at 1 GiB per package (oldest evicted first).
+Set `cache = false` on the piece to bypass it, or delete the cache
+directory by hand to clear it.
+
 ## Pitfalls
 
 - The voice's first letter must match `language`: `e` → `es`, `a` →
@@ -117,6 +130,8 @@ Then, in order of preference:
 - The first `facet pull kokoro` downloads about 840 MB (the 325 MB model,
   28 MB of voices, the 486 MB whisper model and the environment); later runs
   are offline.
+- A clip that drops to digital silence for more than 200 ms inside speech
+  fails verification (`digital_silence_run_ms`): regenerate or fix the text.
 - The package environment carries GPL components (phonemizer, espeak-ng).
   They run isolated as libraries of the runner and do not license the audio
   they produce.

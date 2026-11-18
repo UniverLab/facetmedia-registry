@@ -145,22 +145,37 @@ the person who runs facet responsible for complying with the terms.
 ## Judging the result
 
 The runner itself verifies: after synthesis it transcribes each clip with
-faster-whisper `small` and measures the word error rate against the text
-plus the clip length. A clip over `wer_max = 0.05` or outside 0.5x-2.0x of
-its expected duration prints `REGENERATE` and is rewritten with `seed + 1`
-(three tries per clip, the last attempt kept). The record reports the final
-`seed` and the number of attempts, so a clip that kept its first seed
-passed on first hearing. `verify` reports failing durations the same way
-it reports a bad word error, with `passed` false.
+faster-whisper `small` and measures the word error rate against the text,
+the clip length, and dropouts. A clip over `wer_max = 0.05`, outside
+0.5x-2.0x of its expected duration, or with a run of digital silence
+(all-zero samples) longer than 200 ms between its first and last non-silent
+sample prints `REGENERATE` and is rewritten with `seed + 1` (three tries per
+clip, the last attempt kept). The run record reports the final `seed`, the
+number of attempts, and `properties.cached`, so a clip that kept its first
+seed passed on first hearing. `verify` reports the longest interior
+digital-silence run as `digital_silence_run_ms` and reports a failing
+duration, word error, or dropout with `passed` false.
 
 Two `voicestudio.speak` inputs tune generation: `num-step` (1 to 128) sets
 the diffusion steps, `guidance-scale` (above 0, up to 20) the guidance.
 Raise `num-step` for quality, lower it for speed; raise `guidance-scale`
 when the voice drifts from the text. Omitting either keeps the engine
 default (`voxcpm2` 10 and 2.0, `omnivoice` 16 and 2.0). The clone engine
-reads neither. The length gate catches gross failures only — a stuck loop,
-trailing noise, swallowed words — not pacing: a clone follows its reference
-speaker, so judge rhythm by ear.
+reads neither. Set `cache = false` on a `speak` or `clone` piece to bypass
+the verified-clip cache. The length gate catches gross failures only — a
+stuck loop, trailing noise, swallowed words — not pacing: a clone follows
+its reference speaker, so judge rhythm by ear.
+
+## Clip cache
+
+Identical requests reuse a verified clip from
+`<FACET_HOME|~/.facet>/data/voicestudio/clip-cache` (keyed by engine/model
+version, voice, text, generation parameters and seed) instead of
+synthesizing again. Only clips that passed verification when made are
+cached; verification still runs on every clip, cached or not, and
+`properties.cached` records the origin. The cache is capped at 1 GiB per
+package (oldest evicted first). Set `cache = false` on a `speak` or `clone`
+piece to bypass it, or delete the cache directory by hand to clear it.
 
 ## Pitfalls
 
@@ -183,6 +198,9 @@ speaker, so judge rhythm by ear.
   `voicestudio.profile` from the person's own reference recordings.
 - **The same `seed` does not repeat a clip.** The output varies a little
   between calls.
+- **A dropout fails the clip.** A run of digital silence (all-zero samples)
+  longer than 200 ms inside speech fails verification
+  (`digital_silence_run_ms`) and is retried with `seed + 1`.
 - **Cloned profiles live in the person's data dir** and are never bundled.
   A missing profile is created with `voicestudio.profile` from the person's
   own reference recordings; the doctor names the recipe.

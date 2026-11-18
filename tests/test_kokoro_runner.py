@@ -12,8 +12,11 @@ reads.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import math
 import os
+import struct
 import subprocess
 import sys
 import wave
@@ -128,19 +131,49 @@ class WhisperModel:
         return [_Segment(HEARD.pop(0))], {"language": language}
 """
 
-#: The audio surface preview reads, fixed on one second of 24 kHz zeros.
-STUB_AUDIO = """
+#: The audio surface: reads real WAVs and computes dropout; other values fixed.
+STUB_AUDIO = r"""
+import math
+import wave
+
 import numpy
 
 RATE_HZ = 24000
 
 
-def read_wav(_path):
-    return numpy.zeros(RATE_HZ, dtype=numpy.float32), RATE_HZ
+def read_wav(path):
+    with wave.open(str(path), "rb") as reader:
+        rate = reader.getframerate()
+        frames = reader.getnframes()
+        channels = reader.getnchannels()
+        width = reader.getsampwidth()
+        raw = reader.readframes(frames)
+    if width == 2:
+        data = numpy.frombuffer(raw, dtype=numpy.int16).astype(numpy.float64) / 32768.0
+    elif width == 1:
+        data = (numpy.frombuffer(raw, dtype=numpy.uint8).astype(numpy.float64) - 128.0) / 128.0
+    else:
+        data = numpy.frombuffer(raw, dtype=numpy.int16).astype(numpy.float64) / 32768.0
+    if channels > 1:
+        data = data.reshape(-1, channels)
+    return data, int(rate)
 
 
 def duration_s(samples, rate):
     return len(samples) / rate
+
+
+def _mono(samples):
+    if samples.ndim == 1:
+        return samples
+    return samples.mean(axis=1)
+
+
+def peak_dbfs(samples):
+    peak = float(numpy.max(numpy.abs(samples))) if len(samples) else 0.0
+    if peak <= 0.0:
+        return -1.0
+    return max(20.0 * math.log10(peak), -160.0)
 
 
 def waveform(_samples):
@@ -149,10 +182,6 @@ def waveform(_samples):
 
 def integrated_lufs(_samples, _rate):
     return -18.0
-
-
-def peak_dbfs(_samples):
-    return -1.0
 
 
 def momentary(_samples, _rate):
@@ -165,6 +194,31 @@ def silences(_samples, _rate):
 
 def clipped_samples(_samples):
     return 0
+
+
+def digital_dropout_ms(samples, rate):
+    if rate <= 0:
+        return 0.0
+    mono = _mono(samples)
+    nonzero = numpy.flatnonzero(mono)
+    if nonzero.size == 0:
+        return 0.0
+    first = int(nonzero[0])
+    last = int(nonzero[-1])
+    if last - first <= 1:
+        return 0.0
+    interior = mono[first + 1 : last]
+    zeros = interior == 0
+    if not zeros.any():
+        return 0.0
+    padded = numpy.concatenate(([False], zeros, [False]))
+    diff = numpy.diff(padded.astype(numpy.int8))
+    starts = numpy.flatnonzero(diff == 1)
+    ends = numpy.flatnonzero(diff == -1)
+    if starts.size == 0:
+        return 0.0
+    longest = int(numpy.max(ends - starts))
+    return longest * 1000.0 / rate
 """
 
 
@@ -252,6 +306,7 @@ def _run_verb(
         "PYTHONPATH": str(stub_dir),
         "STUB_CALLS": str(calls),
         "STUB_HEARD": json.dumps(heard),
+        "FACET_HOME": str(tmp_path / "facet-home"),
     }
     done = subprocess.run(
         [
@@ -412,3 +467,273 @@ def test_verify_keeps_the_clip_array_path(tmp_path: Path) -> None:
     heard = _transcriptions(calls)
     assert len(heard) == 1
     assert heard[0]["language"] == "es"
+
+
+DROPOUT_MAX_MS = 200.0
+
+
+def _kokoro_cache_key(
+    voice: str, language: str, text: str, speed: float, target_lufs: float
+) -> str:
+    payload = {
+        "language": language,
+        "models": ["kokoro-82m-v1.0-onnx", "kokoro-voices-v1.0"],
+        "speed": float(speed),
+        "target_lufs": float(target_lufs),
+        "text": text,
+        "tool": "kokoro-onnx",
+        "tool_version": "0.6.1",
+        "voice": voice,
+    }
+    blob = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def _write_tone_wav(path: Path, rate: int = RATE_HZ, frames: int = RATE_HZ) -> None:
+    """A simple non-silent PCM16 WAV."""
+    with wave.open(str(path), "wb") as writer:
+        writer.setnchannels(1)
+        writer.setsampwidth(2)
+        writer.setframerate(rate)
+        samples = bytearray()
+        for i in range(frames):
+            value = int(12000 * math.sin(2 * math.pi * 220 * i / rate))
+            samples += struct.pack("<h", value)
+        writer.writeframes(bytes(samples))
+
+
+def _write_dropout_wav(path: Path, rate: int = RATE_HZ) -> None:
+    """Tone with a 300 ms interior all-zero block (dropout)."""
+    frames = rate  # 1s
+    start_zero = int(0.3 * rate)
+    end_zero = start_zero + int(0.3 * rate)
+    with wave.open(str(path), "wb") as writer:
+        writer.setnchannels(1)
+        writer.setsampwidth(2)
+        writer.setframerate(rate)
+        samples = bytearray()
+        for i in range(frames):
+            if start_zero <= i < end_zero:
+                value = 0
+            else:
+                value = int(12000 * math.sin(2 * math.pi * 220 * i / rate))
+            samples += struct.pack("<h", value)
+        writer.writeframes(bytes(samples))
+
+
+def _run_request(tmp_path: Path, inputs: dict[str, object], facet_home: Path, tag: str):
+    stub_dir = _stub_dir(tmp_path)
+    out = tmp_path / f"out-{tag}"
+    out.mkdir()
+    piece = tmp_path / f"piece-{tag}"
+    piece.mkdir()
+    request_path = tmp_path / f"{tag}-request.json"
+    result_path = tmp_path / f"{tag}-result.json"
+    calls = tmp_path / f"calls-{tag}.jsonl"
+    calls.touch()
+    request = {
+        "protocol": 1,
+        "verb": "run",
+        "capability": "kokoro.speak",
+        "depth": "quick",
+        "inputs": inputs,
+        "out_dir": str(out),
+        "piece_dir": str(piece),
+        "models": {},
+        "assets": [],
+    }
+    request_path.write_text(json.dumps(request), encoding="utf-8")
+    env = {
+        **os.environ,
+        "PYTHONPATH": str(stub_dir),
+        "FACET_HOME": str(facet_home),
+        "STUB_CALLS": str(calls),
+        "STUB_HEARD": "[]",
+    }
+    done = subprocess.run(
+        [
+            sys.executable,
+            str(RUNNER),
+            "run",
+            "--input",
+            str(request_path),
+            "--result",
+            str(result_path),
+        ],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    result = json.loads(result_path.read_text(encoding="utf-8")) if result_path.exists() else None
+    return done, result, out
+
+
+def _cache_file(facet_home: Path, key: str) -> Path:
+    return facet_home / "data" / "kokoro" / "clip-cache" / f"{key}.wav"
+
+
+def test_run_cache_hit_skips_synthesis(tmp_path: Path) -> None:
+    facet_home = tmp_path / "home"
+    key = _kokoro_cache_key("ef_dora", "es", "hola", 1.0, -16.0)
+    cache_path = _cache_file(facet_home, key)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    _write_tone_wav(cache_path)
+    inputs = {
+        "voice": "ef_dora",
+        "language": "es",
+        "speed": 1.0,
+        "target-lufs": -16.0,
+        "clip": [{"name": "saludo", "text": "hola"}],
+    }
+    done, result, out = _run_request(tmp_path, inputs, facet_home, "hit")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert result is not None
+    asset = result["assets"][0]
+    assert asset["file"] == "saludo.wav"
+    assert asset["properties"]["cached"] is True
+    assert (out / "saludo.wav").is_file()
+
+
+def test_verify_stores_passed_clip_in_cache(tmp_path: Path) -> None:
+    facet_home = tmp_path / "home"
+    inputs = {
+        "name": "voz",
+        "text": TEXT,
+        "voice": "ef_dora",
+        "language": "es",
+        "speed": 1.0,
+        "target-lufs": -16.0,
+        "cache": True,
+    }
+    stub_dir = _stub_dir(tmp_path)
+    out = tmp_path / "out-store"
+    out.mkdir()
+    piece = tmp_path / "piece-store"
+    piece.mkdir()
+    asset = out / "voz.wav"
+    _write_tone_wav(asset)
+    model = tmp_path / "faster-whisper-small"
+    model.mkdir()
+    calls = tmp_path / "calls-store.jsonl"
+    calls.touch()
+    request_path = tmp_path / "store-request.json"
+    result_path = tmp_path / "store-result.json"
+    request_path.write_text(
+        json.dumps(_request(out, piece, inputs, asset, model, verb="verify")), encoding="utf-8"
+    )
+    env = {
+        **os.environ,
+        "PYTHONPATH": str(stub_dir),
+        "STUB_CALLS": str(calls),
+        "STUB_HEARD": json.dumps([TEXT]),
+        "FACET_HOME": str(facet_home),
+    }
+    done = subprocess.run(
+        [
+            sys.executable,
+            str(RUNNER),
+            "verify",
+            "--input",
+            str(request_path),
+            "--result",
+            str(result_path),
+        ],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    result = json.loads(result_path.read_text(encoding="utf-8"))
+    assert result["assets"][0]["passed"] is True
+    assert "digital_silence_run_ms" in result["assets"][0]["metrics"]
+    key = _kokoro_cache_key("ef_dora", "es", TEXT, 1.0, -16.0)
+    assert _cache_file(facet_home, key).is_file()
+
+
+def test_verify_dropout_fails_and_not_cached(tmp_path: Path) -> None:
+    facet_home = tmp_path / "home"
+    stub_dir = _stub_dir(tmp_path)
+    out = tmp_path / "out-drop"
+    out.mkdir()
+    piece = tmp_path / "piece-drop"
+    piece.mkdir()
+    asset = out / "voz.wav"
+    _write_dropout_wav(asset)
+    model = tmp_path / "faster-whisper-small"
+    model.mkdir()
+    calls = tmp_path / "calls-drop.jsonl"
+    calls.touch()
+    inputs = {
+        "name": "voz",
+        "text": TEXT,
+        "voice": "ef_dora",
+        "language": "es",
+        "speed": 1.0,
+        "target-lufs": -16.0,
+        "cache": True,
+    }
+    request_path = tmp_path / "drop-request.json"
+    result_path = tmp_path / "drop-result.json"
+    request_path.write_text(
+        json.dumps(_request(out, piece, inputs, asset, model, verb="verify")), encoding="utf-8"
+    )
+    env = {
+        **os.environ,
+        "PYTHONPATH": str(stub_dir),
+        "STUB_CALLS": str(calls),
+        "STUB_HEARD": json.dumps([TEXT]),
+        "FACET_HOME": str(facet_home),
+    }
+    done = subprocess.run(
+        [
+            sys.executable,
+            str(RUNNER),
+            "verify",
+            "--input",
+            str(request_path),
+            "--result",
+            str(result_path),
+        ],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    result = json.loads(result_path.read_text(encoding="utf-8"))
+    entry = result["assets"][0]
+    assert entry["passed"] is False
+    assert entry["metrics"]["digital_silence_run_ms"] > DROPOUT_MAX_MS
+    key = _kokoro_cache_key("ef_dora", "es", TEXT, 1.0, -16.0)
+    assert not _cache_file(facet_home, key).exists()
+
+
+def test_run_cache_bypass_does_not_read_cache(tmp_path: Path) -> None:
+    facet_home = tmp_path / "home"
+    key = _kokoro_cache_key("ef_dora", "es", "hola", 1.0, -16.0)
+    cache_path = _cache_file(facet_home, key)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    _write_tone_wav(cache_path)
+    inputs = {
+        "voice": "ef_dora",
+        "language": "es",
+        "speed": 1.0,
+        "target-lufs": -16.0,
+        "cache": False,
+        "clip": [{"name": "saludo", "text": "hola"}],
+    }
+    # bypass means must not use cache; without real kokoro synth this may fail,
+    # but it must not take the cache-hit path.
+    done, result, out = _run_request(tmp_path, inputs, facet_home, "bypass")
+    # if it hit cache it would succeed with cached:true; bypass must not hit
+    if done.returncode == 0 and result is not None:
+        assert result["assets"][0]["properties"]["cached"] is False
+    else:
+        # failed because synth unavailable in stub env: proves it didn't take cache-hit path
+        assert not (out / "saludo.wav").exists()
+        assert result is None or "cached" not in json.dumps(result)

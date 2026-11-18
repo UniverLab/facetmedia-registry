@@ -59,7 +59,7 @@ MODEL_ENTRIES = 2
 def test_the_engine_is_python_311_with_a_managed_server() -> None:
     assert MANIFEST["name"] == "voicestudio"
     assert MANIFEST["facet"] == "voice"
-    assert MANIFEST["version"] == "0.1.5"
+    assert MANIFEST["version"] == "0.2.0"
     assert MANIFEST["engine"]["type"] == "python-env"
     assert MANIFEST["engine"]["python"] == "3.11"
     assert MANIFEST["engine"]["server"] == {
@@ -396,10 +396,20 @@ def test_the_skill_teaches_the_managed_backend() -> None:
         ("speed", False),
         ("num-step", True),
         ("guidance-scale", True),
+        ("cache", True),
     ],
 )
 def test_the_piece_inputs_are_exactly_the_four(input_name: str, present: bool) -> None:
     assert (input_name in INPUTS) is present
+
+
+def test_speak_and_clone_cache_default_true() -> None:
+    assert INPUTS["cache"]["type"] == "boolean"
+    assert INPUTS["cache"]["default"] is True
+    assert CLONE_INPUTS["cache"]["type"] == "boolean"
+    assert CLONE_INPUTS["cache"]["default"] is True
+    profile_inputs = MANIFEST["capabilities"]["profile"]["inputs"]
+    assert "cache" not in profile_inputs
 
 
 def test_the_speak_generation_params_are_bounded_and_optional() -> None:

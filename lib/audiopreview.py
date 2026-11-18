@@ -174,6 +174,33 @@ def clipped_samples(samples: numpy.ndarray) -> int:
     return int(numpy.count_nonzero(numpy.abs(samples) >= LINEAR_CLIP_FLOOR))
 
 
+def digital_dropout_ms(samples: numpy.ndarray, rate: int) -> float:
+    """Longest all-zero run strictly between the first and last non-silent sample, in ms."""
+    if rate <= 0:
+        return 0.0
+    mono = _mono(samples)
+    nonzero = numpy.flatnonzero(mono)
+    if nonzero.size == 0:
+        return 0.0
+    first = int(nonzero[0])
+    last = int(nonzero[-1])
+    if last - first <= 1:
+        return 0.0
+    interior = mono[first + 1 : last]
+    zeros = interior == 0
+    if not zeros.any():
+        return 0.0
+    # Find runs of consecutive True values.
+    padded = numpy.concatenate(([False], zeros, [False]))
+    diff = numpy.diff(padded.astype(numpy.int8))
+    starts = numpy.flatnonzero(diff == 1)
+    ends = numpy.flatnonzero(diff == -1)
+    if starts.size == 0:
+        return 0.0
+    longest = int(numpy.max(ends - starts))
+    return longest * 1000.0 / rate
+
+
 def _pad(chunk: numpy.ndarray, size: int) -> numpy.ndarray:
     """Zero-pad ``chunk`` (or cut it) to exactly ``size`` samples, along the sample axis only."""
     if len(chunk) >= size:

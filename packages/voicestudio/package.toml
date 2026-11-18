@@ -1,5 +1,5 @@
 name = "voicestudio"
-version = "0.1.5"
+version = "0.2.0"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "debpalash (VoiceStudio)"
@@ -127,6 +127,11 @@ min = 0
 max = 20
 description = "Guidance scale, above 0 up to 20; the backend needs it above 0. Omitting it keeps the engine default (2.0 on both engines)."
 
+[capabilities.speak.inputs.cache]
+type = "boolean"
+default = true
+description = "reuse verified clip; false bypasses"
+
 [capabilities.speak.verify]
 # cps_es copies the pinned backend's services/speech_rate.py per-language table (es 15.5).
 thresholds = { wer_max = 0.05, cps_es = 15.5, duration_min_ratio = 0.5, duration_max_ratio = 2.0 }
@@ -158,6 +163,11 @@ type = "enum"
 values = ["es"]
 default = "es"
 description = "Narration language of the piece."
+
+[capabilities.clone.inputs.cache]
+type = "boolean"
+default = true
+description = "reuse verified clip; false bypasses"
 
 [capabilities.clone.inputs.clip]
 type = "array"

@@ -27,6 +27,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import clipcache
 import espeakpath
 from facet_lib import textnorm
 from facet_runner_sdk import Request, Runner
@@ -37,6 +38,8 @@ runner = Runner()
 WER_MAX = 0.05
 #: A clip whose peak sits at or below this is silence, not narration.
 SILENT_PEAK_DBFS = -40.0
+#: A dropout longer than this, inside speech, fails verification.
+DROPOUT_MAX_MS = 200.0
 #: What verify measured with, named for the record.
 VERIFIER = "faster-whisper-small@536b0662"
 #: Kokoro is deterministic, and its versions are pinned by the manifest.
@@ -81,6 +84,7 @@ def _clips(params: dict[str, Any]) -> list[dict[str, Any]]:
     voice = str(params.get("voice", "ef_dora"))
     speed = float(params.get("speed", 1.0))
     target_lufs = float(params.get("target-lufs", -16.0))
+    cache = bool(params.get("cache", True))
     clips: list[dict[str, Any]] = []
     for raw in params.get("clip", []):
         clip = {
@@ -90,6 +94,7 @@ def _clips(params: dict[str, Any]) -> list[dict[str, Any]]:
             "speed": float(raw.get("speed") or speed),
             "language": language,
             "target_lufs": target_lufs,
+            "cache": cache,
         }
         clips.append(clip)
     return clips
@@ -118,7 +123,22 @@ def _params(clip: dict[str, Any]) -> dict[str, Any]:
         "speed": clip["speed"],
         "language": clip["language"],
         "target-lufs": clip["target_lufs"],
+        "cache": bool(clip.get("cache", True)),
     }
+
+
+def _cache_key(clip: dict[str, Any]) -> str:
+    payload = {
+        "tool": "kokoro-onnx",
+        "tool_version": TOOL["version"],
+        "models": [ONNX_MODEL, VOICES_MODEL],
+        "voice": clip["voice"],
+        "language": clip["language"],
+        "text": clip["text"],
+        "speed": float(clip["speed"]),
+        "target_lufs": float(clip["target_lufs"]),
+    }
+    return clipcache.key(payload)
 
 
 def _require_matching_voice(voice: str, language: str) -> None:
@@ -182,18 +202,17 @@ def run(req: Request) -> dict[str, Any]:
     clips = _clips(dict(req.inputs))
     for clip in clips:
         _require_matching_voice(clip["voice"], clip["language"])
-    kokoro = _kokoro(req)
-    assets = [_speak(kokoro, clip, req.out_dir) for clip in clips]
+    kokoro: Any = None
+    assets = []
+    for clip in clips:
+        asset, kokoro = _speak(req, kokoro, clip, req.out_dir)
+        assets.append(asset)
     return {"tool": _tool(), "assets": assets}
 
 
-def _speak(kokoro: Any, clip: dict[str, Any], out_dir: Path) -> dict[str, Any]:
-    """One clip: synthesise, normalise, write PCM 16-bit, describe it."""
+def _asset_from_wav(path: Path, clip: dict[str, Any], cached: bool) -> dict[str, Any]:
     audio = _audio()
-    samples, rate = kokoro.create(clip["text"], clip["voice"], clip["speed"], clip["language"])
-    samples = audio.normalize(samples, int(rate), clip["target_lufs"])
-    path = out_dir / f"{clip['name']}.wav"
-    audio.write_wav(path, samples, int(rate))
+    samples, rate = audio.read_wav(path)
     return {
         "file": path.name,
         "name": clip["name"],
@@ -206,11 +225,28 @@ def _speak(kokoro: Any, clip: dict[str, Any], out_dir: Path) -> dict[str, Any]:
             "peak_dbfs": round(audio.peak_dbfs(samples), 2),
             "voice": clip["voice"],
             "language": clip["language"],
+            "cached": cached,
         },
         "params": _params(clip),
         "seed": None,
         "inputs": [],
     }
+
+
+def _speak(
+    req: Request, kokoro: Any, clip: dict[str, Any], out_dir: Path
+) -> tuple[dict[str, Any], Any]:
+    """One clip: reuse a verified cached clip, or synthesise and normalise it."""
+    audio = _audio()
+    path = out_dir / f"{clip['name']}.wav"
+    if clipcache.enabled(clip) and clipcache.lookup(_cache_key(clip), path):
+        return _asset_from_wav(path, clip, cached=True), kokoro
+    if kokoro is None:
+        kokoro = _kokoro(req)
+    samples, rate = kokoro.create(clip["text"], clip["voice"], clip["speed"], clip["language"])
+    samples = audio.normalize(samples, int(rate), clip["target_lufs"])
+    audio.write_wav(path, samples, int(rate))
+    return _asset_from_wav(path, clip, cached=False), kokoro
 
 
 @runner.verb("verify")
@@ -244,8 +280,11 @@ def _verify_clip(model: Any, audio: Any, path: Path, clip: dict[str, Any]) -> di
     duration = audio.duration_s(samples, rate)
     peak = audio.peak_dbfs(samples)
     lufs = audio.integrated_lufs(samples, rate)
+    dropout = float(audio.digital_dropout_ms(samples, rate))
     minutes = duration / 60.0 if duration else 0.0
-    passed = score <= WER_MAX and peak > SILENT_PEAK_DBFS
+    passed = score <= WER_MAX and peak > SILENT_PEAK_DBFS and dropout <= DROPOUT_MAX_MS
+    if passed and clipcache.enabled(clip):
+        clipcache.store(_cache_key(clip), path)
     return {
         "file": path.name,
         "passed": passed,
@@ -255,6 +294,7 @@ def _verify_clip(model: Any, audio: Any, path: Path, clip: dict[str, Any]) -> di
             "words_per_minute": round(len(reference) / minutes) if minutes else 0,
             "lufs": round(lufs, 2),
             "peak_dbfs": round(peak, 2),
+            "digital_silence_run_ms": round(dropout, 3),
             "transcript": transcript,
         },
         "thresholds": {"wer_max": WER_MAX},
