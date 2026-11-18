@@ -249,4 +249,152 @@ def doctor(req: Request) -> dict[str, Any]:
     return {"checks": checks}
 
 
+def _handoff_files(h: str) -> list[tuple[str, bool]]:
+    """File names from a handoff string: drop the parenthetical tail, split on +."""
+    text = h.split("(", 1)[0]
+    files: list[tuple[str, bool]] = []
+    for part in text.split("+"):
+        name = part.strip()
+        if not name:
+            continue
+        files.append((name, name.endswith("/")))
+    return files
+
+
+def _record(path: Path) -> dict[str, Any] | None:
+    """The facet record beside an asset, or None when missing or not valid JSON."""
+    record_path = Path(str(path) + ".facet.json")
+    try:
+        data = json.loads(record_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _record_capability(record: dict[str, Any]) -> str | None:
+    """The producing capability named by a record, when present."""
+    provenance = record.get("provenance")
+    if not isinstance(provenance, dict):
+        return None
+    capability = provenance.get("capability")
+    return str(capability) if capability is not None else None
+
+
+def _record_created(record: dict[str, Any]) -> str | None:
+    """The record's UTC created time, comparable as a string."""
+    created = record.get("created")
+    return str(created) if created is not None else None
+
+
+def _file_missing(base: Path, name: str, is_dir: bool) -> bool:
+    """A named handoff is missing, or a directory handoff is empty."""
+    path = base / name
+    if not path.exists():
+        return True
+    if is_dir:
+        return not path.is_dir() or not any(path.iterdir())
+    return False
+
+
+def _namers(steps: list[dict[str, Any]]) -> dict[str, list[int]]:
+    """Map each handoff file name to the step indices that name it."""
+    out: dict[str, list[int]] = {}
+    for step in steps:
+        index = int(step.get("step", 0))
+        for name, _is_dir in _handoff_files(str(step.get("handoff", ""))):
+            out.setdefault(name, []).append(index)
+    return out
+
+
+def _cap_by_index(steps: list[dict[str, Any]]) -> dict[int, str]:
+    """Map each step index to its capability id."""
+    return {int(step.get("step", 0)): str(step.get("capability", "")) for step in steps}
+
+
+def _allowed_caps(
+    namers: dict[str, list[int]], caps: dict[int, str], name: str, index: int
+) -> set[str]:
+    """Capabilities that may legitimately own a file at this step."""
+    return {caps[i] for i in namers.get(name, [index]) if i in caps and i >= index}
+
+
+def _file_state(
+    base: Path,
+    name: str,
+    is_dir: bool,
+    allowed: set[str],
+    max_created: str,
+) -> tuple[str, str | None]:
+    """Report one handoff file and the created time that counts for later steps."""
+    if _file_missing(base, name, is_dir):
+        return "missing", None
+    record = _record(base / name)
+    if record is None:
+        return "stale", None
+    cap = _record_capability(record)
+    created = _record_created(record)
+    if cap not in allowed or (created is not None and max_created and created < max_created):
+        return "stale", created
+    return "done", created
+
+
+def _step_state(file_reports: list[dict[str, str]]) -> str:
+    """Reduce per-file states to the step's state: missing beats stale beats done."""
+    states = {item["state"] for item in file_reports}
+    if "missing" in states:
+        return "missing"
+    if "stale" in states:
+        return "stale"
+    return "done"
+
+
+def _compute_status(plan_path: Path) -> dict[str, Any]:
+    """Compute the status report by reading the plan and its folder now."""
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    base = plan_path.parent
+    steps = plan.get("steps") or []
+    namers = _namers(steps)
+    caps = _cap_by_index(steps)
+
+    max_created = ""
+    report_steps = []
+    for step in steps:
+        index = int(step.get("step", 0))
+        capability = str(step.get("capability", ""))
+        file_reports = []
+        created_values: list[str] = []
+        for name, is_dir in _handoff_files(str(step.get("handoff", ""))):
+            allowed = _allowed_caps(namers, caps, name, index)
+            state, created = _file_state(base, name, is_dir, allowed, max_created)
+            file_reports.append({"file": name, "state": state})
+            if created is not None:
+                created_values.append(created)
+        if created_values:
+            max_created = max(max_created, *created_values)
+        report_steps.append(
+            {
+                "index": index,
+                "capability": capability,
+                "state": _step_state(file_reports),
+                "files": file_reports,
+            }
+        )
+
+    next_step = next((step["index"] for step in report_steps if step["state"] != "done"), None)
+    return {"steps": report_steps, "next_step": next_step}
+
+
+@runner.verb("status")
+def status(req: Request) -> dict[str, Any]:
+    """Inspect the folder beside a plan and report each step's handoff state."""
+    plan_path = req.assets[0]
+    report = _compute_status(plan_path)
+    out_name = f"{plan_path.stem.split('.')[0]}.status.json"
+    out_path = plan_path.parent / out_name
+    out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if _compute_status(plan_path) != report:
+        raise ValueError("status report did not match the folder on re-read")
+    return report
+
+
 runner.main()

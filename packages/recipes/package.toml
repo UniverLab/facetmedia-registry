@@ -1,5 +1,5 @@
 name = "recipes"
-version = "0.1.4"
+version = "0.2.0"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "UniverLab (recipes)"
@@ -43,4 +43,22 @@ description = "Complete piece to plan: explainer-video (narrated explainer video
 thresholds = { steps_min = 1 }
 
 [capabilities.plan.preview]
+viewer = "generic"
+
+[capabilities.status]
+summary = "Inspect the folder beside a plan and report each step as done, missing or stale"
+kind = "text"
+
+[capabilities.status.i18n.es]
+summary = "Inspecciona la carpeta junto a un plan e informa cada paso como hecho, faltante o desactualizado"
+
+[capabilities.status.inputs.plan]
+type = "path"
+required = true
+description = "The <recipe>.plan.json file to inspect; the status is written beside it as <recipe>.status.json."
+
+[capabilities.status.verify]
+thresholds = { steps_min = 1 }
+
+[capabilities.status.preview]
 viewer = "generic"

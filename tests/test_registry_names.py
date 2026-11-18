@@ -34,7 +34,7 @@ CAPABILITIES = {
     "whisper-subs": ("subtitles",),
     "comfy": ("still", "edit", "clip"),
     "comfy-xl": ("still", "edit", "clip"),
-    "recipes": ("plan",),
+    "recipes": ("plan", "status"),
 }
 
 #: The Spanish names each manifest must no longer carry, anywhere.

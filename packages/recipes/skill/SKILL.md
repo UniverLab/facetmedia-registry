@@ -122,6 +122,10 @@ with timings, not the final render by eye).
 `<recipe>.plan.json.preview.json` (generic viewer) with a summary naming the
 recipe and its step count and the fields `recipe`, `steps` and `packages`.
 
+## Checking progress
+
+Run `recipes.status` on the plan before each step of a long recipe and after any failure. It writes `<recipe>.status.json` beside the plan and reports each step as `done`, `missing` or `stale`, plus the `next_step` to run.
+
 ## Pitfalls
 
 - The plan is a route, not a run: no capability is executed here, and a

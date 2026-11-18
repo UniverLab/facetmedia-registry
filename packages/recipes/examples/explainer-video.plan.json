@@ -1,0 +1,48 @@
+{
+  "recipe": "explainer-video",
+  "summary": "Narrated explainer video: a voice track and a music bed, normalized and mixed, transcribed for subtitles, and assembled by HyperFrames.",
+  "steps": [
+    {
+      "step": 1,
+      "capability": "voicestudio.speak",
+      "handoff": "voice.wav",
+      "verify": "Transcribe the voice."
+    },
+    {
+      "step": 2,
+      "capability": "acestep.bed",
+      "handoff": "bed.wav",
+      "verify": "Probe duration and peak."
+    },
+    {
+      "step": 3,
+      "capability": "ffmpeg.normalize",
+      "handoff": "voice-normalized.wav (clip voice.wav, target-lufs -16.0, true-peak-db -1.5)",
+      "verify": "Integrated loudness at -16 LUFS."
+    },
+    {
+      "step": 4,
+      "capability": "ffmpeg.mix",
+      "handoff": "mix.wav (voice voice-normalized.wav, bed bed.wav, ducking true, duck-db -12.0, target-lufs -16.0)",
+      "verify": "Integrated loudness at -16 LUFS."
+    },
+    {
+      "step": 5,
+      "capability": "whisper.transcribe",
+      "handoff": "transcript.txt + transcript.srt + transcript.json (audio voice-normalized.wav)",
+      "verify": "Confidence and no-speech share."
+    },
+    {
+      "step": 6,
+      "capability": "whisper-subs.subtitles",
+      "handoff": "transcript.srt (source transcript.json, format srt)",
+      "verify": "At least one cue, monotonic and non-overlapping."
+    },
+    {
+      "step": 7,
+      "capability": "hyperframes.narrated",
+      "handoff": "narrated.mp4 (composition narrated/, voice voice-normalized.wav, music bed.wav, subtitles transcript.srt)",
+      "verify": "Check the MP4 with an ffprobe probe."
+    }
+  ]
+}

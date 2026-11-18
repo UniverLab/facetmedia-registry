@@ -1,0 +1,5 @@
+# The handoff state beside a plan: which steps are done, missing or stale.
+capability = "recipes.status"
+
+[inputs]
+plan = "explainer-video.plan.json"

@@ -18,6 +18,7 @@ MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
 INDEX = tomllib.loads((ROOT / "index.toml").read_text(encoding="utf-8"))
 CAPABILITY = MANIFEST["capabilities"]["plan"]
 INPUTS = CAPABILITY["inputs"]
+STATUS = MANIFEST["capabilities"]["status"]
 RECIPES = ["explainer-video", "architecture-render", "voice-material", "tool-demo"]
 
 
@@ -47,7 +48,9 @@ def test_the_pyproject_carries_no_dependencies_and_its_lock() -> None:
 def test_the_capability_is_text_with_the_generic_viewer() -> None:
     assert CAPABILITY["kind"] == "text"
     assert CAPABILITY["preview"] == {"viewer": "generic"}
-    assert MANIFEST["capabilities"].keys() == {"plan"}
+    assert STATUS["kind"] == "text"
+    assert STATUS["preview"] == {"viewer": "generic"}
+    assert set(MANIFEST["capabilities"].keys()) == {"plan", "status"}
 
 
 def test_recipe_is_the_required_closed_enum() -> None:

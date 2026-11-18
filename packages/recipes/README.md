@@ -71,3 +71,4 @@ against the registry; the repository tests do that.
 every file it names, into a fresh folder and runs it there:
 
 - `recipes.plan` — `examples/plan.toml`: `facet example recipes.plan --run`
+- `recipes.status` — `examples/status.toml`: `facet example recipes.status --run`
