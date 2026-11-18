@@ -1,0 +1,7 @@
+# Send one video to the TikTok account's inbox as a draft.
+# Dry-run only: facet run inbox.toml --dry-run sends nothing and touches no network.
+capability = "tiktok.post"
+
+[inputs]
+caption = "La escuadra del laboratorio, recién salida del banco. #taller"
+video = "clip.mp4"

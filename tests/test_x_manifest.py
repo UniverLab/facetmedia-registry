@@ -141,6 +141,6 @@ def test_the_registry_indexes_the_package() -> None:
     assert "x" in names
     assert names.index("bluesky") == names.index("x") - 1
     assert names.index("youtube") == names.index("x") + 1
-    assert names.index("youtube") == len(names) - 1
+    assert names.index("youtube") == names.index("tiktok") - 1
     assert INDEX["facets"]["publish"]["label"] == "Publish"
     assert INDEX["facets"]["publish"]["i18n"]["es"]["label"] == "Publicación"

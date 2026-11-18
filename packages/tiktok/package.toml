@@ -1,0 +1,81 @@
+name = "tiktok"
+version = "0.1.0"
+requires_facet = ">=0.1.0b2,<0.2"
+protocol = 1
+provider = "TikTok Pte. Ltd. · Content Posting API"
+tool_name = "TikTok"
+description = "Uploads one video or a photo set to the lab's TikTok account inbox as a draft through the Content Posting API, with a read-back check."
+facet = "publish"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 0.2
+exclusive = false
+platforms = ["linux"]
+
+[[licenses]]
+subject = "TikTok Content Posting API (TikTok Pte. Ltd.)"
+spdx = "LicenseRef-TikTok-API-Terms"
+
+[[secrets]]
+name = "client-key"
+description = "The lab's TikTok app client key, shown once when the app is created"
+required = true
+
+[[secrets]]
+name = "client-secret"
+description = "The lab's TikTok app client secret, shown once with the client key"
+required = true
+
+[[secrets]]
+name = "access-token"
+description = "The account's access token, stored by facet auth tiktok after sign-in"
+required = true
+
+[[secrets]]
+name = "refresh-token"
+description = "The account's refresh token, stored by facet auth tiktok after sign-in"
+required = true
+
+[[secrets]]
+name = "open-id"
+description = "The account's open id, stored by facet auth tiktok after sign-in"
+required = true
+
+[capabilities.post]
+summary = "Send one video or a photo set to the lab's TikTok account inbox as a draft, then read its publish status back."
+kind = "post"
+outward = true
+
+[capabilities.post.i18n.es]
+summary = "Envía un vídeo o una serie de fotos a la bandeja de la cuenta de TikTok del laboratorio como borrador, y vuelve a leer su estado."
+
+[capabilities.post.inputs.caption]
+type = "string"
+required = true
+description = "The caption the user should paste in the TikTok app; the inbox flow takes no caption, so it rides the dry run, the receipt preview and the skill."
+
+[capabilities.post.inputs.video]
+type = "path"
+description = "One local video file to upload in chunks, resolved relative to the piece; refused together with photos."
+
+[capabilities.post.inputs.photos]
+type = "array"
+description = "The photo set, each entry a URL on a domain the TikTok app has verified; refused together with a video."
+
+[capabilities.post.inputs.photos.items.url]
+type = "string"
+required = true
+description = "One photo URL on a domain the TikTok app has verified, https and never redirecting."
+
+[capabilities.post.preview]
+viewer = "post"

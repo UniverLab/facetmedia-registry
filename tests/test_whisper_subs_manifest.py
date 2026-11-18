@@ -99,6 +99,6 @@ def test_the_index_carries_the_package_as_an_append() -> None:
     assert names.index("recipes") == names.index("bluesky") - 1
     assert names.index("bluesky") == names.index("x") - 1
     assert names.index("x") == names.index("youtube") - 1
-    assert names.index("youtube") == len(names) - 1
+    assert names.index("youtube") == names.index("tiktok") - 1
     assert names.index("pillow") == names.index("rembg") + 1  # the prior tail holds
     assert (PACKAGE / "package.toml").is_file()
