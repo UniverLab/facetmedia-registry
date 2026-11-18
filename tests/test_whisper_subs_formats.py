@@ -135,5 +135,132 @@ class TestParse(unittest.TestCase):
         self.assertEqual(formats.parse_timings("no timestamps here"), [])
 
 
+def _worded(start_s: float, end_s: float, spans: list[tuple[str, float, float]]) -> formats.Cue:
+    """One word-timed cue from ``(word, start, end)`` spans."""
+    words = [formats.Word(word, start, end) for word, start, end in spans]
+    text = " ".join(word for word, _start, _end in spans)
+    return formats.Cue(start_s, end_s, text, tuple(words))
+
+
+def _even_words(
+    count: int, start_s: float, step_s: float, length_s: float
+) -> list[tuple[str, float, float]]:
+    """``count`` evenly spaced single-word spans, the uniform-speech case."""
+    return [
+        (f"w{index}", start_s + index * step_s, start_s + index * step_s + length_s)
+        for index in range(count)
+    ]
+
+
+class TestWrap(unittest.TestCase):
+    def test_short_text_stays_one_line(self) -> None:
+        self.assertEqual(formats._wrap("Hola mundo.", 42), ["Hola mundo."])
+
+    def test_long_text_wraps_at_word_boundaries(self) -> None:
+        text = "In this laboratory we test a locally generated English voice."
+        lines = formats._wrap(text, 42)
+        self.assertTrue(len(lines) > 1)
+        for line in lines:
+            self.assertLessEqual(len(line), 42)
+        self.assertEqual(" ".join(lines), text)
+
+    def test_an_overlong_word_stays_whole(self) -> None:
+        word = "x" * 60
+        self.assertEqual(formats._wrap(f"{word} yes", 42), [word, "yes"])
+
+    def test_empty_text_wraps_to_one_empty_line(self) -> None:
+        self.assertEqual(formats._wrap("", 42), [""])
+
+
+class TestShapeSplit(unittest.TestCase):
+    def test_a_long_uniform_segment_splits_into_fitting_pieces(self) -> None:
+        cue = _worded(0.0, 10.0, _even_words(20, 0.0, 0.5, 0.4))
+        shaped = formats.shape_cues([cue], formats.Limits())
+        self.assertEqual(len(shaped), 2)
+        for piece in shaped:
+            self.assertLessEqual(piece.end_s - piece.start_s, 7.0)
+            for line in piece.text.split("\n"):
+                self.assertLessEqual(len(line), 42)
+            self.assertLessEqual(len(piece.text.split("\n")), 2)
+        self.assertEqual(shaped[0].start_s, 0.0)
+        self.assertEqual(shaped[-1].end_s, 10.0)
+        self.assertLessEqual(shaped[1].start_s - shaped[0].end_s, 0.25 + 1e-9)
+        kept = " ".join(line for piece in shaped for line in piece.text.split("\n"))
+        self.assertEqual(kept.split(), cue.text.split())
+
+    def test_a_split_cuts_at_the_widest_silence(self) -> None:
+        spans = [
+            ("a", 0.0, 0.4),
+            ("b", 0.5, 0.9),
+            ("c", 1.0, 1.4),
+            ("d", 1.5, 1.9),
+            ("e", 5.0, 5.4),
+            ("f", 5.5, 5.9),
+            ("g", 6.0, 6.4),
+            ("h", 6.5, 6.9),
+        ]
+        shaped = formats.shape_cues([_worded(0.0, 9.0, spans)], formats.Limits())
+        self.assertEqual(len(shaped), 2)
+        self.assertEqual([piece.text for piece in shaped], ["a b c d", "e f g h"])
+        self.assertAlmostEqual(shaped[0].end_s, 1.9)
+        self.assertAlmostEqual(shaped[1].start_s, 5.0)
+
+    def test_a_wordless_segment_stays_one_cue_and_wraps(self) -> None:
+        text = "In this laboratory we test a locally generated English voice today."
+        shaped = formats.shape_cues([formats.Cue(0.0, 10.0, text)], formats.Limits())
+        self.assertEqual(len(shaped), 1)
+        for line in shaped[0].text.split("\n"):
+            self.assertLessEqual(len(line), 42)
+
+    def test_a_single_forced_word_is_kept_not_dropped(self) -> None:
+        cue = _worded(0.0, 1.0, [("x" * 60, 0.0, 1.0)])
+        shaped = formats.shape_cues([cue], formats.Limits())
+        self.assertEqual(len(shaped), 1)
+        self.assertEqual(shaped[0].text, "x" * 60)
+
+
+class TestShapeMerge(unittest.TestCase):
+    def test_contiguous_shorts_merge_into_one_cue(self) -> None:
+        cues = [formats.Cue(0.0, 0.5, "Hola."), formats.Cue(0.5, 1.5, "Mundo.")]
+        shaped = formats.shape_cues(cues, formats.Limits())
+        self.assertEqual(len(shaped), 1)
+        self.assertEqual((shaped[0].start_s, shaped[0].end_s), (0.0, 1.5))
+        self.assertEqual(shaped[0].text, "Hola. Mundo.")
+
+    def test_a_silence_gap_blocks_the_merge(self) -> None:
+        cues = [formats.Cue(0.0, 0.5, "Hola."), formats.Cue(2.5, 3.5, "Mundo.")]
+        shaped = formats.shape_cues(cues, formats.Limits())
+        self.assertEqual(len(shaped), 2)
+        self.assertEqual([cue.text for cue in shaped], ["Hola.", "Mundo."])
+
+    def test_an_overlap_never_merges(self) -> None:
+        cues = [formats.Cue(0.0, 0.5, "Hola."), formats.Cue(0.4, 1.5, "Mundo.")]
+        shaped = formats.shape_cues(cues, formats.Limits())
+        self.assertEqual(len(shaped), 2)
+
+    def test_a_merge_that_breaks_the_ceiling_is_refused(self) -> None:
+        cues = [formats.Cue(0.0, 0.5, "Hola."), formats.Cue(0.5, 8.0, "Mundo.")]
+        shaped = formats.shape_cues(cues, formats.Limits())
+        self.assertEqual(len(shaped), 2)
+
+
+class TestParseBlocks(unittest.TestCase):
+    def test_blocks_carry_text_lines_and_the_longest_line(self) -> None:
+        blocks = formats.parse_blocks(EXPECTED_SRT)
+        self.assertEqual([(block.start_ms, block.end_ms) for block in blocks], EXPECTED_TIMINGS)
+        self.assertEqual([block.lines for block in blocks], [("Hola.",), ("Mundo.",)])
+        self.assertEqual([block.chars for block in blocks], [5, 6])
+
+    def test_a_two_line_cue_reports_both(self) -> None:
+        text = "1\n00:00:00,000 --> 00:00:01,500\nHola mundo cruel.\nAdios.\n"
+        (block,) = formats.parse_blocks(text)
+        self.assertEqual(block.lines, ("Hola mundo cruel.", "Adios."))
+        self.assertEqual(block.chars, len("Hola mundo cruel."))
+        self.assertEqual((block.start_ms, block.end_ms), (0, 1500))
+
+    def test_missing_arrow_line_parses_to_nothing(self) -> None:
+        self.assertEqual(formats.parse_blocks("no timestamps here"), [])
+
+
 if __name__ == "__main__":
     unittest.main()

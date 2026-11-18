@@ -1,5 +1,5 @@
 name = "whisper-subs"
-version = "0.1.4"
+version = "0.1.5"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "UniverLab (whisper-subs)"
@@ -43,6 +43,31 @@ type = "enum"
 values = ["srt", "vtt"]
 default = "srt"
 description = "Subtitle format: srt (default) renders cues HH:MM:SS,mmm, vtt renders the WEBVTT header with cues HH:MM:SS.mmm; both outputs are <source-stem>.<format>."
+
+[capabilities.subtitles.inputs.max-cps]
+type = "number"
+default = 20.0
+description = "Reading speed limit in characters per second: cues over it are split where the speech allows and flagged by verify; raise it for fast technical speech."
+
+[capabilities.subtitles.inputs.max-line-chars]
+type = "number"
+default = 42
+description = "Line length limit in characters: cue text wraps at word boundaries so no line runs longer."
+
+[capabilities.subtitles.inputs.max-lines]
+type = "number"
+default = 2
+description = "Line count limit per cue: cues wrapping longer are split where the speech allows."
+
+[capabilities.subtitles.inputs.min-cue-seconds]
+type = "number"
+default = 0.8
+description = "Cue duration floor in seconds: very short cues merge into the following contiguous cue, never across a silence gap."
+
+[capabilities.subtitles.inputs.max-cue-seconds]
+type = "number"
+default = 7.0
+description = "Cue duration ceiling in seconds: longer segments are split at word boundaries where the speech allows."
 
 [capabilities.subtitles.verify]
 thresholds = { cues_min = 1 }

@@ -30,6 +30,24 @@ PREVIEW_FIELDS = {"preview", "kind", "summary", "cues", "duration_s", "format"}
 CUE_COUNT = 2
 DURATION_S = 3.25
 
+#: The five readability inputs exactly as the manifest and runner default them.
+LIMIT_DEFAULTS = {
+    "max-cps": 20.0,
+    "max-line-chars": 42,
+    "max-lines": 2,
+    "min-cue-seconds": 0.8,
+    "max-cue-seconds": 7.0,
+}
+
+#: Shaping counts asserted below: the worded segment's pieces by default,
+#: under a four-second ceiling, the stub's cue durations, failing overs.
+SHAPED_CUES = 2
+TIGHT_CUES = 4
+TIGHT_CEILING_S = 4.0
+FIRST_CUE_S = 1.5
+LAST_CUE_S = 1.75
+OVER_CUES = 2
+
 #: Two touching cues, exactly the shape whisper writes into its sidecar.
 SIDECAR = {
     "segments": [
@@ -193,7 +211,7 @@ def test_run_writes_the_srt_beside_the_piece_from_the_stem(tmp_path: Path) -> No
     assert asset["properties"] == {"cues": CUE_COUNT, "duration_s": DURATION_S, "format": "srt"}
     assert asset["seed"] is None
     assert asset["inputs"] == ["laboratorio.json"]
-    assert asset["params"] == {"source": "laboratorio.json", "format": "srt"}
+    assert asset["params"] == {"source": "laboratorio.json", "format": "srt", **LIMIT_DEFAULTS}
     assert result["tool"]["name"] == MANIFEST["tool_name"]
 
 
@@ -369,6 +387,157 @@ def test_doctor_quick_reports_files_and_formats(tmp_path: Path) -> None:
     assert checks["formats"]["ok"] is True
     assert "00:00:01,500" in checks["formats"]["detail"]
     assert "00:00:01.500" in checks["formats"]["detail"]
+
+
+def _stamp(seconds: float) -> str:
+    """One ``HH:MM:SS,mmm`` stamp, the way the runner writes SRT times."""
+    total = round(seconds * 1000)
+    hours, rest = divmod(total, 3600000)
+    minutes, rest = divmod(rest, 60000)
+    whole, millis = divmod(rest, 1000)
+    return f"{hours:02d}:{minutes:02d}:{whole:02d},{millis:03d}"
+
+
+def _srt(cues: list[tuple[float, float, str]]) -> str:
+    """A subtitle fixture from ``(start, end, text)`` cues, never a model."""
+    blocks = [
+        f"{number}\n{_stamp(start)} --> {_stamp(end)}\n{text}\n"
+        for number, (start, end, text) in enumerate(cues, start=1)
+    ]
+    return "\n".join(blocks)
+
+
+def _worded_sidecar() -> dict[str, Any]:
+    """One ten-second segment with even word timings, the splittable case."""
+    words = [
+        {
+            "start_s": index * 0.5,
+            "end_s": index * 0.5 + 0.4,
+            "word": f"w{index}",
+            "probability": 0.9,
+        }
+        for index in range(20)
+    ]
+    text = " ".join(f"w{index}" for index in range(20))
+    return {"segments": [{"start_s": 0.0, "end_s": 10.0, "text": text, "words": words}]}
+
+
+def _verify_file(
+    tmp_path: Path, text: str, inputs: dict[str, object] | None = None, tag: str = "rule"
+) -> dict[str, Any] | None:
+    """One ``verify`` of a written subtitle fixture; returns the verdict."""
+    path = tmp_path / f"{tag}.srt"
+    path.write_text(text, encoding="utf-8")
+    stub_dir = _stub_dir(tmp_path)
+    out = tmp_path / f"out-{tag}"
+    out.mkdir(exist_ok=True)
+    _done, verdict = _call(
+        stub_dir,
+        "verify",
+        _request("verify", out, tmp_path / "piece", inputs or {}, assets=(path,)),
+        tmp_path,
+        tag,
+    )
+    assert _done.returncode == 0, _done.stdout + _done.stderr
+    assert verdict is not None
+    return verdict["assets"][0]
+
+
+def test_run_shapes_a_long_word_timed_segment(tmp_path: Path) -> None:
+    done, result, _piece, out = _run(tmp_path, sidecar=_worded_sidecar(), tag="shaped")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert result is not None
+    text = (out / "laboratorio.srt").read_text(encoding="utf-8")
+    assert text.count("-->") == SHAPED_CUES
+    assert result["assets"][0]["properties"]["cues"] == SHAPED_CUES
+    assert result["assets"][0]["params"] == {
+        "source": "laboratorio.json",
+        "format": "srt",
+        **LIMIT_DEFAULTS,
+    }
+
+
+def test_run_honors_a_tighter_cue_ceiling(tmp_path: Path) -> None:
+    inputs: dict[str, object] = {"source": "laboratorio.json", "max-cue-seconds": TIGHT_CEILING_S}
+    done, result, _piece, _out = _run(
+        tmp_path, inputs=inputs, sidecar=_worded_sidecar(), tag="tight"
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert result is not None
+    assert result["assets"][0]["properties"]["cues"] == TIGHT_CUES
+    assert result["assets"][0]["params"]["max-cue-seconds"] == TIGHT_CEILING_S
+
+
+def test_run_rejects_a_bad_limit_as_a_plain_error(tmp_path: Path) -> None:
+    inputs: dict[str, object] = {"source": "laboratorio.json", "max-cps": "fast"}
+    done, result, _piece, _out = _run(tmp_path, inputs=inputs, tag="bad-limit")
+    assert done.returncode != 0
+    assert result is None
+    assert "bad readability limit" in done.stderr
+
+
+def test_verify_reports_the_readability_metrics(tmp_path: Path) -> None:
+    done, result, _piece, out = _run(tmp_path)
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert result is not None
+    stub_dir = _stub_dir(tmp_path)
+    request = _request(
+        "verify",
+        out,
+        tmp_path / "piece",
+        {"source": "laboratorio.json"},
+        assets=(out / "laboratorio.srt",),
+    )
+    _done, verdict = _call(stub_dir, "verify", request, tmp_path, "metrics")
+    assert _done.returncode == 0, _done.stdout + _done.stderr
+    assert verdict is not None
+    metrics = verdict["assets"][0]["metrics"]
+    assert metrics["worst-cps"] == round(6 / 1.75, 3)
+    assert metrics["longest-line-chars"] == len("Mundo.")
+    assert metrics["most-lines"] == 1
+    assert metrics["shortest-cue-seconds"] == FIRST_CUE_S
+    assert metrics["longest-cue-seconds"] == LAST_CUE_S
+    assert metrics["cues-over-limit"] == 0
+    assert verdict["assets"][0]["passed"] is True
+
+
+def test_verify_passes_a_single_forced_cue(tmp_path: Path) -> None:
+    verdict = _verify_file(tmp_path, _srt([(0.0, 1.0, "x" * 60)]), tag="single")
+    assert verdict is not None
+    assert verdict["metrics"]["cues-over-limit"] == 1
+    assert verdict["passed"] is True
+
+
+def test_verify_fails_two_over_cues_in_ten(tmp_path: Path) -> None:
+    cues = [(float(index), float(index + 1), "ok") for index in range(8)]
+    cues += [(8.0, 9.0, "x" * 60), (9.0, 10.0, "y" * 60)]
+    verdict = _verify_file(tmp_path, _srt(cues), tag="two-in-ten")
+    assert verdict is not None
+    assert verdict["metrics"]["cues-over-limit"] == OVER_CUES
+    assert verdict["passed"] is False
+
+
+def test_verify_passes_two_over_cues_in_a_hundred(tmp_path: Path) -> None:
+    cues = [(float(index), float(index + 1), "ok") for index in range(98)]
+    cues += [(98.0, 99.0, "x" * 60), (99.0, 100.0, "y" * 60)]
+    verdict = _verify_file(tmp_path, _srt(cues), tag="two-in-hundred")
+    assert verdict is not None
+    assert verdict["metrics"]["cues-over-limit"] == OVER_CUES
+    assert verdict["passed"] is True
+
+
+def test_verify_honors_the_raised_limits_it_is_given(tmp_path: Path) -> None:
+    cues = [(float(index), float(index + 1), "ok") for index in range(8)]
+    cues += [(8.0, 9.0, "x" * 60), (9.0, 10.0, "y" * 60)]
+    text = _srt(cues)
+    failing = _verify_file(tmp_path, text, tag="raised-fails")
+    assert failing is not None and failing["passed"] is False
+    raised = _verify_file(
+        tmp_path, text, {"max-cps": 100.0, "max-line-chars": 100}, tag="raised-passes"
+    )
+    assert raised is not None
+    assert raised["metrics"]["cues-over-limit"] == 0
+    assert raised["passed"] is True
 
 
 def test_doctor_full_builds_both_formats_and_cleans_up(tmp_path: Path) -> None:

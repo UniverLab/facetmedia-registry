@@ -14,6 +14,11 @@ does not cover.
 |-------|------|----------|---------|-------|
 | `source` | path | yes | — | a whisper `<name>.json` sidecar with `segments` carrying `start_s`, `end_s` and `text`, resolved relative to the piece |
 | `format` | enum | no | `srt` | `srt` or `vtt` |
+| `max-cps` | number | no | `20` | reading speed limit in characters per second; raise it for fast technical speech |
+| `max-line-chars` | number | no | `42` | longest wrapped line in characters |
+| `max-lines` | number | no | `2` | most lines per cue |
+| `min-cue-seconds` | number | no | `0.8` | shortest cue in seconds; shorter contiguous cues merge |
+| `max-cue-seconds` | number | no | `7` | longest cue in seconds; longer segments split |
 
 ## The sidecar contract
 
@@ -30,8 +35,10 @@ per cue:
 ```
 
 This is exactly what `whisper.transcribe` writes as `<name>.json` beside its
-transcript — the runner reads the sidecar, never re-transcribes. The cues are
-validated in order:
+transcript — the runner reads the sidecar, never re-transcribes. whisper
+always writes word timings (`words` with `start_s`/`end_s`/`word` per word);
+the runner shapes the cues from them, and a segment without any stays one
+cue. The cues are validated in order:
 
 - each cue's `start_s` must be strictly below its `end_s`;
 - each cue must start at or after the previous cue's end — cue boundaries
@@ -49,14 +56,26 @@ One run writes one asset named after the sidecar's stem, beside the piece
 - `<source-stem>.vtt` — WebVTT: the `WEBVTT` header line, unnumbered cues
   with timestamps `HH:MM:SS.mmm`, `text/vtt`.
 
-`verify` re-parses the file and reports `cues`, `duration_s` (the last cue's
-end), `monotonic` and `header`, with the manifest's threshold `cues_min = 1`:
-it passes only when there is at least one cue, every cue starts at or after
-the previous one ends, and the file opens in its format's header shape. The
-monotonic order was already enforced by the runner before the bytes were
-written, so a passing verdict repeats a checked fact, not a hope. `preview`
-writes the generic viewer's fields (`cues`, `duration_s`, `format`) with a
-summary like `2 cues · 2.2 s · srt`.
+Before writing, the runner shapes the cues from the word timings so they
+read at speed: segments over the duration or reading-speed limits split at
+word boundaries, very short contiguous cues merge (never across a silence
+gap), and every cue's text wraps at word boundaries. The limits are common
+subtitle practice — about 20 characters per second, lines of about 42
+characters with at most two per cue, cues between about a second and about
+seven — adjustable through the five inputs above.
+
+`verify` re-parses the file against the run's own limits and reports
+`worst-cps`, `longest-line-chars`, `most-lines`, `shortest-cue-seconds`,
+`longest-cue-seconds` and `cues-over-limit` besides `cues`, `duration_s`
+(the last cue's end), `monotonic` and `header`, with the manifest's
+threshold `cues_min = 1`: it passes only when there is at least one cue,
+every cue starts at or after the previous one ends, the file opens in its
+format's header shape, and no more than one cue — or more than 5 % of the
+cues — breaks a readability limit. A single forced cue is reported, never
+failed. The monotonic order was already enforced by the runner before the
+bytes were written, so a passing verdict repeats a checked fact, not a
+hope. `preview` writes the generic viewer's fields (`cues`, `duration_s`,
+`format`) with a summary like `2 cues · 2.2 s · srt`.
 
 ## The extraction-first workflow for video sources
 

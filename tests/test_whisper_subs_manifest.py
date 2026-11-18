@@ -72,6 +72,26 @@ def test_the_verify_threshold_counts_at_least_one_cue() -> None:
     assert CAPABILITY["verify"]["thresholds"] == {"cues_min": 1}
 
 
+def test_the_five_readability_limits_default_like_common_practice() -> None:
+    expected = {
+        "max-cps": 20.0,
+        "max-line-chars": 42,
+        "max-lines": 2,
+        "min-cue-seconds": 0.8,
+        "max-cue-seconds": 7.0,
+    }
+    for name, default in expected.items():
+        field = INPUTS[name]
+        assert field["type"] == "number", name
+        assert field["default"] == default, name
+        assert "required" not in field or field["required"] is False, name
+
+
+def test_the_patch_version_moved_past_the_unshaped_release() -> None:
+    version = tuple(int(part) for part in MANIFEST["version"].split("."))
+    assert version > (0, 1, 4)
+
+
 def test_the_index_carries_the_package_as_an_append() -> None:
     names = [entry["name"] for entry in INDEX["packages"]]
     assert "whisper-subs" in names

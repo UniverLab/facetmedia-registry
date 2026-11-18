@@ -1,15 +1,16 @@
-"""The whisper-subs package runner: validated subtitles from a sidecar.
+"""The whisper-subs package runner: readable subtitles from a sidecar.
 
 Four verbs on the runner SDK (``facet_runner_sdk``, copied into the
 environment at pull): ``run`` reads the piece's ``source`` — a whisper
-``<name>.json`` sidecar whose ``segments`` carry ``start_s``, ``end_s``
-and ``text`` — validates the cues in order and writes
+``<name>.json`` sidecar whose ``segments`` carry ``start_s``, ``end_s``,
+``text`` and word timings — validates the cues in order, shapes them for
+reading (split long, merged short, wrapped lines) and writes
 ``<source-stem>.srt`` (comma times) or ``.vtt`` (``WEBVTT``, dot times)
 beside the piece; ``verify`` re-parses the written file and judges cue
-count, duration, monotonic order and header; ``preview`` writes the
-generic viewer's fields; ``doctor`` checks the package files and the
-timestamp formats at quick depth and builds both formats from a stub
-sidecar at full depth. There is no model and nothing heavy: the whole
+count, duration, monotonic order, header and readability; ``preview``
+writes the generic viewer's fields; ``doctor`` checks the package files
+and the timestamp formats at quick depth and builds both formats from a
+stub sidecar at full depth. There is no model and nothing heavy: the whole
 package is stdlib, so a broken environment is not a question here.
 """
 
@@ -35,6 +36,8 @@ FORMATS = ("srt", "vtt")
 MIME = {"srt": "application/x-subrip", "vtt": "text/vtt"}
 #: The manifest's verify threshold, repeated so run never drifts from it.
 CUES_MIN = 1
+#: Verify fails only past one over-limit cue and past this share of cues.
+READABILITY_MAX_SHARE = 0.05
 #: The doctor's stub sidecar: two cues, the second touching the first.
 SIDECAR_STUB = {
     "segments": [
@@ -88,8 +91,38 @@ def _asset_name(stem: str) -> str:
     return name or "subtitles"
 
 
+def _limits(params: dict[str, Any]) -> formats.Limits:
+    """The five hyphenated readability inputs, defaulted like the manifest."""
+    try:
+        return formats.Limits(
+            max_cps=float(params.get("max-cps", 20.0)),
+            max_line_chars=int(params.get("max-line-chars", 42)),
+            max_lines=int(params.get("max-lines", 2)),
+            min_cue_s=float(params.get("min-cue-seconds", 0.8)),
+            max_cue_s=float(params.get("max-cue-seconds", 7.0)),
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"bad readability limit: {exc}") from exc
+
+
+def _limit_params(limits: formats.Limits) -> dict[str, Any]:
+    """The five readability inputs as the record echoes them."""
+    return {
+        "max-cps": limits.max_cps,
+        "max-line-chars": limits.max_line_chars,
+        "max-lines": limits.max_lines,
+        "min-cue-seconds": limits.min_cue_s,
+        "max-cue-seconds": limits.max_cue_s,
+    }
+
+
 def _asset(
-    source: Path, out_format: str, path: Path, cues: Sequence[formats.Cue], params: dict[str, Any]
+    source: Path,
+    out_format: str,
+    path: Path,
+    cues: Sequence[formats.Cue],
+    params: dict[str, Any],
+    limits: formats.Limits,
 ) -> dict[str, Any]:
     """One subtitle record: text kind, the monotonically checked timings."""
     return {
@@ -102,7 +135,11 @@ def _asset(
             "duration_s": round(cues[-1].end_s, 3),
             "format": out_format,
         },
-        "params": {"source": str(params.get("source", "")), "format": out_format},
+        "params": {
+            "source": str(params.get("source", "")),
+            "format": out_format,
+            **_limit_params(limits),
+        },
         "seed": None,
         "inputs": [str(params.get("source", ""))],
     }
@@ -110,16 +147,18 @@ def _asset(
 
 @runner.verb("run")
 def run(req: Request) -> dict[str, Any]:
-    """Validate the sidecar and write the subtitle file beside the piece."""
+    """Validate the sidecar, shape it for reading, write the subtitle file."""
     params = dict(req.inputs)
     source = _source_path(params, req)
     out_format = _format_param(params)
-    cues = formats.read_sidecar(source)
-    formats.validate_cues(cues)
+    limits = _limits(params)
+    raw = formats.read_sidecar(source)
+    formats.validate_cues(raw)
+    cues = formats.shape_cues(raw, limits)
     body = formats.to_vtt(cues) if out_format == "vtt" else formats.to_srt(cues)
     path = req.out_dir / f"{source.stem}.{out_format}"
     path.write_text(body, encoding="utf-8")
-    return {"tool": _tool(), "assets": [_asset(source, out_format, path, cues, params)]}
+    return {"tool": _tool(), "assets": [_asset(source, out_format, path, cues, params, limits)]}
 
 
 def _verdict(file: str, passed: bool, metrics: dict[str, Any]) -> dict[str, Any]:
@@ -133,16 +172,60 @@ def _verdict(file: str, passed: bool, metrics: dict[str, Any]) -> dict[str, Any]
     }
 
 
-def _subtitle_metrics(text: str, out_format: str) -> dict[str, Any]:
-    """What verify reports: the cues, the last end, the order, the header."""
-    timings = formats.parse_timings(text)
+def _cue_cps(block: formats.Block, duration_s: float) -> float:
+    """One cue's reading speed: its visible characters per second."""
+    chars = sum(len(line) for line in block.lines)
+    if duration_s > 0:
+        return chars / duration_s
+    return float(chars)
+
+
+def _cue_over(block: formats.Block, duration_s: float, limits: formats.Limits) -> bool:
+    """A cue breaks any one readability limit."""
+    return (
+        _cue_cps(block, duration_s) > limits.max_cps
+        or block.chars > limits.max_line_chars
+        or len(block.lines) > limits.max_lines
+        or duration_s < limits.min_cue_s
+        or duration_s > limits.max_cue_s
+    )
+
+
+def _readability(blocks: Sequence[formats.Block], limits: formats.Limits) -> dict[str, Any]:
+    """What verify reports per cue: speed, line size, count, duration."""
+    durations = [
+        (block.end_ms - block.start_ms) / formats.MILLISECONDS_PER_SECOND for block in blocks
+    ]
+    speeds = [_cue_cps(block, duration) for block, duration in zip(blocks, durations, strict=True)]
+    overs = [
+        _cue_over(block, duration, limits)
+        for block, duration in zip(blocks, durations, strict=True)
+    ]
     return {
-        "cues": len(timings),
-        "duration_s": round(timings[-1][1] / formats.MILLISECONDS_PER_SECOND, 3)
-        if timings
+        "worst-cps": round(max(speeds, default=0.0), 3),
+        "longest-line-chars": max((block.chars for block in blocks), default=0),
+        "most-lines": max((len(block.lines) for block in blocks), default=0),
+        "shortest-cue-seconds": round(min(durations, default=0.0), 3),
+        "longest-cue-seconds": round(max(durations, default=0.0), 3),
+        "cues-over-limit": sum(overs),
+    }
+
+
+def _subtitle_metrics(
+    text: str, out_format: str, limits: formats.Limits | None = None
+) -> dict[str, Any]:
+    """What verify reports: the cues, the last end, the order, the header."""
+    active = limits if limits is not None else formats.Limits()
+    blocks = formats.parse_blocks(text)
+    timings = [(block.start_ms, block.end_ms) for block in blocks]
+    return {
+        "cues": len(blocks),
+        "duration_s": round(blocks[-1].end_ms / formats.MILLISECONDS_PER_SECOND, 3)
+        if blocks
         else 0.0,
         "monotonic": _monotonic(timings),
         "header": _header_ok(text, out_format),
+        **_readability(blocks, active),
     }
 
 
@@ -161,20 +244,25 @@ def _header_ok(text: str, out_format: str) -> bool:
     return first == "1"
 
 
-def _verify_asset(path: Path) -> dict[str, Any]:
-    """The file re-parses: cues over the minimum, in order, headered."""
+def _verify_asset(path: Path, limits: formats.Limits) -> dict[str, Any]:
+    """The file re-parses: cues over the minimum, in order, headered, readable."""
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
         return _verdict(path.name, False, {"error": str(exc), "cues": 0, "monotonic": False})
-    metrics = _subtitle_metrics(text, _format_of(path))
-    passed = metrics["cues"] >= CUES_MIN and metrics["monotonic"] and metrics["header"]
-    return _verdict(path.name, passed, metrics)
+    metrics = _subtitle_metrics(text, _format_of(path), limits)
+    basic = metrics["cues"] >= CUES_MIN and metrics["monotonic"] and metrics["header"]
+    over = metrics["cues-over-limit"]
+    total = metrics["cues"]
+    readable = not (over > 1 and total > 0 and over / total > READABILITY_MAX_SHARE)
+    return _verdict(path.name, basic and readable, metrics)
 
 
 @runner.verb("verify")
 def verify(req: Request) -> dict[str, Any]:
-    return {"assets": [_verify_asset(path) for path in req.assets]}
+    """Verify against the run's own limits: one over-long cue never fails."""
+    limits = _limits(dict(req.inputs))
+    return {"assets": [_verify_asset(path, limits) for path in req.assets]}
 
 
 def _preview_data(path: Path) -> dict[str, Any]:

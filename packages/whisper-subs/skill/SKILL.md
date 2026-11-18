@@ -41,16 +41,41 @@ rejected) — then writes `<source-stem>.<format>` beside the piece. Omit
 (`00:00:01,500` comma for srt, `00:00:01.500` dot for vtt).
 
 Run a piece with `facet run whisper-subs.subtitles <piece.toml> --out
-build/`; without `--out` the subtitle lands in the piece's directory.
+build/`; without `--out` the subtitle lands in the piece's directory. The
+five readability limits below are optional inputs with the same defaults.
+
+## Limits
+
+Before writing, the runner shapes the cues from the segments' word timings
+so they read at speed: long segments split at word boundaries, very short
+contiguous cues merge, and text wraps at word boundaries. A segment without
+word timings stays one cue and is judged like any other.
+
+| Input | Default | What it means |
+|-------|---------|---------------|
+| `max-cps` | `20` | characters per second; faster cues split where speech allows |
+| `max-line-chars` | `42` | longest line; cue text wraps at word boundaries |
+| `max-lines` | `2` | most lines per cue; longer wraps split |
+| `min-cue-seconds` | `0.8` | shortest cue; shorter contiguous cues merge |
+| `max-cue-seconds` | `7` | longest cue; longer segments split |
+
+These numbers are common subtitle practice for readability, not
+transcription targets — only the ~20 characters-per-second flag follows the
+voice research report's reading-speed note. Raise `max-cps` for fast
+technical speech the audience already knows, rather than forcing splits
+the speech cannot fit.
 
 ## Judging the result
 
-`verify` re-parses the written file and reports `cues`, `duration_s` (the
-last cue's end), `monotonic` and `header` — it passes only when there is at
-least one cue, every cue starts at or after the previous one ends, and the
-file carries its format's header (cue `1` first line for srt, `WEBVTT` for
-vtt). Because the runner validated the sidecar before writing, a passing
-verdict means the times were already monotonic at conversion.
+`verify` re-parses the written file against the run's own five limits and
+reports `worst-cps`, `longest-line-chars`, `most-lines`,
+`shortest-cue-seconds`, `longest-cue-seconds` and `cues-over-limit`
+(count of cues breaking any limit) besides `cues`, `duration_s` (the last
+cue's end), `monotonic` and `header`. It fails only when more than one cue
+breaks a limit and those cues are more than 5 % of all cues: a single
+forced cue is reported, never failed, however short the piece. Because the
+runner validated the sidecar before writing, a passing verdict means the
+times were already monotonic at conversion.
 
 `facet preview <source-stem>.<format>` writes
 `<source-stem>.<format>.preview.json` (generic viewer) with a summary like
@@ -58,11 +83,9 @@ verdict means the times were already monotonic at conversion.
 
 The cues are sentence segments, the readable-subtitle granularity — not
 karaoke-style word timings, which stay in the sidecar's timed words. Spell
-names right one step earlier, in the transcription, and no subtitle repair
-is ever needed. Divergence: verification checks monotonic non-overlapping
-times plus the header only — it deliberately does not judge readability
-shaping such as characters per line or reading speed. When conversion
-fails, re-run from the sidecar; never hand-edit it.
+names right one step earlier, in the transcription: shaping fixes timing
+and layout, never spelling. When conversion fails, re-run from the
+sidecar; never hand-edit it.
 
 ## Pitfalls
 
