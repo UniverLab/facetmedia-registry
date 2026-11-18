@@ -145,11 +145,22 @@ the person who runs facet responsible for complying with the terms.
 ## Judging the result
 
 The runner itself verifies: after synthesis it transcribes each clip with
-faster-whisper `small` and measures the word error rate against the text.
-A clip over `wer_max = 0.05` prints `REGENERATE` and is rewritten with
-`seed + 1` (three tries per clip, the last attempt kept). The record
-reports the final `seed` and the number of attempts, so a clip that kept
-its first seed passed on first hearing.
+faster-whisper `small` and measures the word error rate against the text
+plus the clip length. A clip over `wer_max = 0.05` or outside 0.5x-2.0x of
+its expected duration prints `REGENERATE` and is rewritten with `seed + 1`
+(three tries per clip, the last attempt kept). The record reports the final
+`seed` and the number of attempts, so a clip that kept its first seed
+passed on first hearing. `verify` reports failing durations the same way
+it reports a bad word error, with `passed` false.
+
+Two `voicestudio.speak` inputs tune generation: `num-step` (1 to 128) sets
+the diffusion steps, `guidance-scale` (above 0, up to 20) the guidance.
+Raise `num-step` for quality, lower it for speed; raise `guidance-scale`
+when the voice drifts from the text. Omitting either keeps the engine
+default (`voxcpm2` 10 and 2.0, `omnivoice` 16 and 2.0). The clone engine
+reads neither. The length gate catches gross failures only — a stuck loop,
+trailing noise, swallowed words — not pacing: a clone follows its reference
+speaker, so judge rhythm by ear.
 
 ## Pitfalls
 

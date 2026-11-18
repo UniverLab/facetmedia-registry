@@ -57,8 +57,9 @@ WER_MAX = 0.05
 MIN_GRACE_POLLS = 2
 #: The canned clip the stub backend renders, and what it means.
 RATE_HZ = 24_000
-CLIP_FRAMES = RATE_HZ
-DURATION_S = 1.0
+STUB_CLIP_FRAMES = 66_581  # round(len(TEXT) / 15.5 * RATE_HZ): the pass band
+CLIP_FRAMES = STUB_CLIP_FRAMES
+DURATION_S = STUB_CLIP_FRAMES / RATE_HZ
 #: Reachability probe budget for the stub backend start.
 START_TIMEOUT_S = 10
 #: The byte size the manifest pins for the embedded transcriber.
@@ -161,6 +162,20 @@ BODIES = os.environ["STUB_BODIES"]
 GETS = os.environ["STUB_GETS"]
 INSTALLS = os.environ["STUB_INSTALLS"]
 CANNED = os.environ["STUB_CANNED"]
+FRAMES_SPEC = os.environ.get("STUB_CLIP_FRAMES", "24000")
+try:
+    FRAMES_LIST = [int(item) for item in FRAMES_SPEC.split(",") if item.strip()]
+except ValueError:
+    FRAMES_LIST = [24000]
+if not FRAMES_LIST:
+    FRAMES_LIST = [24000]
+FRAMES_COUNT = [0]
+
+
+def _next_frames() -> int:
+    index = min(FRAMES_COUNT[0], len(FRAMES_LIST) - 1)
+    FRAMES_COUNT[0] += 1
+    return FRAMES_LIST[index]
 ERROR = os.environ.get("STUB_ERROR", "")
 INSTALL_STATUSES = list(json.loads(os.environ.get("STUB_INSTALL_STATUSES", "[]")))
 INSTALL_POST = os.environ.get("STUB_INSTALL_POST", "ok")
@@ -173,13 +188,15 @@ def _append(path, item):
 
 
 def _canned_wav():
-    if not os.path.exists(CANNED):
-        with wave.open(CANNED, "wb") as writer:
+    frames = _next_frames()
+    key = f"{CANNED}-{frames}" if len(FRAMES_LIST) > 1 else CANNED
+    if not os.path.exists(key):
+        with wave.open(key, "wb") as writer:
             writer.setnchannels(1)
             writer.setsampwidth(2)
             writer.setframerate(24000)
-            writer.writeframes(b"\\x00\\x00" * 24000)  # 1 s of silence
-    with open(CANNED, "rb") as stream:
+            writer.writeframes(b"\\x00\\x00" * frames)
+    with open(key, "rb") as stream:
         return stream.read()
 
 
@@ -367,6 +384,7 @@ def _backend(
     profiles: list[dict[str, str]] | None = None,
     install_statuses: list[dict[str, object]] | None = None,
     install_post: str = "ok",
+    clip_frames: int = STUB_CLIP_FRAMES,
 ) -> tuple[subprocess.Popen[str], str, dict[str, Path]]:
     port = _free_port()
     logs = tmp_path / "stub-logs"
@@ -393,6 +411,7 @@ def _backend(
         "STUB_PROFILES": json.dumps(profiles or []),
         "STUB_INSTALL_STATUSES": json.dumps(install_statuses or []),
         "STUB_INSTALL_POST": install_post,
+        "STUB_CLIP_FRAMES": str(clip_frames),
     }
     process = subprocess.Popen(
         [sys.executable, str(server), "--port", str(port)],
@@ -435,6 +454,7 @@ def _piece_request(
     model: str = "voxcpm2",
     capability: str = "voicestudio.speak",
     voice: str = "narradora",
+    extra_inputs: dict[str, object] | None = None,
 ) -> Path:
     """Write the run request for one clip; the path of its result file."""
     out = tmp_path / "out"
@@ -448,6 +468,7 @@ def _piece_request(
         "model": model,
         "language": "es",
         "clip": [{"name": "intro", "text": TEXT, "seed": SEED}],
+        **(extra_inputs or {}),
     }
     request = _request(out, models, inputs, capability)
     (tmp_path / "run-request.json").write_text(json.dumps(request), encoding="utf-8")
@@ -462,6 +483,8 @@ class _Piece:
     capability: str = "voicestudio.speak"
     voice: str = "narradora"
     profiles: list[dict[str, str]] | None = None
+    extra_inputs: dict[str, object] | None = None
+    clip_frames: int | str = STUB_CLIP_FRAMES
 
 
 def _run_piece(
@@ -473,11 +496,15 @@ def _run_piece(
 ) -> subprocess.CompletedProcess[str]:
     """One `run` verb as a subprocess against the stub backend."""
     piece = piece or _Piece()
-    result_path = _piece_request(tmp_path, piece.model, piece.capability, piece.voice)
+    result_path = _piece_request(
+        tmp_path, piece.model, piece.capability, piece.voice, piece.extra_inputs
+    )
     stub_dir = _stub_dir(tmp_path)
     calls = tmp_path / "whisper-calls.jsonl"
     calls.touch()
-    process, url, _files = _backend(tmp_path, states, error, piece.profiles)
+    process, url, _files = _backend(
+        tmp_path, states, error, piece.profiles, clip_frames=piece.clip_frames
+    )
     try:
         env = {
             **os.environ,
@@ -514,14 +541,25 @@ def _run_cycle(
     model: str = "voxcpm2",
     capability: str = "voicestudio.speak",
     voice: str = "narradora",
-    profiles: list[dict[str, str]] | None = None,
 ) -> tuple[dict[str, object], str]:
     done = _run_piece(
         tmp_path,
         states,
         heard,
-        piece=_Piece(model=model, capability=capability, voice=voice, profiles=profiles),
+        piece=_Piece(model=model, capability=capability, voice=voice),
     )
+    assert done.returncode == 0, done.stdout + done.stderr
+    return _result(tmp_path / "run-result.json"), done.stdout
+
+
+def _run_shaped(
+    tmp_path: Path,
+    states: list[str],
+    heard: list[str],
+    clip_frames: int | str,
+) -> tuple[dict[str, object], str]:
+    """One run with a stub clip length other than the passing one."""
+    done = _run_piece(tmp_path, states, heard, piece=_Piece(clip_frames=clip_frames))
     assert done.returncode == 0, done.stdout + done.stderr
     return _result(tmp_path / "run-result.json"), done.stdout
 
@@ -600,7 +638,113 @@ def test_a_clip_that_never_passes_keeps_the_last_attempt(tmp_path: Path) -> None
     assert verdict["passed"] is False
     assert verdict["metrics"]["wer"] > WER_MAX
     assert verdict["metrics"]["wer"] == asset["properties"]["wer"]
-    assert verdict["thresholds"] == {"wer_max": WER_MAX}
+    assert verdict["thresholds"] == {
+        "wer_max": WER_MAX,
+        "cps_es": 15.5,
+        "duration_min_ratio": 0.5,
+        "duration_max_ratio": 2.0,
+    }
+
+
+SHORT_FRAMES = int(STUB_CLIP_FRAMES * 0.3)
+LONG_FRAMES = int(STUB_CLIP_FRAMES * 2.5)
+#: The generation params one test sets, asserting the body carries them.
+PARAM_STEPS = 32
+PARAM_GUIDANCE = 3.5
+
+
+def test_a_short_clip_retries_and_keeps_the_last_attempt(tmp_path: Path) -> None:
+    """Good hearing but 0.3x duration: seeds 7, 8, 9, last kept, duration named."""
+    result, stdout = _run_shaped(tmp_path, ["ready"], [TEXT] * MAX_TRIES, SHORT_FRAMES)
+    asset = result["assets"][0]
+    assert asset["properties"]["attempts"] == MAX_TRIES
+    assert asset["seed"] == SEED + MAX_TRIES - 1
+    assert asset["properties"]["wer"] == 0.0
+    assert "duration" in stdout
+    bodies = _read_lines(tmp_path / "stub-logs" / "bodies.jsonl")
+    assert [body["seed"] for body in bodies] == [SEED, SEED + 1, SEED + 2]
+
+
+def test_a_long_clip_retries_and_keeps_the_last_attempt(tmp_path: Path) -> None:
+    """Good hearing but 2.5x duration: seeds 7, 8, 9, last kept, duration named."""
+    result, stdout = _run_shaped(tmp_path, ["ready"], [TEXT] * MAX_TRIES, LONG_FRAMES)
+    asset = result["assets"][0]
+    assert asset["properties"]["attempts"] == MAX_TRIES
+    assert asset["seed"] == SEED + MAX_TRIES - 1
+    assert "duration" in stdout
+
+
+def test_a_short_then_normal_clip_passes_on_the_second_attempt(tmp_path: Path) -> None:
+    """Short first, normal next: seed 8 kept, one REGENERATE, attempts 2."""
+    piece = _Piece(clip_frames=f"{SHORT_FRAMES},{STUB_CLIP_FRAMES}")
+    done = _run_piece(tmp_path, ["ready"], [TEXT, TEXT], piece=piece)
+    assert done.returncode == 0, done.stdout + done.stderr
+    asset = _result(tmp_path / "run-result.json")["assets"][0]
+    assert asset["seed"] == RETRY_SEED
+    assert asset["properties"]["attempts"] == REGEN_ATTEMPTS
+    assert "REGENERATE intro" in done.stdout
+    assert "duration" in done.stdout
+
+
+def test_generation_params_reach_the_request_only_when_set(tmp_path: Path) -> None:
+    """Set params ride the body; omitted params leave the body untouched."""
+    piece = _Piece(extra_inputs={"num-step": PARAM_STEPS, "guidance-scale": PARAM_GUIDANCE})
+    done = _run_piece(tmp_path, ["ready"], [TEXT], piece=piece)
+    assert done.returncode == 0, done.stdout + done.stderr
+    bodies = _read_lines(tmp_path / "stub-logs" / "bodies.jsonl")
+    assert len(bodies) == 1
+    assert bodies[0]["num_step"] == PARAM_STEPS
+    assert bodies[0]["guidance_scale"] == PARAM_GUIDANCE
+    asset = _result(tmp_path / "run-result.json")["assets"][0]
+    assert asset["params"]["num-step"] == PARAM_STEPS
+    assert asset["params"]["guidance-scale"] == PARAM_GUIDANCE
+
+
+def test_unset_generation_params_are_absent_from_the_request(tmp_path: Path) -> None:
+    """No piece params: the body carries neither key, params record None."""
+    _run_cycle(tmp_path, ["ready"], [TEXT])
+    bodies = _read_lines(tmp_path / "stub-logs" / "bodies.jsonl")
+    assert len(bodies) == 1
+    assert "num_step" not in bodies[0]
+    assert "guidance_scale" not in bodies[0]
+
+
+def test_verify_fails_a_bad_duration_with_good_hearing(tmp_path: Path) -> None:
+    """A 0.3x clip heard perfectly still fails verify with passed false."""
+    result, _stdout = _run_shaped(tmp_path, ["ready"], [TEXT] * MAX_TRIES, SHORT_FRAMES)
+    assert result["assets"][0]["seed"] == SEED + MAX_TRIES - 1
+    verify_request = json.loads((tmp_path / "run-request.json").read_text(encoding="utf-8"))
+    verify_request["verb"] = "verify"
+    verify_request["assets"] = [str(tmp_path / "out" / "intro.wav")]
+    verify_path = tmp_path / "verify-duration-request.json"
+    verify_path.write_text(json.dumps(verify_request), encoding="utf-8")
+    verify_result = tmp_path / "verify-duration-result.json"
+    done = subprocess.run(
+        [
+            sys.executable,
+            str(PACKAGE / "runner.py"),
+            "verify",
+            "--input",
+            str(verify_path),
+            "--result",
+            str(verify_result),
+        ],
+        env={
+            **os.environ,
+            "PYTHONPATH": str(tmp_path / "stub"),
+            "STUB_CALLS": str(tmp_path / "whisper-calls.jsonl"),
+            "STUB_HEARD": json.dumps([TEXT]),
+        },
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    verdict = _result(verify_result)["assets"][0]
+    assert verdict["passed"] is False
+    assert verdict["metrics"]["wer"] == 0.0
+    assert verdict["metrics"]["duration_s"] < verdict["metrics"]["expected_duration_s"]
 
 
 def test_the_stub_saw_the_piece_engine_voice_and_both_seeds(tmp_path: Path) -> None:
@@ -647,15 +791,20 @@ CLONE_PROFILES = [{"id": CLONE_ID, "name": "jheison", "kind": "clone"}]
 
 def test_a_clone_piece_speaks_the_local_profile_with_cosyvoice(tmp_path: Path) -> None:
     """`voicestudio.clone` picks the installed profile and the cosyvoice engine."""
-    result, _stdout = _run_cycle(
+    done = _run_piece(
         tmp_path,
         ["ready"],
         [TEXT],
-        model="cosyvoice",
-        capability="voicestudio.clone",
-        voice=CLONE_ID,
-        profiles=CLONE_PROFILES,
+        piece=_Piece(
+            model="cosyvoice",
+            capability="voicestudio.clone",
+            voice=CLONE_ID,
+            profiles=CLONE_PROFILES,
+        ),
     )
+    assert done.returncode == 0, done.stdout + done.stderr
+    result = _result(tmp_path / "run-result.json")
+    _stdout = done.stdout
     asset = result["assets"][0]
     assert asset["properties"]["model"] == "cosyvoice"
     assert asset["properties"]["voice"] == CLONE_ID
@@ -808,7 +957,7 @@ def test_the_written_clip_is_a_real_wav_from_the_backend(tmp_path: Path) -> None
         assert reader.getnframes() == CLIP_FRAMES
     properties = result["assets"][0]["properties"]
     assert properties["sample_rate_hz"] == RATE_HZ
-    assert properties["duration_s"] == DURATION_S
+    assert properties["duration_s"] == round(DURATION_S, 3)
     assert properties["transcript"] == TEXT
     assert result["tool"]["name"] == "VoiceStudio"
 

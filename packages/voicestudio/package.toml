@@ -1,5 +1,5 @@
 name = "voicestudio"
-version = "0.1.4"
+version = "0.1.5"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "debpalash (VoiceStudio)"
@@ -113,8 +113,23 @@ type = "integer"
 required = true
 description = "Synthesis seed; the verification loop regenerates a failed clip with seed + 1."
 
+[capabilities.speak.inputs.num-step]
+type = "integer"
+required = false
+min = 1
+max = 128
+description = "Diffusion steps, 1 to 128; omitting it keeps the engine default (voxcpm2 10, omnivoice 16)."
+
+[capabilities.speak.inputs.guidance-scale]
+type = "number"
+required = false
+min = 0
+max = 20
+description = "Guidance scale, above 0 up to 20; the backend needs it above 0. Omitting it keeps the engine default (2.0 on both engines)."
+
 [capabilities.speak.verify]
-thresholds = { wer_max = 0.05 }
+# cps_es copies the pinned backend's services/speech_rate.py per-language table (es 15.5).
+thresholds = { wer_max = 0.05, cps_es = 15.5, duration_min_ratio = 0.5, duration_max_ratio = 2.0 }
 
 [capabilities.speak.preview]
 viewer = "audio"
@@ -167,7 +182,8 @@ required = true
 description = "Synthesis seed; the verification loop regenerates a failed clip with seed + 1."
 
 [capabilities.clone.verify]
-thresholds = { wer_max = 0.05 }
+# cps_es copies the pinned backend's services/speech_rate.py per-language table (es 15.5).
+thresholds = { wer_max = 0.05, cps_es = 15.5, duration_min_ratio = 0.5, duration_max_ratio = 2.0 }
 
 [capabilities.clone.preview]
 viewer = "audio"

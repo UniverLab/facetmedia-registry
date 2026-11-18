@@ -54,6 +54,12 @@ runner = Runner()
 
 #: The word error rate a clip must stay at or under (manifest threshold).
 WER_MAX = 0.05
+#: Characters per second for Spanish, from the pinned backend's
+#: services/speech_rate.py table (manifest thresholds mirror it).
+CPS_ES = 15.5
+#: A clip's duration must fall inside this multiple of its expected duration.
+DUR_MIN = 0.5
+DUR_MAX = 2.0
 #: What verification measures with, named for the record.
 VERIFIER = "faster-whisper-small@536b0662"
 #: The transcriber the package itself embeds (its manifest model id; the
@@ -226,7 +232,7 @@ def _transcribe(model: Any, path: Path, language: str) -> str:
     return " ".join(segment.text.strip() for segment in segments).strip()
 
 
-def _clip(word: dict[str, Any], piece: dict[str, str]) -> dict[str, Any]:
+def _clip(word: dict[str, Any], piece: dict[str, Any]) -> dict[str, Any]:
     """One clip with the piece defaults resolved into its own fields.
 
     The piece carries exactly one piece-level ``model`` and no entry carries
@@ -243,17 +249,24 @@ def _clip(word: dict[str, Any], piece: dict[str, str]) -> dict[str, Any]:
 
 def _clips(params: dict[str, Any]) -> list[dict[str, Any]]:
     """Every clip, with voice/model/language read once at piece level."""
+    guidance = params.get("guidance-scale")
+    guidance_scale = None if guidance is None else float(guidance)
+    if guidance_scale is not None and guidance_scale <= 0:
+        raise ValueError("guidance-scale must be above 0")
+    num_step_raw = params.get("num-step")
     piece = {
         "voice": str(params.get("voice", DEFAULT_VOICE)),
         "model": str(params.get("model", ENGINE)),
         "language": str(params.get("language", "es")),
+        "num_step": None if num_step_raw is None else int(num_step_raw),
+        "guidance_scale": guidance_scale,
     }
     return [_clip(word, piece) for word in params.get("clip", [])]
 
 
 def _speak_body(clip: dict[str, Any], seed: int) -> dict[str, Any]:
     """The lab ``speak()`` request body, one clip and one seed."""
-    return {
+    body: dict[str, Any] = {
         "model": clip["model"],
         "input": clip["text"],
         "voice": clip["voice"],
@@ -261,6 +274,11 @@ def _speak_body(clip: dict[str, Any], seed: int) -> dict[str, Any]:
         "response_format": "wav",
         "seed": seed,
     }
+    if clip.get("num_step") is not None:
+        body["num_step"] = clip["num_step"]
+    if clip.get("guidance_scale") is not None:
+        body["guidance_scale"] = clip["guidance_scale"]
+    return body
 
 
 def _params(clip: dict[str, Any], seed: int) -> dict[str, Any]:
@@ -272,7 +290,19 @@ def _params(clip: dict[str, Any], seed: int) -> dict[str, Any]:
         "voice": clip["voice"],
         "model": clip["model"],
         "language": clip["language"],
+        "num-step": clip.get("num_step"),
+        "guidance-scale": clip.get("guidance_scale"),
     }
+
+
+def _expected_s(clip: dict[str, Any]) -> float:
+    """The rough duration the text implies, in seconds (Python codepoints)."""
+    return len(clip["text"]) / CPS_ES
+
+
+def _duration_ok(actual: float, expected: float) -> bool:
+    """A clip passes when its duration is within the gross-failure band."""
+    return DUR_MIN * expected <= actual <= DUR_MAX * expected
 
 
 def _wav_shape(path: Path) -> tuple[float, int]:
@@ -295,6 +325,7 @@ def _asset(
         "mime": "audio/wav",
         "properties": {
             "duration_s": round(duration, 3),
+            "expected_duration_s": round(_expected_s(clip), 3),
             "sample_rate_hz": rate,
             "voice": clip["voice"],
             "model": clip["model"],
@@ -329,31 +360,44 @@ def _try_clip(
 
 
 def _narrate(whisper: Any, base_url: str, clip: dict[str, Any], out_dir: Path) -> dict[str, Any]:
-    """One clip, verified; a clip over the WER regenerates with seed + 1."""
+    """One clip, verified; a failing clip regenerates with seed + 1."""
     seed = clip["seed"]
     path = out_dir / f"{clip['name']}.wav"
     transcript = ""
     score = 1.0
     tries = 0
+    expected = _expected_s(clip)
+    duration = 0.0
+    duration_ok = False
+    fail_kind = "wer"
     while True:
         tries += 1
         transcript, score = _try_clip(whisper, base_url, clip, seed, out_dir)
-        if score <= WER_MAX:
+        duration, _rate = _wav_shape(path)
+        duration_ok = _duration_ok(duration, expected)
+        if score <= WER_MAX and duration_ok:
             break
+        fail_kind = _fail_kind(score, duration_ok)
         if tries >= MAX_TRIES:
             print(
-                f"REGENERATE {clip['name']}: still wer {score:.3f} > {WER_MAX:.2f} "
+                f"REGENERATE {clip['name']}: still {fail_kind} "
                 f"after {tries} attempts, keeping seed {seed}",
                 flush=True,
             )
             break
         seed += 1
         print(
-            f"REGENERATE {clip['name']}: wer {score:.3f} > {WER_MAX:.2f}, "
-            f"retrying with seed {seed}",
+            f"REGENERATE {clip['name']}: {fail_kind}, retrying with seed {seed}",
             flush=True,
         )
     return _asset(clip, path, seed, score, transcript, tries)
+
+
+def _fail_kind(score: float, duration_ok: bool) -> str:
+    """Which check failed, for the regenerate log line."""
+    if not duration_ok:
+        return "duration outside 0.5x-2.0x of expected"
+    return f"wer {score:.3f} > {WER_MAX:.2f}"
 
 
 def _profile_module() -> Any:
@@ -499,22 +543,35 @@ def verify(req: Request) -> dict[str, Any]:
         clip = clips.get(path.stem)
         if clip is None:
             raise ValueError(f"{path.name}: no clip named {path.stem!r} in the piece")
-        transcript = _transcribe(whisper, path, clip["language"])
-        score, reference = _score(clip, transcript)
-        entries.append(
-            {
-                "file": path.name,
-                "passed": score <= WER_MAX,
-                "metrics": {
-                    "wer": round(score, 4),
-                    "words": len(reference),
-                    "transcript": transcript,
-                },
-                "thresholds": {"wer_max": WER_MAX},
-                "verifier": VERIFIER,
-            }
-        )
+        entries.append(_verify_clip(whisper, path, clip))
     return {"assets": entries}
+
+
+def _verify_clip(whisper: Any, path: Path, clip: dict[str, Any]) -> dict[str, Any]:
+    """One asset's verdict: word error and duration against the clip's text."""
+    transcript = _transcribe(whisper, path, clip["language"])
+    score, reference = _score(clip, transcript)
+    duration, _rate = _wav_shape(path)
+    expected = _expected_s(clip)
+    duration_ok = _duration_ok(duration, expected)
+    return {
+        "file": path.name,
+        "passed": score <= WER_MAX and duration_ok,
+        "metrics": {
+            "wer": round(score, 4),
+            "words": len(reference),
+            "transcript": transcript,
+            "duration_s": round(duration, 3),
+            "expected_duration_s": round(expected, 3),
+        },
+        "thresholds": {
+            "wer_max": WER_MAX,
+            "cps_es": CPS_ES,
+            "duration_min_ratio": DUR_MIN,
+            "duration_max_ratio": DUR_MAX,
+        },
+        "verifier": VERIFIER,
+    }
 
 
 def _audio() -> Any:

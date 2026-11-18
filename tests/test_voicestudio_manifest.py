@@ -38,6 +38,14 @@ DESCRIPTION_MAX = 200
 REVISION = "536b0662742c02347bc0e980a01041f333bce120"
 WHISPER_MODEL = "faster-whisper-small-verify"
 WHISPER_BYTES = 486_212_372
+#: The backend bounds the manifest declares for the two generation params.
+NUM_STEP_MIN = 1
+NUM_STEP_MAX = 128
+GUIDANCE_MAX = 20
+#: The pinned-table rate and the gross-failure band the length gate judges by.
+CPS_ES = 15.5
+DUR_MIN = 0.5
+DUR_MAX = 2.0
 #: The requirements the manifest declares.
 RAM_GB = 8
 DISK_GB = 40
@@ -51,7 +59,7 @@ MODEL_ENTRIES = 2
 def test_the_engine_is_python_311_with_a_managed_server() -> None:
     assert MANIFEST["name"] == "voicestudio"
     assert MANIFEST["facet"] == "voice"
-    assert MANIFEST["version"] == "0.1.4"
+    assert MANIFEST["version"] == "0.1.5"
     assert MANIFEST["engine"]["type"] == "python-env"
     assert MANIFEST["engine"]["python"] == "3.11"
     assert MANIFEST["engine"]["server"] == {
@@ -150,7 +158,12 @@ def test_no_skip_field_can_reach_the_runner() -> None:
 
 def test_the_result_is_judged_and_previewed_as_audio() -> None:
     assert CAPABILITY["kind"] == "audio"
-    assert CAPABILITY["verify"]["thresholds"] == {"wer_max": 0.05}
+    assert CAPABILITY["verify"]["thresholds"] == {
+        "wer_max": 0.05,
+        "cps_es": 15.5,
+        "duration_min_ratio": 0.5,
+        "duration_max_ratio": 2.0,
+    }
     assert CAPABILITY["preview"] == {"viewer": "audio"}
 
 
@@ -375,17 +388,66 @@ def test_the_skill_teaches_the_managed_backend() -> None:
 
 @pytest.mark.parametrize(
     ("input_name", "present"),
-    [("voice", True), ("model", True), ("language", True), ("clip", True), ("speed", False)],
+    [
+        ("voice", True),
+        ("model", True),
+        ("language", True),
+        ("clip", True),
+        ("speed", False),
+        ("num-step", True),
+        ("guidance-scale", True),
+    ],
 )
 def test_the_piece_inputs_are_exactly_the_four(input_name: str, present: bool) -> None:
     assert (input_name in INPUTS) is present
+
+
+def test_the_speak_generation_params_are_bounded_and_optional() -> None:
+    """num-step 1-128, guidance-scale up to 20, both omitted by default."""
+    num_step = INPUTS["num-step"]
+    assert num_step["type"] == "integer"
+    assert num_step["min"] == NUM_STEP_MIN
+    assert num_step["max"] == NUM_STEP_MAX
+    assert num_step["required"] is False
+    assert "default" not in num_step
+    guidance = INPUTS["guidance-scale"]
+    assert guidance["type"] == "number"
+    assert guidance["max"] == GUIDANCE_MAX
+    assert guidance["required"] is False
+    assert "default" not in guidance
+    assert "engine default" in num_step["description"]
+    assert "engine default" in guidance["description"]
+
+
+def test_the_clone_capability_takes_no_generation_params() -> None:
+    """The clone engine reads neither param: cosyvoice tuning is out of scope."""
+    assert "num-step" not in CLONE_INPUTS
+    assert "guidance-scale" not in CLONE_INPUTS
+
+
+def test_the_duration_thresholds_mirror_the_runner_consts() -> None:
+    """Manifest ratios and the pinned-table rate match what the runner judges by."""
+    source = (PACKAGE / "runner.py").read_text(encoding="utf-8")
+    assert "CPS_ES = 15.5" in source
+    assert "DUR_MIN = 0.5" in source
+    assert "DUR_MAX = 2.0" in source
+    thresholds = CAPABILITY["verify"]["thresholds"]
+    assert thresholds["cps_es"] == CPS_ES
+    assert thresholds["duration_min_ratio"] == DUR_MIN
+    assert thresholds["duration_max_ratio"] == DUR_MAX
+    assert CLONE["verify"]["thresholds"] == thresholds
 
 
 def test_the_clone_capability_speaks_with_cosyvoice_alone() -> None:
     """One capability, one engine: the clone side is cosyvoice and nothing else."""
     assert CLONE["kind"] == "audio"
     assert "cosyvoice" in CLONE["summary"]
-    assert CLONE["verify"]["thresholds"] == {"wer_max": 0.05}
+    assert CLONE["verify"]["thresholds"] == {
+        "wer_max": 0.05,
+        "cps_es": 15.5,
+        "duration_min_ratio": 0.5,
+        "duration_max_ratio": 2.0,
+    }
     assert CLONE["preview"] == {"viewer": "audio"}
     model = CLONE_INPUTS["model"]
     assert model["values"] == ["cosyvoice"]
