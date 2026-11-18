@@ -30,11 +30,11 @@ packages/<name>/
 ```
 
 - **`package.toml`** — the manifest. Its `facet` (`voice`, `audio`, `image`,
-  `video`, `cad`, `text`, `presentation`) places the package in a domain; its
-  `[[capabilities]]` each declare the **kind** of asset they write, which
-  picks the preview schema and the viewer, and name the viewer directory with
-  `[capabilities.<c>.preview] viewer` — the core's default is `generic`, so a
-  kind's viewer is reached by naming it.
+  `video`, `cad`, `text`, `presentation`, `publish`) places the package in a
+  domain; its `[[capabilities]]` each declare the **kind** of asset they write,
+  which picks the preview schema and the viewer, and name the viewer directory
+  with `[capabilities.<c>.preview] viewer` — the core's default is `generic`, so
+  a kind's viewer is reached by naming it.
 - **`pyproject.toml` / `uv.lock`** — python-engine packages only: the tool's
   dependencies for its own environment, with `[tool.uv] package = false` so uv
   treats it as a virtual project, and the pinned lock CI audits. A
