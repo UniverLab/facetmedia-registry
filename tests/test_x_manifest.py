@@ -139,7 +139,8 @@ def test_the_root_readme_lists_x_under_the_publish_facet() -> None:
 def test_the_registry_indexes_the_package() -> None:
     names = [entry["name"] for entry in INDEX["packages"]]
     assert "x" in names
-    assert names.index("x") == len(names) - 1
     assert names.index("bluesky") == names.index("x") - 1
+    assert names.index("youtube") == names.index("x") + 1
+    assert names.index("youtube") == len(names) - 1
     assert INDEX["facets"]["publish"]["label"] == "Publish"
     assert INDEX["facets"]["publish"]["i18n"]["es"]["label"] == "Publicación"

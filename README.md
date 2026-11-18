@@ -56,6 +56,7 @@ the core:
 | video | rhubarb | Mouth cues X..H for a drawn character, timed to a voice clip from the text it says, with the phonetic recognizer of Rhubarb Lip Sync 1.14.0, writing mouths.json checked by cue count, mouth letters and time order; the pinned Linux ELF zip; about a second for a 10 s clip |
 | publish | bluesky | Text, images, video and threads on the lab's Bluesky brand account through the AT Protocol, with a read-back check after the send |
 | publish | x | Text, images, video and threads on the lab's X brand account through the X API v2, with the cost shown before the send and a read-back check |
+| publish | youtube | One video to the lab's YouTube brand channel through the YouTube Data API, private by default with AI disclosure from provenance and a read-back check |
 
 ## How facet uses this repository
 

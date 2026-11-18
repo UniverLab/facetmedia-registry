@@ -1,0 +1,13 @@
+# Upload one video to the lab's YouTube channel, private by default.
+# Dry-run only: facet run upload.toml --dry-run sends nothing and touches no network.
+capability = "youtube.upload"
+
+[inputs]
+video = "banco.mp4"
+title = "La escuadra del laboratorio"
+description = "La escuadra de aluminio recién salida del banco de trabajo."
+tags = [{ tag = "taller" }, { tag = "escuadra" }]
+category = "28"
+privacy = "private"
+made-for-kids = false
+notify-subscribers = true
