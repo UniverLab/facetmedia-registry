@@ -12,6 +12,7 @@ examples (20 805 vs 20 805.514 451 passes at 0.1 %; 30 000 fails).
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import sys
 import types
@@ -107,7 +108,11 @@ def test_verify_step_passes_volume_and_bbox() -> None:
     assert verdict["passed"] is True
     assert verdict["metrics"]["volume_diff_rel"] == pytest.approx(2.5e-05)
     assert verdict["metrics"]["bbox_diff_mm"] == [0.0, 0.0, 0.0]
-    assert verdict["thresholds"] == {"volume_rel_tol": 0.001, "bbox_abs_tol_mm": 0.01}
+    assert verdict["thresholds"] == {
+        "expect_solids": 1,
+        "volume_rel_tol": 0.001,
+        "bbox_abs_tol_mm": 0.01,
+    }
 
 
 def test_verify_step_fails_the_off_volume() -> None:
@@ -284,3 +289,216 @@ def test_hole_key_ignores_the_axis_sign() -> None:
     other = {"center_mm": [2.5, 20, 35], "diameter_mm": 6.5, "axis": [1, 0, 0]}
     assert occlab._key(down) == occlab._key(up)
     assert occlab._key(other) != occlab._key(up)
+
+
+def test_verify_step_fails_when_solids_count_differs() -> None:
+    """A part with two solids fails by default and names the counts."""
+    measured = {**ESCUEADRA_MEASURED, "solids": 2}
+    with (
+        mock.patch.object(occlab, "import_step", return_value=ESCUEADRA_SHAPE),
+        mock.patch.object(occlab, "measure", return_value=measured),
+    ):
+        verdict = runner._verify_step({}, Path("part.step"))
+    assert verdict["passed"] is False
+    assert verdict["metrics"]["expected_solids"] == 1
+    assert verdict["thresholds"]["expect_solids"] == 1
+    assert verdict["metrics"]["error"] == "expected 1 solid(s), found 2"
+
+
+def test_verify_step_passes_when_expect_solids_matches() -> None:
+    """expect-solids accepts an exact multi-body result."""
+    expected_solids = 2
+    measured = {**ESCUEADRA_MEASURED, "solids": expected_solids}
+    with (
+        mock.patch.object(occlab, "import_step", return_value=ESCUEADRA_SHAPE),
+        mock.patch.object(occlab, "measure", return_value=measured),
+    ):
+        verdict = runner._verify_step({"expect-solids": expected_solids}, Path("part.step"))
+    assert verdict["passed"] is True
+    assert verdict["metrics"]["expected_solids"] == expected_solids
+    assert verdict["thresholds"]["expect_solids"] == expected_solids
+
+
+class _Attr:
+    def __init__(self, **values):
+        self._values = values
+
+    def get(self, key, default=None):
+        return self._values.get(key, default)
+
+    def drop(self, key) -> None:
+        self._values.pop(key, None)
+
+    def __getattr__(self, key):
+        try:
+            return self._values[key]
+        except KeyError as exc:
+            raise AttributeError(key) from exc
+
+
+class _Entity:
+    def __init__(self, dxftype: str, **attrs):
+        self._dxftype = dxftype
+        self.dxf = _Attr(**attrs)
+
+    def dxftype(self) -> str:
+        return self._dxftype
+
+
+class _TableEntry:
+    def __init__(self, name: str):
+        self.dxf = _Attr(name=name)
+
+
+class _Audit:
+    def __init__(self, errors=(), fixes=()):
+        self.errors = list(errors)
+        self.fixes = list(fixes)
+
+
+class _FakeDoc:
+    """The slice of an ezdxf document that verify touches, with ezdxf's defaults."""
+
+    def __init__(
+        self,
+        *,
+        insunits: int,
+        measurement: int,
+        entities=None,
+        layers=None,
+        linetypes=None,
+        styles=None,
+    ):
+        self.header = {"$INSUNITS": insunits, "$MEASUREMENT": measurement}
+        self._entities = list(entities or [])
+        self.layers = list(layers or [_TableEntry("0")])
+        self.linetypes = list(linetypes or [_TableEntry("Continuous")])
+        self.styles = list(styles or [_TableEntry("Standard")])
+
+    def modelspace(self):
+        return list(self._entities)
+
+    def audit(self):
+        """Like ezdxf's audit: repair an undefined linetype by dropping it."""
+        fixes = 0
+        for entity in self._entities:
+            linetype = entity.dxf.get("linetype")
+            if linetype is not None and linetype not in {"BYLAYER", "BYBLOCK"}:
+                entity.dxf.drop("linetype")
+                fixes += 1
+        return _Audit(fixes=[None] * fixes)
+
+
+@contextlib.contextmanager
+def _dxf_document(tmp_path: Path, *, build, fake_doc=None):
+    """Yield a DXF fixture's path: a real ezdxf file, or the fake document."""
+    path = tmp_path / "drawing.dxf"
+    if fake_doc is not None:
+        path.write_bytes(b"fake-dxf")
+        with (
+            mock.patch.object(occlab, "read_dxf", return_value=fake_doc),
+            mock.patch.object(
+                occlab, "dxf_data", return_value={"entities": len(fake_doc.modelspace())}
+            ),
+        ):
+            yield path
+        return
+    ezdxf = importlib.import_module("ezdxf")
+    document = ezdxf.new("R2018", setup=True)
+    build(document)
+    document.saveas(path)
+    yield path
+
+
+def _dxf_fixture(tmp_path: Path, *, build, fake_doc):
+    """The real-ezdxf fixture when the kernel is installed, the fake otherwise."""
+    if importlib.util.find_spec("ezdxf") is not None:
+        return _dxf_document(tmp_path, build=build)
+    return _dxf_document(tmp_path, build=build, fake_doc=fake_doc)
+
+
+def test_verify_dxf_fails_units_mismatch_and_names_found_expected(tmp_path: Path) -> None:
+    """units='m' fails when the header codes do not match metres."""
+
+    def build(document):
+        document.header["$INSUNITS"] = 4
+
+    fake = _FakeDoc(insunits=4, measurement=1)
+    with _dxf_fixture(tmp_path, build=build, fake_doc=fake) as path:
+        verdict = runner._verify_dxf({"units": "m"}, path)
+    assert verdict["passed"] is False
+    assert verdict["metrics"]["units_found"] == [4, 1]
+    assert verdict["metrics"]["units_expected"] == [6, 1]
+    assert "units found (4,1) expected [6, 1]" in verdict["metrics"]["error"]
+
+
+def test_verify_dxf_fails_when_insunits_unset(tmp_path: Path) -> None:
+    """An explicitly unitless drawing fails when no units are declared."""
+
+    def build(document):
+        document.header["$INSUNITS"] = 0
+
+    fake = _FakeDoc(insunits=0, measurement=1)
+    with _dxf_fixture(tmp_path, build=build, fake_doc=fake) as path:
+        verdict = runner._verify_dxf({}, path)
+    assert verdict["passed"] is False
+    assert verdict["metrics"]["units_found"] == [0, 1]
+    assert "units found (0,1) expected set" in verdict["metrics"]["error"]
+
+
+def test_verify_dxf_passes_a_metric_header_without_units(tmp_path: Path) -> None:
+    """A drawing that names its units and measurement as metres still passes."""
+
+    def build(document):
+        document.modelspace().add_line((0, 0), (1, 0))
+
+    fake = _FakeDoc(insunits=6, measurement=1, entities=[_Entity("LINE", layer="0")])
+    with _dxf_fixture(tmp_path, build=build, fake_doc=fake) as path:
+        verdict = runner._verify_dxf({}, path)
+    assert verdict["passed"] is True
+    assert verdict["metrics"]["units_expected"] == "consistent"
+
+
+def test_verify_dxf_fails_on_undefined_linetype_before_audit(tmp_path: Path) -> None:
+    """An undefined linetype is reported before the audit can remove it."""
+
+    def build(document):
+        document.modelspace().add_line((0, 0), (1, 0), dxfattribs={"linetype": "MISSING_LT"})
+
+    fake = _FakeDoc(
+        insunits=6,
+        measurement=1,
+        entities=[_Entity("LINE", layer="0", linetype="MISSING_LT")],
+    )
+    with _dxf_fixture(tmp_path, build=build, fake_doc=fake) as path:
+        verdict = runner._verify_dxf({}, path)
+    assert verdict["passed"] is False
+    assert "MISSING_LT" in verdict["metrics"]["undefined_refs"]["linetypes"]
+    assert "undefined linetype MISSING_LT" in verdict["metrics"]["error"]
+
+
+def test_verify_dxf_accepts_text_without_an_explicit_style(tmp_path: Path) -> None:
+    """A TEXT with no style names ezdxf's Standard style, not a phantom name."""
+
+    def build(document):
+        document.modelspace().add_text("STUDY")
+
+    fake = _FakeDoc(insunits=6, measurement=1, entities=[_Entity("TEXT", layer="0")])
+    with _dxf_fixture(tmp_path, build=build, fake_doc=fake) as path:
+        verdict = runner._verify_dxf({}, path)
+    assert verdict["passed"] is True
+    assert verdict["metrics"]["undefined_refs"] == {"layers": [], "linetypes": [], "styles": []}
+
+
+def test_verify_dxf_fails_on_undefined_layer_and_names_it(tmp_path: Path) -> None:
+    """A layer an entity references but the drawing never defines fails."""
+
+    def build(document):
+        document.modelspace().add_line((0, 0), (1, 0), dxfattribs={"layer": "ghost"})
+
+    fake = _FakeDoc(insunits=6, measurement=1, entities=[_Entity("LINE", layer="ghost")])
+    with _dxf_fixture(tmp_path, build=build, fake_doc=fake) as path:
+        verdict = runner._verify_dxf({}, path)
+    assert verdict["passed"] is False
+    assert verdict["metrics"]["undefined_refs"]["layers"] == ["ghost"]
+    assert "undefined layer ghost" in verdict["metrics"]["error"]

@@ -1,5 +1,5 @@
 name = "cad"
-version = "0.1.4"
+version = "0.2.0"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "CadQuery project · Manfred Moitzi (ezdxf)"
@@ -106,6 +106,12 @@ default = 0.01
 min = 0
 description = "Absolute tolerance on expect-bbox-mm, in mm."
 
+[capabilities.solid.inputs.expect-solids]
+type = "integer"
+default = 1
+min = 1
+description = "Exact solid count the result must contain."
+
 [capabilities.solid.preview]
 viewer = "cad"
 
@@ -135,6 +141,11 @@ description = "Layers the DXF must contain; verify fails when one is missing."
 type = "string"
 required = true
 description = "Layer name the plan must draw on."
+
+[capabilities.drawing.inputs.units]
+type = "enum"
+values = ["mm", "cm", "m", "in", "ft"]
+description = "Drawing units the DXF header must declare; verify checks $INSUNITS and $MEASUREMENT."
 
 [capabilities.drawing.preview]
 viewer = "cad"

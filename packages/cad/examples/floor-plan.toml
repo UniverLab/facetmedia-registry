@@ -3,6 +3,7 @@ capability = "cad.drawing"
 [inputs]
 script = "floor-plan.py"
 name = "floor-plan"
+units = "m"
 expect-layers = [
   { layer = "walls" },
   { layer = "openings" },

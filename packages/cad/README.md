@@ -34,6 +34,7 @@ the optional `<name>.glb`:
 | `volume-rel-tol` | number | no | `0.001` | relative tolerance on the volume, 0 to 0.1 |
 | `expect-bbox-mm` | array | no | — | expected bounding box as one item `{ x, y, z }` in mm; verify fails when any side is off by more than `bbox-abs-tol-mm` |
 | `bbox-abs-tol-mm` | number | no | `0.01` | absolute tolerance per side, in mm |
+| `expect-solids` | integer | no | `1` | exact solid count the result must contain |
 
 `cad.drawing` — 2D plan from an ezdxf script: DXF with an audit, SVG and PNG
 views:
@@ -43,6 +44,7 @@ views:
 | `script` | path | yes | — | ezdxf script; must write `<name>.dxf`, may write `.svg` and `.png` |
 | `name` | string | yes | — | matches `[a-z0-9][a-z0-9-]*`; the asset base name |
 | `expect-layers` | array | no | — | layers the DXF must define; each item is `{ layer = "..." }` |
+| `units` | string | no | — | one of `mm`, `cm`, `m`, `in`, `ft`; when given, verify checks `$INSUNITS` and `$MEASUREMENT` match it |
 
 The core's field names never carry an underscore (`manifest._NAME_RE`), so
 the piece spells the expectations `expect-volume-mm3`, `expect-bbox-mm` and
@@ -98,19 +100,25 @@ actually ran, pinned by the manifest and the lock.
 
 `verify` re-imports the assets; nothing is trusted from the run:
 
-- **STEP**: `isValid()` is true, there is at least one solid, and when the
-  piece carries `expect-volume-mm3` the volume is within `volume-rel-tol`
-  (relative) and when it carries `expect-bbox-mm` (one `{ x, y, z }` item,
-  e.g. `expect-bbox-mm = [{ x = 60, y = 40, z = 50 }]`) every side is
-  within `bbox-abs-tol-mm` (absolute). The metrics carry `volume_mm3`,
-  `bbox_mm`, `faces`, `solids` and, when expected, `volume_diff_rel` and
-  `bbox_diff_mm`.
+- **STEP**: `isValid()` is true, the solid count matches `expect-solids`
+  exactly (default 1), and when the piece carries `expect-volume-mm3` the
+  volume is within `volume-rel-tol` (relative) and when it carries
+  `expect-bbox-mm` (one `{ x, y, z }` item, e.g.
+  `expect-bbox-mm = [{ x = 60, y = 40, z = 50 }]`) every side is within
+  `bbox-abs-tol-mm` (absolute). The metrics carry `volume_mm3`, `bbox_mm`,
+  `faces`, `solids`, `expected_solids` and, when expected, `volume_diff_rel`
+  and `bbox_diff_mm`. A wrong solid count names the count found and expected.
 - **STL and SVG**: non-empty and parseable — the STL meshes to at least one
   triangle, the SVG parses as XML.
 - **glb**: non-empty, glTF magic — the file starts with the `glTF` binary magic.
-- **DXF**: `ezdxf.readfile`, then `audit()` with 0 errors and 0 fixes, and
-  every `expect-layers` layer present. The metrics carry `entities`,
-  `layers`, `errors`, `fixes` and `missing_layers`.
+- **DXF**: `ezdxf.readfile`, then undefined layer, linetype and text-style
+  references are collected before `audit()` (the audit removes that
+  evidence). Verify fails when any are undefined, naming them. It requires
+  `$INSUNITS` to be set and `$MEASUREMENT` to agree with it; when `units`
+  is given, both must match the expected codes exactly. The audit must have
+  0 errors and 0 fixes, and every `expect-layers` layer must be present.
+  The metrics carry `entities`, `layers`, `errors`, `fixes`,
+  `missing_layers`, `undefined_refs`, `units_found` and `units_expected`.
 - **PNG**: opens with matplotlib's image reader.
 
 The verification belongs to the STEP or the DXF asset; the derived views
@@ -177,19 +185,20 @@ expect-volume-mm3 = 20805
 ```
 
 `examples/floor-plan.py` and `examples/floor-plan.toml`: the lab's
-6 × 4.5 m study plan (ezdxf 1.4.4 + matplotlib), verified by its five layers
-and a clean audit:
+6 × 4.5 m study plan (ezdxf 1.4.4 + matplotlib), verified by its five layers,
+its units and a clean audit:
 
 ```toml
 [inputs]
 script = "floor-plan.py"
 name = "floor-plan"
+units = "m"
 expect-layers = [
-  { layer = "muros" },
-  { layer = "aberturas" },
-  { layer = "mobiliario" },
-  { layer = "cotas" },
-  { layer = "textos" },
+  { layer = "walls" },
+  { layer = "openings" },
+  { layer = "furniture" },
+  { layer = "dimensions" },
+  { layer = "labels" },
 ]
 ```
 

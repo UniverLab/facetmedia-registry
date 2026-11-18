@@ -117,17 +117,19 @@ piece; it never generates one itself.
 
 ## Judging the result
 
-- Set `expect-volume-mm3` (with `volume-rel-tol`, default 0.1 %) or
+- Set `expect-volume-mm3` (with `volume-rel-tol`, default 0.1 %),
   `expect-bbox-mm` (one `{ x, y, z }` item — `expect-bbox-mm = [{ x = 60,
-  y = 40, z = 50 }]` — with `bbox-abs-tol-mm`, default 0.01 mm) so `verify`
-  can fail: it re-imports the STEP, checks `isValid()`, at least one solid,
-  and the volume and bbox against those expectations. A wrong feature that
-  keeps the volume right shows up in `expect-bbox-mm`; one that keeps both
-  right shows up in the view.
-- Aim for exactly one solid in every part: a stray second body (a leftover
-  cutter, a duplicated feature) passes `verify` today but is a modelling
-  defect — read the `solids` count in the preview and delete the extra body
-  before calling the part done.
+  y = 40, z = 50 }]` — with `bbox-abs-tol-mm`, default 0.01 mm), or
+  `expect-solids` (default 1) so `verify` can fail: it re-imports the STEP,
+  checks `isValid()`, exactly `expect-solids` solids, and the volume and
+  bbox against those expectations. A wrong feature that keeps the volume
+  right shows up in `expect-bbox-mm`; one that keeps both right shows up in
+  the view.
+- `verify` requires exactly `expect-solids` solids (default 1), so a stray
+  second body (a leftover cutter, a duplicated feature) fails verification
+  and names the solid count found and expected. Read the `solids` count in
+  the preview and delete the extra body, or set `expect-solids` only when
+  the part is intentionally made of that many bodies.
 - `facet preview <name>.step` writes `solid` with `valid`, `volume_mm3`,
   `bbox_mm`, `faces`, `solids` and `holes`. To fix a misplaced feature,
   read `holes`: each has its `center_mm`, `diameter_mm` and `axis`, so a
@@ -145,8 +147,11 @@ piece; it never generates one itself.
   file still builds the same volume. On curved or lofted solids allow a
   wider volume drift (about a percent, not the default tenth of a percent),
   because the kernel's own measurement runs high on splines.
-- For drawings, `verify` audits the DXF with 0 errors and 0 fixes and
-  checks every `expect-layers` layer is defined; the preview's `drawing`
+- For drawings, `verify` checks header units (`$INSUNITS` set and
+  consistent with `$MEASUREMENT`, or exactly matching `units` when given),
+  collects undefined layer, linetype and text-style references before the
+  audit and fails naming them, audits the DXF with 0 errors and 0 fixes, and
+  checks every `expect-layers` layer is defined. The preview's `drawing`
   carries `units`, `entities`, `layers` with entity counts and the `audit`,
   so an empty layer (0 entities) or a missing one is visible at a glance.
 - Dimensions on a drawing must be measured from the geometry, never retyped:
@@ -190,13 +195,14 @@ piece; it never generates one itself.
   nothing under the short extension. Never call `show()` (or import a
   viewer) in a script either: it hangs with no display, and facet always
   runs headless with `-I`.
-- For drawings, name the unit in the file, not just in your head: the ezdxf
-  calls are unitless and the `$INSUNITS` header only tells CAD programs
-  what the numbers mean, so set it deliberately for the piece and confirm
-  the scale in the preview — an audit-clean file can still be drawn a
-  thousand times off. Define every layer, linetype and style the file
-  references, and keep the audit at 0 errors and 0 fixes: a fix the auditor
-  applies silently can hide a file another program refuses to open.
+- For drawings, name the unit in the file and in the piece: set `$INSUNITS`
+  and `$MEASUREMENT` in the script and declare `units` when the drawing has a
+  known scale. `verify` requires `$INSUNITS` to be set and consistent with
+  `$MEASUREMENT` (or to match `units` exactly when given), so a drawing at
+  the wrong or unset scale fails instead of passing. Define every layer,
+  linetype and style the file references: `verify` collects undefined
+  references before the audit and fails naming them, and the audit must stay
+  at 0 errors and 0 fixes.
 - Drawing practice that survives real shops lives in
   references/drawing.md: layers carry machine intent (cut vs marking),
   machine-read text goes down as outlines, cut profiles stay closed with no
@@ -214,10 +220,12 @@ piece; it never generates one itself.
   record, so the record names exactly the code that made the part.
 - Where facet differs from common public advice: broad-fillet-last is the
   popular rule, but facet rounds primitives first because wide selectors
-  after booleans are the top crash source. Public guides assert exactly one
-  solid while facet's `verify` still accepts at least one, so count the
-  solids yourself. Public guides check DXF header units in tooling while
-  facet's `verify` does not, so set and eyeball the scale yourself.
+  after booleans are the top crash source. `verify` requires exactly
+  `expect-solids` solids (default 1), so set `expect-solids` when a part is
+  intentionally multi-body and read the count in the preview either way.
+  `verify` also checks DXF header units and fails on undefined layer,
+  linetype and text-style references before the audit, so declare `units`
+  and keep every referenced table entry defined.
 
 Sources for the practices above — one row per source, with what was taken
 from it — are listed in references/sources.md.

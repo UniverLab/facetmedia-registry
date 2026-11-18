@@ -40,6 +40,12 @@ AXIS_ZERO = 1e-9
 #: A binary STL is an 80-byte header, a 4-byte count and 50 bytes per triangle.
 STL_HEADER_BYTES = 80
 STL_TRIANGLE_BYTES = 50
+#: Entity types that reference a text style by name.
+TEXT_ENTITY_TYPES = {"TEXT", "MTEXT", "ATTRIB", "ATTDEF"}
+#: The text style a DXF entity names when it carries none, as ezdxf spells it.
+DEFAULT_TEXT_STYLE = "Standard"
+#: Linetypes that resolve through the layer rather than the table.
+INDIRECT_LINETYPES = {"BYLAYER", "BYBLOCK"}
 
 
 def import_step(path: Path) -> Any:
@@ -163,6 +169,38 @@ def audit_dxf(document: Any) -> dict[str, int]:
 def layer_names(document: Any) -> list[str]:
     """Every layer the drawing defines, for verify's expect-layers."""
     return [layer.dxf.name for layer in document.layers]
+
+
+def dxf_undefined_refs(document: Any) -> dict[str, list[str]]:
+    """Layer, linetype and text-style names referenced but not defined.
+
+    Collected before auditing, because the audit removes the evidence by
+    fixing or dropping the bad references. Table names are case-insensitive
+    in DXF, so the comparison is too.
+    """
+    defined_layers = {layer.dxf.name.casefold() for layer in document.layers}
+    defined_linetypes = {linetype.dxf.name.casefold() for linetype in document.linetypes}
+    defined_styles = {style.dxf.name.casefold() for style in document.styles}
+    layers: set[str] = set()
+    linetypes: set[str] = set()
+    styles: set[str] = set()
+    for entity in document.modelspace():
+        layer = entity.dxf.get("layer", "0")
+        if layer.casefold() not in defined_layers:
+            layers.add(layer)
+        linetype = entity.dxf.get("linetype", "BYLAYER")
+        indirect = linetype.upper() in INDIRECT_LINETYPES
+        if not indirect and linetype.casefold() not in defined_linetypes:
+            linetypes.add(linetype)
+        if entity.dxftype() in TEXT_ENTITY_TYPES:
+            style = entity.dxf.get("style", DEFAULT_TEXT_STYLE)
+            if style.casefold() not in defined_styles:
+                styles.add(style)
+    return {
+        "layers": sorted(layers),
+        "linetypes": sorted(linetypes),
+        "styles": sorted(styles),
+    }
 
 
 def dxf_data(document: Any, audit: dict[str, int]) -> dict[str, Any]:

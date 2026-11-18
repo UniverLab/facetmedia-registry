@@ -1,9 +1,10 @@
 # Drawing practice for fabrication-grade DXF
 
 These rules decide whether a DXF survives outside facet: a CAD program, a
-print shop, a cutting machine. They are agent habits, not runner checks —
-`verify` audits the file and checks the expected layers, and everything
-below is on the script author.
+print shop, a cutting machine. `verify` now enforces header units and fails
+on undefined layer, linetype and text-style references collected before the
+audit, in addition to the audit and expected layers. The guidance below
+keeps drawings unambiguous and fabrication-ready beyond those checks.
 
 ## Layers carry machine intent
 

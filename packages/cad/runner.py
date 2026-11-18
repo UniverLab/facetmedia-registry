@@ -4,9 +4,10 @@ Four verbs on the runner SDK (``facet_runner_sdk``, copied into the
 environment at pull): ``run`` executes the caller's CadQuery or ezdxf
 script unchanged inside the package environment, completes the exports the
 script left out and reports every file as a ``cad`` asset; ``verify``
-re-imports the STEP (valid, one solid, volume and bounding box against the
-piece's expectations) or audits the DXF (zero errors, zero fixes, every
-expected layer present); ``preview`` writes the CAD preview file with a
+re-imports the STEP (valid, the expected solid count, volume and bounding
+box against the piece's expectations) or audits the DXF (header units,
+undefined table references, zero errors, zero fixes, every expected layer
+present); ``preview`` writes the CAD preview file with a
 shaded view; ``doctor`` checks the tools at ``quick`` and ``full`` depth.
 
 The script is code chosen by the caller and runs with the caller's rights
@@ -227,15 +228,25 @@ def _verdict(
 
 
 def _verify_step(params: Mapping[str, Any], path: Path) -> dict[str, Any]:
-    """Re-import the STEP: valid, one solid, volume and bbox as expected."""
+    """Re-import the STEP: valid, expected solid count, volume and bbox."""
     try:
         shape = occlab.import_step(path)
         measured = occlab.measure(shape)
     except Exception as exc:  # catch-all: an unreadable STEP is a failed verdict
         return _verdict(path.name, False, {"error": str(exc)}, "cadquery")
-    passed = bool(shape.isValid()) and int(measured["solids"]) >= 1
+    expected_solids = int(params.get("expect-solids", 1))
+    found_solids = int(measured["solids"])
+    ok_count = found_solids == expected_solids
+    passed = bool(shape.isValid()) and ok_count
     metrics = dict(measured)
-    thresholds: dict[str, Any] = {"volume_rel_tol": None, "bbox_abs_tol_mm": None}
+    metrics["expected_solids"] = expected_solids
+    thresholds: dict[str, Any] = {
+        "expect_solids": expected_solids,
+        "volume_rel_tol": None,
+        "bbox_abs_tol_mm": None,
+    }
+    if not ok_count:
+        metrics["error"] = f"expected {expected_solids} solid(s), found {found_solids}"
     expect_volume = params.get("expect-volume-mm3")
     if expect_volume is not None:
         wanted_volume = float(expect_volume)
@@ -280,29 +291,76 @@ def _expected_bbox(value: Any) -> tuple[float, float, float] | None:
 
 
 def _verify_dxf(params: Mapping[str, Any], path: Path) -> dict[str, Any]:
-    """Audit the DXF: zero errors, zero fixes, every expected layer present."""
+    """Audit the DXF: zero errors, zero fixes, expected layers and units."""
     try:
         document = occlab.read_dxf(path)
+        undefined = occlab.dxf_undefined_refs(document)
         audit = occlab.audit_dxf(document)
         defined = occlab.layer_names(document)
     except Exception as exc:  # catch-all: an unreadable DXF is a failed verdict
         return _verdict(path.name, False, {"error": str(exc)}, "ezdxf")
-    expected = [str(item["layer"]) for item in params.get("expect-layers") or []]
-    missing = [layer for layer in expected if layer not in defined]
-    metrics = {
+    expected_layers = [str(item["layer"]) for item in params.get("expect-layers") or []]
+    missing_layers = [layer for layer in expected_layers if layer not in defined]
+    insunits = int(document.header.get("$INSUNITS", 0) or 0)
+    measurement = int(document.header.get("$MEASUREMENT", 0) or 0)
+    units_ok, units_expected = _check_dxf_units(params.get("units"), insunits, measurement)
+    undefined_any = any(undefined[kind] for kind in ("layers", "linetypes", "styles"))
+    metrics: dict[str, Any] = {
         "entities": int(occlab.dxf_data(document, audit)["entities"]),
         "layers": len(defined),
         "errors": audit["errors"],
         "fixes": audit["fixes"],
-        "missing_layers": missing,
+        "missing_layers": missing_layers,
+        "undefined_refs": undefined,
+        "units_found": [insunits, measurement],
+        "units_expected": units_expected,
     }
-    thresholds = {"audit_errors_max": 0, "audit_fixes_max": 0, "expect_layers": expected}
-    passed = audit["errors"] == 0 and audit["fixes"] == 0 and not missing
+    thresholds: dict[str, Any] = {
+        "audit_errors_max": 0,
+        "audit_fixes_max": 0,
+        "expect_layers": expected_layers,
+        "units": params.get("units"),
+    }
+    passed = (
+        audit["errors"] == 0
+        and audit["fixes"] == 0
+        and not missing_layers
+        and units_ok
+        and not undefined_any
+    )
+    problems = []
+    if undefined_any:
+        names = []
+        for kind in ("layers", "linetypes", "styles"):
+            for name in undefined[kind]:
+                names.append(f"{kind[:-1]} {name}")
+        problems.append("undefined " + ", ".join(names))
+    if not units_ok:
+        problems.append(f"units found ({insunits},{measurement}) expected {units_expected}")
+    if problems:
+        metrics["error"] = "; ".join(problems)
     return _verdict(path.name, passed, metrics, "ezdxf", thresholds)
+
+
+def _check_dxf_units(expected: Any, insunits: int, measurement: int) -> tuple[bool, Any]:
+    """Whether the DXF header units match the expectation."""
+    if expected is not None:
+        wanted = UNIT_CODES[str(expected)]
+        return (insunits, measurement) == wanted, list(wanted)
+    if insunits == 0:
+        return False, "set"
+    metric_ok = insunits not in IMPERIAL and measurement == 1
+    imperial_ok = insunits in IMPERIAL and measurement == 0
+    return metric_ok or imperial_ok, "consistent"
 
 
 #: The first four bytes of every binary glTF file.
 GLB_MAGIC = b"glTF"
+
+#: DXF header codes for each named unit: ($INSUNITS, $MEASUREMENT).
+UNIT_CODES = {"mm": (4, 1), "cm": (5, 1), "m": (6, 1), "in": (1, 0), "ft": (2, 0)}
+#: $INSUNITS values whose measurement is imperial, per ezdxf's split.
+IMPERIAL = {1, 2, 3, 8, 9, 10}
 
 
 def _verify_glb(path: Path) -> dict[str, Any]:
