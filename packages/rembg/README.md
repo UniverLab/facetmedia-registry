@@ -1,10 +1,12 @@
 # rembg
 
-Background removal from photos with rembg's U2NetP on CPU:
+Background removal from photos with rembg on CPU:
 `facet run rembg.cutout` turns a photo into an alpha PNG and, beside it,
 a checkerboard `-checkerboard` PNG so a person can judge thin edges. CPU only,
-no GPU flag; the only model is the `u2netp` ONNX weights file, which
-arrives through `facet pull rembg` and is checked by sha256 in `doctor`.
+no GPU flag; the default `u2netp` ONNX weights file arrives through
+`facet pull rembg` and is checked by sha256 in `doctor`, while the
+bigger `birefnet-general` weights for the `birefnet` edge mode are pulled
+the same way and checked by size only when that mode runs.
 
 ## Capabilities and pieces
 
@@ -13,6 +15,7 @@ arrives through `facet pull rembg` and is checked by sha256 in `doctor`.
 | Field | Type | Required | Default | Notes |
 |-------|------|----------|---------|-------|
 | `photo` | path | yes | — | PNG, JPEG or WebP, resolved relative to the piece |
+| `edge-mode` | string | no | `plain` | `plain`, `decontaminate` (coloured halo), `matting` or `birefnet` (hair and fur); alternatives, not layers |
 
 `run` writes two assets into the output directory: `<photo-stem>.png`,
 the RGBA cutout, and `<photo-stem>-checkerboard.png`, the cutout pasted over a
@@ -59,11 +62,13 @@ fields for each asset — `prompt` is `cutout of <photo-stem>`, `seed` 0,
 A person judges the result on the checkerboard asset: semi-transparent fringes,
 halo pixels and missed wisps show against the checkerboard while the
 alpha PNG stays untouched for compositing. `facet doctor rembg` runs two
-checks, both quick:
+checks, both quick, plus a third in `birefnet` edge mode:
 
 - `imports`: rembg, onnxruntime and Pillow import, with versions.
 - `weights`: `u2netp.onnx` exists at its manifest size and hashes to the
   manifest's sha256.
+- `birefnet-weights`: `birefnet-general` exists at its manifest size
+  (the manifest pins its sha256 as well; the check only measures size).
 
 Every failing check names `facet pull rembg` as its fix.
 
@@ -74,8 +79,9 @@ Measured with `examples/remove.py`
 a 1344×768 test photo (`photo.png`, not shipped) rembg 2.0.67's U2NetP cutout took 1.48 s on
 CPU, 66.59 % of pixels transparent, and the checkerboard view kept the figure,
 the book and the lamp — the three subjects the photo was shot for. The
-package pins rembg 2.0.86, the newest release the dependency audit
-accepts; the session call and the weights are unchanged.
+package pins rembg 2.0.87, the first release with the `decontaminate`
+option the `decontaminate` edge mode passes; the session call and the
+weights are unchanged.
 
 ## Licences
 

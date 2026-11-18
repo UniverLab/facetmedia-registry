@@ -1,5 +1,5 @@
 name = "rembg"
-version = "0.1.4"
+version = "0.2.0"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "Daniel Gatis (rembg) · xuebinqin (U-2-Net)"
@@ -31,6 +31,10 @@ subject = "U-2-Net weights (u2netp)"
 spdx = "Apache-2.0"
 
 [[licenses]]
+subject = "BiRefNet weights (birefnet-general)"
+spdx = "MIT"
+
+[[licenses]]
 subject = "onnxruntime"
 spdx = "MIT"
 
@@ -53,6 +57,17 @@ commercial_use = true
 requires_acceptance = false
 terms_url = "https://github.com/xuebinqin/U-2-Net"
 
+[[models]]
+id = "birefnet-general"
+url = "https://github.com/danielgatis/rembg/releases/download/v0.0.0/BiRefNet-general-epoch_244.onnx"
+sha256 = "58f621f00f5d756097615970a88a791584600dcf7c45b18a0a6267535a1ebd3c"
+bytes = 972666916
+path = "birefnet-general/BiRefNet-general-epoch_244.onnx"
+spdx = "MIT"
+commercial_use = true
+requires_acceptance = false
+terms_url = "https://github.com/ZhengPeng7/BiRefNet"
+
 [capabilities.cutout]
 summary = "Background removal from a photo with rembg's U2NetP on CPU, writing the alpha PNG and a checkerboard preview for edge review"
 kind = "image"
@@ -64,6 +79,13 @@ summary = "Eliminación de fondo de una foto con U2NetP de rembg en CPU, con PNG
 type = "path"
 required = true
 description = "Photo to cut out (PNG, JPEG or WebP), resolved relative to the piece file; writes <photo-stem>.png with alpha and <photo-stem>-checkerboard.png over a checkerboard."
+
+[capabilities.cutout.inputs.edge-mode]
+type = "string"
+required = false
+default = "plain"
+pattern = "^(plain|decontaminate|matting|birefnet)$"
+description = "Edge refinement: plain (default, U2NetP only), decontaminate for a coloured halo, matting for hair and fur, birefnet for the slowest, highest-quality pass with the birefnet-general model."
 
 [capabilities.cutout.preview]
 viewer = "image"

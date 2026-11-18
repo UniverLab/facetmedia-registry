@@ -6,7 +6,7 @@ readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-  "rembg[cpu]==2.0.86",
+  "rembg[cpu]==2.0.87",
   "pillow==13.0.0",
 ]
 

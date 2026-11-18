@@ -3,11 +3,12 @@
 The runner is a subprocess of the host ``python``. Its ``PYTHONPATH``
 carries a stub ``facet_runner_sdk`` (the pull-time SDK surface) and a stub
 ``rembg`` module whose ``new_session`` records the model name, providers
-and ``U2NET_HOME``, and whose ``remove`` returns a deterministic RGBA
-image — the right half fully transparent — so the test can prove the
-alpha PNG and the checkerboard ``-checkerboard`` beside it, the image previews,
-the verify verdicts and the doctor's weights check, all without onnxruntime
-or the real 4.6 MB weights.
+and ``U2NET_HOME``, whose ``remove`` records its extra keyword arguments
+and returns a deterministic RGBA image — the right half fully transparent
+— so the test can prove the alpha PNG and the checkerboard
+``-checkerboard`` beside it, each edge mode's session and rembg options, the
+image previews, the verify verdicts and the doctor's weights checks, all
+without onnxruntime or the real weights.
 """
 
 from __future__ import annotations
@@ -21,11 +22,14 @@ from pathlib import Path
 from typing import Any
 
 import PIL.Image
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "rembg"
 MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
-MODEL = MANIFEST["models"][0]
+MODELS = {model["id"]: model for model in MANIFEST["models"]}
+MODEL = MODELS["u2netp"]
+BIREFNET = MODELS["birefnet-general"]
 RUNNER = PACKAGE / "runner.py"
 WIDTH = 64
 HEIGHT = 48
@@ -106,21 +110,36 @@ from PIL import Image
 LOG = os.environ.get("REMBG_STUB_LOG", "")
 
 
+def _record(**updates):
+    if not LOG:
+        return
+    path = Path(LOG)
+    data = json.loads(path.read_text()) if path.exists() else {}
+    data.update(updates)
+    path.write_text(json.dumps(data))
+
+
 def new_session(name, providers=None, **kwargs):
-    if LOG:
-        Path(LOG).write_text(
-            json.dumps(
-                {
-                    "name": name,
-                    "providers": providers,
-                    "u2net_home": os.environ.get("U2NET_HOME"),
-                }
-            )
-        )
+    _record(
+        name=name,
+        providers=providers,
+        u2net_home=os.environ.get("U2NET_HOME"),
+    )
     return {"name": name, "providers": providers}
 
 
 def remove(image, session=None, only_mask=False, **kwargs):
+    if LOG:
+        path = Path(LOG)
+        data = json.loads(path.read_text()) if path.exists() else {}
+        data.setdefault("removes", []).append(
+            {
+                "session": session.get("name") if isinstance(session, dict) else None,
+                "kwargs": kwargs,
+                "only_mask": only_mask,
+            }
+        )
+        path.write_text(json.dumps(data))
     if only_mask:
         mask = Image.new("L", image.size, 255)
         pixels = mask.load()
@@ -148,12 +167,31 @@ def _stub_modules(tmp_path: Path) -> Path:
     return folder
 
 
-def _model_file(home: Path, content: bytes | None = None) -> Path:
-    """A placeholder weights file where facet pull puts it."""
-    path = home / "models" / "direct" / str(MODEL["path"])
+def _model_file(
+    home: Path,
+    content: bytes | None = None,
+    model: dict[str, Any] | None = None,
+    size: int | None = None,
+) -> Path:
+    """A placeholder weights file where facet pull puts it.
+
+    ``size`` truncates a sparse file, so an exact 930 MB byte count costs no
+    disk space and no download.
+    """
+    chosen = model if model is not None else MODEL
+    path = home / "models" / "direct" / str(chosen["path"])
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(content if content is not None else b"stub weights")
+    if size is not None:
+        with path.open("wb") as handle:
+            handle.truncate(size)
+    else:
+        path.write_bytes(content if content is not None else b"stub weights")
     return path
+
+
+def _all_models(home: Path) -> dict[str, Path]:
+    """A placeholder file for every model the manifest declares."""
+    return {model_id: _model_file(home, model=model) for model_id, model in MODELS.items()}
 
 
 def _piece(tmp_path: Path) -> Path:
@@ -592,3 +630,175 @@ def test_preview_paper_writes_the_image_fields(tmp_path: Path) -> None:
     assert data["name"] == "plate"
     assert data["seed"] == 0
     assert (data["width"], data["height"]) == (LAMINA_WIDTH, LAMINA_HEIGHT)
+
+
+def _run_cutout(
+    tmp_path: Path, inputs: dict[str, object], models: dict[str, Path]
+) -> tuple[subprocess.CompletedProcess[str], dict[str, Any] | None]:
+    """Run the cutout with the given inputs and pulled model placeholders."""
+    stub_dir = _stub_modules(tmp_path)
+    piece = _piece(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(stub_dir, tmp_path)
+    request = _request("run", out, piece, models, inputs=inputs)
+    return _call(stub_dir, "run", request, tmp_path, env)
+
+
+def _session_log(tmp_path: Path) -> dict[str, Any]:
+    return json.loads((tmp_path / "session.json").read_text(encoding="utf-8"))
+
+
+def test_rembg_pin_supports_the_decontaminate_option() -> None:
+    """The cutout passes decontaminate=True, which rembg grew in 2.0.87.
+
+    Below that floor the flag is silently swallowed and the decontaminate
+    mode is a plain run in disguise — which the stubbed runner tests could
+    not catch, so the floor is pinned here instead of in the stub.
+    """
+    locked = tomllib.loads((PACKAGE / "uv.lock").read_text(encoding="utf-8"))
+    versions = {
+        package["name"]: package["version"]
+        for package in locked.get("package", [])
+        if isinstance(package, dict)
+    }
+    release = tuple(int(part) for part in str(versions["rembg"]).split("."))
+    assert release >= (2, 0, 87)
+
+
+def test_run_defaults_to_the_plain_edge_mode(tmp_path: Path) -> None:
+    """No edge-mode input keeps today's U2NetP call, with no extra kwargs."""
+    home = tmp_path / "home"
+    done, result = _run_cutout(tmp_path, {"photo": "entrada.png"}, {"u2netp": _model_file(home)})
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert result is not None
+    log = _session_log(tmp_path)
+    assert log["name"] == "u2netp"
+    assert log["removes"] == [{"session": "u2netp", "kwargs": {}, "only_mask": False}]
+    assert [asset["params"] for asset in result["assets"]] == [
+        {"photo": "entrada.png", "edge-mode": "plain"},
+        {"photo": "entrada.png", "edge-mode": "plain"},
+    ]
+
+
+@pytest.mark.parametrize(
+    ("mode", "session_name", "kwargs"),
+    [
+        ("plain", "u2netp", {}),
+        ("decontaminate", "u2netp", {"decontaminate": True}),
+        ("matting", "u2netp", {"alpha_matting": True}),
+        ("birefnet", "birefnet-general", {}),
+    ],
+)
+def test_each_edge_mode_maps_to_its_session_and_rembg_options(
+    tmp_path: Path, mode: str, session_name: str, kwargs: dict[str, object]
+) -> None:
+    """Each mode selects rembg's own option, and birefnet its own session."""
+    home = tmp_path / "home"
+    models = _all_models(home)
+    done, result = _run_cutout(tmp_path, {"photo": "entrada.png", "edge-mode": mode}, models)
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert result is not None
+    log = _session_log(tmp_path)
+    assert log["name"] == session_name
+    assert log["providers"] == ["CPUExecutionProvider"]
+    assert log["u2net_home"] == str(models[session_name].parent)
+    assert log["removes"] == [{"session": session_name, "kwargs": kwargs, "only_mask": False}]
+    assert all(asset["params"]["edge-mode"] == mode for asset in result["assets"])
+
+
+def test_an_unknown_edge_mode_fails_before_any_removal(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    models = {"u2netp": _model_file(home)}
+    done, result = _run_cutout(tmp_path, {"photo": "entrada.png", "edge-mode": "sharpen"}, models)
+    assert done.returncode != 0
+    assert result is None
+    assert "edge-mode 'sharpen'" in done.stderr
+    assert not (tmp_path / "session.json").exists()
+
+
+@pytest.mark.parametrize("mode", ["plain", "decontaminate", "matting", "birefnet"])
+def test_verify_keeps_its_checks_in_every_edge_mode(tmp_path: Path, mode: str) -> None:
+    """The RGBA/RGB/flat checks do not depend on how the cutout was made."""
+    stub_dir = _stub_modules(tmp_path)
+    piece = _piece(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    cutout = PIL.Image.new("RGBA", (WIDTH, HEIGHT))
+    cutout.putpixel((1, 1), (20, 120, 60, 255))
+    cutout.save(out / "entrada.png")
+    view = PIL.Image.new("RGB", (WIDTH, HEIGHT))
+    view.putpixel((1, 1), (20, 120, 60))
+    view.save(out / "entrada-checkerboard.png")
+    env = _environment(stub_dir, tmp_path)
+    request = _request(
+        "verify",
+        out,
+        piece,
+        {},
+        assets=(out / "entrada.png", out / "entrada-checkerboard.png"),
+        inputs={"photo": "entrada.png", "edge-mode": mode},
+    )
+    done, result = _call(stub_dir, "verify", request, tmp_path, env)
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert result is not None
+    assert [asset["passed"] for asset in result["assets"]] == [True, True]
+
+
+def test_doctor_does_not_check_birefnet_outside_that_mode(tmp_path: Path) -> None:
+    """Plain runs must not demand the 930 MB model they never load."""
+    stub_dir = _stub_modules(tmp_path)
+    home = tmp_path / "home"
+    weights = _model_file(home)
+    piece = _piece(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(stub_dir, tmp_path)
+    done, result = _call(
+        stub_dir,
+        "doctor",
+        _request("doctor", out, piece, {"u2netp": weights}),
+        tmp_path,
+        env,
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert result is not None
+    assert "birefnet-weights" not in {check["name"] for check in result["checks"]}
+
+
+def test_doctor_checks_birefnet_weights_in_that_mode(tmp_path: Path) -> None:
+    """In birefnet mode: present, missing and wrong-size each report honestly."""
+    stub_dir = _stub_modules(tmp_path)
+    home = tmp_path / "home"
+    present = _all_models(home)
+    present["birefnet-general"] = _model_file(home, model=BIREFNET, size=int(BIREFNET["bytes"]))
+    piece = _piece(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    env = _environment(stub_dir, tmp_path)
+
+    def checks(models: dict[str, Path]) -> dict[str, Any]:
+        request = _request("doctor", out, piece, models, inputs={"edge-mode": "birefnet"})
+        done, result = _call(stub_dir, "doctor", request, tmp_path, env)
+        assert done.returncode == 0, done.stdout + done.stderr
+        assert result is not None
+        return {check["name"]: check for check in result["checks"]}
+
+    assert checks(present)["birefnet-weights"]["ok"] is True
+
+    only_u2net = {"u2netp": present["u2netp"]}
+    absent = checks(only_u2net)["birefnet-weights"]
+    assert absent["ok"] is False
+    assert "not in this request" in absent["detail"]
+
+    nowhere = dict(present)
+    nowhere["birefnet-general"] = home / "nowhere" / "BiRefNet-general-epoch_244.onnx"
+    missing = checks(nowhere)["birefnet-weights"]
+    assert missing["ok"] is False
+    assert "missing at" in missing["detail"]
+
+    wrong = dict(present)
+    wrong["birefnet-general"] = _model_file(home, content=b"x", model=BIREFNET)
+    short = checks(wrong)["birefnet-weights"]
+    assert short["ok"] is False
+    assert f"manifest says {BIREFNET['bytes']}" in short["detail"]

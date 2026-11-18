@@ -2,10 +2,16 @@
 
 Written on the runner SDK (``facet_runner_sdk``, copied into every
 environment). Four verbs: ``run`` cuts the background out of the piece's
-``photo`` with rembg's U2NetP on ``CPUExecutionProvider`` and writes the
-alpha PNG plus a checkerboard ``-checkerboard`` PNG for edge review, ``verify``
+``photo`` with rembg on ``CPUExecutionProvider`` and writes the alpha PNG
+plus a checkerboard ``-checkerboard`` PNG for edge review, ``verify``
 re-opens both PNGs with Pillow, ``preview`` writes the image preview
 file of each, ``doctor`` checks the imports and the weights' sha256.
+
+The cutout takes an optional ``edge-mode``: ``plain`` runs U2NetP alone,
+``decontaminate`` and ``matting`` add rembg's own edge options to that same
+session, and ``birefnet`` swaps the session for the bigger birefnet-general
+model. Modes are alternatives, not layers: rembg's alpha matting already
+decontaminates.
 
 Heavy imports go through ``importlib`` inside the functions, so the pure
 PNG side (verify, preview, doctor) still answers when rembg or
@@ -39,6 +45,12 @@ runner = Runner()
 #: The manifest model id and the session rembg builds for it.
 MODEL_ID = "u2netp"
 MODEL_NAME = "u2netp"
+#: The bigger session the ``birefnet`` edge mode uses instead.
+BIREFNET_ID = "birefnet-general"
+BIREFNET_NAME = "birefnet-general"
+#: The cutout's edge modes, cheapest first; ``plain`` is the default.
+DEFAULT_EDGE_MODE = "plain"
+EDGE_MODES = (DEFAULT_EDGE_MODE, "decontaminate", "matting", "birefnet")
 #: CPU only: the manifest declares gpu = false and the lab measured this.
 PROVIDERS = ["CPUExecutionProvider"]
 #: The checkerboard tile of the ``-checkerboard`` review image, as in the lab.
@@ -105,16 +117,27 @@ def _plate(params: dict[str, Any], req: Request) -> Path:
     return path
 
 
-def _weights(req: Request) -> Path:
-    """The pulled u2netp.onnx; rembg finds it through ``U2NET_HOME``."""
-    return req.model_path(MODEL_ID)
+def _weights(req: Request, model_id: str = MODEL_ID) -> Path:
+    """The pulled weights; rembg finds them through ``U2NET_HOME``."""
+    return req.model_path(model_id)
 
 
-def _session(req: Request) -> Any:
-    """A U2NetP session on CPU, pointed at the pulled weights."""
+def _session(req: Request, mode: str = DEFAULT_EDGE_MODE) -> Any:
+    """A CPU session for the mode: birefnet-general, or U2NetP for the rest."""
     rembg = importlib.import_module("rembg")
-    os.environ["U2NET_HOME"] = str(_weights(req).parent)
-    return rembg.new_session(MODEL_NAME, providers=list(PROVIDERS))
+    model_id, model_name = (
+        (BIREFNET_ID, BIREFNET_NAME) if mode == "birefnet" else (MODEL_ID, MODEL_NAME)
+    )
+    os.environ["U2NET_HOME"] = str(_weights(req, model_id).parent)
+    return rembg.new_session(model_name, providers=list(PROVIDERS))
+
+
+def _edge_mode(params: dict[str, Any]) -> str:
+    """The requested edge mode, defaulting to ``plain``; anything else fails."""
+    mode = str(params.get("edge-mode") or DEFAULT_EDGE_MODE)
+    if mode not in EDGE_MODES:
+        raise ValueError(f"edge-mode {mode!r} is not one of {', '.join(EDGE_MODES)}")
+    return mode
 
 
 def _checkerboard(cutout: Image.Image) -> Image.Image:
@@ -183,7 +206,11 @@ def _clean_paper(image: Image.Image, mask: Image.Image) -> Image.Image:
 
 
 def _asset(
-    photo: Path, path: Path, params: dict[str, Any], checkerboard: bool = False
+    photo: Path,
+    path: Path,
+    params: dict[str, Any],
+    mode: str,
+    checkerboard: bool = False,
 ) -> dict[str, Any]:
     """One output record: both PNGs share the photo's stem as their name."""
     width, height = _size(path)
@@ -196,7 +223,7 @@ def _asset(
         "kind": "image",
         "mime": "image/png",
         "properties": properties,
-        "params": {"photo": str(params["photo"])},
+        "params": {"photo": str(params["photo"]), "edge-mode": mode},
         "seed": SEED,
         "inputs": [str(params["photo"])],
     }
@@ -217,19 +244,29 @@ def _paper_asset(plate: Path, path: Path, params: dict[str, Any]) -> dict[str, A
     }
 
 
+def _refine(rembg: Any, image: Image.Image, session: Any, mode: str) -> Image.Image:
+    """rembg's own option for the mode; birefnet already picked its session."""
+    if mode == "decontaminate":
+        return rembg.remove(image, session=session, decontaminate=True)
+    if mode == "matting":
+        return rembg.remove(image, session=session, alpha_matting=True)
+    return rembg.remove(image, session=session)
+
+
 def _run_cutout(req: Request) -> dict[str, Any]:
     params = dict(req.inputs)
     photo = _photo(params, req)
+    mode = _edge_mode(params)
     rembg = importlib.import_module("rembg")
-    cutout = rembg.remove(Image.open(photo).convert("RGBA"), session=_session(req))
+    cutout = _refine(rembg, Image.open(photo).convert("RGBA"), _session(req, mode), mode)
     stem = photo.stem
     cutout_path = req.out_dir / f"{stem}.png"
     checkerboard_path = req.out_dir / f"{stem}-checkerboard.png"
     cutout.save(cutout_path)
     _checkerboard(cutout).save(checkerboard_path)
     assets = [
-        _asset(photo, cutout_path, params),
-        _asset(photo, checkerboard_path, params, checkerboard=True),
+        _asset(photo, cutout_path, params, mode),
+        _asset(photo, checkerboard_path, params, mode, checkerboard=True),
     ]
     return {"tool": _tool(), "assets": assets}
 
@@ -400,12 +437,12 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _manifest_model() -> dict[str, Any]:
+def _manifest_model(model_id: str = MODEL_ID) -> dict[str, Any]:
     models = _manifest().get("models")
     for model in models if isinstance(models, list) else []:
-        if str(model.get("id")) == MODEL_ID:
+        if str(model.get("id")) == model_id:
             return model
-    raise ValueError(f"package.toml has no model {MODEL_ID!r}")
+    raise ValueError(f"package.toml has no model {model_id!r}")
 
 
 def _doctor_weights(req: Request) -> dict[str, Any]:
@@ -438,9 +475,33 @@ def _doctor_weights(req: Request) -> dict[str, Any]:
     return _check("weights", True, f"{MODEL_ID} {size} B, sha256 verified")
 
 
+def _doctor_birefnet(req: Request) -> dict[str, Any]:
+    """birefnet-general is present at the manifest's size; rembg hashes it."""
+    model = _manifest_model(BIREFNET_ID)
+    want_bytes = int(model["bytes"])
+    try:
+        path = _weights(req, BIREFNET_ID)
+    except KeyError:
+        return _check("birefnet-weights", False, f"{BIREFNET_ID}: not in this request", PULL_FIX)
+    if not path.is_file():
+        return _check("birefnet-weights", False, f"{BIREFNET_ID}: missing at {path}", PULL_FIX)
+    size = path.stat().st_size
+    if size != want_bytes:
+        return _check(
+            "birefnet-weights",
+            False,
+            f"{BIREFNET_ID}: {size} bytes, manifest says {want_bytes}",
+            PULL_FIX,
+        )
+    return _check("birefnet-weights", True, f"{BIREFNET_ID} {size} B, size verified")
+
+
 @runner.verb("doctor")
 def doctor(req: Request) -> dict[str, Any]:
-    return {"checks": [_doctor_imports(req.depth), _doctor_weights(req)]}
+    checks = [_doctor_imports(req.depth), _doctor_weights(req)]
+    if _edge_mode(dict(req.inputs)) == "birefnet":
+        checks.append(_doctor_birefnet(req))
+    return {"checks": checks}
 
 
 runner.main()

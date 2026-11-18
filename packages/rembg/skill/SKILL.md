@@ -49,22 +49,30 @@ out — it is a univerlab.org pipeline, not part of this package.
 
 ## Edges and limits
 
-The cutout runs rembg's default single pass — no edge mode, no alpha matting,
-no decontamination — so the mask is whatever U2NetP produced. That is the
-right trade for a couple of seconds per photo on CPU, and it fails in known
-ways:
+The cutout runs one rembg pass and takes an optional `edge-mode`. Try the
+modes in this order; each costs more than the one before:
 
-- **A coloured halo** around a subject shot on a strongly coloured backdrop is
-  backdrop colour left in the fringe. rembg's `-dc` decontamination mode is
-  the upstream fix; this package does not run it, so crop the fringe out or
-  reshoot against a neutral backdrop.
-- **Hair, fur and wispy edges** are where U2NetP softens or eats detail. A
-  bigger session model (`birefnet-general`) or alpha matting refines them;
-  neither is exposed here, and rerunning the same photo cannot improve the
-  same mask.
+1. **`plain`** (the default) runs U2NetP alone: a couple of seconds per photo
+   on CPU. Start here.
+2. **`decontaminate`** (`edge-mode = "decontaminate"`, rembg's `-dc`) removes
+   backdrop colour left in the fringe. Use it when a subject shot on a
+   strongly coloured backdrop keeps a coloured halo. It is still seconds.
+3. **`matting`** (`edge-mode = "matting"`, rembg's `-a`) runs alpha matting
+   through pymatting for hair, fur and wispy edges. It takes minutes rather
+   than seconds and needs noticeably more RAM; use it when plain or
+   decontaminate softens or eats fine detail.
+4. **`birefnet`** swaps the session for the `birefnet-general` model: the
+   slowest, highest-quality option for hair and fur. Its ~930 MB weights are
+   fetched once on first use, and a run then costs more time and memory than
+   U2NetP.
+
+The modes are alternatives, not layers: `matting` already decontaminates, so
+there is no matting-plus-decontaminate combination. A halo that survives
+`matting` is better handled by `birefnet` than by stacking modes.
+
 - **Large plates.** U2NetP on a photo past roughly 4096 px on the long side
   risks the memory blow-up: downscale before the piece and keep the cutout at
-  the size you need.
+  the size you need. `birefnet` is heavier still.
 
 A flat, solid AI backdrop is better cut with a chroma key than with a matte:
 when the backdrop is one known colour, key it out and skip rembg entirely.
@@ -92,10 +100,13 @@ kept the figure, the book and the lamp. The package ships that lab run:
   a light page; the checkerboard makes semi-transparent and missed edges
   visible. The alpha PNG itself is never composited for review.
 - **U2NetP is the small model.** Fine hair and wispy edges benefit from a
-  bigger session model; `rembg.cutout` pins `u2netp` for CPU speed.
+  bigger session model; `rembg.cutout` defaults to `u2netp` for CPU speed and
+  takes `edge-mode = "birefnet"` for the bigger model.
 - **The weights come from `facet pull rembg`.** A missing or mismatched
   `u2netp.onnx` fails `doctor` with that fix; tests and CI never download.
-  `rembg.paper` uses the same `u2netp` session and the same pull.
+  `rembg.paper` uses the same `u2netp` session and the same pull. The
+  `birefnet` edge mode also needs the pinned `birefnet-general` file, which
+  `facet pull rembg` fetches (~930 MB).
 - **Record the numbers.** Read the alpha channel after a run: the four corner
   values and the share of fully transparent pixels are the cheapest sanity
   record, and they catch an inverted or empty mask that a thumbnail hides.
