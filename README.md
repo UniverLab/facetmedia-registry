@@ -14,9 +14,9 @@ core ([UniverLab/facetmedia](https://github.com/UniverLab/facetmedia)), so a new
 tool can arrive without a facet release. A **package** is one directory under
 `packages/` with its `package.toml` manifest; a **facet** is the domain it
 belongs to (`voice`, `audio`, `image`, `video`, `cad`, `text`,
-`presentation`) — Kokoro (speech) and Whisper (transcription) are both
-`voice` — and the **kind** is the kind of asset a capability writes
-(`audio`, `text`, `cad`, ...), which picks the preview schema
+`presentation`, `publish`) — Kokoro (speech) and Whisper (transcription) are
+both `voice` — and the **kind** is the kind of asset a capability writes
+(`audio`, `text`, `cad`, `post`, ...), which picks the preview schema
 ([`schemas/preview/`](schemas/preview/README.md)) and the viewer
 (`viewers/<kind>/`).
 facet downloads this registry at a **pinned commit** (`facet update`) and
