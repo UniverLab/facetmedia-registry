@@ -70,6 +70,9 @@ name = "whisper-subs"
 [[packages]]
 name = "recipes"
 
+[[packages]]
+name = "bluesky"
+
 
 [facets.voice]
 label = "Voice"

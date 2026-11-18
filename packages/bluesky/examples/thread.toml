@@ -1,0 +1,20 @@
+# A two-post thread: the first post carries the bench photo with alt text,
+# the second replies text-only with the catalogue link as a card.
+# Dry-run only: facet run thread.toml --dry-run sends nothing.
+capability = "bluesky.post"
+
+[[inputs.posts]]
+text = "La escuadra del laboratorio, recién salida del banco. #taller"
+lang = "es"
+
+[[inputs.posts]]
+text = "El plano queda en el catálogo para quien quiera repetirla."
+lang = "es"
+card-url = "https://univerlab.org/catalogo/escuadra"
+card-title = "Escuadra de banco"
+card-description = "Plano y cotas de la escuadra del laboratorio."
+
+[[inputs.images]]
+post = 1
+path = "banco.png"
+alt = "La escuadra de aluminio sobre la mesa, con sus dos agujeros a la vista."

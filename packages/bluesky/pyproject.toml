@@ -1,0 +1,11 @@
+[project]
+name = "facet-bluesky"
+version = "0.1.0"
+description = "Post text, images, video and threads to Bluesky through the AT Protocol."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[tool.uv]
+package = false

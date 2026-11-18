@@ -76,6 +76,7 @@ def test_the_index_carries_the_package_as_an_append() -> None:
     names = [entry["name"] for entry in INDEX["packages"]]
     assert "whisper-subs" in names
     assert names.index("whisper-subs") == names.index("recipes") - 1
-    assert names.index("recipes") == len(names) - 1
+    assert names.index("recipes") == names.index("bluesky") - 1
+    assert names.index("bluesky") == len(names) - 1
     assert names.index("pillow") == names.index("rembg") + 1  # the prior tail holds
     assert (PACKAGE / "package.toml").is_file()

@@ -62,10 +62,11 @@ def test_the_verify_threshold_counts_at_least_one_step() -> None:
     assert CAPABILITY["verify"]["thresholds"] == {"steps_min": 1}
 
 
-def test_the_index_carries_the_package_as_the_tail_append() -> None:
+def test_the_index_carries_the_package_before_the_tail() -> None:
     names = [entry["name"] for entry in INDEX["packages"]]
     assert "recipes" in names
-    assert names.index("recipes") == len(names) - 1
+    assert names.index("recipes") == names.index("bluesky") - 1
+    assert names.index("bluesky") == len(names) - 1
     assert names.index("whisper-subs") == names.index("recipes") - 1
 
 

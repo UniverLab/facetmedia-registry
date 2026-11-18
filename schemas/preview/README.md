@@ -42,7 +42,7 @@ first and rejects the second — a waveform of 600 bins instead of 1200, a
 negative hole diameter, a `fields` value that is a list. A new kind adds the
 pair: `cad.json` is the lab's escuadra with two holes and its two views,
 `audio.json` a 9.6 s narration with its word alignment, `video.json` the lab's
-two-second fog clip, `post.json` a two-post thread with one image, `generic.json`
+two-second fog clip, `post.json` a two-post text-only thread, `generic.json`
 a short `text` asset.
 
 ## Common fields
@@ -131,9 +131,10 @@ a short `text` asset.
 - `account`: the account that sent them.
 - `state`: the state the network holds the posts in, one of `published`, `draft`,
   `private`, `scheduled`, `unknown`.
-- `images`: every media file the posts carried, relative to the receipt, at least
-  one. facet serves exactly these names from the receipt's directory, so a path
-  that is absolute or climbs out with `..` never reaches the viewer.
+- `images`: every media file the posts carried, relative to the receipt; empty
+  for a text-only post or thread. facet serves exactly these names from the
+  receipt's directory, so a path that is absolute or climbs out with `..`
+  never reaches the viewer.
 - `posts`: the posts, in thread order, at least one.
 - `posts[].text`: the post's text, the only place it lives.
 - `posts[].url`: the post's public URL.
