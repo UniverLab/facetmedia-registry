@@ -71,6 +71,10 @@ strength knob, that is a separate flow.
 
 The fields below are what `facet describe comfy.edit --json` reports.
 
+Omitting `width` and `height` keeps the source's aspect at the flow's
+pixel count; a pair more than 5 % off it is refused, so crop the source
+first for another framing.
+
 | Field | Type | Required | Default | Notes |
 |-------|------|----------|---------|-------|
 | `source` | path | yes | — | reference image, relative to the piece; missing fails `invalid_input` |
@@ -78,9 +82,10 @@ The fields below are what `facet describe comfy.edit --json` reports.
 | `image[].name` | string | yes | — | `[a-z0-9][a-z0-9-]*`; the asset base name |
 | `image[].prompt` | string | yes | — | English instruction describing the edit |
 | `image[].seed` | integer | yes | — | same seed, prompt and reference give the same image |
-| `image[].width` | integer | no | `1344` | 64 to 2048, a multiple of 64 |
-| `image[].height` | integer | no | `768` | 64 to 2048, a multiple of 64 |
+| `image[].width` | integer | no | source aspect | 64 to 2048, a multiple of 64 |
+| `image[].height` | integer | no | source aspect | 64 to 2048, a multiple of 64 |
 | `image[].steps` | integer | no | flow default | sampling steps, at least 1; the flow's own is 4 |
+
 | `image[].cfg` | number | no | flow default | classifier-free guidance, at least 0; the flow's own is 1 |
 | `image[].sampler` | string | no | flow default | sampler name; the flow's own is `euler` |
 
@@ -142,6 +147,10 @@ second.
 
 The fields below are what `facet describe comfy.clip --json` reports.
 
+Omitting `width` and `height` keeps the source's aspect at the flow's
+pixel count; a pair more than 5 % off it is refused, so crop the source
+first for another framing.
+
 | Field | Type | Required | Default | Notes |
 |-------|------|----------|---------|-------|
 | `image` | array | yes | — | at least one entry; each writes one MP4 |
@@ -149,9 +158,10 @@ The fields below are what `facet describe comfy.clip --json` reports.
 | `image[].image` | path | yes | — | the clip's first frame, relative to the piece |
 | `image[].prompt` | string | yes | — | English; describes the movement inside the frame |
 | `image[].seed` | integer | yes | — | same seed, prompt and first frame give the same clip |
-| `image[].width` | integer | no | `1280` | 64 to 2048, a multiple of 64 |
-| `image[].height` | integer | no | `704` | 64 to 2048, a multiple of 64 |
+| `image[].width` | integer | no | source aspect | 64 to 2048, a multiple of 64 |
+| `image[].height` | integer | no | source aspect | 64 to 2048, a multiple of 64 |
 | `image[].length` | integer | no | `49` | frames at 24 fps: `49` ≈ 2 s, `121` ≈ 5 s |
+
 | `image[].steps` | integer | no | flow default | sampling steps, at least 1; the flow's own is 20 on wan22-i2v and 4 on wan22-i2v-fast |
 | `image[].cfg` | number | no | flow default | classifier-free guidance, at least 0; the flow's own is 5 on wan22-i2v and 1 on wan22-i2v-fast |
 | `image[].sampler` | string | no | flow default | sampler name; the flow's own is `uni_pc` on wan22-i2v and `euler` on wan22-i2v-fast |

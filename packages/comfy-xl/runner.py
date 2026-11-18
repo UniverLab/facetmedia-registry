@@ -23,7 +23,9 @@ only comfy-xl's flows, sizes, model map and thin entry-point wiring.
 
 from __future__ import annotations
 
+import importlib
 import json
+import sys
 import urllib.parse
 from pathlib import Path
 from typing import Any
@@ -31,6 +33,9 @@ from typing import Any
 import PIL.Image
 from facet_lib import comfyclient
 from facet_runner_sdk import Request, Runner
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+size_helper = importlib.import_module("size_helper")
 
 runner = Runner()
 
@@ -197,6 +202,38 @@ def _upload_entry(req: Request, entry: dict[str, Any]) -> str:
     return uploaded
 
 
+def _size_edit(
+    req: Request, flow: dict[str, Any], entries: list[dict[str, Any]], inputs: dict[str, Any]
+) -> None:
+    source = _source_path(flow, inputs)
+    if source is None:
+        raise ValueError("the piece has no source image")
+    src_path = source if source.is_absolute() else req.piece_dir / source
+    sw, sh = _size(src_path)
+    fw, fh = flow["params"]["width"], flow["params"]["height"]
+    for entry in entries:
+        try:
+            w, h = size_helper.compute_size(
+                (sw, sh), (fw, fh), (entry.get("width"), entry.get("height"))
+            )
+        except ValueError as exc:
+            raise RuntimeError(f"runner_failed: {exc}") from exc
+        entry["width"], entry["height"] = w, h
+
+
+def _size_clip(req: Request, flow: dict[str, Any], entries: list[dict[str, Any]]) -> None:
+    fw, fh = flow["params"]["width"], flow["params"]["height"]
+    for entry in entries:
+        sw, sh = _size(_entry_image(req, entry))
+        try:
+            w, h = size_helper.compute_size(
+                (sw, sh), (fw, fh), (entry.get("width"), entry.get("height"))
+            )
+        except ValueError as exc:
+            raise RuntimeError(f"runner_failed: {exc}") from exc
+        entry["width"], entry["height"] = w, h
+
+
 @runner.verb("run")
 def run(req: Request) -> dict[str, Any]:
     if req.capability not in (STILL_CAPABILITY, EDIT_CAPABILITY, CLIP_CAPABILITY):
@@ -208,6 +245,10 @@ def run(req: Request) -> dict[str, Any]:
     video = req.capability == CLIP_CAPABILITY
     manifest = comfyclient.manifest(PACKAGE_DIR)
     flow, draft, meta = _load_flow(req, inputs)
+    if req.capability == EDIT_CAPABILITY:
+        _size_edit(req, flow, entries, inputs)
+    elif req.capability == CLIP_CAPABILITY:
+        _size_clip(req, flow, entries)
     planned = [comfyclient.values(flow, entry) for entry in entries]
     allowed = comfyclient.model_files(manifest)
     for entry_values in planned:
@@ -257,12 +298,75 @@ def _size(path: Path) -> tuple[int, int]:
     return int(width), int(height)
 
 
-def _verify_video(entries: dict[str, dict[str, Any]], path: Path) -> dict[str, Any]:
+def _expected_from_source(
+    flow: dict[str, Any], source: Path, entry: dict[str, Any]
+) -> tuple[int, int] | None:
+    """The size the helper picks for this entry, or None when it cannot be read."""
+    try:
+        width, height = _size(source)
+        frame = (int(flow["params"]["width"]), int(flow["params"]["height"]))
+        return size_helper.compute_size(
+            (width, height), frame, (entry.get("width"), entry.get("height"))
+        )
+    except (OSError, ValueError):
+        return None
+
+
+def _verify_source(
+    req: Request, inputs: dict[str, Any], flow: dict[str, Any] | None, entry: dict[str, Any]
+) -> Path | None:
+    """The image this asset was sized from, when verify still has it.
+
+    A fresh run hands verify the piece's inputs; ``facet check`` hands it one
+    record's params, whose source is not among them any more.
+    """
+    if flow is None:
+        return None
+    if req.capability == CLIP_CAPABILITY:
+        return _entry_image(req, entry)
+    try:
+        source = _source_path(flow, inputs)
+    except ValueError:
+        return None
+    if source is None:
+        return None
+    return source if source.is_absolute() else req.piece_dir / source
+
+
+def _expected_size(
+    req: Request,
+    inputs: dict[str, Any],
+    flow: dict[str, Any] | None,
+    entry: dict[str, Any],
+    fallback: tuple[int, int],
+) -> tuple[int, int]:
+    """The size to hold the output to: the source's, else the record's own.
+
+    ``run`` writes the size it used into the record's params, so the record
+    answers for ``facet check`` when the source is gone.
+    """
+    source = _verify_source(req, inputs, flow, entry)
+    if flow is not None and source is not None:
+        computed = _expected_from_source(flow, source, entry)
+        if computed is not None:
+            return computed
+    width, height = entry.get("width"), entry.get("height")
+    if width is not None and height is not None:
+        return int(width), int(height)
+    return fallback
+
+
+def _verify_video(
+    req: Request, inputs: dict[str, Any], flow: dict[str, Any] | None, entries, path: Path
+) -> dict[str, Any]:
     """The MP4 opens, at the entry's size, 24 fps and the entry's frame count."""
     entry = _entry_for(entries, path)
+    width, height = _expected_size(
+        req, inputs, flow, entry, (DEFAULT_CLIP_WIDTH, DEFAULT_CLIP_HEIGHT)
+    )
     thresholds: dict[str, Any] = {
-        "width": int(entry.get("width", DEFAULT_CLIP_WIDTH)),
-        "height": int(entry.get("height", DEFAULT_CLIP_HEIGHT)),
+        "width": width,
+        "height": height,
         "fps": VIDEO_FPS,
         "frames": int(entry.get("length", DEFAULT_CLIP_LENGTH)),
     }
@@ -270,14 +374,19 @@ def _verify_video(entries: dict[str, dict[str, Any]], path: Path) -> dict[str, A
 
 
 def _verify_asset(
-    entries: dict[str, dict[str, Any]], path: Path, video: bool = False
+    req: Request,
+    inputs: dict[str, Any],
+    flow: dict[str, Any] | None,
+    entries: dict[str, dict[str, Any]],
+    path: Path,
 ) -> dict[str, Any]:
     """A clip's MP4 is probed with FFmpeg; a still's PNG with Pillow."""
-    if video:
-        return _verify_video(entries, path)
+    if req.capability == CLIP_CAPABILITY:
+        return _verify_video(req, inputs, flow, entries, path)
     entry = _entry_for(entries, path)
-    expected_width = int(entry.get("width", DEFAULT_WIDTH))
-    expected_height = int(entry.get("height", DEFAULT_HEIGHT))
+    expected_width, expected_height = _expected_size(
+        req, inputs, flow, entry, (DEFAULT_WIDTH, DEFAULT_HEIGHT)
+    )
     thresholds = {"width": expected_width, "height": expected_height}
     try:
         width, height = _size(path)
@@ -299,11 +408,23 @@ def _verify_asset(
     }
 
 
+def _verify_flow(req: Request, inputs: dict[str, Any]) -> dict[str, Any] | None:
+    """The flow a verify sizes against: only an edit or a clip has one."""
+    if req.capability not in (EDIT_CAPABILITY, CLIP_CAPABILITY):
+        return None
+    try:
+        flow, _draft, _meta = _load_flow(req, inputs)
+    except (OSError, ValueError):
+        return None
+    return flow
+
+
 @runner.verb("verify")
 def verify(req: Request) -> dict[str, Any]:
+    inputs = dict(req.inputs)
     entries = _entries(req)
-    video = req.capability == CLIP_CAPABILITY
-    return {"assets": [_verify_asset(entries, path, video) for path in req.assets]}
+    flow = _verify_flow(req, inputs)
+    return {"assets": [_verify_asset(req, inputs, flow, entries, path) for path in req.assets]}
 
 
 def _preview_data(entry: dict[str, Any], path: Path) -> dict[str, Any]:

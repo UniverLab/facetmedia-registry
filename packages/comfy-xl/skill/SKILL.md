@@ -49,9 +49,11 @@ image = [
 ]
 ```
 
-`width` defaults to 1344 and `height` to 768, each between 64 and 2048 and a
-multiple of 64; say both per entry to change the shape. `workflow` picks
-the still flow (`"z-image"`, used when omitted) or the clip flow
+For a still, `width` defaults to 1344 and `height` to 768, each between 64 and
+2048 and a multiple of 64; for `comfy-xl.edit` and `comfy-xl.clip`, omitting
+`width`/`height` follows the source's aspect at the flow's pixel count, and a
+pair more than 5 % off it is refused — crop the source first for another framing.
+`workflow` picks the still flow (`"z-image"`, used when omitted) or the clip flow
 (`"wan22-i2v-14b"` or `"wan22-i2v-14b-fast"`, omitting it uses
 `"wan22-i2v-14b"`); an edit has no `workflow` input — it always
 uses `qwen-image-edit`. Any of the three takes `flow` instead: a path to

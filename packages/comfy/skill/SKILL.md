@@ -44,9 +44,11 @@ image = [
 ]
 ```
 
-`width` defaults to 1344 and `height` to 768, each between 64 and 2048 and a
-multiple of 64; say both per entry to change the shape. `workflow` picks the
-still flow (`"z-image-turbo"` or `"flux2-klein-4b"`, omitting it uses
+For a still, `width` defaults to 1344 and `height` to 768, each between 64 and
+2048 and a multiple of 64; for `comfy.edit` and `comfy.clip`, omitting
+`width`/`height` follows the source's aspect at the flow's pixel count, and a
+pair more than 5 % off it is refused — crop the source first for another framing.
+`workflow` picks the still flow (`"z-image-turbo"` or `"flux2-klein-4b"`, omitting it uses
 `"z-image-turbo"`) or the clip flow (`"wan22-i2v"` or `"wan22-i2v-fast"`,
 omitting it uses `"wan22-i2v"`); an edit has no `workflow` input —
 it always uses `flux2-klein-img2img`. Any of the three takes `flow` instead:

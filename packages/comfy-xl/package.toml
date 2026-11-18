@@ -1,5 +1,5 @@
 name = "comfy-xl"
-version = "0.1.5"
+version = "0.1.6"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "ComfyUI project"
@@ -251,11 +251,11 @@ description = "Own flow beside the piece: the package shape (about, params with 
 viewer = "image"
 
 [capabilities.edit]
-summary = "Reference-guided edit by instruction with the qwen-image-edit flow, per 1344x768 image."
+summary = "Reference-guided edit by instruction with the qwen-image-edit flow; output size follows source aspect."
 kind = "image"
 
 [capabilities.edit.i18n.es]
-summary = "Edición guiada por referencia según instrucciones con el flujo qwen-image-edit, por imagen de 1344x768."
+summary = "Edición guiada por referencia según instrucciones con el flujo qwen-image-edit; el tamaño de salida sigue la proporción del origen."
 
 [capabilities.edit.inputs.source]
 type = "path"
@@ -287,7 +287,6 @@ description = "Sampling seed; the same seed, prompt and reference image give the
 
 [capabilities.edit.inputs.image.items.width]
 type = "integer"
-default = 1344
 min = 64
 max = 2048
 multiple_of = 64
@@ -295,7 +294,6 @@ description = "Image width in pixels, a multiple of 64."
 
 [capabilities.edit.inputs.image.items.height]
 type = "integer"
-default = 768
 min = 64
 max = 2048
 multiple_of = 64
@@ -338,11 +336,11 @@ description = "Own flow beside the piece: the package shape (about, params with 
 viewer = "image"
 
 [capabilities.clip]
-summary = "Micro video from a still with the wan22-i2v-14b flow, per 1280x704 clip."
+summary = "Micro video from a still with the wan22-i2v-14b flow; output size follows source aspect."
 kind = "video"
 
 [capabilities.clip.i18n.es]
-summary = "Microvideo a partir de una imagen fija con el flujo wan22-i2v-14b, por clip de 1280x704."
+summary = "Microvideo a partir de una imagen fija con el flujo wan22-i2v-14b; el tamaño de salida sigue la proporción del origen."
 
 [capabilities.clip.inputs.image]
 type = "array"
@@ -374,7 +372,6 @@ description = "Sampling seed; the same seed, prompt and first frame give the sam
 
 [capabilities.clip.inputs.image.items.width]
 type = "integer"
-default = 1280
 min = 64
 max = 2048
 multiple_of = 64
@@ -382,7 +379,6 @@ description = "Clip width in pixels, a multiple of 64."
 
 [capabilities.clip.inputs.image.items.height]
 type = "integer"
-default = 704
 min = 64
 max = 2048
 multiple_of = 64

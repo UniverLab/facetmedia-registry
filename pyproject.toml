@@ -15,7 +15,12 @@ dev = [
     "pyfiglet==1.0.4",
     "imageio-ffmpeg==0.6.0",
     "packaging>=26.3",
+    # The core, for the tests that drive its real input validation.
+    "facetmedia",
 ]
+
+[tool.uv.sources]
+facetmedia = { git = "https://github.com/UniverLab/facetmedia", branch = "feature/publish" }
 
 [tool.uv]
 package = false

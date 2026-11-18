@@ -17,6 +17,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from facet_registry import facet_capability
+from facetmedia.schema import validate
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "comfy-xl"
@@ -49,6 +51,8 @@ DEFAULT_HEIGHT = 768
 DEFAULT_CLIP_WIDTH = 1280
 DEFAULT_CLIP_HEIGHT = 704
 DEFAULT_CLIP_LENGTH = 49
+#: The one side a piece may give: the runner derives the other from the source.
+GIVEN_WIDTH = 1280
 EDIT_STEPS = 40
 EDIT_CFG = 4
 EDIT_SHIFT = 3.1
@@ -367,7 +371,7 @@ def test_every_size_field_is_a_multiple_of_64() -> None:
             assert field["type"] == "integer", side
             assert field["multiple_of"] == SIDE_MULTIPLE, side
             # The core also checks the declared bounds against the divisor.
-            for bound in ("default", "min", "max"):
+            for bound in ("min", "max"):
                 assert field[bound] % SIDE_MULTIPLE == 0, (side, bound)
 
 
@@ -401,8 +405,9 @@ def test_the_edit_entries_have_the_still_shape_and_defaults() -> None:
     assert set(EDIT_ITEMS) == {"name", "prompt", "seed", "width", "height", *KNOB_FIELDS}
     _assert_knob_fields(EDIT_ITEMS, tuple(KNOB_FIELDS))
     assert EDIT_ITEMS["prompt"]["pattern"] == ITEMS["prompt"]["pattern"]
+    assert "default" not in EDIT_ITEMS["width"]
+    assert "default" not in EDIT_ITEMS["height"]
     for side in ("width", "height"):
-        assert EDIT_ITEMS[side]["default"] == ITEMS[side]["default"]
         assert EDIT_ITEMS[side]["min"] == ITEMS[side]["min"]
         assert EDIT_ITEMS[side]["max"] == ITEMS[side]["max"]
     assert EDIT["inputs"]["image"]["min_items"] == 1
@@ -493,8 +498,8 @@ def test_the_clip_entries_carry_their_own_first_frame() -> None:
     assert CLIP_ITEMS["prompt"]["pattern"] == ITEMS["prompt"]["pattern"]
     assert CLIP_ITEMS["seed"]["required"] is True
     assert CLIP_ITEMS["seed"]["type"] == "integer"
-    assert CLIP_ITEMS["width"]["default"] == DEFAULT_CLIP_WIDTH
-    assert CLIP_ITEMS["height"]["default"] == DEFAULT_CLIP_HEIGHT
+    assert "default" not in CLIP_ITEMS["width"]
+    assert "default" not in CLIP_ITEMS["height"]
     assert CLIP_ITEMS["length"]["default"] == DEFAULT_CLIP_LENGTH
 
 
@@ -526,7 +531,8 @@ def _assert_valid_clip_entry(entry: dict[str, object]) -> None:
     for side in ("width", "height"):
         field = CLIP_ITEMS[side]
         value = entry.get(side, field.get("default"))
-        assert field["min"] <= int(str(value)) <= field["max"]
+        if value is not None:
+            assert field["min"] <= int(str(value)) <= field["max"]
     length = entry.get("length", CLIP_ITEMS["length"].get("default"))
     assert int(str(length)) % 4 == 1
     pattern = CLIP_ITEMS["negative"].get("pattern")
@@ -569,6 +575,46 @@ def test_the_skill_teaches_the_24gb_card() -> None:
     assert "24 GB of VRAM" in flat
     assert "have not yet been run on such a GPU by the lab" in flat
     assert "On an 8 GB card, use `comfy` instead." in flat
+
+
+def test_an_edit_entry_without_a_size_reaches_the_runner(tmp_path: Path) -> None:
+    """facet fills no size into an edit: the runner sizes it from the source."""
+    (tmp_path / "source.png").write_bytes(b"png")
+    piece = {
+        "source": "source.png",
+        "image": [{"name": "out", "prompt": "a quiet forest", "seed": 1}],
+    }
+    values = validate(facet_capability("comfy-xl.edit"), piece, tmp_path)
+    assert values["image"] == [{"name": "out", "prompt": "a quiet forest", "seed": 1}]
+
+
+def test_an_edit_entry_with_one_size_keeps_only_that_one(tmp_path: Path) -> None:
+    """A given width validates and the height stays omitted for the runner."""
+    (tmp_path / "source.png").write_bytes(b"png")
+    piece = {
+        "source": "source.png",
+        "image": [{"name": "out", "prompt": "a quiet forest", "seed": 1, "width": GIVEN_WIDTH}],
+    }
+    entry = validate(facet_capability("comfy-xl.edit"), piece, tmp_path)["image"][0]
+    assert entry["width"] == GIVEN_WIDTH
+    assert "height" not in entry
+
+
+def test_a_clip_entry_without_a_size_reaches_the_runner(tmp_path: Path) -> None:
+    """facet fills no size into a clip: the runner sizes it from the frame."""
+    (tmp_path / "frame.png").write_bytes(b"png")
+    piece = {"image": [{"name": "clip", "image": "frame.png", "prompt": "fog drifting", "seed": 1}]}
+    entry = validate(facet_capability("comfy-xl.clip"), piece, tmp_path)["image"][0]
+    assert entry["image"].endswith("frame.png")
+    assert "width" not in entry
+    assert "height" not in entry
+
+
+def test_a_still_entry_still_takes_the_fixed_frame(tmp_path: Path) -> None:
+    """Text-to-image is unchanged: nothing given is a fixed 1344x768."""
+    piece = {"image": [{"name": "out", "prompt": "a quiet forest", "seed": 1}]}
+    entry = validate(facet_capability("comfy-xl.still"), piece, tmp_path)["image"][0]
+    assert (entry["width"], entry["height"]) == (DEFAULT_WIDTH, DEFAULT_HEIGHT)
 
 
 def test_the_clip_workflow_is_the_14b_enum() -> None:
