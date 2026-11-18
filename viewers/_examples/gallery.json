@@ -80,6 +80,25 @@
       "thumb": null,
       "open": null,
       "facet": null
+    },
+    {
+      "n": 5,
+      "asset": "hilo.post.json",
+      "name": "hilo",
+      "package": "bluesky",
+      "kind": "post",
+      "capability": "publish.post",
+      "created": "2026-11-17T19:44:09Z",
+      "verified": true,
+      "bytes": 657,
+      "duration_s": null,
+      "preview_state": "fresh",
+      "thumb": null,
+      "open": "/open/5",
+      "facet": "publish",
+      "network": "bluesky",
+      "post_state": "draft",
+      "url": "https://bsky.app/profile/lab.test/post/3khilo01"
     }
   ]
 }

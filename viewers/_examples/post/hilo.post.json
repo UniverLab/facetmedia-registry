@@ -1,0 +1,26 @@
+{
+  "account": "lab.test",
+  "cost": null,
+  "network": "bluesky",
+  "posts": [
+    {
+      "id": "at://did:plc:facetlab/app.bsky.feed.post/3khilo01",
+      "url": "https://bsky.app/profile/lab.test/post/3khilo01"
+    },
+    {
+      "id": "at://did:plc:facetlab/app.bsky.feed.post/3khilo02",
+      "url": "https://bsky.app/profile/lab.test/post/3khilo02"
+    }
+  ],
+  "receipt": 1,
+  "sent_at": "2026-11-17T19:44:03Z",
+  "sources": [
+    {
+      "generated": false,
+      "id": "sha256:d5ce9432101e40db7a26afa2bdca5ffe8bee329f2de54a1074fb6e43b87c6b55",
+      "path": "hilo-media.png"
+    }
+  ],
+  "state": "draft",
+  "verified_at": "2026-11-17T19:44:09Z"
+}

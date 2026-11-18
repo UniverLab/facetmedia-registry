@@ -532,7 +532,7 @@ async function checkGalleryHeader(page, label, failures) {
 }
 
 /** The gallery's facets, in the manual's order, with `other` last. */
-const FACET_ORDER = ["voice", "audio", "image", "video", "cad", "text", "presentation"];
+const FACET_ORDER = ["voice", "audio", "image", "video", "cad", "text", "presentation", "publish"];
 const OTHER_FACET = "other";
 
 /** One group per facet present, in the manual's order, holding its own cards. */

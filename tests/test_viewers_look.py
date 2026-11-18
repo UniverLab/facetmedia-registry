@@ -23,9 +23,9 @@ VIEWERS = ROOT / "viewers"
 KIT = VIEWERS / "_kit"
 BASE = KIT / "base.css"
 #: Every viewer, gallery included: it shares the surface but its own header.
-KINDS = ("audio", "cad", "document", "generic", "image", "video", "gallery", "slides")
+KINDS = ("audio", "cad", "document", "generic", "image", "post", "video", "gallery", "slides")
 #: The viewers that render one asset's record, and so the shared header.
-RECORD_KINDS = ("audio", "cad", "document", "generic", "image", "video", "slides")
+RECORD_KINDS = ("audio", "cad", "document", "generic", "image", "post", "video", "slides")
 SOURCES = (".css", ".js", ".html")
 #: FR1: the whole palette, and every value it may take.
 TOKENS = {
@@ -198,7 +198,7 @@ class GalleryLineTests(unittest.TestCase):
         ids = re.findall(r'"([a-z]+)"', match.group(1))
         self.assertEqual(
             ids,
-            ["voice", "audio", "image", "video", "cad", "text", "presentation"],
+            ["voice", "audio", "image", "video", "cad", "text", "presentation", "publish"],
         )
         self.assertIn('const OTHER = "other";', self.main)
         self.assertIn(
@@ -701,6 +701,56 @@ class GenericViewerTests(unittest.TestCase):
                 self.assertIn(f'wireCopy("copy-{name}"', self.main)
         self.assertIn("await navigator.clipboard.writeText(text);", self.main)
         self.assertIn('button.textContent = "copied";', self.main)
+
+
+class PostViewerTests(unittest.TestCase):
+    """The post viewer: the thread in order, its media, and the brand rule."""
+
+    def setUp(self) -> None:
+        self.html = read(VIEWERS / "post" / "index.html")
+        self.main = read(VIEWERS / "post" / "main.js")
+
+    def test_the_viewer_renders_the_shared_header_and_the_receipt(self) -> None:
+        self.assertIn('id="header"', self.html)
+        self.assertIn('import { renderHeader } from "/kit/header.js"', self.main)
+        self.assertIn('renderHeader(document.getElementById("header"), record)', self.main)
+        self.assertIn('import { assetUrl, loadAsset } from "/kit/load.js"', self.main)
+        self.assertIn("receipt.href = assetUrl(name);", self.main)
+
+    def test_the_thread_follows_the_previews_order(self) -> None:
+        self.assertIn("const posts = Array.isArray(preview.posts) ? preview.posts : [];", self.main)
+        self.assertIn("posts.forEach((post, index) => {", self.main)
+        self.assertIn('if (index > 0) thread.append(element("hr", "rule"));', self.main)
+        self.assertIn("article.dataset.n = String(index);", self.main)
+
+    def test_media_is_a_still_or_a_player_by_its_suffix(self) -> None:
+        self.assertIn('const VIDEO_SUFFIXES = new Set(["mov", "mp4", "webm"]);', self.main)
+        self.assertIn("if (isVideoFile(item.file)) {", self.main)
+        self.assertIn("video.controls = true;", self.main)
+        self.assertIn('image.loading = "lazy";', self.main)
+        self.assertIn('image.alt = item.alt ?? "";', self.main)
+        self.assertIn('return text.startsWith("/") ? text : assetUrl(text);', self.main)
+
+    def test_senal_marks_only_a_verified_published_post(self) -> None:
+        self.assertIn(
+            'const verified = record?.verification?.status === "passed"'
+            " && preview.state === PUBLISHED;",
+            self.main,
+        )
+        self.assertIn('const PUBLISHED = "published";', self.main)
+        self.assertIn('node.className = "verdict passed";', self.main)
+        self.assertIn('node.className = "muted mono";', self.main)
+        self.assertNotIn("--senal", self.main)
+
+    def test_unknown_says_the_post_may_exist_and_names_the_network(self) -> None:
+        self.assertIn('preview.state === "unknown"', self.main)
+        self.assertIn("the post may exist, check ${preview.network}", self.main)
+
+    def test_each_post_links_its_public_url(self) -> None:
+        self.assertIn("link.href = String(url);", self.main)
+        self.assertIn('link.target = "_blank";', self.main)
+        self.assertIn('link.rel = "noopener";', self.main)
+        self.assertIn("article.append(urlNode(post.url, index));", self.main)
 
 
 class ViewerExampleTests(unittest.TestCase):

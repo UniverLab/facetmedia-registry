@@ -42,7 +42,8 @@ first and rejects the second — a waveform of 600 bins instead of 1200, a
 negative hole diameter, a `fields` value that is a list. A new kind adds the
 pair: `cad.json` is the lab's escuadra with two holes and its two views,
 `audio.json` a 9.6 s narration with its word alignment, `video.json` the lab's
-two-second fog clip, `generic.json` a short `text` asset.
+two-second fog clip, `post.json` a two-post thread with one image, `generic.json`
+a short `text` asset.
 
 ## Common fields
 
@@ -123,4 +124,25 @@ two-second fog clip, `generic.json` a short `text` asset.
 - `height`: clip height in pixels, integer >= 1.
 - `length`: frame count at the clip's frame rate, integer >= 1.
 - `fps`: frame rate in frames per second, integer >= 1.
+
+## Post fields
+
+- `network`: the network the posts went to.
+- `account`: the account that sent them.
+- `state`: the state the network holds the posts in, one of `published`, `draft`,
+  `private`, `scheduled`, `unknown`.
+- `images`: every media file the posts carried, relative to the receipt, at least
+  one. facet serves exactly these names from the receipt's directory, so a path
+  that is absolute or climbs out with `..` never reaches the viewer.
+- `posts`: the posts, in thread order, at least one.
+- `posts[].text`: the post's text, the only place it lives.
+- `posts[].url`: the post's public URL.
+- `posts[].media`: the media this post carried, in order.
+- `posts[].media[].file`: an entry of `images`.
+- `posts[].media[].alt`: the alt text the network holds, null when it has none.
+
+The receipt keeps only `{id, url}` per post; this preview is where the text and
+its media are read. `scripts/check-previews.py` cannot prove an entry of
+`images` exists or that a media `file` is one of them: a test beside the
+package's fixture does.
 

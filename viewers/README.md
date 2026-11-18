@@ -92,7 +92,7 @@ its JSON, SRT, VTT, ASCII and banner files, `image` with a photo and a
 transparent cut-out) is opened once per asset, the name swapped in the URL.
 
 Every viewer that renders one asset (`audio`, `cad`, `document`, `generic`,
-`image`, `video`, `slides`) opens with the same header line, `_kit/header.js`:
+`image`, `post`, `video`, `slides`) opens with the same header line, `_kit/header.js`:
 `facetMedia · <capability id> · <asset name>` in Sometype Mono, with
 `facetMedia` in Hueso, and the verification verdict at the right — `✓ passed`
 in Señal, `✗ failed` in Hueso tenue — above a thin `--regla` rule. Below it:
@@ -124,7 +124,10 @@ bounding box its parameters expected, the drawing's layers and audit),
 `document` (a paginated PDF page by page: thumbnails, the selected page, the
 PDF a click away), `image` (the still fitted by default, 1:1 pixels on a click
 or Z with a drag to pan, a checkerboard behind transparent PNGs, its pixels and
-file size), `video` (by the record's mime: a clip letterboxed on the slide black
+file size), `post` (a receipt's thread: the network, the account and the state,
+each post's text in order with a link to its public URL, its images inline and
+its videos as players, and Señal only on a verified `published` post), `video`
+(by the record's mime: a clip letterboxed on the slide black
 with play/pause, a scrub bar, the time and the frame number, `,`/`.` stepping a
 frame while paused and F for full screen; a GIF looped on the same stage with
 its `GIF · loops · <frames> frames · <fps> fps` line; a file the browser cannot

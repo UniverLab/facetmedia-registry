@@ -112,3 +112,9 @@ label = "Presentation"
 
 [facets.presentation.i18n.es]
 label = "Presentación"
+
+[facets.publish]
+label = "Publish"
+
+[facets.publish.i18n.es]
+label = "Publicación"

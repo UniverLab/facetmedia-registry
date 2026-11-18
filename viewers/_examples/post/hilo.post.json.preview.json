@@ -1,0 +1,26 @@
+{
+  "preview": 1,
+  "kind": "post",
+  "summary": "A two-post thread on bluesky with one image, held as a draft.",
+  "network": "bluesky",
+  "account": "lab.test",
+  "state": "draft",
+  "images": ["hilo-media.png"],
+  "posts": [
+    {
+      "text": "La escuadra del laboratorio, recién salida del banco: dos agujeros y la misma cota de siempre.",
+      "url": "https://bsky.app/profile/lab.test/post/3khilo01",
+      "media": [
+        {
+          "file": "hilo-media.png",
+          "alt": "La escuadra de aluminio sobre la mesa, con sus dos agujeros a la vista."
+        }
+      ]
+    },
+    {
+      "text": "La segunda pieza va mañana. El plano queda en el catálogo para quien quiera repetirla.",
+      "url": "https://bsky.app/profile/lab.test/post/3khilo02",
+      "media": []
+    }
+  ]
+}

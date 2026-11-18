@@ -3,13 +3,14 @@
    facet's `/gallery.json` and nothing else; a line's `thumb` and `open` are
    the only URLs it follows. */
 
-const FACETS = ["voice", "audio", "image", "video", "cad", "text", "presentation"];
+const FACETS = ["voice", "audio", "image", "video", "cad", "text", "presentation", "publish"];
 const OTHER = "other";
 const GLYPHS = {
   audio: "♪",
   cad: "◇",
   image: "▣",
   presentation: "▤",
+  publish: "✦",
   text: "¶",
   video: "▶",
   voice: "◉",

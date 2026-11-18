@@ -1,0 +1,65 @@
+{
+  "record": 1,
+  "id": "sha256:7a619b96c2a839f6a982ffc18efaa6c2087f508f7ecb23f942788452fe7d9e3f",
+  "name": "hilo",
+  "path": "hilo.post.json",
+  "kind": "post",
+  "mime": "application/json",
+  "bytes": 657,
+  "created": "2026-11-17T19:44:09Z",
+  "properties": {
+    "network": "bluesky",
+    "state": "draft",
+    "url": "https://bsky.app/profile/lab.test/post/3khilo01"
+  },
+  "provenance": {
+    "facet": "publish",
+    "registry": {
+      "commit": "0000000000000000000000000000000000000000",
+      "path": null
+    },
+    "capability": "publish.post",
+    "package": {
+      "name": "bluesky",
+      "version": "0.1.0"
+    },
+    "tool": {
+      "name": "bluesky",
+      "version": "0.1.0"
+    },
+    "models": [],
+    "params": {
+      "network": "bluesky",
+      "account": "lab.test"
+    },
+    "params_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "seed": null,
+    "inputs": [
+      {
+        "path": "hilo-media.png",
+        "id": "sha256:d5ce9432101e40db7a26afa2bdca5ffe8bee329f2de54a1074fb6e43b87c6b55"
+      }
+    ]
+  },
+  "verification": {
+    "status": "passed",
+    "metrics": {
+      "state": "draft",
+      "media": 1
+    },
+    "thresholds": {},
+    "verifier": "post-read-back"
+  },
+  "license": {
+    "tools": [
+      {
+        "name": "bluesky",
+        "spdx": "Apache-2.0",
+        "commercial_use": true
+      }
+    ],
+    "models": [],
+    "commercial_use": true,
+    "accepted": []
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://univerlab.org/facetmedia-registry/schemas/preview/post.schema.json",
+  "title": "Post preview",
+  "description": "Preview file (<asset>.preview.json) for the post kind.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["preview", "kind", "summary", "network", "account", "state", "images", "posts"],
+  "properties": {
+    "preview": {
+      "const": 1,
+      "description": "Preview format version."
+    },
+    "kind": {
+      "const": "post",
+      "description": "Asset kind."
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 160,
+      "description": "One-line summary for an agent."
+    },
+    "network": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The network the posts went to."
+    },
+    "account": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The account that sent them."
+    },
+    "state": {
+      "type": "string",
+      "enum": ["published", "draft", "private", "scheduled", "unknown"],
+      "description": "The state the network holds the posts in."
+    },
+    "images": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^(?!/)(?!.*\\.\\.)[^\\\\]+$",
+        "description": "A media file, relative to the receipt."
+      },
+      "description": "Every media file the posts carried, relative to the receipt."
+    },
+    "posts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["text", "url", "media"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The post's text."
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "The post's public URL."
+          },
+          "media": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["file", "alt"],
+              "properties": {
+                "file": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "An entry of images."
+                },
+                "alt": {
+                  "type": ["string", "null"],
+                  "description": "The alt text the network holds, null when it has none."
+                }
+              }
+            },
+            "description": "The media this post carried, in order."
+          }
+        }
+      },
+      "description": "The posts, in thread order."
+    }
+  }
+}

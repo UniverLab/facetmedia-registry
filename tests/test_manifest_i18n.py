@@ -27,6 +27,7 @@ FACET_LABELS = {
     "cad": ("CAD", "CAD"),
     "text": ("Text", "Texto"),
     "presentation": ("Presentation", "Presentación"),
+    "publish": ("Publish", "Publicación"),
 }
 
 
