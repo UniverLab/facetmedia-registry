@@ -735,7 +735,34 @@ function runCli(args, cwd) {
 
 function verify(request) {
   requireFfmpeg();
-  return { assets: (request.assets || []).map((asset) => verdictOf(asset, request)) };
+  const source = compositionDir(request);
+  const lint = lintComposition(source);
+  return { assets: (request.assets || []).map((asset) => verdictOf(asset, request, lint)) };
+}
+
+function lintComposition(dir) {
+  const shim = process.env.FACET_TEST_LINT_JSON || "";
+  const text = shim ? shim : runCli(["lint", "--json", dir], dir);
+  let parsed = null;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    throw new Error(`hyperframes lint: cannot parse lint output: ${error.message}`);
+  }
+  const raw = parsed && parsed.errorCount !== undefined ? Number(parsed.errorCount) : 0;
+  const errorCount = Number.isFinite(raw) ? raw : 0;
+  const findings = parsed && Array.isArray(parsed.findings) ? parsed.findings : [];
+  const errors = findings.map(lintFinding);
+  return { ok: Boolean(parsed && parsed.ok) && errorCount === 0, errorCount, errors };
+}
+
+function lintFinding(finding) {
+  const code = finding && finding.code ? String(finding.code) : "unknown";
+  const where =
+    finding && (finding.message || finding.selector || finding.element)
+      ? String(finding.message || finding.selector || finding.element)
+      : "";
+  return where ? `${code} at ${where}` : code;
 }
 
 const AUDIO_REQUIRED = new Set(["hyperframes.narrated", "hyperframes.character"]);
@@ -871,12 +898,12 @@ function loudnessVerdict(asset, request, metrics) {
   };
 }
 
-function verdictOf(asset, request) {
+function verdictOf(asset, request, lint) {
   const file = path.basename(String(asset));
   try {
     const metrics = probe(asset);
     const loudness = loudnessVerdict(asset, request, metrics);
-    const passed =
+    const probePassed =
       metrics.width > 0 &&
       metrics.height > 0 &&
       metrics.frames > 0 &&
@@ -884,18 +911,31 @@ function verdictOf(asset, request) {
       audioOk(request, metrics) &&
       (!loudness || loudness.passed) &&
       formatOk(asset, request, metrics);
+    const lintPassed = !lint || lint.errorCount === 0;
+    const passed = probePassed && lintPassed;
+    const combined = loudness ? { ...metrics, ...loudness.metrics } : metrics;
+    const withLint = lint
+      ? { ...combined, lint_ok: lint.ok, lint_errorCount: lint.errorCount, lint_errors: lint.errors }
+      : combined;
+    if (!lintPassed) withLint.error = `hyperframes lint: ${lint.errors.join("; ")}`;
     return {
       file,
       passed,
-      metrics: loudness ? { ...metrics, ...loudness.metrics } : metrics,
+      metrics: withLint,
       thresholds: loudness ? loudness.thresholds : {},
       verifier: "ffprobe",
     };
   } catch (error) {
+    const failed = { error: error.message };
+    if (lint) {
+      failed.lint_ok = lint.ok;
+      failed.lint_errorCount = lint.errorCount;
+      failed.lint_errors = lint.errors;
+    }
     return {
       file,
       passed: false,
-      metrics: { error: error.message },
+      metrics: failed,
       thresholds: {},
       verifier: "ffprobe",
     };

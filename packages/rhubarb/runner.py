@@ -23,6 +23,7 @@ import os
 import shutil
 import subprocess
 import tomllib
+import wave
 import zipfile
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -56,6 +57,8 @@ EXTRACT_ENV = "RHUBARB_HOME"
 #: The manifest's verify threshold, repeated here so a run never drifts from it.
 CUES_MIN = 1
 THRESHOLDS = {"cues_min": float(CUES_MIN)}
+#: Rhubarb emits cues in hundredths of a second; the last cue ends at the voice.
+VOICE_END_TOLERANCE_S = 0.01
 #: Rhubarb takes about a second; the probe is only a platform check.
 RUN_TIMEOUT_S = 120
 PROBE_TIMEOUT_S = 15
@@ -249,20 +252,143 @@ def _asset(
 
 @runner.verb("verify")
 def verify(req: Request) -> dict[str, Any]:
-    return {"assets": [_verdict(path) for path in req.assets]}
+    return {"assets": [_verdict(path, req) for path in req.assets]}
 
 
-def _verdict(path: Path) -> dict[str, Any]:
-    """Judge one mouths.json: it parses, its mouths are X..H, and it is ordered."""
+def _voice_duration(path: Path) -> float:
+    """The voice file's measured seconds: WAV via the header, Ogg via last page."""
+    suffix = path.suffix.lower()
+    if suffix == ".wav":
+        return _wav_duration(path)
+    if suffix == ".ogg":
+        return _ogg_duration(path)
+    raise ValueError(f"{path.name}: voice must be WAV or Ogg Vorbis, got {suffix or 'no suffix'}")
+
+
+def _wav_duration(path: Path) -> float:
+    """The WAV header's frames over its rate, matching the voice the cues follow."""
+    try:
+        with wave.open(str(path), "rb") as reader:
+            rate = reader.getframerate()
+            frames = reader.getnframes()
+    except (OSError, wave.Error) as exc:
+        raise ValueError(f"{path.name}: cannot read the WAV header: {exc}") from exc
+    if not rate:
+        raise ValueError(f"{path.name}: the WAV header carries no sample rate")
+    return frames / rate
+
+
+def _ogg_duration(path: Path) -> float:
+    """The Ogg Vorbis duration from the last page's granule over its rate."""
+    try:
+        raw = path.read_bytes()
+    except OSError as exc:
+        raise ValueError(f"{path.name}: cannot read the Ogg file: {exc}") from exc
+    rate = _ogg_rate(raw, path)
+    granule = _ogg_last_granule(raw)
+    if granule is None:
+        raise ValueError(f"{path.name}: the Ogg carries no Vorbis granule")
+    return granule / rate
+
+
+def _ogg_rate(raw: bytes, path: Path) -> int:
+    """The Vorbis identification header's sample rate."""
+    marker = b"\x01vorbis"
+    at = raw.find(marker)
+    if at == -1 or at + len(marker) + 9 > len(raw):
+        raise ValueError(f"{path.name}: the Ogg has no Vorbis identification header")
+    rate = int.from_bytes(raw[at + len(marker) + 5 : at + len(marker) + 9], "little")
+    if not rate:
+        raise ValueError(f"{path.name}: the Ogg header carries no sample rate")
+    return rate
+
+
+def _ogg_last_granule(raw: bytes) -> int | None:
+    """The last Ogg page's granule position, walking the page segments."""
+    granule: int | None = None
+    at = 0
+    while True:
+        at = raw.find(b"OggS", at)
+        if at == -1 or at + 27 > len(raw):
+            return granule
+        segments = raw[at + 26]
+        if at + 27 + segments > len(raw):
+            return granule
+        table = raw[at + 27 : at + 27 + segments]
+        size = sum(table)
+        granule = int.from_bytes(raw[at + 6 : at + 14], "little")
+        at += 27 + segments + size
+
+
+def _verdict(path: Path, req: Request) -> dict[str, Any]:
+    """Judge one mouths.json: parses, starts at 0, rises, ends with the voice."""
     try:
         data = _read_mouths(path)
     except ValueError as exc:
         return _entry(path.name, False, {"error": str(exc)})
     cues = data["cues"]
-    starts = [cue["start"] for cue in cues]
-    ordered = starts == sorted(starts)
-    metrics = {**_properties(data), "ordered": ordered}
+    problems = _start_problems(cues)
+    voice_s, voice_problem = _measured_voice(req)
+    if voice_problem is not None:
+        problems.append(voice_problem)
+    elif voice_s is not None:
+        tail = _tail_problem(cues[-1]["end"], voice_s)
+        if tail is not None:
+            problems.append(tail)
+    ordered = _strictly_ordered(cues)
+    metrics = {
+        **_properties(data),
+        "ordered": ordered,
+        "voice_s": round(voice_s, 3) if voice_s is not None else None,
+    }
+    if problems:
+        return _entry(path.name, False, {**metrics, "error": "; ".join(problems)})
     return _entry(path.name, len(cues) >= CUES_MIN and ordered, metrics)
+
+
+def _start_problems(cues: Sequence[Mapping[str, Any]]) -> list[str]:
+    """Each cue that does not start after the previous one, naming its index."""
+    problems: list[str] = []
+    if cues[0]["start"] != 0:
+        problems.append(f"cue 0 starts at {cues[0]['start']}, not 0")
+    for index in range(1, len(cues)):
+        if not cues[index]["start"] > cues[index - 1]["start"]:
+            problems.append(
+                f"cue {index} starts at {cues[index]['start']}, "
+                f"not after cue {index - 1} at {cues[index - 1]['start']}"
+            )
+    return problems
+
+
+def _strictly_ordered(cues: Sequence[Mapping[str, Any]]) -> bool:
+    """True only when every cue starts after the previous one."""
+    starts = [cue["start"] for cue in cues]
+    return all(later > earlier for earlier, later in zip(starts, starts[1:], strict=False))
+
+
+def _measured_voice(req: Request) -> tuple[float | None, str | None]:
+    """The input voice's duration, or the failure naming why it cannot be tied."""
+    try:
+        return _voice_duration(_voice_path(req)), None
+    except ValueError as exc:
+        return None, str(exc)
+
+
+def _tail_problem(cue_end: float, voice_s: float) -> str | None:
+    """The last cue must end where the voice ends, within Rhubarb's centiseconds."""
+    if abs(cue_end - voice_s) > VOICE_END_TOLERANCE_S:
+        return f"the last cue ends at {cue_end}, the voice lasts {round(voice_s, 3)}"
+    return None
+
+
+def _voice_path(req: Request) -> Path:
+    """The request's voice input, resolved against the piece dir."""
+    raw = req.inputs.get("voice")
+    if raw is None or str(raw) == "":
+        raise ValueError("verify needs the voice input to tie the cues to the voice")
+    candidate = Path(str(raw))
+    base = Path(str(req.piece_dir)) if str(req.piece_dir) else Path(".")
+    return candidate if candidate.is_absolute() else base / candidate
 
 
 def _entry(file: str, passed: bool, metrics: dict[str, Any]) -> dict[str, Any]:

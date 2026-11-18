@@ -339,7 +339,9 @@ every composition here is a `gsap.timeline({ paused: true })`.
 
 `verify` probes the MP4 with `ffprobe`: a video stream with positive width,
 height, frame count and frame rate passes, and a `narrated` or `character`
-asset additionally needs an audio stream. For those two it also measures
+asset additionally needs an audio stream. It also runs the pinned tool's
+`lint --json` on the source composition: it fails when `errorCount` is above
+0, naming each error finding's code and location. For those two it also measures
 integrated loudness and true peak with the pinned `ffmpeg`, adds both to the
 metrics, and passes only within ±1 LU of `target-lufs` with true peak at or
 below -0.5 dBTP. `preview` writes the video kind's

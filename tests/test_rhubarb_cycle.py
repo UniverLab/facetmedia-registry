@@ -17,6 +17,7 @@ import os
 import subprocess
 import sys
 import tomllib
+import wave
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -44,6 +45,8 @@ CUES = [
 DURATION = 1.2
 MOUTHS = "XABCE"
 SUMMARY_MAX = 160
+#: The Vorbis identification packet's byte length: marker, flags, rate and rest.
+VORBIS_ID_PACKET = 30
 
 #: The pull-time SDK surface the runner touches; the real one is copied in.
 STUB_SDK = """
@@ -537,33 +540,81 @@ def test_a_missing_zip_fails_the_run_naming_the_pull(tmp_path: Path) -> None:
     assert PULL_FIX in done.stdout + done.stderr
 
 
-def _verify(tmp_path: Path, body: str, tag: str) -> tuple[subprocess.CompletedProcess[str], Path]:
+def _wav_bytes(*, rate: int = 16000, seconds: float = DURATION) -> bytes:
+    """A silent PCM WAV of the wanted length, for tying cues to a voice."""
+    frames = int(rate * seconds)
+    payload = b"\x00\x00" * frames
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as writer:
+        writer.setnchannels(1)
+        writer.setsampwidth(2)
+        writer.setframerate(rate)
+        writer.writeframes(payload)
+    return buffer.getvalue()
+
+
+def _ogg_bytes(*, rate: int = 16000, seconds: float = DURATION) -> bytes:
+    """A minimal Ogg Vorbis stream: an id header naming the rate, pages to the end."""
+    granule = int(rate * seconds)
+    packet = b"\x01vorbis" + (0).to_bytes(4, "little") + b"\x01" + rate.to_bytes(4, "little")
+    packet += (0).to_bytes(12, "little") + b"\xb0\x01"
+    assert len(packet) == VORBIS_ID_PACKET, len(packet)
+    header = (
+        b"OggS\x00\x02"
+        + (0).to_bytes(8, "little")
+        + (1).to_bytes(4, "little")
+        + (0).to_bytes(4, "little")
+        + (0).to_bytes(4, "little")
+        + b"\x01\x1e"
+        + packet
+    )
+    body = (
+        b"OggS\x00\x04"
+        + granule.to_bytes(8, "little")
+        + (1).to_bytes(4, "little")
+        + (0).to_bytes(4, "little")
+        + (0).to_bytes(4, "little")
+        + b"\x01\x01\x00"
+    )
+    return header + body
+
+
+def _verify_against(
+    tmp_path: Path, body: str, tag: str, voice: bytes, name: str = "voz.wav"
+) -> tuple[subprocess.CompletedProcess[str], Path]:
     stub_dir = _stubs(tmp_path)
     env = _environment(stub_dir, tmp_path / "extract")
+    piece_dir = tmp_path / f"piece-{tag}"
+    character = piece_dir / "character"
+    character.mkdir(parents=True)
+    (character / name).write_bytes(voice)
+    (character / "dialogue.txt").write_text(DIALOG_TEXT + "\n", encoding="utf-8")
     out = tmp_path / f"verify-{tag}"
     out.mkdir()
     target = out / "mouths.json"
     target.write_text(body, encoding="utf-8")
-    return _invoke(
-        "verify",
-        _request("verify", out, tmp_path / "piece", _inputs(), {MODEL_ID: target}, (target,)),
-        tmp_path,
-        env,
-        tag=tag,
-    )
+    request = _request("verify", out, piece_dir, _inputs(), {MODEL_ID: target}, (target,))
+    if name != "voz.wav":
+        request["inputs"]["voice"] = f"character/{name}"
+    return _invoke("verify", request, tmp_path, env, tag=f"-{tag}")
+
+
+def _verdict_of(result_path: Path) -> dict[str, Any]:
+    return json.loads(result_path.read_text(encoding="utf-8"))["assets"][0]
 
 
 def test_verify_passes_an_ordered_x_to_h_timeline(tmp_path: Path) -> None:
     body = json.dumps({"metadata": {"duration": DURATION}, "mouthCues": CUES})
-    done, result_path = _verify(tmp_path, body, "-ok")
+    done, result_path = _verify_against(tmp_path, body, "ok", _wav_bytes())
     assert done.returncode == 0, done.stdout + done.stderr
-    verdict = json.loads(result_path.read_text(encoding="utf-8"))["assets"][0]
+    verdict = _verdict_of(result_path)
     assert verdict["passed"] is True
     assert verdict["metrics"] == {
-        "duration_s": DURATION,
+        "duration_s": CUES[-1]["end"],
         "cues": len(CUES),
         "mouths": 5,
         "ordered": True,
+        "voice_s": DURATION,
     }
     assert verdict["thresholds"] == {"cues_min": 1.0}
     assert verdict["verifier"] == "rhubarb-lip-sync-1.14.0"
@@ -571,9 +622,9 @@ def test_verify_passes_an_ordered_x_to_h_timeline(tmp_path: Path) -> None:
 
 def test_verify_fails_a_letter_outside_the_mouth_alphabet(tmp_path: Path) -> None:
     body = json.dumps({"mouthCues": [{"start": 0.0, "end": 0.1, "value": "Z"}]})
-    done, result_path = _verify(tmp_path, body, "-bad-letter")
+    done, result_path = _verify_against(tmp_path, body, "bad-letter", _wav_bytes(seconds=0.1))
     assert done.returncode == 0
-    verdict = json.loads(result_path.read_text(encoding="utf-8"))["assets"][0]
+    verdict = _verdict_of(result_path)
     assert verdict["passed"] is False
     assert "Z" in verdict["metrics"]["error"]
 
@@ -582,19 +633,70 @@ def test_verify_fails_a_mouth_value_that_is_not_one_letter(tmp_path: Path) -> No
     """``""`` and ``"XA"`` are substrings of the alphabet, not mouths in it."""
     for value in ("", "XA", "ABC"):
         cue = {"start": 0.0, "end": 0.1, "value": value}
-        done, result_path = _verify(tmp_path, json.dumps({"mouthCues": [cue]}), f"-{value!r}")
+        tag = f"not-one-letter-{value!r}"
+        done, result_path = _verify_against(
+            tmp_path, json.dumps({"mouthCues": [cue]}), tag, _wav_bytes(seconds=0.1)
+        )
         assert done.returncode == 0
-        verdict = json.loads(result_path.read_text(encoding="utf-8"))["assets"][0]
+        verdict = _verdict_of(result_path)
         assert verdict["passed"] is False, value
 
 
 def test_verify_fails_a_timeline_out_of_order(tmp_path: Path) -> None:
     cues = [{"start": 0.5, "end": 0.6, "value": "B"}, {"start": 0.1, "end": 0.2, "value": "A"}]
-    done, result_path = _verify(tmp_path, json.dumps({"mouthCues": cues}), "-unordered")
+    body = json.dumps({"mouthCues": cues})
+    done, result_path = _verify_against(tmp_path, body, "unordered", _wav_bytes(seconds=0.2))
     assert done.returncode == 0
-    verdict = json.loads(result_path.read_text(encoding="utf-8"))["assets"][0]
+    verdict = _verdict_of(result_path)
     assert verdict["passed"] is False
     assert verdict["metrics"]["ordered"] is False
+
+
+def test_verify_fails_a_first_cue_that_does_not_start_at_zero(tmp_path: Path) -> None:
+    cues = [
+        {"start": 0.07, "end": 0.2, "value": "X"},
+        {"start": 0.2, "end": 1.2, "value": "A"},
+    ]
+    body = json.dumps({"mouthCues": cues})
+    done, result_path = _verify_against(tmp_path, body, "late-start", _wav_bytes())
+    assert done.returncode == 0, done.stdout + done.stderr
+    verdict = _verdict_of(result_path)
+    assert verdict["passed"] is False
+    assert "cue 0 starts at 0.07" in verdict["metrics"]["error"]
+
+
+def test_verify_fails_equal_starts_as_not_strictly_increasing(tmp_path: Path) -> None:
+    cues = [
+        {"start": 0.0, "end": 0.2, "value": "X"},
+        {"start": 0.2, "end": 0.6, "value": "B"},
+        {"start": 0.2, "end": 1.2, "value": "A"},
+    ]
+    body = json.dumps({"mouthCues": cues})
+    done, result_path = _verify_against(tmp_path, body, "equal-starts", _wav_bytes())
+    assert done.returncode == 0, done.stdout + done.stderr
+    verdict = _verdict_of(result_path)
+    assert verdict["passed"] is False
+    assert verdict["metrics"]["ordered"] is False
+    assert "cue 2 starts at 0.2" in verdict["metrics"]["error"]
+
+
+def test_verify_fails_cues_made_from_another_clip(tmp_path: Path) -> None:
+    body = json.dumps({"metadata": {"duration": DURATION}, "mouthCues": CUES})
+    done, result_path = _verify_against(tmp_path, body, "short-voice", _wav_bytes(seconds=2.5))
+    assert done.returncode == 0, done.stdout + done.stderr
+    verdict = _verdict_of(result_path)
+    assert verdict["passed"] is False
+    assert "the last cue ends at 1.2" in verdict["metrics"]["error"]
+    assert "the voice lasts 2.5" in verdict["metrics"]["error"]
+
+
+def test_verify_passes_an_ogg_voice_measured_from_its_last_page(tmp_path: Path) -> None:
+    body = json.dumps({"metadata": {"duration": DURATION}, "mouthCues": CUES})
+    done, result_path = _verify_against(tmp_path, body, "ogg", _ogg_bytes(), name="voz.ogg")
+    assert done.returncode == 0, done.stdout + done.stderr
+    verdict = _verdict_of(result_path)
+    assert verdict["passed"] is True
+    assert verdict["metrics"]["voice_s"] == DURATION
 
 
 def test_preview_writes_the_generic_mouth_timeline(tmp_path: Path) -> None:

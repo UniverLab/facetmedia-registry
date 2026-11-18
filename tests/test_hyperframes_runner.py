@@ -477,6 +477,7 @@ def test_run_loop_mov_alpha_passes_the_format_flag(tmp_path: Path) -> None:
 @pytest.mark.skipif(FFPROBE is None, reason="ffprobe is not available")
 def test_verify_mov_alpha_requires_an_alpha_channel(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
+    piece, _comp, _clip = _composition(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     alpha = out / "overlay.mov"
@@ -486,14 +487,16 @@ def test_verify_mov_alpha_requires_an_alpha_channel(tmp_path: Path) -> None:
     request = _request(
         "verify",
         out,
-        tmp_path,
+        piece,
         capability="hyperframes.loop",
         composition="comp",
         prompt="brief",
         format="mov-alpha",
     )
     request["assets"] = [str(alpha), str(opaque)]
-    done, result = _invoke(tmp_path, "verify", request, _environment(tmp_path, _dirs(packages)))
+    env = _environment(tmp_path, _dirs(packages))
+    env["FACET_TEST_LINT_JSON"] = json.dumps({"ok": True, "errorCount": 0, "findings": []})
+    done, result = _invoke(tmp_path, "verify", request, env)
     assert done.returncode == 0, done.stderr
     passed, failed = result["assets"]
     assert passed["file"] == "overlay.mov" and passed["passed"] is True
@@ -504,6 +507,7 @@ def test_verify_mov_alpha_requires_an_alpha_channel(tmp_path: Path) -> None:
 @pytest.mark.skipif(FFPROBE is None, reason="ffprobe is not available")
 def test_verify_gif_requires_the_netscape_loop_block(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
+    piece, _comp, _clip = _composition(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     looping = out / "loop.gif"
@@ -513,14 +517,16 @@ def test_verify_gif_requires_the_netscape_loop_block(tmp_path: Path) -> None:
     request = _request(
         "verify",
         out,
-        tmp_path,
+        piece,
         capability="hyperframes.loop",
         composition="comp",
         prompt="brief",
         format="gif",
     )
     request["assets"] = [str(looping), str(still)]
-    done, result = _invoke(tmp_path, "verify", request, _environment(tmp_path, _dirs(packages)))
+    env = _environment(tmp_path, _dirs(packages))
+    env["FACET_TEST_LINT_JSON"] = json.dumps({"ok": True, "errorCount": 0, "findings": []})
+    done, result = _invoke(tmp_path, "verify", request, env)
     assert done.returncode == 0, done.stderr
     passed, failed = result["assets"]
     assert passed["file"] == "loop.gif" and passed["passed"] is True
@@ -616,15 +622,18 @@ def test_preview_writes_the_ten_video_fields(tmp_path: Path) -> None:
 @pytest.mark.skipif(FFPROBE is None, reason="ffprobe is not available")
 def test_verify_probes_the_mp4_and_rejects_a_non_video(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
+    piece, _comp, _clip = _composition(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     good = out / "good.mp4"
     shutil.copyfile(CLIP, good)
     bad = out / "notes.txt"
     bad.write_text("not a video\n", encoding="utf-8")
-    request = _request("verify", out, tmp_path, composition="comp", prompt="a brief")
+    request = _request("verify", out, piece, composition="comp", prompt="a brief")
     request["assets"] = [str(good), str(bad)]
-    done, result = _invoke(tmp_path, "verify", request, _environment(tmp_path, _dirs(packages)))
+    env = _environment(tmp_path, _dirs(packages))
+    env["FACET_TEST_LINT_JSON"] = json.dumps({"ok": True, "errorCount": 0, "findings": []})
+    done, result = _invoke(tmp_path, "verify", request, env)
     assert done.returncode == 0, done.stderr
     passed, failed = result["assets"]
     assert passed["file"] == "good.mp4" and passed["passed"] is True
@@ -632,6 +641,20 @@ def test_verify_probes_the_mp4_and_rejects_a_non_video(tmp_path: Path) -> None:
     assert (passed["metrics"]["width"], passed["metrics"]["height"]) == (WIDTH, HEIGHT)
     assert passed["metrics"]["frames"] == FRAMES and passed["metrics"]["fps"] == FPS
     assert failed["file"] == "notes.txt" and failed["passed"] is False
+
+
+def test_verify_without_a_composition_errors_before_the_probe(tmp_path: Path) -> None:
+    packages = _fixture(tmp_path)
+    piece = tmp_path / "piece"
+    piece.mkdir()
+    out = tmp_path / "out"
+    out.mkdir()
+    request = _request("verify", out, piece, prompt="a brief")
+    request["assets"] = [str(CLIP)]
+    done, result = _invoke(tmp_path, "verify", request, _environment(tmp_path, _dirs(packages)))
+    assert done.returncode != 0
+    assert result is None
+    assert "composition is required" in done.stderr
 
 
 def test_verify_without_the_pinned_ffmpeg_fails_with_the_pull_fix(tmp_path: Path) -> None:
@@ -1389,6 +1412,7 @@ def test_verify_fails_a_narrated_video_without_an_audio_stream(
     tmp_path: Path,
 ) -> None:
     packages = _fixture(tmp_path)
+    piece, _comp, _clip = _composition(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     asset = out / "comp.mp4"
@@ -1396,19 +1420,21 @@ def test_verify_fails_a_narrated_video_without_an_audio_stream(
     narrated = _request(
         "verify",
         out,
-        tmp_path,
+        piece,
         capability="hyperframes.narrated",
         composition="comp",
         prompt="a brief",
     )
     narrated["assets"] = [str(asset)]
-    done, result = _invoke(tmp_path, "verify", narrated, _environment(tmp_path, _dirs(packages)))
+    env = _environment(tmp_path, _dirs(packages))
+    env["FACET_TEST_LINT_JSON"] = json.dumps({"ok": True, "errorCount": 0, "findings": []})
+    done, result = _invoke(tmp_path, "verify", narrated, env)
     assert done.returncode == 0, done.stderr
     assert result["assets"][0]["passed"] is False
     assert result["assets"][0]["metrics"]["audio_streams"] == 0
-    plain = _request("verify", out, tmp_path, composition="comp", prompt="a brief")
+    plain = _request("verify", out, piece, composition="comp", prompt="a brief")
     plain["assets"] = [str(asset)]
-    done, result = _invoke(tmp_path, "verify", plain, _environment(tmp_path, _dirs(packages)))
+    done, result = _invoke(tmp_path, "verify", plain, env)
     assert done.returncode == 0, done.stderr
     assert result["assets"][0]["passed"] is True
 
@@ -1417,11 +1443,12 @@ def _verify_loudness(
     root: Path, asset: Path, capability: str, measured: dict[str, float], **inputs: Any
 ) -> dict[str, Any]:
     packages = _fixture(root)
+    _piece, _comp, _clip = _composition(root)
     out = root / "out"
     request = _request(
         "verify",
         out,
-        root,
+        _piece,
         capability=capability,
         composition="comp",
         prompt="a brief",
@@ -1430,6 +1457,7 @@ def _verify_loudness(
     request["assets"] = [str(asset)]
     env = _environment(root, _dirs(packages))
     env["FACET_TEST_LOUDNESS_JSON"] = json.dumps(measured)
+    env["FACET_TEST_LINT_JSON"] = json.dumps({"ok": True, "errorCount": 0, "findings": []})
     done, result = _invoke(root, "verify", request, env)
     assert done.returncode == 0, done.stderr
     assert result is not None
@@ -1532,19 +1560,22 @@ def test_verify_measures_against_the_record_loudness_target(tmp_path: Path) -> N
 )
 def test_verify_measures_real_loudness_without_a_shim(tmp_path: Path) -> None:
     packages = _fixture(tmp_path)
+    piece, _comp, _clip = _composition(tmp_path)
     out = tmp_path / "out"
     out.mkdir()
     asset = _audio_mp4(out)
     request = _request(
         "verify",
         out,
-        tmp_path,
+        piece,
         capability="hyperframes.narrated",
         composition="comp",
         prompt="a brief",
     )
     request["assets"] = [str(asset)]
-    done, result = _invoke(tmp_path, "verify", request, _environment(tmp_path, _dirs(packages)))
+    env = _environment(tmp_path, _dirs(packages))
+    env["FACET_TEST_LINT_JSON"] = json.dumps({"ok": True, "errorCount": 0, "findings": []})
+    done, result = _invoke(tmp_path, "verify", request, env)
     assert done.returncode == 0, done.stderr
     assert result is not None
     verdict = result["assets"][0]
@@ -1580,7 +1611,9 @@ def test_narrated_run_normalises_the_render_to_the_loudness_target(
         prompt="a brief",
     )
     verify["assets"] = [str(asset)]
-    done, result = _invoke(tmp_path, "verify", verify, _environment(tmp_path, _dirs(packages)))
+    env = _environment(tmp_path, _dirs(packages))
+    env["FACET_TEST_LINT_JSON"] = json.dumps({"ok": True, "errorCount": 0, "findings": []})
+    done, result = _invoke(tmp_path, "verify", verify, env)
     assert done.returncode == 0, done.stderr
     assert result is not None
     verdict = result["assets"][0]

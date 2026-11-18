@@ -88,8 +88,10 @@ a character animates against it:
 ## Judging the result
 
 `verify` reads `mouths.json`: it passes when it parses to at least one cue,
-every `value` is one of `XABCDEFGH`, and the cues are in time order. Metrics:
-`duration_s`, `cues`, `mouths` and `ordered`. `facet preview mouths.json` writes
+every `value` is one of `XABCDEFGH`, the first cue starts at 0, cue starts
+are strictly increasing, and the last cue ends at the input voice's measured
+duration within 0.01 s, so a cue file made from another clip fails. Metrics:
+`duration_s`, `cues`, `mouths`, `ordered` and `voice_s`. `facet preview mouths.json` writes
 the generic `mouths.json.preview.json` with a summary such as
 `1.5 s · 10 mouth cues · 6 mouths (BCDEGX)`. Read the cue list itself when
 the mouths look wrong: a run of `A` under a vowel, or `X` while sound plays,
