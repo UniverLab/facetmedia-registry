@@ -24,6 +24,7 @@ file on CPU, checked by confidence and optional reference text:
 | `language` | enum | no | `auto` | `auto`, `es`, `en`; `auto` lets the model detect it |
 | `name` | string | yes | — | matches `[a-z0-9][a-z0-9-]*`; writes `<name>.txt`, `<name>.srt`, `<name>.json` |
 | `expect-text` | string | no | — | what was said, when known; enables the WER check |
+| `glossary` | string | no | — | names and terms spelled as they should appear, at most 400 characters; biases the model's spelling, not what it hears |
 
 The core's field names never carry an underscore (`manifest._NAME_RE`), so the
 piece spells the reference text `expect-text`, exactly as Kokoro spells
@@ -72,8 +73,11 @@ into the environment as `facet_lib.textnorm` (the `uses = ["textnorm"]` entry
 in the manifest).
 
 `run` calls the model with `language` (`None` for `auto`), `beam_size=5`,
-`vad_filter=True` and `word_timestamps=True`; it writes the transcript, the
-cues and the sidecar.
+`vad_filter=True` and `word_timestamps=True`; when the piece carries a
+`glossary` it also passes it as `initial_prompt`, which biases the spelling of
+the names and terms it lists without changing what the model hears. It writes
+the transcript, the cues and the sidecar, and its record keeps the glossary
+used along with the other params.
 
 `facet preview <name>.txt` writes `<name>.txt.preview.json` (the generic
 schema) with a one-line `summary` such as

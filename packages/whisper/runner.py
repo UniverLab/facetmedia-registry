@@ -53,6 +53,8 @@ THRESHOLDS = {
 }
 #: ``language`` values that let the model detect the language itself.
 AUTO_LANGUAGES = frozenset({"", "auto"})
+#: The glossary is a prompt, so it stays well inside Whisper's prompt window.
+GLOSSARY_LIMIT = 400
 #: Imports the doctor proves, with the distribution each comes from.
 DOCTOR_IMPORTS = (
     ("faster_whisper", "faster-whisper"),
@@ -77,14 +79,21 @@ def _model(req: Request) -> Any:
     )
 
 
-def _transcribe(model: Any, path: Path, language: str) -> tuple[list[dict[str, Any]], Any]:
-    """The audio's segments and info: beam 5, VAD and word timestamps on."""
+def _transcribe(
+    model: Any, path: Path, language: str, glossary: str | None = None
+) -> tuple[list[dict[str, Any]], Any]:
+    """The audio's segments and info: beam 5, VAD and word timestamps on.
+
+    ``glossary`` reaches the model as its ``initial_prompt``, which biases the
+    spelling of the words it hears; ``None`` leaves the call as it was.
+    """
     segments, info = model.transcribe(
         str(path),
         language=None if language in AUTO_LANGUAGES else language,
         beam_size=5,
         vad_filter=True,
         word_timestamps=True,
+        initial_prompt=glossary,
     )
     return [_segment(segment) for segment in segments], info
 
@@ -116,7 +125,8 @@ def run(req: Request) -> dict[str, Any]:
     audio = Path(str(params["audio"]))
     name = str(params["name"])
     language = str(params.get("language", "auto"))
-    segments, info = _transcribe(_model(req), audio, language)
+    glossary = _glossary(params)
+    segments, info = _transcribe(_model(req), audio, language, glossary)
     transcript = "\n".join(str(segment["text"]).strip() for segment in segments).strip()
     sidecar = formats.to_json(
         str(info.language),
@@ -176,7 +186,27 @@ def _params(params: Mapping[str, Any]) -> dict[str, Any]:
     expect = _expect_text(params)
     if expect is not None:
         resolved["expect-text"] = expect
+    glossary = _glossary(params)
+    if glossary is not None:
+        resolved["glossary"] = glossary
     return resolved
+
+
+def _glossary(params: Mapping[str, Any]) -> str | None:
+    """The names and terms that bias the spelling; ``None`` when absent.
+
+    Over the limit is a hard error: the glossary is a prompt, and a caller
+    that bloats it is asking for a silently truncated one.
+    """
+    value = params.get("glossary")
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if len(text) > GLOSSARY_LIMIT:
+        raise ValueError(f"glossary is {len(text)} characters, over the {GLOSSARY_LIMIT} limit")
+    return text
 
 
 def _expect_text(params: Mapping[str, Any]) -> str | None:

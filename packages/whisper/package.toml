@@ -1,5 +1,5 @@
 name = "whisper"
-version = "0.1.5"
+version = "0.1.6"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "SYSTRAN (faster-whisper) · OpenAI (Whisper model)"
@@ -88,6 +88,10 @@ description = "Asset base name: writes <name>.txt, <name>.srt and <name>.json."
 [capabilities.transcribe.inputs.expect-text]
 type = "string"
 description = "What was said, when known; the word error rate is measured against it."
+
+[capabilities.transcribe.inputs.glossary]
+type = "string"
+description = "Names and terms spelled as they should appear, at most 400 characters; they bias the model's spelling, not what it hears."
 
 [capabilities.transcribe.verify]
 thresholds = { min_avg_logprob = -1.0, max_no_speech_share = 0.2, wer_max = 0.10 }

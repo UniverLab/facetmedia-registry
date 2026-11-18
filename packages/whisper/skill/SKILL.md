@@ -43,10 +43,34 @@ language = "auto"
 name = "interview"
 ```
 
+A clip full of names, with a glossary that tells the model how they are
+spelled:
+
+```toml
+[inputs]
+audio = "paso-a-produccion.m4a"
+language = "es"
+name = "paso-a-produccion"
+glossary = "UniverLab, facetMedia, Canopy, ComfyUI, GitHub Actions."
+```
+
 Run a piece with `facet run whisper.transcribe <piece.toml> --out build/`;
 without `--out` the three assets land in the piece's directory. The field is
 spelled `expect-text` because the core's field names never carry an
 underscore.
+
+## The glossary
+
+`glossary` is one string of at most 400 characters — the names, brands and
+technical terms the recording says, spelled as they should appear:
+`UniverLab`, `facetMedia`, `Canopy`, `ComfyUI`. The runner passes it to the
+model as its `initial_prompt`, which **biases the spelling, not the content**:
+it makes the model likelier to write `Canopy` where it would have guessed
+`canopy`, but it never adds, removes or corrects what the audio says. A term
+the audio never pronounces does not appear in the transcript. Keep it to the
+words that are actually said and that a generic spelling would get wrong;
+prose costs prompt room and buys nothing. Over 400 characters the run fails
+with a plain error instead of a silently truncated prompt.
 
 ## Judging the result
 
@@ -83,9 +107,9 @@ quality first is the whole policy:
   is kept against that public speed advice.
 - Compute is int8 on CPU with no system `ffmpeg` in the path: faster-whisper
   decodes through its bundled libraries.
-- The VAD filter is on: silence is skipped before decoding, which cuts CPU
-  time and is the main defence against the model inventing words over
-  silence or music.
+- The VAD filter is always on: silence is skipped before decoding, which cuts
+  CPU time and is the main defence against the model inventing words over
+  silence or music. There is no knob to turn it off.
 - Timed words are always written — the subtitle pipeline downstream needs
   them — and that costs speed deliberately.
 
