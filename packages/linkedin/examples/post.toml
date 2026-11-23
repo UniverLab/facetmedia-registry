@@ -1,0 +1,11 @@
+# Post text with one image to the lab's LinkedIn organization account.
+# Dry-run only: facet run post.toml --dry-run sends nothing and touches no network.
+capability = "linkedin.post"
+
+[inputs]
+author = "urn:li:organization:1234567"
+text = "La escuadra del laboratorio, recién salida del banco. #taller"
+
+[[inputs.images]]
+path = "banco.png"
+alt = "La escuadra del laboratorio sobre el banco de trabajo."

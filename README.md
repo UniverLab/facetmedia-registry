@@ -58,6 +58,7 @@ the core:
 | publish | x | Text, images, video and threads on the lab's X brand account through the X API v2, with the cost shown before the send and a read-back check |
 | publish | youtube | One video to the lab's YouTube brand channel through the YouTube Data API, private by default with AI disclosure from provenance and a read-back check |
 | publish | tiktok | One video or a photo set to the lab's TikTok account inbox as a draft through the Content Posting API, with a read-back check |
+| publish | linkedin | Text with images to the lab's LinkedIn organization account through the Posts API, with a read-back check |
 
 ## How facet uses this repository
 

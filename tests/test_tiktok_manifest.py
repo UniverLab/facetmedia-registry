@@ -96,7 +96,7 @@ def test_the_root_readme_lists_tiktok_under_the_publish_facet() -> None:
 def test_the_registry_indexes_the_package_after_youtube() -> None:
     names = [entry["name"] for entry in INDEX["packages"]]
     assert "tiktok" in names
-    assert names.index("tiktok") == len(names) - 1
     assert names.index("youtube") == names.index("tiktok") - 1
+    assert names.index("tiktok") == names.index("linkedin") - 1
     assert INDEX["facets"]["publish"]["label"] == "Publish"
     assert INDEX["facets"]["publish"]["i18n"]["es"]["label"] == "Publicación"

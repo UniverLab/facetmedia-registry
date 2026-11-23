@@ -1,0 +1,11 @@
+[project]
+name = "facet-linkedin"
+version = "0.1.0"
+description = "Post text with images to the lab's LinkedIn organization account through the Posts API."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[tool.uv]
+package = false

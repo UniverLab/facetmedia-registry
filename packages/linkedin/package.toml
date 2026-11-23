@@ -1,0 +1,88 @@
+name = "linkedin"
+version = "0.1.0"
+requires_facet = ">=0.1.0b2,<0.2"
+protocol = 1
+provider = "LinkedIn Corporation · Posts API"
+tool_name = "LinkedIn"
+description = "Posts text with images to the lab's LinkedIn organization account through the Posts API, with a read-back check."
+facet = "publish"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 0.2
+exclusive = false
+platforms = ["linux"]
+
+[[licenses]]
+subject = "LinkedIn API (LinkedIn Corporation)"
+spdx = "LicenseRef-LinkedIn-API-Terms"
+
+[[secrets]]
+name = "client-id"
+description = "The lab's LinkedIn app client id, shown once when the app is created"
+required = true
+
+[[secrets]]
+name = "client-secret"
+description = "The lab's LinkedIn app client secret, shown once with the client id"
+required = true
+
+[[secrets]]
+name = "access-token"
+description = "The organization's access token, stored by facet auth linkedin after sign-in"
+required = true
+
+[[secrets]]
+name = "refresh-token"
+description = "The organization's refresh token, stored by facet auth linkedin after sign-in"
+required = true
+
+[[secrets]]
+name = "org-id"
+description = "The organization's numeric id, the digits of urn:li:organization:{id}"
+required = true
+
+[capabilities.post]
+summary = "Post text with images to the lab's LinkedIn organization account, then read it back."
+kind = "post"
+outward = true
+
+[capabilities.post.i18n.es]
+summary = "Publica texto con imágenes en la cuenta de organización de LinkedIn del laboratorio, y lo vuelve a leer."
+
+[capabilities.post.inputs.author]
+type = "string"
+required = true
+pattern = "^urn:li:organization:[0-9]+$"
+description = "The organization URN the post publishes as, for example urn:li:organization:1234567."
+
+[capabilities.post.inputs.text]
+type = "string"
+required = true
+description = "The post's text, at most 3000 characters; URLs are unfurled into link previews."
+
+[capabilities.post.inputs.images]
+type = "array"
+description = "The post's images, each a local file with alt text; one image makes a single-image post, two to twenty make a MultiImage post."
+
+[capabilities.post.inputs.images.items.path]
+type = "path"
+required = true
+description = "The image file, resolved relative to the piece; JPG, GIF or PNG."
+
+[capabilities.post.inputs.images.items.alt]
+type = "string"
+required = true
+description = "The image's alt text; an image without alt text is refused."
+
+[capabilities.post.preview]
+viewer = "post"

@@ -130,3 +130,6 @@ name = "youtube"
 
 [[packages]]
 name = "tiktok"
+
+[[packages]]
+name = "linkedin"
