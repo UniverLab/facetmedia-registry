@@ -98,7 +98,7 @@ wheels = [
 [[package]]
 name = "facetmedia"
 version = "0.1.0b2"
-source = { git = "https://github.com/UniverLab/facetmedia?branch=feature%2Fpublish#8cd62c33dabc43d9195c54d46a29bf94c9aff8df" }
+source = { git = "https://github.com/UniverLab/facetmedia?branch=feature%2Fpublish#e12af56938838acba1c40f53d3cfc76cc3919c10" }
 dependencies = [
     { name = "packaging" },
     { name = "pynacl" },

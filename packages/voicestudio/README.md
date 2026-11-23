@@ -109,6 +109,18 @@ hint above; a `voxcpm2` piece runs with nothing accepted. The runner never
 re-implements that check. Accepting makes the person who runs facet
 responsible for complying with the terms.
 
+The managed backend keeps its own Model Catalogue gate for the same engine:
+after the readiness wait and before any narration, the run forwards the
+recorded facet acceptance to the backend for two repos — `k2-fsa/OmniVoice`
+and `eustlb/higgs-audio-v2-tokenizer` — and stores the catalogue receipts
+beside the facet record. Accepting `omnivoice` covers both repos; accepting
+the `higgs-audio-v2-tokenizer` model id alone never unlocks the engine. A
+piece that reaches the backend with no recorded `omnivoice` acceptance fails
+with `license_not_accepted` (exit 4) naming both repos and the accept
+command, and changed backend terms fail the same way until re-accepted. A
+remote backend (anything but loopback) is only ever read: it must already
+report both repos accepted in its own catalogue.
+
 ## Cloned voices (cosyvoice)
 
 `voicestudio.clone` speaks a person's own clone on the `cosyvoice` engine

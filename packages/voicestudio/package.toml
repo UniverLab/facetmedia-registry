@@ -65,6 +65,15 @@ spdx = "CC-BY-NC"
 commercial_use = false
 requires_acceptance = true
 terms_url = "https://huggingface.co/k2-fsa/OmniVoice"
+acceptance_repos = ["k2-fsa/OmniVoice", "eustlb/higgs-audio-v2-tokenizer"]
+
+[[models]]
+id = "higgs-audio-v2-tokenizer"
+backend = true
+spdx = "NOASSERTION"
+commercial_use = false
+requires_acceptance = true
+terms_url = "https://huggingface.co/eustlb/higgs-audio-v2-tokenizer"
 
 [capabilities.speak]
 summary = "Narration through a facet-managed VoiceStudio backend (engine voxcpm2 or omnivoice), checked by transcription"

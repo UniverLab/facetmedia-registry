@@ -52,8 +52,10 @@ DISK_GB = 40
 #: Built blind so the spec's wording grep stays clean of this file.
 SELF_STARTED = "self" + "-started"
 USER_STARTED = "user" + "-started"
-#: The manifest's two model entries: the embedded mouth and the backend engine.
-MODEL_ENTRIES = 2
+#: The manifest's three model entries: the embedded mouth and two backend engines.
+MODEL_ENTRIES = 3
+#: The two catalogue repos the backend gates for the omnivoice engine.
+GATED_REPOS = ["k2-fsa/OmniVoice", "eustlb/higgs-audio-v2-tokenizer"]
 
 
 def test_the_engine_is_python_311_with_a_managed_server() -> None:
@@ -201,7 +203,9 @@ def test_the_omnivoice_entry_is_backend_owned_with_the_cc_by_nc_terms() -> None:
         "commercial_use",
         "requires_acceptance",
         "terms_url",
+        "acceptance_repos",
     }
+    assert entry["acceptance_repos"] == GATED_REPOS
     assert entry["backend"] is True
     # The licensor states only "CC-BY-NC": no version number, exact-match gate.
     assert entry["spdx"] == "CC-BY-NC"
@@ -217,9 +221,33 @@ def test_the_omnivoice_terms_url_is_an_upstream_url() -> None:
     assert entry["terms_url"].startswith("https://huggingface.co/k2-fsa/OmniVoice")
 
 
-def test_only_the_omnivoice_entry_requires_acceptance() -> None:
+def test_only_omnivoice_and_tokenizer_require_acceptance() -> None:
+    """Both gated models need acceptance; the forward keys off the omnivoice record."""
     gated = [entry["id"] for entry in MANIFEST["models"] if entry["requires_acceptance"]]
-    assert gated == ["omnivoice"]
+    assert gated == ["omnivoice", "higgs-audio-v2-tokenizer"]
+
+
+def test_the_tokenizer_entry_is_backend_owned_without_own_repos() -> None:
+    """The tokenizer discloses its own terms; the engine entry owns both gated repos."""
+    entry = next(entry for entry in MANIFEST["models"] if entry["id"] == "higgs-audio-v2-tokenizer")
+    assert set(entry) == {
+        "id",
+        "backend",
+        "spdx",
+        "commercial_use",
+        "requires_acceptance",
+        "terms_url",
+    }
+    assert "acceptance_repos" not in entry
+    assert entry["backend"] is True
+    assert entry["spdx"] == "NOASSERTION"
+    assert entry["commercial_use"] is False
+    assert entry["requires_acceptance"] is True
+    assert entry["terms_url"] == "https://huggingface.co/eustlb/higgs-audio-v2-tokenizer"
+    for source in ("url", "sha256", "path", "hf_repo", "revision", "bytes"):
+        assert source not in entry
+    owners = [entry["id"] for entry in MANIFEST["models"] if "acceptance_repos" in entry]
+    assert owners == ["omnivoice"]
 
 
 def test_the_model_id_is_unique_across_the_registry() -> None:

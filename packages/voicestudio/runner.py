@@ -15,7 +15,9 @@ each sidecar engine's install state.
 
 The runner never reimplements the licence gate: an ``omnivoice`` piece whose
 CC-BY-NC terms are not recorded fails in the core with
-``license_not_accepted`` (exit 4), before the runner starts.
+``license_not_accepted`` (exit 4), before the runner starts. Once ready, the
+run forwards that recorded acceptance to the backend's own Model Catalogue
+(``preflight``, two repos for ``omnivoice``) before any narration.
 
 This runner is a client of a facet-managed server: facet pulls VoiceStudio
 from its pinned ``uv.lock`` and starts it for each run, with its state
@@ -38,7 +40,6 @@ import json
 import os
 import subprocess
 import sys
-import time
 import tomllib
 import urllib.error
 import urllib.request
@@ -49,6 +50,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import clipcache
+import preflight
 from facet_lib import textnorm  # noqa: E402  (path insert must run first)
 from facet_runner_sdk import Request, Runner  # noqa: E402
 
@@ -78,17 +80,8 @@ TOOL = {"name": "VoiceStudio", "version": "c2ef998"}
 #: The base URL when neither facet nor the person named one.
 DEFAULT_BASE_URL = "http://127.0.0.1:3900"
 #: Endpoint paths of the VoiceStudio backend this runner talks to.
-STATUS_PATH = "/model/status"
 SPEAK_PATH = "/v1/audio/speech"
 PROFILES_PATH = "/profiles"
-#: Seconds a connection gets and a readiness wait may take in total.
-CONNECT_TIMEOUT_S = 10.0
-READY_TIMEOUT_S = 600.0
-READY_POLL_S = 1.0
-#: How long ``idle`` must persist before the runner treats it as "nothing
-#: preloaded" and proceeds: the lab's 30 s, so a preload that starts right
-#: after the backend did (idle → loading → ready) is never raced.
-READY_IDLE_GRACE_S = 30.0
 #: Seconds the doctor's health peek gets and an nvidia-smi call may take.
 HEALTH_TIMEOUT_S = 2.0
 NVIDIA_SMI_TIMEOUT_S = 4.0
@@ -156,70 +149,6 @@ def _post_speak(base_url: str, name: str, body: dict[str, Any]) -> bytes:
         raise RuntimeError(f"{name}: VoiceStudio answered {exc.code}: {detail}") from None
     except OSError as exc:
         raise RuntimeError(f"{name}: no VoiceStudio backend at {base_url}: {exc}") from None
-
-
-def _status(base_url: str) -> dict[str, Any]:
-    """GET /model/status; facet starts the backend for each run."""
-    try:
-        payload = _fetch_json(base_url, STATUS_PATH, CONNECT_TIMEOUT_S)
-    except ValueError as exc:
-        raise RuntimeError(f"{base_url}{STATUS_PATH} answered no JSON: {exc}") from None
-    except OSError as exc:
-        raise RuntimeError(
-            f"no VoiceStudio backend at {base_url} ({exc}); "
-            "facet starts it for each run — see facet doctor voicestudio"
-        ) from None
-    if not isinstance(payload, dict):
-        raise RuntimeError(f"{base_url}{STATUS_PATH} answered no JSON object")
-    return payload
-
-
-def _state(payload: Any) -> str:
-    """The backend's reported state, whichever key the response uses."""
-    if not isinstance(payload, dict):
-        return ""
-    return str(payload.get("state") or payload.get("status") or "").lower()
-
-
-def _idle_since(state: str, idle_since: float | None, now: float) -> float | None:
-    """When the current idle stretch began; any other state resets it."""
-    if state != "idle":
-        return None
-    return now if idle_since is None else idle_since
-
-
-def _ready_detail(state: str, payload: dict[str, Any]) -> str:
-    """What the readiness wait reports back to the run."""
-    return f"{state}: {json.dumps(payload)[:120]}"
-
-
-def _wait_ready(base_url: str) -> str:
-    """Poll GET /model/status until the backend is ready to synthesise.
-
-    ``ready`` returns at once; ``idle`` returns only after it *stays* idle for
-    ``READY_IDLE_GRACE_S`` — a backend that is still starting reports idle
-    first and loading right after, so proceeding on the first idle would race
-    the preload. A report carrying ``error`` (the backend's shape: status
-    stays idle/loading and the failure travels in that field) fails naming it;
-    /health alone is never trusted, because it answers ok while the background
-    import is still running.
-    """
-    started = time.monotonic()
-    idle_since: float | None = None
-    while True:
-        payload = _status(base_url)
-        state = _state(payload)
-        now = time.monotonic()
-        if state == "ready":
-            return _ready_detail(state, payload)
-        if state == "error" or payload.get("error"):
-            raise RuntimeError(f"backend state error: {json.dumps(payload)[:200]}")
-        idle_since = _idle_since(state, idle_since, now)
-        if idle_since is not None and now - idle_since >= READY_IDLE_GRACE_S:
-            return _ready_detail(state, payload)
-        if now - started > READY_TIMEOUT_S:
-            raise RuntimeError(f"backend not ready after {READY_TIMEOUT_S:.0f} s (state {state!r})")
-        time.sleep(READY_POLL_S)
 
 
 def _whisper(req: Request) -> Any:
@@ -516,7 +445,8 @@ def run(req: Request) -> dict[str, Any]:
     if clone:
         _check_clone_engine(clips)
     base_url = _base_url()
-    _wait_ready(base_url)
+    preflight._wait_ready(base_url)
+    preflight.forward_licenses(base_url, clips[0]["model"])
     if clone:
         _check_clone_voice(base_url, clips[0]["voice"])
     else:
@@ -763,8 +693,8 @@ def _doctor_vram() -> dict[str, Any]:
 def _doctor_gpu_free(base_url: str) -> dict[str, Any]:
     """No model but the backend's holds GPU memory: one model at a time."""
     try:
-        payload = _fetch_json(base_url, STATUS_PATH, HEALTH_TIMEOUT_S)
-        state = _state(payload)
+        payload = _fetch_json(base_url, preflight.STATUS_PATH, HEALTH_TIMEOUT_S)
+        state = preflight._state(payload)
         if state in ("ready", "loading"):
             return _verdict(
                 "gpu_free", True, f"the VoiceStudio backend at {base_url} owns the GPU ({state})"
@@ -857,7 +787,7 @@ def _tree_bytes(path: Path) -> int | None:
 def _doctor_backend(base_url: str) -> dict[str, Any]:
     """The backend answers /model/status; facet starts it for each run."""
     try:
-        payload = _fetch_json(base_url, STATUS_PATH, CONNECT_TIMEOUT_S)
+        payload = _fetch_json(base_url, preflight.STATUS_PATH, preflight.CONNECT_TIMEOUT_S)
     except (urllib.error.URLError, OSError, ValueError) as exc:
         return _verdict(
             "backend",
@@ -865,7 +795,7 @@ def _doctor_backend(base_url: str) -> dict[str, Any]:
             f"not answering at {base_url}: {exc} — facet starts it for each run",
             "facet doctor voicestudio",
         )
-    state = _state(payload)
+    state = preflight._state(payload)
     if state == "error":
         return _verdict(
             "backend",
@@ -899,7 +829,7 @@ def _doctor_engine(base_url: str, engine: str) -> dict[str, Any]:
 
 def _profile_rows(base_url: str) -> list[dict[str, Any]]:
     """The backend's local voice profiles, unwrapped from the response body."""
-    payload = _fetch_json(base_url, PROFILES_PATH, CONNECT_TIMEOUT_S)
+    payload = _fetch_json(base_url, PROFILES_PATH, preflight.CONNECT_TIMEOUT_S)
     profiles = payload.get("profiles", payload) if isinstance(payload, dict) else payload
     if not isinstance(profiles, list):
         raise ValueError(f"{PROFILES_PATH} answered an unexpected body")

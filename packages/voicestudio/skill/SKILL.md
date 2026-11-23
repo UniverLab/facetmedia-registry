@@ -142,6 +142,12 @@ An `omnivoice` piece with no acceptance fails in the core with
 nothing accepted. The runner never re-checks the licence. Accepting makes
 the person who runs facet responsible for complying with the terms.
 
+The backend gates the same engine through its own Model Catalogue: after
+the readiness wait the run forwards the recorded acceptance for
+`k2-fsa/OmniVoice` and `eustlb/higgs-audio-v2-tokenizer` and stores the
+catalogue receipts. `facet license accept omnivoice` covers both repos;
+accepting `higgs-audio-v2-tokenizer` alone never unlocks the engine.
+
 ## Judging the result
 
 The runner itself verifies: after synthesis it transcribes each clip with
