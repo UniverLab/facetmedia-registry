@@ -31,6 +31,34 @@ HTTP_CONFLICT = 409
 #: managed Python names clang, which most Linux hosts do not have.
 NEEDS_CXX = ("cosyvoice",)
 CXX_FIX = "sudo apt install build-essential"
+#: Substrings marking a transient install-job failure worth one retry.
+TRANSIENT_MARKERS = (
+    "pip",
+    "uv",
+    "fetch",
+    "download",
+    "connection",
+    "reset",
+    "timeout",
+    "network",
+    "temporary",
+)
+#: Job-error tokens that mean a compiler problem: never retried.
+COMPILER_TOKENS = ("c++", "compiler", "g++", "pyworld", "build-essential")
+
+
+def _is_transient(detail: str, remediation: str) -> bool:
+    """Whether an install-job failure looks transient and worth one retry."""
+    text = f"{detail} {remediation}".lower()
+    if not text.strip():
+        return False
+    return any(marker in text for marker in TRANSIENT_MARKERS)
+
+
+def _looks_like_compiler_problem(text: str) -> bool:
+    """Whether job text names the C++ toolchain: never retried."""
+    lowered = text.lower()
+    return any(token in lowered for token in COMPILER_TOKENS)
 
 
 def compiler_problem(engine: str) -> str:
@@ -117,6 +145,31 @@ def _current_step(job: dict[str, Any]) -> str:
     return _step_label(started[-1] if started else steps[0])
 
 
+def _may_retry_transient(engine: str, detail: str, remediation: str, attempts: int) -> bool:
+    """Whether a failed install job earns the one automatic retry POST."""
+    if attempts != 0:
+        return False
+    if compiler_problem(engine):
+        return False
+    if _looks_like_compiler_problem(f"{detail} {remediation}"):
+        return False
+    return _is_transient(detail, remediation)
+
+
+def _repost_install(base_url: str, engine: str) -> None:
+    """Re-POST the install after a transient failure; a 409 stays fatal."""
+    try:
+        _post_json(base_url, _install_path(engine), 10.0)
+    except _HttpError as exc:
+        if exc.code == HTTP_CONFLICT:
+            raise RuntimeError(
+                f"{engine}: VoiceStudio cannot install it on this machine: {_detail(exc.body)}"
+            ) from None
+        raise RuntimeError(f"{engine}: install POST answered {exc.code}: {exc.body}") from None
+    except (urllib.error.URLError, OSError) as exc:
+        raise RuntimeError(f"{engine}: no VoiceStudio backend at {base_url}: {exc}") from None
+
+
 def _ensure_engine(base_url: str, engine: str) -> None:
     """Install ``engine`` on first use; return at once when already installed.
 
@@ -146,6 +199,7 @@ def _ensure_engine(base_url: str, engine: str) -> None:
         raise RuntimeError(f"{engine}: no VoiceStudio backend at {base_url}: {exc}") from None
     started = time.monotonic()
     seen = ""
+    attempts = 0
     while True:
         try:
             payload = engine_status(base_url, engine)
@@ -164,6 +218,16 @@ def _ensure_engine(base_url: str, engine: str) -> None:
         if state in ("error", "failed"):
             detail = str(job.get("error", "") or state)
             remediation = str(job.get("remediation", "") or "")
+            if _may_retry_transient(engine, detail, remediation, attempts):
+                print(
+                    f"voicestudio: installing {engine}: retrying after transient failure: {detail}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                _repost_install(base_url, engine)
+                seen = ""
+                attempts = 1
+                continue
             raise RuntimeError(f"{engine}: install {state}: {detail} {remediation}".rstrip())
         if time.monotonic() - started > ENGINE_INSTALL_TIMEOUT_S:
             raise RuntimeError(
