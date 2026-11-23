@@ -74,10 +74,9 @@ kind = "audio"
 summary = "Narración mediante un backend VoiceStudio gestionado por facet (motor voxcpm2 u omnivoice), verificada por transcripción"
 
 [capabilities.speak.inputs.voice]
-type = "enum"
-values = ["narradora"]
+type = "string"
 default = "narradora"
-description = "Cloned voice profile registered in the backend (POST /profiles); clones live on the person's machine."
+description = "speak voices narradora; own cloned profiles speak via voicestudio.clone on cosyvoice; anything else fails with the recipe."
 
 [capabilities.speak.inputs.model]
 type = "enum"

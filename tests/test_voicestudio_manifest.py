@@ -109,8 +109,10 @@ def test_the_runner_is_a_client_of_two_lib_modules() -> None:
 
 def test_the_piece_voice_is_the_narradora_clone() -> None:
     voice = INPUTS["voice"]
-    assert voice["values"] == ["narradora"]
+    assert voice["type"] == "string"
+    assert "values" not in voice
     assert voice["default"] == "narradora"
+    assert "voicestudio.clone" in voice["description"]
 
 
 def test_the_piece_engine_offers_both_engines_with_voxcpm2_the_default() -> None:

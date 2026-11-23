@@ -519,6 +519,8 @@ def run(req: Request) -> dict[str, Any]:
     _wait_ready(base_url)
     if clone:
         _check_clone_voice(base_url, clips[0]["voice"])
+    else:
+        _check_speak_voice(base_url, clips[0]["voice"])
     engine = clips[0]["model"]
     if engine in _engines().SIDECAR_ENGINES:
         _engines()._ensure_engine(base_url, engine)
@@ -921,6 +923,25 @@ def _check_clone_voice(base_url: str, voice: str) -> None:
         raise ValueError(
             f"clone voice {voice} is not installed in this backend; {CLONE_PROFILE_SPEC}"
         )
+
+
+def _check_speak_voice(base_url: str, voice: str) -> None:
+    """A speak piece voices narradora; own clones go through voicestudio.clone."""
+    if voice == DEFAULT_VOICE:
+        return
+    try:
+        profiles = _profile_rows(base_url)
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        raise RuntimeError(f"GET {PROFILES_PATH} failed: {exc}") from None
+    known = {str(entry.get("id", "")) for entry in profiles} | {
+        str(entry.get("name", "")) for entry in profiles
+    }
+    if voice in known:
+        raise ValueError(
+            f"speak voice {voice} is a clone profile; own profiles speak "
+            f"through voicestudio.clone on cosyvoice; two voices go in two pieces"
+        )
+    raise ValueError(f"speak voice {voice} unknown; {CLONE_PROFILE_SPEC}")
 
 
 def _doctor_profile(base_url: str) -> dict[str, Any]:

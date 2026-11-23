@@ -61,7 +61,7 @@ Two clips, the piece defaults once:
 
 ```toml
 [inputs]
-voice = "narradora"
+voice = "narradora"  # speak voices narradora; own cloned profiles speak via voicestudio.clone on cosyvoice; anything else fails with the recipe
 model = "omnivoice"
 language = "es"
 
