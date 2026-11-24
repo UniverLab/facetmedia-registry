@@ -1,8 +1,8 @@
 # x
 
 Posts text, images, video and threads to the lab's X brand account:
-`facet run x.post` sends one post or a thread through the X API v2 with
-OAuth 1.0a user context, shows the cost before the send, then reads it
+`facet run x.post` sends one post or a thread through the X API v2 with an
+OAuth 2.0 bearer token, shows the cost before the send, then reads it
 back. The whole package is stdlib — a thin vendored client, no SDK — so
 it runs anywhere the facet lock runs.
 
@@ -31,10 +31,16 @@ The per-request prices live in `rates.json` beside the runner (read
 back costs $0.005, and the one account read a real run makes costs $0.010.
 A rate change ships as a package version bump.
 
-Credentials come from the secrets store, never the piece: `consumer-key`,
-`consumer-secret`, `access-token` and `access-token-secret` (all
-required). The four `facet secret set x <name>` commands, run by a person
-in their own terminal, store them; the runner reads them through the SDK.
+Credentials come from the secrets store, never the piece: `client-id`
+and `client-secret` (both required, the app's OAuth 2.0 keys, typed by a
+person in their own terminal with `facet secret set x <name>`) plus
+`access-token` and `refresh-token` (both required, stored by the
+`facet auth login x` browser sign-in, never typed by hand). The runner
+reads them through the SDK and refreshes the pair before every send,
+storing each rotation. The app is a confidential client — type **Web
+App, Automated App or Bot** — with the redirect URL
+`http://127.0.0.1:8080/callback` registered in its User authentication
+settings.
 
 ## Verification and preview
 
@@ -58,9 +64,10 @@ preview file beside the receipt: `images` holds every media file's name
 `media` with alt text.
 
 `facet doctor post` checks the client, the rates and all four secrets at
-the quick depth; `--full` reads the own account with the stored keys,
-names the account they open, probes write access with a request the
+the quick depth; `--full` reads the own account with a fresh token,
+names the account it opens, probes write access with a request the
 network rejects before creating a post, and states the cost of the read.
+A package whose `access-token` is not stored says `run facet auth login x`.
 
 ## Licences
 

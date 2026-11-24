@@ -73,9 +73,13 @@ def _stub_sdk() -> types.ModuleType:
         except KeyError:
             raise KeyError(f"secret {name} is not set; run facet secret set") from None
 
+    def renew_secret(name: str, value: str) -> None:
+        del name, value
+
     stub.Request = Request  # type: ignore[attr-defined]
     stub.Runner = Runner  # type: ignore[attr-defined]
     stub.secret = secret  # type: ignore[attr-defined]
+    stub.renew_secret = renew_secret  # type: ignore[attr-defined]
     return stub
 
 

@@ -1,11 +1,11 @@
-"""The x send, read-back, preview and credential check, all offline.
+"""The x send, read-back, preview, credential check and sign-in, all offline.
 
 The network is replaced, never touched: these tests run the runner
 in-process against a stub ``facet_runner_sdk`` and a fake ``x_client``
-whose calls are recorded, so the reply chain, the uploaded media, the
-rates on the receipt and the read-back comparisons are the runner's own
-answers. A test that still passed with the send removed would be sent
-back.
+whose calls are recorded, so the refresh before the first request, the
+401 retry, the reply chain, the uploaded media, the rates on the receipt
+and the read-back comparisons are the runner's own answers. A test that
+still passed with the send removed would be sent back.
 """
 
 from __future__ import annotations
@@ -25,7 +25,9 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "x"
 HANDLE = "lab"
 USER_ID = "123456"
-SECRETS = ("CONSUMER_KEY", "CONSUMER_SECRET", "ACCESS_TOKEN", "ACCESS_TOKEN_SECRET")
+SECRETS = ("CLIENT_ID", "CLIENT_SECRET", "ACCESS_TOKEN", "REFRESH_TOKEN")
+#: One attempt before the 401 plus the single retry the runner allows.
+TRY_AND_RETRY = 2
 
 
 def _stub_sdk() -> types.ModuleType:
@@ -68,9 +70,14 @@ def _stub_sdk() -> types.ModuleType:
         except KeyError:
             raise KeyError(f"secret {name} is not set; run facet secret set") from None
 
+    def renew_secret(name: str, value: str) -> None:
+        stub.renewals.append((name, value))  # type: ignore[attr-defined]
+
     stub.Request = Request  # type: ignore[attr-defined]
     stub.Runner = Runner  # type: ignore[attr-defined]
     stub.secret = secret  # type: ignore[attr-defined]
+    stub.renew_secret = renew_secret  # type: ignore[attr-defined]
+    stub.renewals = []  # type: ignore[attr-defined]
     return stub
 
 
@@ -79,8 +86,8 @@ STUB = _stub_sdk()
 
 def _load_runner() -> Any:
     sys.modules["facet_runner_sdk"] = STUB
-    if "x_runner" in sys.modules:
-        return sys.modules["x_runner"]
+    for name in ("x_runner", "x_client"):
+        sys.modules.pop(name, None)
     spec = importlib.util.spec_from_file_location("x_runner", PACKAGE / "runner.py")
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -94,7 +101,7 @@ RUNNER = _load_runner()
 
 
 class FakeNet:
-    """The whole network: the account, uploads, posts and reads on demand."""
+    """The whole network: auth, the account, uploads, posts and reads on demand."""
 
     def __init__(self) -> None:
         self.posts: dict[str, dict[str, Any]] = {}
@@ -102,6 +109,30 @@ class FakeNet:
         self.alts: list[dict[str, str]] = []
         self.counter = 0
         self.reads = 0
+        self.refreshes = 0
+        self.rotate = True
+        self.refresh_error: Exception | None = None
+        self.authorized = {"access-token": "fresh-access", "refresh-token": "fresh-refresh"}
+        self.authorize_error: Exception | None = None
+        self.seen_redirects: list[str] = []
+
+    def refresh_tokens(self, client_id: str, client_secret: str, refresh_token: str) -> Any:
+        self.refreshes += 1
+        assert (client_id, client_secret, refresh_token) == ("s3cr3t", "s3cr3t", "s3cr3t")
+        if self.refresh_error is not None:
+            raise self.refresh_error
+        tokens_cls = RUNNER.x_client.Tokens
+        return tokens_cls(
+            access_token="fresh-access",
+            refresh_token="fresh-refresh" if self.rotate else None,
+        )
+
+    def authorize(self, client_id: str, client_secret: str, redirect_uri: str) -> dict[str, str]:
+        self.seen_redirects.append(redirect_uri)
+        if self.authorize_error is not None:
+            raise self.authorize_error
+        assert (client_id, client_secret) == ("s3cr3t", "s3cr3t")
+        return dict(self.authorized)
 
     def whoami(self) -> dict[str, Any]:
         return {"id": USER_ID, "name": "Laboratorio", "username": HANDLE}
@@ -144,26 +175,29 @@ def net(monkeypatch: pytest.MonkeyPatch) -> FakeNet:
     fake = FakeNet()
     for name in SECRETS:
         monkeypatch.setenv(f"FACET_SECRET_{name}", "s3cr3t")
-    monkeypatch.setattr(RUNNER.x_client, "whoami", lambda keys: fake.whoami())
-    monkeypatch.setattr(RUNNER.x_client, "probe_write", lambda keys: fake.probe_write())
+    STUB.renewals.clear()
+    monkeypatch.setattr(RUNNER.x_client, "refresh_tokens", fake.refresh_tokens)
+    monkeypatch.setattr(RUNNER.x_client, "authorize", fake.authorize)
+    monkeypatch.setattr(RUNNER.x_client, "whoami", lambda token: fake.whoami())
+    monkeypatch.setattr(RUNNER.x_client, "probe_write", lambda token: fake.probe_write())
     monkeypatch.setattr(
         RUNNER.x_client,
         "upload_media",
-        lambda keys, data, mime, cat: fake.upload_media(data, mime, cat),
+        lambda token, data, mime, cat: fake.upload_media(data, mime, cat),
     )
     monkeypatch.setattr(
         RUNNER.x_client,
         "set_alt_text",
-        lambda keys, media_id, alt: fake.set_alt_text(media_id, alt),
+        lambda token, media_id, alt: fake.set_alt_text(media_id, alt),
     )
     monkeypatch.setattr(
         RUNNER.x_client,
         "create_post",
-        lambda keys, text, **kwargs: fake.create_post(
+        lambda token, text, **kwargs: fake.create_post(
             text, media_ids=kwargs.get("media_ids"), reply_to=kwargs.get("reply_to")
         ),
     )
-    monkeypatch.setattr(RUNNER.x_client, "get_posts", lambda keys, ids: fake.get_posts(ids))
+    monkeypatch.setattr(RUNNER.x_client, "get_posts", lambda token, ids: fake.get_posts(ids))
     return fake
 
 
@@ -188,13 +222,123 @@ def _request(verb: str, tmp_path: Path, data: dict[str, Any]) -> Any:
     return STUB.Request({"verb": verb, "capability": "x.post", **data})
 
 
+def test_run_refreshes_before_the_first_request_and_stores_both_tokens(
+    tmp_path: Path, png: Path, net: FakeNet
+) -> None:
+    req = _request("run", tmp_path, {"inputs": _inputs(png), "out_dir": str(tmp_path)})
+    result = RUNNER.runner._verbs["run"](req)
+    assert result["post"]["account"] == "@lab"
+    assert net.refreshes == 1
+    assert ("access-token", "fresh-access") in STUB.renewals
+    assert ("refresh-token", "fresh-refresh") in STUB.renewals
+
+
+def test_a_refresh_without_a_rotation_stores_only_the_access_token(
+    tmp_path: Path, png: Path, net: FakeNet
+) -> None:
+    net.rotate = False
+    req = _request("run", tmp_path, {"inputs": _inputs(png), "out_dir": str(tmp_path)})
+    RUNNER.runner._verbs["run"](req)
+    assert ("access-token", "fresh-access") in STUB.renewals
+    assert [name for name, _ in STUB.renewals].count("refresh-token") == 0
+
+
+def test_a_401_refreshes_once_and_retries_once(
+    tmp_path: Path, png: Path, net: FakeNet, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = {"count": 0}
+    real_whoami = net.whoami
+
+    def flaky() -> dict[str, Any]:
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RUNNER.x_client.XError("GET /2/users/me", 401, "expired")
+        return real_whoami()
+
+    monkeypatch.setattr(RUNNER.x_client, "whoami", lambda token: flaky())
+    req = _request("run", tmp_path, {"inputs": _inputs(png), "out_dir": str(tmp_path)})
+    result = RUNNER.runner._verbs["run"](req)
+    assert result["post"]["account"] == "@lab"
+    assert net.refreshes == TRY_AND_RETRY
+    assert calls["count"] == TRY_AND_RETRY
+
+
+def test_a_second_401_fails_instead_of_retrying_again(
+    tmp_path: Path, png: Path, net: FakeNet, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def refused(token: str) -> dict[str, Any]:
+        raise RUNNER.x_client.XError("GET /2/users/me", 401, "expired")
+
+    monkeypatch.setattr(RUNNER.x_client, "whoami", refused)
+    req = _request("run", tmp_path, {"inputs": _inputs(png), "out_dir": str(tmp_path)})
+    with pytest.raises(ValueError, match="X refused"):
+        RUNNER.runner._verbs["run"](req)
+    assert net.refreshes == TRY_AND_RETRY
+
+
+def test_run_refreshes_once_and_retries_a_post_that_401s(
+    tmp_path: Path, png: Path, net: FakeNet, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = {"count": 0}
+
+    def flaky(token: str, text: str, **kwargs: Any) -> dict[str, str]:
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RUNNER.x_client.XError("POST /2/tweets", 401, "expired")
+        return net.create_post(
+            text, media_ids=kwargs.get("media_ids"), reply_to=kwargs.get("reply_to")
+        )
+
+    monkeypatch.setattr(RUNNER.x_client, "create_post", flaky)
+    req = _request("run", tmp_path, {"inputs": _inputs(png), "out_dir": str(tmp_path)})
+    result = RUNNER.runner._verbs["run"](req)
+    assert [entry["url"] for entry in result["post"]["posts"]] == [
+        "https://x.com/i/status/1900000000000000001",
+        "https://x.com/i/status/1900000000000000002",
+    ]
+    assert net.refreshes == TRY_AND_RETRY
+    assert calls["count"] == 1 + TRY_AND_RETRY
+
+
+def test_run_spends_no_refresh_when_a_post_is_refused_without_a_401(
+    tmp_path: Path, png: Path, net: FakeNet, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def refused(token: str, text: str, **kwargs: Any) -> dict[str, str]:
+        raise RUNNER.x_client.XError("POST /2/tweets", 403, "read only token")
+
+    monkeypatch.setattr(RUNNER.x_client, "create_post", refused)
+    req = _request("run", tmp_path, {"inputs": _inputs(png), "out_dir": str(tmp_path)})
+    with pytest.raises(ValueError, match="post 1"):
+        RUNNER.runner._verbs["run"](req)
+    assert net.refreshes == 1
+
+
+def test_a_failed_refresh_names_logout_then_login(tmp_path: Path, png: Path, net: FakeNet) -> None:
+    net.refresh_error = RUNNER.x_client.XError("POST /2/oauth2/token", 400, "invalid_grant")
+    req = _request("run", tmp_path, {"inputs": _inputs(png), "out_dir": str(tmp_path)})
+    with pytest.raises(ValueError, match="facet auth logout x"):
+        RUNNER.runner._verbs["run"](req)
+    with pytest.raises(ValueError, match="facet auth login x"):
+        RUNNER.runner._verbs["run"](
+            _request(
+                "verify",
+                tmp_path,
+                {
+                    "inputs": _inputs(png),
+                    "post": {"posts": [{"id": "1", "url": "https://x.com/i/status/1"}]},
+                    "sources": [],
+                },
+            )
+        )
+
+
 def test_run_sends_a_thread_of_replies_with_one_record_each(
     tmp_path: Path, png: Path, net: FakeNet
 ) -> None:
     req = _request("run", tmp_path, {"inputs": _inputs(png), "out_dir": str(tmp_path)})
     result = RUNNER.runner._verbs["run"](req)
     post = result["post"]
-    assert result["tool"] == {"name": "X", "version": "0.1.1"}
+    assert result["tool"] == {"name": "X", "version": "0.2.0"}
     assert post["network"] == "x"
     assert post["account"] == "@lab"
     assert post["state"] == "published"
@@ -218,6 +362,17 @@ def test_run_uploads_the_image_with_alt_text(tmp_path: Path, png: Path, net: Fak
     assert net.alts == [{"media_id": "media1", "alt": "La escuadra sobre la mesa."}]
     assert net.posts["1900000000000000001"]["attachments"] == {"media_keys": ["media1"]}
     assert net.posts["1900000000000000002"]["attachments"] == {"media_keys": []}
+
+
+def test_run_sends_no_media_ids_for_a_text_only_thread(tmp_path: Path, net: FakeNet) -> None:
+    inputs = {"posts": [{"text": "Solo texto."}], "images": []}
+    req = _request("run", tmp_path, {"inputs": inputs, "out_dir": str(tmp_path)})
+    result = RUNNER.runner._verbs["run"](req)
+    assert [entry["url"] for entry in result["post"]["posts"]] == [
+        "https://x.com/i/status/1900000000000000001"
+    ]
+    assert net.uploads == []
+    assert net.posts["1900000000000000001"]["attachments"] == {"media_keys": []}
 
 
 def test_run_refuses_over_long_text_before_anything_leaves(
@@ -378,6 +533,33 @@ def test_preview_of_a_text_only_thread_lists_no_images(tmp_path: Path) -> None:
     ]
 
 
+def test_auth_returns_the_secrets_map(tmp_path: Path, net: FakeNet) -> None:
+    req = _request("auth", tmp_path, {"inputs": {}})
+    result = RUNNER.runner._verbs["auth"](req)
+    assert result == {"secrets": net.authorized}
+    assert net.seen_redirects == ["http://127.0.0.1:8080/callback"]
+
+
+def test_auth_honours_a_redirect_uri_input(tmp_path: Path, net: FakeNet) -> None:
+    req = _request("auth", tmp_path, {"inputs": {"redirect-uri": "http://127.0.0.1:9000/callback"}})
+    RUNNER.runner._verbs["auth"](req)
+    assert net.seen_redirects == ["http://127.0.0.1:9000/callback"]
+
+
+def test_auth_refuses_without_the_stored_app_pair(
+    tmp_path: Path, net: FakeNet, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("FACET_SECRET_CLIENT_ID")
+    with pytest.raises(ValueError, match="client-id"):
+        RUNNER.runner._verbs["auth"](_request("auth", tmp_path, {"inputs": {}}))
+
+
+def test_auth_reports_a_sign_in_failure(tmp_path: Path, net: FakeNet) -> None:
+    net.authorize_error = RUNNER.x_client.XError("authorize", None, "no sign-in code arrived")
+    with pytest.raises(ValueError, match="no sign-in code"):
+        RUNNER.runner._verbs["auth"](_request("auth", tmp_path, {"inputs": {}}))
+
+
 def test_doctor_quick_checks_client_rates_and_secrets(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -387,16 +569,16 @@ def test_doctor_quick_checks_client_rates_and_secrets(
     checks = {check["name"]: check for check in RUNNER.runner._verbs["doctor"](req)["checks"]}
     assert set(checks) == {
         "imports",
-        "consumer-key",
-        "consumer-secret",
+        "client-id",
+        "client-secret",
         "access-token",
-        "access-token-secret",
+        "refresh-token",
     }
     assert all(check["ok"] for check in checks.values())
     assert all("s3cr3t" not in check["detail"] for check in checks.values())
 
 
-def test_doctor_quick_names_a_missing_secret(
+def test_doctor_quick_names_a_missing_token_with_the_sign_in(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     for name in SECRETS:
@@ -405,7 +587,7 @@ def test_doctor_quick_names_a_missing_secret(
     req = _request("doctor", tmp_path, {"depth": "quick"})
     checks = {check["name"]: check for check in RUNNER.runner._verbs["doctor"](req)["checks"]}
     assert checks["access-token"]["ok"] is False
-    assert "facet secret set" in checks["access-token"]["fix"]
+    assert "run facet auth login x" in checks["access-token"]["fix"]
 
 
 def test_doctor_full_names_the_account_and_states_the_check_cost(
@@ -421,16 +603,15 @@ def test_doctor_full_names_the_account_and_states_the_check_cost(
     assert "before creating a post" in checks["write"]["detail"]
 
 
-def test_doctor_full_names_a_read_only_token(
+def test_doctor_full_names_a_token_without_the_grant(
     tmp_path: Path, net: FakeNet, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(RUNNER.x_client, "probe_write", lambda keys: False)
+    monkeypatch.setattr(RUNNER.x_client, "probe_write", lambda token: False)
     req = _request("doctor", tmp_path, {"depth": "full"})
     checks = {check["name"]: check for check in RUNNER.runner._verbs["doctor"](req)["checks"]}
     assert checks["write"]["ok"] is False
     assert "cannot write" in checks["write"]["detail"]
-    assert "Read and write" in checks["write"]["fix"]
-    assert "facet secret set x access-token" in checks["write"]["fix"]
+    assert "facet auth login x" in checks["write"]["fix"]
 
 
 def test_doctor_full_reports_a_failed_sign_in(
@@ -442,6 +623,11 @@ def test_doctor_full_reports_a_failed_sign_in(
     def _refused(*args: Any, **kwargs: Any) -> dict[str, Any]:
         raise RUNNER.x_client.XError("GET /2/users/me", 403, "Forbidden")
 
+    monkeypatch.setattr(
+        RUNNER.x_client,
+        "refresh_tokens",
+        lambda *args: RUNNER.x_client.Tokens("tok", "ref"),
+    )
     monkeypatch.setattr(RUNNER.x_client, "whoami", _refused)
     req = _request("doctor", tmp_path, {"depth": "full"})
     checks = {check["name"]: check for check in RUNNER.runner._verbs["doctor"](req)["checks"]}

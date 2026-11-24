@@ -1,6 +1,8 @@
 """The x package runner: post a thread with its cost up front, then read it back.
 
-Five verbs on the runner SDK. ``dry-run`` sends nothing: it renders every
+Six verbs on the runner SDK. ``auth`` runs the lab's OAuth 2.0 sign-in
+through the browser and stores the token pair through facet's secrets
+store. ``dry-run`` sends nothing: it renders every
 post, counts its weighted length the way X does (a URL counts as a fixed
 length from the bundled rates, emoji and CJK twice), prices every post,
 the read-back and the account read from those rates and shows them item by
@@ -20,15 +22,17 @@ import re
 import sys
 import tomllib
 import unicodedata
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from functools import partial
+from http import HTTPStatus
 from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import x_client
-from facet_runner_sdk import Request, Runner, secret
+from facet_runner_sdk import Request, Runner, renew_secret, secret
 from x_client import XError
 
 runner = Runner()
@@ -65,11 +69,13 @@ IMAGE_MIME = {
     ".webp": "image/webp",
 }
 URL_RE = re.compile(r"https?://[^\s]+", re.IGNORECASE)
-#: What fixes a token that may not write.
+#: What fixes a token that may not write: the sign-in grants the scopes again.
 WRITE_FIX = (
-    "set the app's permission to Read and write, generate a new access token, "
-    "then run facet secret set x access-token"
+    "check the app's User authentication settings grant the posting scopes, "
+    "then run facet auth logout x and facet auth login x"
 )
+#: What fixes a refresh that fails: the stored pair is spent, so sign in again.
+REFRESH_FIX = "run facet auth logout x then facet auth login x"
 
 
 @dataclass(frozen=True)
@@ -119,22 +125,77 @@ def _tool() -> dict[str, str]:
     return {"name": str(manifest["tool_name"]), "version": str(manifest["version"])}
 
 
-def _credentials() -> x_client.Keys:
-    """The developer app's keys and the brand account's tokens."""
-    return x_client.Keys(
-        secret("consumer-key"),
-        secret("consumer-secret"),
-        secret("access-token"),
-        secret("access-token-secret"),
-    )
-
-
-def _account(keys: x_client.Keys) -> str:
-    """The brand account's handle, read at send time so a refusal sends nothing."""
+def _stored(name: str) -> str:
+    """One stored secret; a missing one names the sign-in that stores it."""
     try:
-        user = x_client.whoami(keys)
+        return secret(name)
+    except KeyError as exc:
+        raise ValueError(str(exc)) from exc
+
+
+def _credentials() -> tuple[str, str]:
+    """The developer app's OAuth 2.0 client ID and secret."""
+    return _stored("client-id"), _stored("client-secret")
+
+
+def _refresh() -> str:
+    """Trade the stored refresh token for a fresh pair, kept via store-back.
+
+    Both renewed tokens ride facet's store-back mechanism at once, so a
+    rotated token is kept even when the verb fails later; a renewed token
+    never lives only in this process's memory.
+    """
+    client_id, client_secret = _credentials()
+    refresh_token = _stored("refresh-token")
+    try:
+        tokens = x_client.refresh_tokens(client_id, client_secret, refresh_token)
     except XError as exc:
-        raise ValueError(f"the account could not be read: {exc}") from exc
+        raise ValueError(f"the token refresh failed: {exc}; {REFRESH_FIX}") from exc
+    renew_secret("access-token", tokens.access_token)
+    if tokens.refresh_token:
+        renew_secret("refresh-token", tokens.refresh_token)
+    return tokens.access_token
+
+
+def _with_token(action: Callable[[str], Any]) -> tuple[Any, str]:
+    """Run ``action`` with a working token, refreshing once on a 401.
+
+    The refresh rides the store-back mechanism before the first request,
+    so every verb starts from a fresh pair; a 401 refreshes once more and
+    retries once, and anything else X refuses fails with X's own reason.
+    """
+    access = _refresh()
+    try:
+        return action(access), access
+    except XError as exc:
+        if exc.status != HTTPStatus.UNAUTHORIZED:
+            raise ValueError(f"X refused: {exc}") from exc
+    fresh = _refresh()
+    try:
+        return action(fresh), fresh
+    except XError as exc:
+        raise ValueError(f"X refused: {exc}") from exc
+
+
+def _send(action: Callable[[str], Any], token: str) -> tuple[Any, str]:
+    """One request with the current token; a 401 refreshes once and retries once.
+
+    The verb already refreshed before its first request, so no refresh is
+    spent up front here: a 401 means the token died mid-verb, and only then
+    is the stored refresh token traded once and the one request replayed.
+    """
+    try:
+        return action(token), token
+    except XError as exc:
+        if exc.status != HTTPStatus.UNAUTHORIZED:
+            raise
+    fresh = _refresh()
+    return action(fresh), fresh
+
+
+def _account(token: str) -> str:
+    """The brand account's handle, read at send time so a refusal sends nothing."""
+    user = x_client.whoami(token)
     username = user.get("username")
     if not isinstance(username, str) or not username:
         raise ValueError("the account read no username")
@@ -436,8 +497,8 @@ def _public_url(post_id: str) -> str:
     return f"https://x.com/i/status/{post_id}"
 
 
-def _upload(keys: x_client.Keys, index: int, entry: Attachment) -> str:
-    """Upload one file and answer its media id."""
+def _upload(token: str, index: int, entry: Attachment) -> str:
+    """Upload one file and answer its media id; an X refusal rides unchanged."""
     suffix = entry.path.suffix.lower()
     if entry.kind == "image":
         mime = IMAGE_MIME.get(suffix)
@@ -454,12 +515,9 @@ def _upload(keys: x_client.Keys, index: int, entry: Attachment) -> str:
         data = entry.path.read_bytes()
     except OSError:
         raise ValueError(f"post {index}: {entry.path} cannot be read") from None
-    try:
-        media_id = x_client.upload_media(keys, data, mime, category)
-        if entry.kind == "image" and entry.alt:
-            x_client.set_alt_text(keys, media_id, entry.alt)
-    except XError as exc:
-        raise ValueError(f"post {index}: {exc}") from exc
+    media_id = x_client.upload_media(token, data, mime, category)
+    if entry.kind == "image" and entry.alt:
+        x_client.set_alt_text(token, media_id, entry.alt)
     return media_id
 
 
@@ -475,15 +533,26 @@ def run(req: Request) -> dict[str, Any]:
         if _char_count(text, rates) > WEIGHT_LIMIT:
             raise ValueError(f"post {index}: text is over the {WEIGHT_LIMIT} limit")
         _check_files(index, media[index])
-    keys = _credentials()
-    account = _account(keys)
+    account, token = _with_token(_account)
     sent: list[dict[str, str]] = []
     reply_to: str | None = None
     for index, post in enumerate(posts, start=1):
-        media_ids = [_upload(keys, index, entry) for entry in media[index]]
+        media_ids: list[str] = []
+        for entry in media[index]:
+            try:
+                media_id, token = _send(partial(_upload, index=index, entry=entry), token)
+            except XError as exc:
+                raise ValueError(f"post {index}: {exc}") from exc
+            media_ids.append(media_id)
         try:
-            created = x_client.create_post(
-                keys, str(post["text"]), media_ids=media_ids or None, reply_to=reply_to
+            created, token = _send(
+                partial(
+                    x_client.create_post,
+                    text=str(post["text"]),
+                    media_ids=media_ids or None,
+                    reply_to=reply_to,
+                ),
+                token,
             )
         except XError as exc:
             raise ValueError(f"post {index}: {exc}") from exc
@@ -525,15 +594,14 @@ def verify(req: Request) -> dict[str, Any]:
         media = _attachments(inputs, _image_rows(dict(req.inputs)))
         texts = [post.get("text") for post in inputs]
         counts = [len(media[index]) for index in range(1, len(inputs) + 1)]
-    keys = _credentials()
     ids: list[str] = []
     for index, ref in enumerate(refs, start=1):
         if not isinstance(ref, dict) or not isinstance(ref.get("id"), str):
             raise ValueError(f"post {index}: the receipt names no id")
         ids.append(str(ref["id"]))
     try:
-        found = x_client.get_posts(keys, ids)
-    except XError as exc:
+        found, _ = _with_token(lambda token: x_client.get_posts(token, ids))
+    except ValueError as exc:
         raise ValueError(f"the read-back failed: {exc}") from exc
     by_id = {post.get("id"): post for post in found if isinstance(post, dict)}
     measured: list[dict[str, Any]] = []
@@ -636,25 +704,32 @@ def _missing_secret(name: str) -> str | None:
 def _doctor_secrets() -> list[dict[str, Any]]:
     """All four credentials are stored; a value never appears in a detail."""
     checks = []
-    for name in ("consumer-key", "consumer-secret", "access-token", "access-token-secret"):
+    for name in ("client-id", "client-secret", "access-token", "refresh-token"):
         missing = _missing_secret(name)
         if missing is None:
             checks.append(_check(name, True, f"{name} is stored"))
+        elif name in ("access-token", "refresh-token"):
+            checks.append(
+                _check(
+                    name,
+                    False,
+                    f"{name} is not stored",
+                    f"run facet auth login x to sign in and store {name}",
+                )
+            )
         else:
             checks.append(_check(name, False, f"{name} is not stored", missing))
     return checks
 
 
 def _doctor_session() -> dict[str, Any]:
-    """Read the own account with the stored keys and state what that read costs."""
+    """Read the own account with a working token and state what that read costs."""
     try:
-        keys = _credentials()
-    except KeyError as exc:
-        return _check("session", False, str(exc), str(exc))
-    try:
-        user = x_client.whoami(keys)
-    except XError as exc:
+        user, _ = _with_token(x_client.whoami)
+    except ValueError as exc:
         return _check("session", False, f"sign-in failed: {exc}", WRITE_FIX)
+    if not isinstance(user, dict):
+        return _check("session", False, "the account read no user", WRITE_FIX)
     rates = _rates()
     name = user.get("name") or user.get("username") or ""
     return _check(
@@ -666,14 +741,10 @@ def _doctor_session() -> dict[str, Any]:
 
 
 def _doctor_write() -> dict[str, Any]:
-    """Probe the token's write access; a refusal names the permission to change."""
+    """Probe the token's write access; a refusal names the sign-in that grants it."""
     try:
-        keys = _credentials()
-    except KeyError as exc:
-        return _check("write", False, str(exc), str(exc))
-    try:
-        allowed = x_client.probe_write(keys)
-    except XError as exc:
+        allowed, _ = _with_token(x_client.probe_write)
+    except ValueError as exc:
         return _check("write", False, f"the write probe failed: {exc}", WRITE_FIX)
     if allowed:
         return _check(
@@ -695,6 +766,23 @@ def doctor(req: Request) -> dict[str, Any]:
         if session["ok"]:
             checks.append(_doctor_write())
     return {"checks": checks}
+
+
+@runner.verb("auth")
+def auth(req: Request) -> dict[str, Any]:
+    try:
+        client_id, client_secret = _credentials()
+    except ValueError as exc:
+        raise ValueError(str(exc)) from exc
+    redirect = req.inputs.get("redirect-uri")
+    if redirect is not None and (not isinstance(redirect, str) or not redirect):
+        raise ValueError("the redirect URI is not a URI")
+    uri = str(redirect) if isinstance(redirect, str) else x_client.DEFAULT_REDIRECT_URI
+    try:
+        secrets = x_client.authorize(client_id, client_secret, uri)
+    except XError as exc:
+        raise ValueError(str(exc)) from exc
+    return {"secrets": secrets}
 
 
 runner.main()

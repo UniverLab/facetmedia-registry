@@ -1,5 +1,5 @@
 name = "x"
-version = "0.1.1"
+version = "0.2.0"
 requires_facet = ">=0.1.0b2,<0.2"
 protocol = 1
 provider = "X Corp · X API v2"
@@ -27,28 +27,30 @@ subject = "X API (X Corp)"
 spdx = "LicenseRef-X-API-Terms"
 
 [[secrets]]
-name = "consumer-key"
-description = "The developer app's API key (consumer key), shown once when the app is created"
+name = "client-id"
+description = "The lab's X developer app client ID, the OAuth 2.0 key shown once with the client secret"
 required = true
-obtain = "Shown once in the Developer Console at developer.x.com when the lab's developer app is created"
+obtain = "Shown once in the Developer Console at developer.x.com, in the app's Keys and Tokens tab"
 
 [[secrets]]
-name = "consumer-secret"
-description = "The developer app's API secret (consumer secret), shown once with the key"
+name = "client-secret"
+description = "The lab's X developer app client secret, the OAuth 2.0 key shown once with the client ID"
 required = true
-obtain = "Shown once in the Developer Console at developer.x.com with the API key when the app is created"
+obtain = "Shown once in the Developer Console at developer.x.com, in the app's Keys and Tokens tab"
 
 [[secrets]]
 name = "access-token"
-description = "The brand account's access token, generated after the app's permission is set to read and write"
+description = "The brand account's OAuth 2.0 access token, stored by facet auth login x after sign-in"
 required = true
-obtain = "Generated in the app's Keys and tokens tab after its Settings permission is set to Read and write"
+obtain = "Stored by the browser sign-in after you authorize the app with the posting scopes, never typed by hand"
+produced_by = "auth"
 
 [[secrets]]
-name = "access-token-secret"
-description = "The brand account's access token secret, generated with the access token"
+name = "refresh-token"
+description = "The brand account's OAuth 2.0 refresh token, stored by facet auth login x after sign-in"
 required = true
-obtain = "Generated with the access token in the app's Keys and tokens tab"
+obtain = "Stored by the browser sign-in after you authorize the app with the posting scopes, never typed by hand"
+produced_by = "auth"
 
 [capabilities.post]
 summary = "Post text with images or video to the lab's X brand account, one post or a thread, then read it back — the cost shown before the send."

@@ -1,6 +1,7 @@
 # A two-post thread: the first post carries the bench photo with alt text,
 # the second replies with the catalogue link, priced above a text-only post.
 # Dry-run only: facet run thread.toml --dry-run sends nothing.
+# Connect the account first with facet auth login x in your own terminal.
 capability = "x.post"
 
 [[inputs.posts]]

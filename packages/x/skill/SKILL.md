@@ -68,45 +68,54 @@ beside it; dry-run it with `facet run thread.toml --dry-run`.
 ## Authentication
 
 The agent never handles a secret: it never asks the user to paste one
-into the conversation, and it never runs `facet secret set` with a
-value. The guided way to connect is `facet auth login x`: it walks
-the user through every secret below. In a non-interactive shell, connecting
-the account is the user's own work in their own terminal instead, one
-`facet secret set` fallback command per secret, in this order:
+into the conversation, and it never runs `facet secret set` or
+`facet auth` with a value. The guided way to connect is
+`facet auth login x`: it walks the user through every secret below and
+opens the browser sign-in where needed. In a non-interactive shell,
+connecting the account is the user's own work in their own terminal
+instead, one `facet secret set` fallback command per typed secret, in
+this order:
 
 1. The user creates the lab's own developer app in the Developer
    Console (developer.x.com), one app for the brand account, and loads
    credits in the same Console: X is pay per use, and a run with no
-   credits is refused. The API key and secret are shown once when the
-   app is created — they are saved then.
-2. The user opens the app's Settings and sets its permission to **Read
-   and write** before generating the access token. A token generated
-   earlier stays read-only: posting with it is refused, so a new one is
-   generated after the switch.
-3. The user generates the brand account's access token and secret inside
-   the app's **Keys and tokens** tab and stores the four secret names
-   the manifest declares, one command each, typed in their own
-   terminal — each command reads the value from a hidden prompt, so it
-   never rides a command line: `facet secret set x consumer-key` (the
-   app's API key), then `facet secret set x consumer-secret` (the app's
-   API secret), then `facet secret set x access-token` (the brand
-   account's access token) and then
-   `facet secret set x access-token-secret` (the token's secret).
-4. The user confirms with `facet doctor post --full`: it reads the own
-   account with the stored keys, reports which account they open, and
-   probes write access with a request the network rejects before creating
-   a post. The read costs $0.010; the probe creates nothing.
+   credits is refused.
+2. The user opens the app's User authentication settings and sets it up
+   as a confidential client: the app type is **Web App, Automated App
+   or Bot**, with the posting scopes (`tweet.read`, `tweet.write`,
+   `users.read`, `media.write`, `offline.access`). The Client ID and
+   Client Secret are the OAuth 2.0 keys shown once in the app's **Keys
+   and Tokens** tab — they are saved then.
+3. The user registers the redirect URL in the app's authentication
+   settings: `http://127.0.0.1:8080/callback` (a loopback address, so
+   the sign-in returns to the user's own machine).
+4. The user stores the two typed secrets, one command each, typed in
+   their own terminal — each command reads the value from a hidden
+   prompt, so it never rides a command line:
+   `facet secret set x client-id` (the app's OAuth 2.0 Client ID), then
+   `facet secret set x client-secret` (the app's OAuth 2.0 Client
+   Secret).
+5. The user runs `facet auth login x` in their own terminal. It opens
+   the sign-in address, the user authorizes the app for the brand
+   account that will publish the posts, and the access and refresh
+   tokens are stored through facet's secrets store.
+6. The user confirms with `facet doctor post --full`: it reads the own
+   account with a fresh token, reports which account it opens, and
+   probes write access with a request the network rejects before
+   creating a post. The read costs $0.010; the probe creates nothing.
 
-Usual failures: `consumer-key is not stored` (or any of the four names)
-means step 3 was skipped for that name; a sign-in that fails with all
-four stored means a pasted value carries a stray space or belongs to
-another app — regenerate it in the same tab and store it again. The
-doctor's `write` check failing means the token is read-only: set the app
-to **Read and write**, generate a new access token and store it again. A
-403 on the first post with a fresh token means the same thing. A refused
-run with no other change means the credits ran out: load more in the
-Console. An access token works only for the account that created the
-app: tokens made on a personal account never open the brand account.
+Usual failures: `client-id is not stored` (or any of the four names)
+means a step was skipped — store the app values and run
+`facet auth login x` again. A sign-in that opens the wrong account means
+the user authorized a personal account instead of the lab's: run
+`facet auth login x` again and pick the lab's account. The doctor's
+`write` check failing means the posting scopes were not granted at
+sign-in: check the app's authentication settings and sign in again. A
+run refused with `access_token_invalid` after a long idle means the
+refresh failed: sign in again. A refused run with no other change means
+the credits ran out: load more in the Console. An access token works
+only for the account that authorized the app: tokens made on a personal
+account never open the brand account.
 
 ## Judging the result
 

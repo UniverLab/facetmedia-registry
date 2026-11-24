@@ -1,14 +1,15 @@
 """The x manifest: the publish facet's second outward package.
 
 The registry suite runs without the core, so the checks here read the
-manifest as data. The package is ``x`` 0.1.0 on the publish facet,
+manifest as data. The package is ``x`` 0.2.0 on the publish facet,
 floored at the facet release that brought it (0.1.0b2): older cores skip
 it before reading the rest. The capability is ``x.post`` of kind post,
 the one outward kind, with the post viewer; the credentials are the
-developer's app key and secret plus the brand account's access token and
-secret, all required; ``rates.json`` beside the runner is the dated
-price table no manifest key may carry; and ``index.toml`` is the only
-way the package reaches the registry.
+developer's OAuth 2.0 client ID and secret plus the brand account's
+access and refresh tokens from the browser sign-in, all required;
+``rates.json`` beside the runner is the dated price table no manifest
+key may carry; and ``index.toml`` is the only way the package reaches
+the registry.
 """
 
 from __future__ import annotations
@@ -38,7 +39,7 @@ URL_LENGTH = 23
 
 def test_the_package_is_publish_on_the_publish_facet() -> None:
     assert MANIFEST["name"] == "x"
-    assert MANIFEST["version"] == "0.1.1"
+    assert MANIFEST["version"] == "0.2.0"
     assert MANIFEST["requires_facet"] == ">=0.1.0b2,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["facet"] == "publish"
@@ -85,34 +86,42 @@ def test_the_rates_file_is_the_dated_price_table() -> None:
     assert rates["url_length"] == URL_LENGTH
 
 
-def test_the_secrets_are_the_app_keys_and_the_account_tokens() -> None:
+def test_the_secrets_are_the_client_pair_and_the_sign_in_tokens() -> None:
     secrets = {entry["name"]: entry for entry in MANIFEST["secrets"]}
     assert set(secrets) == {
-        "consumer-key",
-        "consumer-secret",
+        "client-id",
+        "client-secret",
         "access-token",
-        "access-token-secret",
+        "refresh-token",
     }
     for entry in secrets.values():
         assert entry["required"] is True
         assert entry["description"]
-    assert "api key" in secrets["consumer-key"]["description"].lower()
-    assert "secret" in secrets["consumer-secret"]["description"].lower()
+    assert "client id" in secrets["client-id"]["description"].lower()
+    assert "client secret" in secrets["client-secret"]["description"].lower()
     assert "access token" in secrets["access-token"]["description"].lower()
+    assert "refresh token" in secrets["refresh-token"]["description"].lower()
 
 
-def test_every_secret_says_where_to_get_it_and_none_is_browser_minted() -> None:
+def test_the_typed_secrets_say_where_to_get_them() -> None:
     for entry in MANIFEST["secrets"]:
         obtain = entry.get("obtain")
         assert isinstance(obtain, str) and obtain, entry["name"]
         assert "\n" not in obtain and "\r" not in obtain, entry["name"]
         assert len(obtain) <= MAX_OBTAIN_LEN, entry["name"]
     secrets = {entry["name"]: entry for entry in MANIFEST["secrets"]}
-    assert "developer.x.com" in secrets["consumer-key"]["obtain"]
-    assert "Keys and tokens" in secrets["access-token"]["obtain"]
-    assert "Read and write" in secrets["access-token"]["obtain"]
-    for entry in MANIFEST["secrets"]:
-        assert "produced_by" not in entry, entry["name"]
+    assert "developer.x.com" in secrets["client-id"]["obtain"]
+    assert "Keys and Tokens" in secrets["client-id"]["obtain"]
+    assert "OAuth 2.0" in secrets["client-secret"]["description"]
+
+
+def test_the_tokens_are_produced_by_the_sign_in() -> None:
+    secrets = {entry["name"]: entry for entry in MANIFEST["secrets"]}
+    for name in ("access-token", "refresh-token"):
+        assert secrets[name].get("produced_by") == "auth", name
+        assert "sign-in" in secrets[name]["obtain"], name
+    for name in ("client-id", "client-secret"):
+        assert "produced_by" not in secrets[name], name
 
 
 def test_the_capability_is_the_outward_post() -> None:

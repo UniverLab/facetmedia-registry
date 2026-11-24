@@ -55,27 +55,30 @@ def test_the_body_names_the_capability_and_the_piece() -> None:
 def test_the_auth_section_names_secrets_commands_and_confirmation() -> None:
     body = _body()
     assert "## Authentication" in body
-    assert "Read" in body and "write" in body
-    assert "consumer-key" in body and "access-token-secret" in body
+    assert "Automated App" in body
+    assert "confidential client" in body
+    assert "http://127.0.0.1:8080/callback" in body
+    flat = " ".join(body.split())
+    assert "client-id" in flat and "refresh token" in flat
+    assert "consumer-key" not in body and "access-token-secret" not in body
     assert "facet auth login x" in body
-    assert "facet secret set x consumer-key" in body
-    assert "facet secret set x consumer-secret" in body
-    assert "facet secret set x access-token" in body
-    assert "facet secret set x access-token-secret" in body
+    assert "facet secret set x client-id" in body
+    assert "facet secret set x client-secret" in body
     assert "facet doctor post --full" in body
 
 
 def test_the_auth_section_never_trades_in_secrets() -> None:
     flat = " ".join(_body().split())
     assert "never asks" in flat.lower() or "never ask" in flat.lower()
-    assert "never runs `facet secret set` with a value" in flat
+    assert "`facet auth` with a value" in flat
 
 
-def test_the_auth_section_names_credits_read_only_and_failures() -> None:
+def test_the_auth_section_names_credits_scopes_and_failures() -> None:
     flat = " ".join(_body().split())
     assert "credit" in flat.lower()
-    assert "read-only" in flat.lower()
+    assert "offline.access" in flat.lower()
     assert "no credits" in flat.lower() or "credits ran out" in flat.lower()
+    assert "wrong account" in flat.lower()
 
 
 def test_the_body_shows_the_cost_before_the_send() -> None:
@@ -93,6 +96,8 @@ def test_the_sources_file_cites_the_official_docs() -> None:
         "https://docs.x.com/x-api/posts/create-post",
         "https://docs.x.com/x-api/posts/get-posts-by-ids",
         "https://docs.x.com/x-api/media/quickstart/media-upload-chunked",
-        "https://docs.x.com/fundamentals/authentication/oauth-1-0a/api-key-and-secret",
+        "https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code",
+        "https://docs.x.com/fundamentals/authentication/oauth-2-0/refresh-token",
+        "https://docs.x.com/fundamentals/authentication/oauth-2-0/user-context",
     ):
         assert url in SOURCES, url
