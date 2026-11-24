@@ -65,27 +65,41 @@ own work in their own terminal instead, one `facet secret set` fallback command
 per typed secret, in this order:
 
 1. The user creates the lab's own app in the LinkedIn Developer Portal
-   and adds the **Share on LinkedIn** and **Sign In with LinkedIn using
-   OpenID Connect** products to it.
-2. The user requests the **`w_organization_social`** and
+   with the Create an app form: the App name is required; the LinkedIn
+   Page is required and must be a Company Page the user administers (not
+   a member profile page), it cannot be changed once the app is saved,
+   and a Page admin verifies the association — an individual developer
+   without a Company Page selects the default Company Page the products
+   offer, or creates one first with the form's "Create a new LinkedIn
+   Page" link; the App logo is required (square recommended, at least
+   100 px in one dimension); the Privacy policy URL is optional; and the
+   legal agreement must be accepted. The Client ID and the Client Secret
+   are on the app's Auth tab.
+2. The user adds the **Share on LinkedIn** and **Sign In with LinkedIn
+   using OpenID Connect** products to the app in the Products tab.
+3. The user requests the **`w_organization_social`** and
    **`r_organization_social`** scopes for the app. Both are granted
    only to apps tied to a Company Page the member administers, and the
    member must hold one of the **ADMINISTRATOR**,
    **DIRECT_SPONSORED_CONTENT_POSTER** or **CONTENT_ADMIN** roles —
    without the role the upload and the read-back fail.
-3. The user registers the redirect URI in the app's auth settings:
+4. The user registers the redirect URI in the app's auth settings:
    `http://localhost:8080/callback` (a loopback address, so the
-   sign-in returns to the user's own machine).
-4. The user stores the app values and the organization id, each from a
+   sign-in returns to the user's own machine). LinkedIn's help says to
+   add redirect URLs "via HTTPS" and does not say whether
+   `http://localhost` is accepted; when LinkedIn refuses that address
+   the sign-in verb's `redirect-uri` input takes an `https` address
+   instead.
+5. The user stores the app values and the organization id, each from a
    hidden prompt, never pasted in chat: `facet secret set linkedin
    client-id`, `facet secret set linkedin client-secret`, and
    `facet secret set linkedin org-id` with the numeric id (the digits
    of `urn:li:organization:{id}`).
-5. The user runs `facet auth linkedin` in their own terminal. It opens
+6. The user runs `facet auth linkedin` in their own terminal. It opens
    the sign-in address, the user authorizes the app for the member who
    holds the Company Page role, and the token pair is stored through
    facet's secrets store.
-6. The user confirms with `facet doctor linkedin --full`: it reports
+7. The user confirms with `facet doctor linkedin --full`: it reports
    which member the token opens and whether both organization scopes
    were granted with a Company Page role for the stored organization,
    so a post never lands on an unexpected account.

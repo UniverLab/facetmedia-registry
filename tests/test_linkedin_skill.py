@@ -54,6 +54,32 @@ def test_the_skill_warns_about_the_usual_failures() -> None:
     assert "never re-send" in lowered
 
 
+def test_the_skill_explains_the_create_app_form_before_the_client_id() -> None:
+    lowered = " ".join(SKILL.lower().split())
+    for step in (
+        "create an app",
+        "app name",
+        "company page",
+        "member profile page",
+        "cannot be changed",
+        "page admin",
+        "default company page",
+        "create a new linkedin page",
+        "app logo",
+        "square",
+        "100 px",
+        "privacy policy url",
+        "legal agreement",
+        "auth tab",
+        "products tab",
+        "via https",
+        "http://localhost",
+        "redirect-uri",
+    ):
+        assert step in lowered, step
+    assert "the digits of `urn:li:organization:{id}`" in lowered
+
+
 def test_the_skill_names_the_piece_shapes() -> None:
     assert "linkedin.post" in SKILL
     assert "author" in SKILL

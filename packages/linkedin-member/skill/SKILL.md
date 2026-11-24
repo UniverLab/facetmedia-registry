@@ -73,23 +73,38 @@ secret below and opens the browser sign-in. In a non-interactive shell,
 connecting the account is the user's own work in their own terminal
 instead, one `facet secret set` fallback command per typed secret:
 
-1. In the LinkedIn Developer Portal, the user opens the lab's app and
+1. The user creates the lab's own app in the LinkedIn Developer Portal
+   with the Create an app form: the App name is required; the LinkedIn
+   Page is required and must be a Company Page the user administers (not
+   a member profile page), it cannot be changed once the app is saved,
+   and a Page admin verifies the association — an individual developer
+   without a Company Page selects the default Company Page the products
+   offer, or creates one first with the form's "Create a new LinkedIn
+   Page" link; the App logo is required (square recommended, at least
+   100 px in one dimension); the Privacy policy URL is optional; and the
+   legal agreement must be accepted. The Client ID and the Client Secret
+   are on the app's Auth tab.
+2. In the LinkedIn Developer Portal, the user opens the lab's app and
    adds **Share on LinkedIn** and **Sign In with LinkedIn using OpenID Connect**
-   in the **Products** tab.
-2. In the **Auth** tab, the user copies the **Client ID** and **Client
+   in the **Products tab**.
+3. In the **Auth tab**, the user copies the **Client ID** and **Client
    Secret**, and registers the redirect URI
-   `http://localhost:8080/callback` (a loopback address, so the sign-in
-   returns to the user's own machine).
-3. The user stores the app credentials, each from a hidden prompt, never
+   `http://localhost:8080/callback` in the app's auth settings (a
+   loopback address, so the sign-in returns to the user's own machine).
+   LinkedIn's help says to add redirect URLs "via HTTPS" and does not
+   say whether `http://localhost` is accepted; when LinkedIn refuses
+   that address the sign-in verb's `redirect-uri` input takes an
+   `https` address instead.
+4. The user stores the app credentials, each from a hidden prompt, never
    pasted in chat: `facet secret set linkedin-member client-id` and
    `facet secret set linkedin-member client-secret`.
-4. The user runs `facet auth login linkedin-member` (or
+5. The user runs `facet auth login linkedin-member` (or
    `facet auth linkedin-member`) in their own terminal. It opens the
    sign-in address with scopes `openid profile w_member_social`, exchanges
    the code for an access token (and optional refresh token), reads
    `/v2/userinfo`, and stores `access-token`, `member-id` (the `sub`
    field), and `refresh-token` if issued.
-5. The user confirms with `facet doctor linkedin-member --full`: it
+6. The user confirms with `facet doctor linkedin-member --full`: it
    checks the stored secrets (treating `refresh-token` as optional, since
    self-serve apps may not receive one) and calls `/v2/userinfo` to
    report the signed-in member's name.

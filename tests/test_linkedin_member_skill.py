@@ -41,6 +41,36 @@ def test_the_skill_guides_the_sign_in_without_touching_a_secret() -> None:
     assert "never asks the user to paste" in lowered
 
 
+def test_the_skill_explains_the_create_app_form_before_the_client_id() -> None:
+    lowered = " ".join(SKILL.lower().split())
+    for step in (
+        "create an app",
+        "app name",
+        "company page",
+        "member profile page",
+        "cannot be changed",
+        "page admin",
+        "default company page",
+        "create a new linkedin page",
+        "app logo",
+        "square",
+        "100 px",
+        "privacy policy url",
+        "legal agreement",
+        "auth tab",
+        "products tab",
+        "via https",
+        "http://localhost",
+        "redirect-uri",
+    ):
+        assert step in lowered, step
+
+
+def test_the_skill_requests_only_the_member_scopes() -> None:
+    assert "openid profile w_member_social" in SKILL
+    assert "email" not in SKILL.lower()
+
+
 def test_the_skill_names_the_piece_shapes_and_pitfalls() -> None:
     assert "linkedin-member.post" in SKILL
     assert "post.toml" in SKILL

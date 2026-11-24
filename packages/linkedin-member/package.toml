@@ -30,13 +30,13 @@ spdx = "LicenseRef-LinkedIn-API-Terms"
 name = "client-id"
 description = "The lab's LinkedIn app client id, shown in the Developer Portal Auth tab"
 required = true
-obtain = "Shown in the lab's LinkedIn app Auth tab in the LinkedIn Developer Portal; add the Share on LinkedIn and Sign In with LinkedIn using OpenID Connect products in the Products tab"
+obtain = "Create an app in the LinkedIn Developer Portal (needs a Company Page you administer and a logo), add the Share on LinkedIn and Sign In with LinkedIn using OpenID Connect products in the Products tab, then copy the Client ID from the Auth tab"
 
 [[secrets]]
 name = "client-secret"
 description = "The lab's LinkedIn app client secret, shown with the client id in the Auth tab"
 required = true
-obtain = "Shown with the client id in the lab's LinkedIn app Auth tab in the LinkedIn Developer Portal"
+obtain = "Shown with the Client ID in the same app Auth tab in the LinkedIn Developer Portal"
 
 [[secrets]]
 name = "access-token"

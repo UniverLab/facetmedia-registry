@@ -79,6 +79,12 @@ def test_every_secret_says_where_to_get_it_and_only_tokens_are_browser_minted() 
             assert "produced_by" not in entry, entry["name"]
     secrets = {entry["name"]: entry for entry in MANIFEST["secrets"]}
     assert "Developer Portal" in secrets["client-id"]["obtain"]
+    assert "Create an app" in secrets["client-id"]["obtain"]
+    assert "Share on LinkedIn" in secrets["client-id"]["obtain"]
+    assert "Sign In with LinkedIn using OpenID Connect" in secrets["client-id"]["obtain"]
+    assert "Products tab" in secrets["client-id"]["obtain"]
+    assert "Auth tab" in secrets["client-id"]["obtain"]
+    assert "Auth tab" in secrets["client-secret"]["obtain"]
     assert "organization scopes" in secrets["access-token"]["obtain"]
     assert "urn:li:organization" in secrets["org-id"]["obtain"]
 
