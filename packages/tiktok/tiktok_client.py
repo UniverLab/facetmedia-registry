@@ -12,9 +12,11 @@ Requires: stdlib
 
 from __future__ import annotations
 
+import hashlib
 import http.server
 import json
 import secrets
+import string
 import threading
 import time
 import urllib.error
@@ -53,6 +55,10 @@ FAILED_STATUS = "FAILED"
 TOKEN_INVALID = "access_token_invalid"
 #: The error code TikTok answers when the grant misses a scope.
 SCOPE_MISSING = "scope_not_authorized"
+#: Unreserved PKCE verifier alphabet (RFC 7636).
+PKCE_ALPHABET = string.ascii_letters + string.digits + "-._~"
+#: Default PKCE verifier length (>= 64, <= 128).
+PKCE_VERIFIER_LEN = 64
 
 
 class TikTokError(Exception):
@@ -149,7 +155,17 @@ def _http_error(path_or_url: str, exc: urllib.error.HTTPError) -> TikTokError:
     return TikTokError(path_or_url, exc.code, detail)
 
 
-def authorize_url(client_key: str, redirect_uri: str, state: str) -> str:
+def make_verifier() -> str:
+    """Create a random PKCE code verifier from the unreserved character set."""
+    return "".join(secrets.choice(PKCE_ALPHABET) for _ in range(PKCE_VERIFIER_LEN))
+
+
+def challenge_of(verifier: str) -> str:
+    """Return TikTok's lowercase hexadecimal SHA-256 PKCE code challenge."""
+    return hashlib.sha256(verifier.encode("ascii")).hexdigest()
+
+
+def authorize_url(client_key: str, redirect_uri: str, state: str, code_challenge: str) -> str:
     """The browser address that starts the lab's OAuth sign-in."""
     query = urllib.parse.urlencode(
         {
@@ -158,12 +174,20 @@ def authorize_url(client_key: str, redirect_uri: str, state: str) -> str:
             "scope": ",".join(SCOPES),
             "redirect_uri": redirect_uri,
             "state": state,
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
         }
     )
     return f"{AUTHORIZE_URL}?{query}"
 
 
-def exchange_code(client_key: str, client_secret: str, code: str, redirect_uri: str) -> Tokens:
+def exchange_code(
+    client_key: str,
+    client_secret: str,
+    code: str,
+    redirect_uri: str,
+    code_verifier: str,
+) -> Tokens:
     """Trade the sign-in code for the token pair facet stores."""
     return _tokens(
         _call(
@@ -175,6 +199,7 @@ def exchange_code(client_key: str, client_secret: str, code: str, redirect_uri: 
                 "code": code,
                 "grant_type": "authorization_code",
                 "redirect_uri": redirect_uri,
+                "code_verifier": code_verifier,
             },
         )
     )
@@ -291,15 +316,25 @@ def publish_status(access_token: str, publish_id: str) -> tuple[str, str]:
 def authorize(client_key: str, client_secret: str, redirect_uri: str) -> dict[str, str]:
     """Run the browser sign-in and answer the secrets map facet stores."""
     state = secrets.token_urlsafe(16)
-    print(f"open this address and sign in:\n{authorize_url(client_key, redirect_uri, state)}")
+    verifier = make_verifier()
+    challenge = challenge_of(verifier)
+    print(f"register this redirect URI in your TikTok app:\n{redirect_uri}")
+    url = authorize_url(client_key, redirect_uri, state, challenge)
+    print(f"open this address and sign in:\n{url}")
     parsed = urllib.parse.urlparse(redirect_uri)
     if parsed.scheme != "http" or not parsed.hostname:
         raise TikTokError(AUTHORIZE_URL, None, "the redirect URI must be an http loopback address")
+    expected_path = parsed.path.removesuffix("/")
     code_holder: dict[str, str] = {}
 
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
-            query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            req_url = urllib.parse.urlparse(self.path)
+            if req_url.path.removesuffix("/") != expected_path:
+                self.send_response(404)
+                self.end_headers()
+                return
+            query = urllib.parse.parse_qs(req_url.query)
             if query.get("state", [""])[0] != state:
                 self.send_response(400)
                 self.end_headers()
@@ -324,7 +359,7 @@ def authorize(client_key: str, client_secret: str, redirect_uri: str) -> dict[st
     code = code_holder.get("code")
     if not code:
         raise TikTokError(AUTHORIZE_URL, None, "no sign-in code arrived; try again")
-    tokens = exchange_code(client_key, client_secret, code, redirect_uri)
+    tokens = exchange_code(client_key, client_secret, code, redirect_uri, verifier)
     return {
         "access-token": tokens.access_token,
         "refresh-token": tokens.refresh_token,

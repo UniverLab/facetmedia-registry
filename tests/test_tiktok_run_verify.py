@@ -218,7 +218,7 @@ def test_run_video_uploads_chunks_and_answers_a_draft(
     files: dict[str, Path], fake: FakeTikTok
 ) -> None:
     result = RUNNER.runner._verbs["run"](_req("run", files))
-    assert result["tool"] == {"name": "TikTok", "version": "0.1.1"}
+    assert result["tool"] == {"name": "TikTok", "version": "0.1.2"}
     post = result["post"]
     assert post["network"] == "tiktok"
     assert post["account"] == "@lab"
@@ -431,9 +431,64 @@ def test_chunk_plan_keeps_every_chunk_inside_tiktoks_rule() -> None:
 
 
 def test_authorize_url_names_the_scopes_and_the_redirect() -> None:
-    url = RUNNER.tiktok_client.authorize_url("key-1", "http://127.0.0.1:8080/x", "s")
+    verifier = RUNNER.tiktok_client.make_verifier()
+    challenge = RUNNER.tiktok_client.challenge_of(verifier)
+    url = RUNNER.tiktok_client.authorize_url("key-1", "http://127.0.0.1:8080/x", "s", challenge)
     assert url.startswith("https://www.tiktok.com/v2/auth/authorize/?")
     assert "scope=user.info.basic" in url and "redirect_uri=" in url
+    assert f"code_challenge={challenge}" in url
+    assert "code_challenge_method=S256" in url
+
+
+MIN_VERIFIER_LEN = 64
+MAX_VERIFIER_LEN = 128
+SHA256_HEX_LEN = 64
+
+
+def test_pkce_verifier_charset_length_and_hex_sha256_challenge() -> None:
+    client = RUNNER.tiktok_client
+    verifier = client.make_verifier()
+    assert MIN_VERIFIER_LEN <= len(verifier) <= MAX_VERIFIER_LEN
+    allowed = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+    assert set(verifier) <= allowed
+    expected = __import__("hashlib").sha256(verifier.encode("ascii")).hexdigest()
+    assert client.challenge_of(verifier) == expected
+    assert expected == expected.lower() and len(expected) == SHA256_HEX_LEN
+
+
+def test_exchange_code_sends_code_verifier(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: list[dict[str, Any]] = []
+
+    def fake_urlopen(request: urllib.request.Request, timeout: float = 30.0) -> _FakeResponse:
+        assert request.data is not None
+        captured.append(json.loads(request.data.decode("utf-8")))
+        return _FakeResponse(
+            {
+                "data": {
+                    "access_token": "a1",
+                    "refresh_token": "r1",
+                    "open_id": "o1",
+                    "scope": "user.info.basic,video.upload",
+                },
+                "error": {"code": "ok"},
+            }
+        )
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    tokens = RUNNER.tiktok_client.exchange_code(
+        "k1", "s1", "c1", "http://127.0.0.1:8080/callback/", "v1"
+    )
+    assert tokens.access_token == "a1"
+    assert captured == [
+        {
+            "client_key": "k1",
+            "client_secret": "s1",
+            "code": "c1",
+            "grant_type": "authorization_code",
+            "redirect_uri": "http://127.0.0.1:8080/callback/",
+            "code_verifier": "v1",
+        }
+    ]
 
 
 class _FakeResponse:

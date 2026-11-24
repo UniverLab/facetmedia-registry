@@ -491,7 +491,7 @@ def auth(req: Request) -> dict[str, Any]:
     redirect = req.inputs.get("redirect-uri")
     if redirect is not None and (not isinstance(redirect, str) or not redirect):
         raise ValueError("the redirect URI is not a URI")
-    uri = str(redirect) if isinstance(redirect, str) else "http://127.0.0.1:8080/callback"
+    uri = str(redirect) if isinstance(redirect, str) else "http://127.0.0.1:8080/callback/"
     try:
         secrets = tiktok_client.authorize(key, client_secret, uri)
     except TikTokError as exc:

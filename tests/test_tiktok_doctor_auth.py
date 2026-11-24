@@ -3,11 +3,19 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
+import http.client
 import importlib.util
 import json
 import os
+import socket
 import sys
+import threading
+import time
 import types
+import urllib.parse
+import urllib.request
+from http import HTTPStatus
 from pathlib import Path
 from typing import Any
 
@@ -106,6 +114,7 @@ class FakeTikTok:
         self.authorize_error: Exception | None = None
         self.missing_scope = False
         self.refreshes = 0
+        self.redirect_uri: str | None = None
 
     def _check(self, token: str) -> None:
         if token != self.token_ok:
@@ -134,6 +143,7 @@ class FakeTikTok:
     def authorize(self, key: str, client_secret: str, redirect_uri: str) -> dict[str, str]:
         if self.authorize_error is not None:
             raise self.authorize_error
+        self.redirect_uri = redirect_uri
         assert key == "s3cr3t" and redirect_uri.startswith("http://127.0.0.1")
         return dict(self.authorized)
 
@@ -170,6 +180,98 @@ def test_auth_returns_the_secrets_map(tmp_path: Path, fake: FakeTikTok) -> None:
     result = RUNNER.runner._verbs["auth"](_req("auth", tmp_path))
     assert result == {"secrets": fake.authorized}
     assert set(result["secrets"]) == {"access-token", "refresh-token", "open-id"}
+    assert fake.redirect_uri == "http://127.0.0.1:8080/callback/"
+
+
+def _free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
+
+
+class _FakeTokenResponse:
+    def __init__(self, payload: dict[str, Any]) -> None:
+        self._payload = payload
+
+    def read(self) -> bytes:
+        return json.dumps(self._payload).encode("utf-8")
+
+    def __enter__(self) -> _FakeTokenResponse:
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        return None
+
+
+MIN_VERIFIER_LEN = 64
+MAX_VERIFIER_LEN = 128
+
+
+@pytest.mark.parametrize("callback_path", ["/callback/", "/callback"])
+def test_authorize_pkce_and_callback_slash_handling(
+    callback_path: str, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    client = RUNNER.tiktok_client
+    port = _free_port()
+    redirect_uri = f"http://127.0.0.1:{port}/callback/"
+    seen_url: list[str] = []
+    seen_token_body: list[dict[str, Any]] = []
+    ready = threading.Event()
+    orig_authorize_url = client.authorize_url
+
+    def spy_authorize_url(client_key: str, r_uri: str, state: str, code_challenge: str) -> str:
+        url = orig_authorize_url(client_key, r_uri, state, code_challenge)
+        seen_url.append(url)
+        ready.set()
+        return url
+
+    def fake_urlopen(request: urllib.request.Request, timeout: float = 30.0) -> _FakeTokenResponse:
+        assert request.data is not None
+        seen_token_body.append(json.loads(request.data.decode("utf-8")))
+        return _FakeTokenResponse(
+            {
+                "data": {
+                    "access_token": "a1",
+                    "refresh_token": "r1",
+                    "open_id": "o1",
+                    "scope": "user.info.basic,video.upload",
+                },
+                "error": {"code": "ok"},
+            }
+        )
+
+    monkeypatch.setattr(client, "authorize_url", spy_authorize_url)
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    def send_callback() -> None:
+        assert ready.wait(timeout=5.0)
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(seen_url[0]).query)
+        state = query["state"][0]
+        for _ in range(50):
+            try:
+                conn = http.client.HTTPConnection("127.0.0.1", port, timeout=2.0)
+                conn.request("GET", f"{callback_path}?state={state}&code=code-1")
+                resp = conn.getresponse()
+                assert resp.status == HTTPStatus.OK
+                conn.close()
+                return
+            except OSError:
+                time.sleep(0.05)
+        raise AssertionError("callback server did not accept connection")
+
+    thread = threading.Thread(target=send_callback, daemon=True)
+    thread.start()
+    result = client.authorize("k1", "s1", redirect_uri)
+    thread.join(timeout=5.0)
+
+    assert result == {"access-token": "a1", "refresh-token": "r1", "open-id": "o1"}
+    out = capsys.readouterr().out
+    assert redirect_uri in out
+    qs = urllib.parse.parse_qs(urllib.parse.urlparse(seen_url[0]).query)
+    assert qs["code_challenge_method"] == ["S256"]
+    verifier = seen_token_body[0]["code_verifier"]
+    assert MIN_VERIFIER_LEN <= len(verifier) <= MAX_VERIFIER_LEN
+    assert qs["code_challenge"] == [hashlib.sha256(verifier.encode("ascii")).hexdigest()]
 
 
 def test_auth_refuses_without_the_stored_app_pair(

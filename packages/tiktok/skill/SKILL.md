@@ -70,26 +70,44 @@ where needed. In a non-interactive shell, connecting the account is the user's
 own work in their own terminal instead, one `facet secret set` fallback command
 per typed secret, in this order:
 
-1. The user creates the lab's own app in the TikTok for Developers
-   website and adds two products to it: **Login Kit** and the
-   **Content Posting API**.
-2. The user requests the **`video.upload`** scope for the app and waits
-   for its approval: without the grant the sign-in cannot open the
-   inbox. No Direct Post is needed — posting to public needs an audit
-   the lab does not have, so the app stays unaudited and drafts stay
-   drafts.
-3. The user registers the redirect URI in the app's Login Kit settings:
-   `http://127.0.0.1:8080/callback` (a loopback address, so the sign-in
-   returns to the user's own machine).
-4. For photo sets, the user verifies the domain in the app's URL
+1. In TikTok for Developers (Manage apps, Connect an app), create the
+   lab's app. An organization is highly recommended, not required.
+   The Connect an app form asks for an app icon (1024 x 1024, JPEG or
+   PNG, up to 5 MB), an app name, a category and a description of up to
+   120 characters. Terms of Service and Privacy Policy URLs are required
+   and are verified through the portal's URL properties.
+2. Add two products to the app: **Login Kit** and the **Content Posting
+   API**, and add the **`user.info.basic`** and **`video.upload`**
+   scopes. No Direct Post is needed — posting to public needs an audit
+   the lab does not have, so the app stays unaudited and all content
+   posted by unaudited clients is restricted to private viewing.
+3. On the **Desktop** platform, set the redirect URI that `facet auth`
+   prints (default `http://127.0.0.1:8080/callback/`). A Desktop
+   redirect URI must begin with `http` or `https`, use only `localhost`
+   or `127.0.0.1`, include a port, take no query parameters or fragment,
+   and be repeated exactly in the authorize and token requests. Then
+   copy the client key and client secret from the app's credentials.
+4. The app has a **Production** tab that must be submitted for review,
+   with at least one demo video (which TikTok says may take several days
+   to two weeks), and a **Sandbox** tab that allows trying integrations
+   without review with up to 10 target accounts added in Sandbox
+   settings. Sandbox does not offer the Content Posting API for public
+   videos, and all content posted by unaudited clients is restricted to
+   private viewing.
+   What TikTok's pages do not say: whether the sign-in works for a
+   Production app still in Draft, whether Sandbox has its own client
+   key and secret, and whether the inbox draft upload works in Sandbox;
+   the owner finds these out at first use.
+5. For photo sets, the user verifies the domain in the app's URL
    properties (a DNS signature string, per TikTok's domain rules):
    TikTok downloads photos only from a verified domain or URL prefix,
    over https with no redirect.
-5. The user runs `facet auth tiktok` in their own terminal. It opens the
-   sign-in address, the user authorizes the app for the account that
-   will receive the drafts, and the token pair plus the open id are
-   stored through facet's secrets store.
-6. The user confirms with `facet doctor post --full`: it reports which
+6. The user runs `facet auth tiktok` in their own terminal. It prints
+   the exact redirect URI to register and the PKCE sign-in address, the
+   user authorizes the app for the account that will receive the drafts,
+   and the token pair plus the open id are stored through facet's
+   secrets store.
+7. The user confirms with `facet doctor post --full`: it reports which
    account the token belongs to (display name and handle) and whether
    the `video.upload` scope was granted, so a draft never lands on an
    unexpected account.
