@@ -17,6 +17,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "bluesky"
 MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
+
+#: Longest one-line ``obtain`` hint the core wizard shows; mirrors the core limit.
+MAX_OBTAIN_LEN = 300
 INDEX = tomllib.loads((ROOT / "index.toml").read_text(encoding="utf-8"))
 CAPABILITY = MANIFEST["capabilities"]["post"]
 INPUTS = CAPABILITY["inputs"]
@@ -26,7 +29,7 @@ IMAGES = INPUTS["images"]["items"]
 
 def test_the_package_is_publish_on_the_publish_facet() -> None:
     assert MANIFEST["name"] == "bluesky"
-    assert MANIFEST["version"] == "0.1.0"
+    assert MANIFEST["version"] == "0.1.1"
     assert MANIFEST["requires_facet"] == ">=0.1.0b2,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["facet"] == "publish"
@@ -62,6 +65,17 @@ def test_the_secrets_are_the_handle_and_an_app_password() -> None:
         assert entry["description"]
     assert "handle" in secrets["handle"]["description"].lower()
     assert "app password" in secrets["app-password"]["description"].lower()
+
+
+def test_every_secret_says_where_to_get_it_and_none_is_browser_minted() -> None:
+    for entry in MANIFEST["secrets"]:
+        obtain = entry.get("obtain")
+        assert isinstance(obtain, str) and obtain, entry["name"]
+        assert "\n" not in obtain and "\r" not in obtain, entry["name"]
+        assert len(obtain) <= MAX_OBTAIN_LEN, entry["name"]
+    assert "App passwords" in MANIFEST["secrets"][1]["obtain"]
+    for entry in MANIFEST["secrets"]:
+        assert "produced_by" not in entry, entry["name"]
 
 
 def test_the_capability_is_the_outward_post() -> None:

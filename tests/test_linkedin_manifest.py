@@ -8,6 +8,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "linkedin"
 MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
+
+#: Longest one-line ``obtain`` hint the core wizard shows; mirrors the core limit.
+MAX_OBTAIN_LEN = 300
 INDEX = tomllib.loads((ROOT / "index.toml").read_text(encoding="utf-8"))
 CAPABILITY = MANIFEST["capabilities"]["post"]
 INPUTS = CAPABILITY["inputs"]
@@ -15,7 +18,7 @@ INPUTS = CAPABILITY["inputs"]
 
 def test_the_package_is_publish_on_the_publish_facet() -> None:
     assert MANIFEST["name"] == "linkedin"
-    assert MANIFEST["version"] == "0.1.0"
+    assert MANIFEST["version"] == "0.1.1"
     assert MANIFEST["requires_facet"] == ">=0.1.0b2,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["facet"] == "publish"
@@ -61,6 +64,23 @@ def test_the_secrets_are_the_app_pair_tokens_and_org() -> None:
     assert "client id" in secrets["client-id"]["description"]
     assert "refresh" in secrets["refresh-token"]["description"]
     assert "organization" in secrets["org-id"]["description"]
+
+
+def test_every_secret_says_where_to_get_it_and_only_tokens_are_browser_minted() -> None:
+    produced = {"access-token", "refresh-token"}
+    for entry in MANIFEST["secrets"]:
+        obtain = entry.get("obtain")
+        assert isinstance(obtain, str) and obtain, entry["name"]
+        assert "\n" not in obtain and "\r" not in obtain, entry["name"]
+        assert len(obtain) <= MAX_OBTAIN_LEN, entry["name"]
+        if entry["name"] in produced:
+            assert entry.get("produced_by") == "auth", entry["name"]
+        else:
+            assert "produced_by" not in entry, entry["name"]
+    secrets = {entry["name"]: entry for entry in MANIFEST["secrets"]}
+    assert "Developer Portal" in secrets["client-id"]["obtain"]
+    assert "organization scopes" in secrets["access-token"]["obtain"]
+    assert "urn:li:organization" in secrets["org-id"]["obtain"]
 
 
 def test_the_capability_is_the_outward_post_with_the_post_viewer() -> None:

@@ -57,6 +57,7 @@ def test_the_auth_section_names_secrets_commands_and_confirmation() -> None:
     assert "## Authentication" in body
     assert "Read" in body and "write" in body
     assert "consumer-key" in body and "access-token-secret" in body
+    assert "facet auth login x" in body
     assert "facet secret set x consumer-key" in body
     assert "facet secret set x consumer-secret" in body
     assert "facet secret set x access-token" in body

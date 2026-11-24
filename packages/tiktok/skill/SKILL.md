@@ -64,8 +64,11 @@ beside it; dry-run it with `facet run inbox.toml --dry-run`.
 
 The agent never handles a secret: it never asks the user to paste one
 into the conversation, and it never runs `facet secret set` or
-`facet auth` with a value. Connecting the account is the user's own work
-in their own terminal, in this order:
+`facet auth` with a value. The guided way to connect is `facet auth login tiktok`:
+it walks the user through every secret below and opens the browser sign-in
+where needed. In a non-interactive shell, connecting the account is the user's
+own work in their own terminal instead, one `facet secret set` fallback command
+per typed secret, in this order:
 
 1. The user creates the lab's own app in the TikTok for Developers
    website and adds two products to it: **Login Kit** and the

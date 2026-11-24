@@ -55,6 +55,7 @@ def test_the_auth_guide_covers_setup_signin_and_confirmation() -> None:
     assert "Testing" in body
     assert "refresh token" in flat.lower()
     assert "brand channel" in flat.lower()
+    assert "facet auth login youtube" in body
     assert "facet auth youtube" in body
     assert "facet doctor post --full" in body
 

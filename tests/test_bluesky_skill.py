@@ -57,6 +57,7 @@ def test_the_auth_section_names_secrets_commands_and_confirmation() -> None:
     assert "## Authentication" in body
     assert "App passwords" in body
     assert "handle" in body and "app-password" in body
+    assert "facet auth login bluesky" in body
     assert "facet secret set bluesky handle" in body
     assert "facet secret set bluesky app-password" in body
     assert "facet doctor post --full" in body

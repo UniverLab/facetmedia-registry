@@ -69,8 +69,10 @@ beside it; dry-run it with `facet run thread.toml --dry-run`.
 
 The agent never handles a secret: it never asks the user to paste one
 into the conversation, and it never runs `facet secret set` with a
-value. Connecting the account is the user's own work in their own
-terminal, in this order:
+value. The guided way to connect is `facet auth login x`: it walks
+the user through every secret below. In a non-interactive shell, connecting
+the account is the user's own work in their own terminal instead, one
+`facet secret set` fallback command per secret, in this order:
 
 1. The user creates the lab's own developer app in the Developer
    Console (developer.x.com), one app for the brand account, and loads

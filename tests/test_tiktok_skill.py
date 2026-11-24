@@ -32,6 +32,7 @@ def test_the_skill_guides_the_sign_in_without_touching_a_secret() -> None:
         "redirect",
         "verif",
         "facet auth tiktok",
+        "facet auth login tiktok",
         "doctor",
     ):
         assert step in lowered, step

@@ -1,5 +1,5 @@
 name = "x"
-version = "0.1.0"
+version = "0.1.1"
 requires_facet = ">=0.1.0b2,<0.2"
 protocol = 1
 provider = "X Corp · X API v2"
@@ -30,21 +30,25 @@ spdx = "LicenseRef-X-API-Terms"
 name = "consumer-key"
 description = "The developer app's API key (consumer key), shown once when the app is created"
 required = true
+obtain = "Shown once in the Developer Console at developer.x.com when the lab's developer app is created"
 
 [[secrets]]
 name = "consumer-secret"
 description = "The developer app's API secret (consumer secret), shown once with the key"
 required = true
+obtain = "Shown once in the Developer Console at developer.x.com with the API key when the app is created"
 
 [[secrets]]
 name = "access-token"
 description = "The brand account's access token, generated after the app's permission is set to read and write"
 required = true
+obtain = "Generated in the app's Keys and tokens tab after its Settings permission is set to Read and write"
 
 [[secrets]]
 name = "access-token-secret"
 description = "The brand account's access token secret, generated with the access token"
 required = true
+obtain = "Generated with the access token in the app's Keys and tokens tab"
 
 [capabilities.post]
 summary = "Post text with images or video to the lab's X brand account, one post or a thread, then read it back — the cost shown before the send."

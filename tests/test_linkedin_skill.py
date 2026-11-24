@@ -40,6 +40,7 @@ def test_the_skill_guides_the_sign_in_without_touching_a_secret() -> None:
         "redirect",
         "facet secret set linkedin",
         "facet auth linkedin",
+        "facet auth login linkedin",
         "doctor",
     ):
         assert step in lowered, step

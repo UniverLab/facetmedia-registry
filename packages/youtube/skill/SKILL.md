@@ -60,8 +60,11 @@ dry-run it with `facet run upload.toml --dry-run`.
 
 The agent never handles a secret: it never asks the user to paste one into the
 conversation, and it never runs `facet secret set` or `facet auth` with a
-value. Connecting the account is the user's own work in their own terminal, in
-this order:
+value. The guided way to connect is `facet auth login youtube`: it walks the
+user through every secret below and opens the browser sign-in where needed. In
+a non-interactive shell, connecting the account is the user's own work in their
+own terminal instead, one `facet secret set` fallback command per typed secret,
+in this order:
 
 1. The user creates the lab's own Google Cloud project (or chooses an existing
    one) in the Google Cloud Console and enables the **YouTube Data API v3** for

@@ -1,5 +1,5 @@
 name = "linkedin"
-version = "0.1.0"
+version = "0.1.1"
 requires_facet = ">=0.1.0b2,<0.2"
 protocol = 1
 provider = "LinkedIn Corporation · Posts API"
@@ -30,26 +30,33 @@ spdx = "LicenseRef-LinkedIn-API-Terms"
 name = "client-id"
 description = "The lab's LinkedIn app client id, shown once when the app is created"
 required = true
+obtain = "Shown once when the lab's app is created in the LinkedIn Developer Portal with both organization scopes"
 
 [[secrets]]
 name = "client-secret"
 description = "The lab's LinkedIn app client secret, shown once with the client id"
 required = true
+obtain = "Shown once with the client id when the lab's app is created in the LinkedIn Developer Portal"
 
 [[secrets]]
 name = "access-token"
 description = "The organization's access token, stored by facet auth linkedin after sign-in"
 required = true
+obtain = "Stored by the browser sign-in after you authorize the app with both organization scopes, never typed by hand"
+produced_by = "auth"
 
 [[secrets]]
 name = "refresh-token"
 description = "The organization's refresh token, stored by facet auth linkedin after sign-in"
 required = true
+obtain = "Stored by the browser sign-in after you authorize the app with both organization scopes, never typed by hand"
+produced_by = "auth"
 
 [[secrets]]
 name = "org-id"
 description = "The organization's numeric id, the digits of urn:li:organization:{id}"
 required = true
+obtain = "The digits of urn:li:organization:{id} for the Company Page the signing-in member administers"
 
 [capabilities.post]
 summary = "Post text with images to the lab's LinkedIn organization account, then read it back."

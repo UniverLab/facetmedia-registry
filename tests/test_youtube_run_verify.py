@@ -206,7 +206,7 @@ def test_run_uploads_with_body_and_notify_and_receipt(
     files: dict[str, Path], fake: FakeYouTube
 ) -> None:
     result = RUNNER.runner._verbs["run"](_req("run", files))
-    assert result["tool"] == {"name": "YouTube", "version": "0.1.0"}
+    assert result["tool"] == {"name": "YouTube", "version": "0.1.1"}
     post = result["post"]
     assert post["network"] == "youtube"
     assert post["account"] in {"@lab", "Laboratorio"}

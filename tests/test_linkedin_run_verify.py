@@ -261,7 +261,7 @@ def test_run_single_image_uploads_then_answers_a_published_receipt(
     files: dict[str, Path], fake: FakeLinkedIn
 ) -> None:
     result = RUNNER.runner._verbs["run"](_req("run", files))
-    assert result["tool"] == {"name": "LinkedIn", "version": "0.1.0"}
+    assert result["tool"] == {"name": "LinkedIn", "version": "0.1.1"}
     post = result["post"]
     assert post["network"] == "linkedin"
     assert post["account"] == "Laboratorio"

@@ -1,5 +1,5 @@
 name = "tiktok"
-version = "0.1.0"
+version = "0.1.1"
 requires_facet = ">=0.1.0b2,<0.2"
 protocol = 1
 provider = "TikTok Pte. Ltd. · Content Posting API"
@@ -30,26 +30,34 @@ spdx = "LicenseRef-TikTok-API-Terms"
 name = "client-key"
 description = "The lab's TikTok app client key, shown once when the app is created"
 required = true
+obtain = "Shown once when the lab's app is created on the TikTok for Developers website with Login Kit added"
 
 [[secrets]]
 name = "client-secret"
 description = "The lab's TikTok app client secret, shown once with the client key"
 required = true
+obtain = "Shown once with the client key when the lab's app is created on the TikTok for Developers website"
 
 [[secrets]]
 name = "access-token"
 description = "The account's access token, stored by facet auth tiktok after sign-in"
 required = true
+obtain = "Stored by the browser sign-in after you authorize the app with the video.upload scope, never typed by hand"
+produced_by = "auth"
 
 [[secrets]]
 name = "refresh-token"
 description = "The account's refresh token, stored by facet auth tiktok after sign-in"
 required = true
+obtain = "Stored by the browser sign-in after you authorize the app with the video.upload scope, never typed by hand"
+produced_by = "auth"
 
 [[secrets]]
 name = "open-id"
 description = "The account's open id, stored by facet auth tiktok after sign-in"
 required = true
+obtain = "Stored by the browser sign-in after you authorize the app with the video.upload scope, never typed by hand"
+produced_by = "auth"
 
 [capabilities.post]
 summary = "Send one video or a photo set to the lab's TikTok account inbox as a draft, then read its publish status back."

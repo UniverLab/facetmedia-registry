@@ -20,6 +20,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "x"
 MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
+
+#: Longest one-line ``obtain`` hint the core wizard shows; mirrors the core limit.
+MAX_OBTAIN_LEN = 300
 INDEX = tomllib.loads((ROOT / "index.toml").read_text(encoding="utf-8"))
 CAPABILITY = MANIFEST["capabilities"]["post"]
 INPUTS = CAPABILITY["inputs"]
@@ -35,7 +38,7 @@ URL_LENGTH = 23
 
 def test_the_package_is_publish_on_the_publish_facet() -> None:
     assert MANIFEST["name"] == "x"
-    assert MANIFEST["version"] == "0.1.0"
+    assert MANIFEST["version"] == "0.1.1"
     assert MANIFEST["requires_facet"] == ">=0.1.0b2,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["facet"] == "publish"
@@ -96,6 +99,20 @@ def test_the_secrets_are_the_app_keys_and_the_account_tokens() -> None:
     assert "api key" in secrets["consumer-key"]["description"].lower()
     assert "secret" in secrets["consumer-secret"]["description"].lower()
     assert "access token" in secrets["access-token"]["description"].lower()
+
+
+def test_every_secret_says_where_to_get_it_and_none_is_browser_minted() -> None:
+    for entry in MANIFEST["secrets"]:
+        obtain = entry.get("obtain")
+        assert isinstance(obtain, str) and obtain, entry["name"]
+        assert "\n" not in obtain and "\r" not in obtain, entry["name"]
+        assert len(obtain) <= MAX_OBTAIN_LEN, entry["name"]
+    secrets = {entry["name"]: entry for entry in MANIFEST["secrets"]}
+    assert "developer.x.com" in secrets["consumer-key"]["obtain"]
+    assert "Keys and tokens" in secrets["access-token"]["obtain"]
+    assert "Read and write" in secrets["access-token"]["obtain"]
+    for entry in MANIFEST["secrets"]:
+        assert "produced_by" not in entry, entry["name"]
 
 
 def test_the_capability_is_the_outward_post() -> None:

@@ -1,5 +1,5 @@
 name = "youtube"
-version = "0.1.0"
+version = "0.1.1"
 requires_facet = ">=0.1.0b2,<0.2"
 protocol = 1
 provider = "Google LLC · YouTube Data API v3"
@@ -30,16 +30,20 @@ spdx = "LicenseRef-YouTube-API-Terms"
 name = "client-id"
 description = "The desktop OAuth client's id, created in the Google Cloud project"
 required = true
+obtain = "Created as a Desktop app OAuth client in the Google Cloud Console with YouTube Data API v3 enabled"
 
 [[secrets]]
 name = "client-secret"
 description = "The desktop OAuth client's secret, created with the client id"
 required = true
+obtain = "Created with the client id as a Desktop app OAuth client in the Google Cloud Console"
 
 [[secrets]]
 name = "refresh-token"
 description = "The brand channel's refresh token, stored by facet auth youtube after sign-in"
 required = true
+obtain = "Stored by the browser sign-in after you pick the brand channel, never typed by hand"
+produced_by = "auth"
 
 [capabilities.upload]
 summary = "Upload one video to the lab's YouTube brand channel, private by default, with AI disclosure from provenance and a read-back check."

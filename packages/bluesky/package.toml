@@ -1,5 +1,5 @@
 name = "bluesky"
-version = "0.1.0"
+version = "0.1.1"
 requires_facet = ">=0.1.0b2,<0.2"
 protocol = 1
 provider = "Bluesky Social PBC · AT Protocol"
@@ -30,11 +30,13 @@ spdx = "MIT"
 name = "handle"
 description = "The brand account's handle, for example lab.example.com (never the password)"
 required = true
+obtain = "The handle of the brand account you sign in to in a browser"
 
 [[secrets]]
 name = "app-password"
 description = "The app password created in the account's settings, not the login password"
 required = true
+obtain = "Created in Settings, Privacy and Security, App passwords in a browser signed in to the brand account"
 
 [capabilities.post]
 summary = "Post text with images or video to the lab's Bluesky brand account, one post or a thread, then read it back."
