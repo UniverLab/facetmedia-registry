@@ -133,7 +133,10 @@ public on the organization's feed.
 ## Pitfalls
 
 - **Organization posts only, never personal.** The author is always a
-  `urn:li:organization:{id}` URN; personal posting is out of scope.
+  `urn:li:organization:{id}` URN; for the owner's personal profile
+  (using LinkedIn's self-serve Share on LinkedIn product without
+  organization permissions), use `linkedin-member` instead — the two
+  authenticate separately.
 - **Images only, at most twenty.** Videos, documents, carousels, polls
   and articles are follow-ups, not v1.
 - **Public at once, no drafts.** Whatever LinkedIn accepts is visible

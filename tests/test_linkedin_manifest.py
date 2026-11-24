@@ -18,7 +18,7 @@ INPUTS = CAPABILITY["inputs"]
 
 def test_the_package_is_publish_on_the_publish_facet() -> None:
     assert MANIFEST["name"] == "linkedin"
-    assert MANIFEST["version"] == "0.1.1"
+    assert MANIFEST["version"] == "0.1.2"
     assert MANIFEST["requires_facet"] == ">=0.1.0b2,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["facet"] == "publish"
@@ -132,7 +132,6 @@ def test_the_root_readme_lists_linkedin_under_the_publish_facet() -> None:
 def test_the_registry_indexes_the_package_after_tiktok() -> None:
     names = [entry["name"] for entry in INDEX["packages"]]
     assert "linkedin" in names
-    assert names.index("linkedin") == len(names) - 1
     assert names.index("tiktok") == names.index("linkedin") - 1
     assert INDEX["facets"]["publish"]["label"] == "Publish"
     assert INDEX["facets"]["publish"]["i18n"]["es"]["label"] == "Publicación"

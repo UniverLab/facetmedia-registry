@@ -133,3 +133,6 @@ name = "tiktok"
 
 [[packages]]
 name = "linkedin"
+
+[[packages]]
+name = "linkedin-member"

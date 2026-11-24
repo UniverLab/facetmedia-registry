@@ -1,0 +1,90 @@
+name = "linkedin-member"
+version = "0.1.0"
+requires_facet = ">=0.1.0b2,<0.2"
+protocol = 1
+provider = "LinkedIn Corporation · Posts API"
+tool_name = "LinkedIn Member"
+description = "Posts text with images to the owner's personal LinkedIn profile through the Posts API."
+facet = "publish"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 0.2
+exclusive = false
+platforms = ["linux"]
+
+[[licenses]]
+subject = "LinkedIn API (LinkedIn Corporation)"
+spdx = "LicenseRef-LinkedIn-API-Terms"
+
+[[secrets]]
+name = "client-id"
+description = "The lab's LinkedIn app client id, shown in the Developer Portal Auth tab"
+required = true
+obtain = "Shown in the lab's LinkedIn app Auth tab in the LinkedIn Developer Portal; add the Share on LinkedIn and Sign In with LinkedIn using OpenID Connect products in the Products tab"
+
+[[secrets]]
+name = "client-secret"
+description = "The lab's LinkedIn app client secret, shown with the client id in the Auth tab"
+required = true
+obtain = "Shown with the client id in the lab's LinkedIn app Auth tab in the LinkedIn Developer Portal"
+
+[[secrets]]
+name = "access-token"
+description = "The member's access token, stored by facet auth login linkedin-member after sign-in"
+required = true
+obtain = "Stored by the browser sign-in after you authorize the app with openid, profile and w_member_social scopes, never typed by hand"
+produced_by = "auth"
+
+[[secrets]]
+name = "member-id"
+description = "The member's OpenID sub id, stored by facet auth login linkedin-member from /v2/userinfo"
+required = true
+obtain = "Stored by the browser sign-in from /v2/userinfo sub, never typed by hand"
+produced_by = "auth"
+
+[[secrets]]
+name = "refresh-token"
+description = "The member's optional refresh token, stored by facet auth login linkedin-member when issued"
+required = false
+obtain = "Stored by the browser sign-in when LinkedIn issues one (optional; self-serve apps may not receive a refresh token)"
+produced_by = "auth"
+
+[capabilities.post]
+summary = "Post text with images to the owner's personal LinkedIn profile, then read it back when permitted."
+kind = "post"
+outward = true
+
+[capabilities.post.i18n.es]
+summary = "Publica texto con imágenes en el perfil personal de LinkedIn, y lo vuelve a leer cuando está permitido."
+
+[capabilities.post.inputs.text]
+type = "string"
+required = true
+description = "The post's text, at most 3000 characters; URLs are unfurled into link previews."
+
+[capabilities.post.inputs.images]
+type = "array"
+description = "The post's images, each a local file with alt text; one image makes a single-image post, two to twenty make a MultiImage post."
+
+[capabilities.post.inputs.images.items.path]
+type = "path"
+required = true
+description = "The image file, resolved relative to the piece; JPG, GIF or PNG."
+
+[capabilities.post.inputs.images.items.alt]
+type = "string"
+required = true
+description = "The image's alt text; an image without alt text is refused."
+
+[capabilities.post.preview]
+viewer = "post"
