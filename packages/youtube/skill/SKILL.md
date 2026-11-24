@@ -66,24 +66,29 @@ a non-interactive shell, connecting the account is the user's own work in their
 own terminal instead, one `facet secret set` fallback command per typed secret,
 in this order:
 
-1. The user creates the lab's own Google Cloud project (or chooses an existing
+1. The user creates their own Google Cloud project (or chooses an existing
    one) in the Google Cloud Console and enables the **YouTube Data API v3** for
-   it.
-2. The user configures the **OAuth consent screen** for the project as a
-   desktop application flow and creates an **OAuth client ID** of type
-   **Desktop app**. The consent screen must be moved out of **Testing** status:
-   refresh tokens issued to an app left in Testing stop working after a few
-   days. If the app is not verified for production, publish it so the brand
-   account can authorize it without the testing expiry.
-3. The user stores the two client values the manifest declares, one command
+   it. Each person registers their own app because the OAuth client is theirs,
+   not facet's.
+2. The user configures the **Google Auth Platform** for the project: under
+   **Branding** they fill the app name, a support email and a contact; under
+   **Audience** they choose **External** and add their own Google account as a
+   test user. An account that is not Google Workspace can only use the
+   External audience, and that is the expected choice, not an error.
+3. The user creates an OAuth client of type **Desktop app** under **Clients**
+   and stores the two client values the manifest declares, one command
    each, typed in their own terminal — each command reads the value from a
    hidden prompt, so it never rides a command line:
    `facet secret set youtube client-id` and
    `facet secret set youtube client-secret`.
-4. The user runs `facet auth youtube` in their own terminal. It opens the
+4. The user publishes the app to production and then runs
+   `facet auth login youtube` in their own terminal. It opens the
    installed-app sign-in on a loopback port and stores the refresh token and
    client details through facet's secrets store. At sign-in the user must pick
    the **brand channel** that will receive the uploads, not a personal channel.
+   While an external app stays in Testing, its refresh token expires after 7
+   days. An unverified app shows Google's "not verified" screen at sign-in,
+   which the owner of the app accepts for their own account.
 5. The user confirms with `facet doctor post --full`: it reports which channel
    the token belongs to (title and handle) and whether the refresh token still
    works, so an upload never lands on an unexpected channel.
