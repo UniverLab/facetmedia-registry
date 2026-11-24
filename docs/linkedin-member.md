@@ -39,7 +39,13 @@ alt = "La escuadra del laboratorio sobre el banco de trabajo."
 
 ## Authentication and secrets
 
-In the LinkedIn Developer Portal, add **Share on LinkedIn** and **Sign In with LinkedIn using OpenID Connect** in the app's **Products** tab, copy **Client ID** and **Client Secret** from the **Auth** tab, and register the loopback redirect URI `http://localhost:8080/callback`.
+1. **Create the app** in the LinkedIn Developer Portal using the **Create an app** form:
+   - **App name** is required.
+   - **LinkedIn Page** is required and must be a Company Page you administer (not a member profile page); it cannot be changed once the app is saved, and a Page admin verifies the association. An individual developer without a Company Page selects the default Company Page the products offer, or creates one first with the form's **Create a new LinkedIn Page** link.
+   - **App logo** is required (square recommended, at least 100 px in one dimension).
+   - **Privacy policy URL** is optional, and the legal agreement must be accepted.
+2. **Add products** in the app's **Products** tab: **Share on LinkedIn** and **Sign In with LinkedIn using OpenID Connect**.
+3. **Copy credentials and set the redirect URL** in the app's **Auth** tab (auth settings): copy **Client ID** and **Client Secret**, and register the loopback redirect URI `http://localhost:8080/callback`. LinkedIn's help says to add redirect URLs "via HTTPS" and does not say whether `http://localhost` is accepted; when LinkedIn refuses that address, pass an `https` address to the sign-in verb's `redirect-uri` input instead.
 
 Store the app credentials and sign in:
 
