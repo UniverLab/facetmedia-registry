@@ -18,7 +18,7 @@ INPUTS = CAPABILITY["inputs"]
 
 def test_the_package_is_publish_on_the_publish_facet() -> None:
     assert MANIFEST["name"] == "linkedin-member"
-    assert MANIFEST["version"] == "0.1.0"
+    assert MANIFEST["version"] == "0.1.1"
     assert MANIFEST["requires_facet"] == ">=0.1.0b2,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["facet"] == "publish"
@@ -78,6 +78,9 @@ def test_every_secret_says_where_to_get_it_and_auth_produced_ones() -> None:
             assert "produced_by" not in entry, entry["name"]
     secrets = {entry["name"]: entry for entry in MANIFEST["secrets"]}
     assert "Developer Portal" in secrets["client-id"]["obtain"]
+    assert "Company Page you administer" in secrets["client-id"]["obtain"]
+    assert "association is permanent" in secrets["client-id"]["obtain"]
+    assert len(secrets["client-id"]["obtain"]) <= MAX_OBTAIN_LEN
     assert "Create an app" in secrets["client-id"]["obtain"]
     assert "Share on LinkedIn" in secrets["client-id"]["obtain"]
     assert "Sign In with LinkedIn using OpenID Connect" in secrets["client-id"]["obtain"]

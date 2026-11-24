@@ -245,7 +245,7 @@ def test_run_single_image_uses_person_urn_and_answers_published_receipt(
     files: dict[str, Path], fake: FakeLinkedInMember
 ) -> None:
     result = RUNNER.runner._verbs["run"](_req("run", files))
-    assert result["tool"] == {"name": "LinkedIn Member", "version": "0.1.0"}
+    assert result["tool"] == {"name": "LinkedIn Member", "version": "0.1.1"}
     post = result["post"]
     assert post["network"] == "linkedin-member"
     assert post["account"] == "Ada Lovelace"

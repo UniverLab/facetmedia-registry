@@ -41,7 +41,7 @@ alt = "La escuadra del laboratorio sobre el banco de trabajo."
 
 1. **Create the app** in the LinkedIn Developer Portal using the **Create an app** form:
    - **App name** is required.
-   - **LinkedIn Page** is required and must be a Company Page you administer (not a member profile page); it cannot be changed once the app is saved, and a Page admin verifies the association. An individual developer without a Company Page selects the default Company Page the products offer, or creates one first with the form's **Create a new LinkedIn Page** link.
+   - **LinkedIn Page**: the app must be associated with a LinkedIn Page, and the organization that owns the Page acts as the app's publisher. The Page is required and must be a Company Page you administer (not a member profile page); it cannot be changed once the app is saved, the association is permanent, the app cannot be moved to another Page, and a new Page needs new apps. A Page admin verifies the association — the Page's super admin approves the request within 30 days, and a person who created the Page is its super admin. A person with no Page creates one first with the form's **Create a new LinkedIn Page** link. The posts the package publishes appear on the member's own profile, not on the Page.
    - **App logo** is required (square recommended, at least 100 px in one dimension).
    - **Privacy policy URL** is optional, and the legal agreement must be accepted.
 2. **Add products** in the app's **Products** tab: **Share on LinkedIn** and **Sign In with LinkedIn using OpenID Connect**.

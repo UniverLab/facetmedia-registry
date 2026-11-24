@@ -1,5 +1,5 @@
 name = "linkedin-member"
-version = "0.1.0"
+version = "0.1.1"
 requires_facet = ">=0.1.0b2,<0.2"
 protocol = 1
 provider = "LinkedIn Corporation · Posts API"
@@ -30,7 +30,7 @@ spdx = "LicenseRef-LinkedIn-API-Terms"
 name = "client-id"
 description = "The lab's LinkedIn app client id, shown in the Developer Portal Auth tab"
 required = true
-obtain = "Create an app in the LinkedIn Developer Portal (needs a Company Page you administer and a logo), add the Share on LinkedIn and Sign In with LinkedIn using OpenID Connect products in the Products tab, then copy the Client ID from the Auth tab"
+obtain = "Create an app in the LinkedIn Developer Portal (needs a Company Page you administer, association is permanent, and a logo), add the Share on LinkedIn and Sign In with LinkedIn using OpenID Connect products in the Products tab, then copy the Client ID from the Auth tab"
 
 [[secrets]]
 name = "client-secret"

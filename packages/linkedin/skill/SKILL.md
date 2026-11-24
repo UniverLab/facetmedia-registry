@@ -65,16 +65,20 @@ own work in their own terminal instead, one `facet secret set` fallback command
 per typed secret, in this order:
 
 1. The user creates the lab's own app in the LinkedIn Developer Portal
-   with the Create an app form: the App name is required; the LinkedIn
-   Page is required and must be a Company Page the user administers (not
-   a member profile page), it cannot be changed once the app is saved,
-   and a Page admin verifies the association — an individual developer
-   without a Company Page selects the default Company Page the products
-   offer, or creates one first with the form's "Create a new LinkedIn
-   Page" link; the App logo is required (square recommended, at least
-   100 px in one dimension); the Privacy policy URL is optional; and the
-   legal agreement must be accepted. The Client ID and the Client Secret
-   are on the app's Auth tab.
+   with the Create an app form: the App name is required; the app must
+   be associated with a LinkedIn Page, and the organization that owns
+   the Page acts as the app's publisher; the LinkedIn Page is required
+   and must be a Company Page the user administers (not a member
+   profile page), it cannot be changed once the app is saved, the
+   association is permanent, the app cannot be moved to another Page,
+   and a new Page needs new apps; a Page admin verifies the
+   association — the Page's super admin approves the request within 30
+   days, and a person who created the Page is its super admin; a person
+   with no Page creates one first with the form's "Create a new
+   LinkedIn Page" link; the App logo is required (square recommended,
+   at least 100 px in one dimension); the Privacy policy URL is
+   optional; and the legal agreement must be accepted. The Client ID
+   and the Client Secret are on the app's Auth tab.
 2. The user adds the **Share on LinkedIn** and **Sign In with LinkedIn
    using OpenID Connect** products to the app in the Products tab.
 3. The user requests the **`w_organization_social`** and

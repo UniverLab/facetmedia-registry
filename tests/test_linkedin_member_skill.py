@@ -50,7 +50,6 @@ def test_the_skill_explains_the_create_app_form_before_the_client_id() -> None:
         "member profile page",
         "cannot be changed",
         "page admin",
-        "default company page",
         "create a new linkedin page",
         "app logo",
         "square",
@@ -64,6 +63,16 @@ def test_the_skill_explains_the_create_app_form_before_the_client_id() -> None:
         "redirect-uri",
     ):
         assert step in lowered, step
+    assert "default company page" not in lowered
+    for fact in (
+        "super admin",
+        "30 days",
+        "permanent",
+        "publisher",
+        "cannot be moved to another page",
+        "appear on the member's own profile, not on the page",
+    ):
+        assert fact in lowered, fact
 
 
 def test_the_skill_requests_only_the_member_scopes() -> None:
