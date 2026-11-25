@@ -1,17 +1,19 @@
 ---
 name: linkedin-member
-description: Post text with images to the owner's personal LinkedIn profile, then read it back when permitted.
+description: Post text with images or an MP4 video to the owner's personal LinkedIn profile, then read it back when permitted.
 ---
 # linkedin-member
 
-`linkedin-member.post` posts text with images to the owner's personal
-LinkedIn profile under their own name through the Posts API, and reads
-the created post back when permitted. Images ride the Images API asset
+`linkedin-member.post` posts text with images or an MP4 video to the owner's
+personal LinkedIn profile under their own name through the Posts API, and
+reads the created post back when permitted. Images ride the Images API asset
 upload first (one upload per image, then the returned `urn:li:image:{id}`
 values ride the post): exactly one image makes a single-image post, two
-to twenty images make a MultiImage post. Every accepted post is public at
-once — LinkedIn keeps no drafts, so the dry run comes first and a
-receipt is never re-sent.
+to twenty images make a MultiImage post. A local `.mp4` video rides the
+Videos API (`/rest/videos`) instead: initialize upload, PUT each chunk,
+finalize with the chunk ETags, and poll until `AVAILABLE` before creating
+the post. Every accepted post is public at once — LinkedIn keeps no drafts,
+so the dry run comes first and a receipt is never re-sent.
 
 ## Choosing between `linkedin` and `linkedin-member`
 
@@ -32,15 +34,18 @@ receipt is never re-sent.
   against LinkedIn's 3 000-character limit and every image against the
   MultiImage rules, and shows what will land on the personal profile. It
   sends nothing and touches no network.
-- When the piece carries `text` (required) and `images` (0 to 20 entries,
-  each a local `path` plus required `alt` text). There is no `author`
-  input: the author is always the signed-in member. A piece without
-  images is a text-only post; a piece with more than 20 images is refused
-  before anything leaves.
+- When the piece carries `text` (required) and either `images` (0 to 20
+  entries, each a local `path` plus required `alt` text) or `video` (one
+  local `.mp4` file, at most 500 MiB, with optional `video-title`
+  defaulting to the video filename stem). `images` and `video` are
+  mutually exclusive: a piece carrying both is refused. There is no
+  `author` input: the author is always the signed-in member. A piece
+  without images or video is a text-only post; a piece with more than 20
+  images is refused before anything leaves.
 - When posting to an organization page or using another LinkedIn action,
-  leave this package alone: use `linkedin` for organization feeds. v1
-  posts to the personal profile with images only; it never schedules,
-  never touches DMs or analytics.
+  leave this package alone: use `linkedin` for organization feeds. It
+  posts to the personal profile with text, images, or an MP4 video; it
+  never schedules, never touches DMs or analytics.
 
 ## Pieces
 
@@ -59,9 +64,12 @@ alt = "La escuadra del laboratorio sobre el banco de trabajo."
 into link previews. Each image is a JPG, GIF or PNG file under
 36 152 320 pixels, resolved relative to the piece; one image makes a
 single-image post (the alt text rides as the media title), two to twenty
-make a MultiImage post (each alt text rides its image). The bundled
-`examples/post.toml` is the single-image shape with its picture beside
-it; dry-run it with `facet run post.toml --dry-run`.
+make a MultiImage post (each alt text rides its image). For a video post,
+set `video = "clip.mp4"` (resolved relative to the piece, `.mp4`, non-empty,
+at most 500 MiB) and optionally `video-title` (defaults to the filename
+stem, e.g. `"clip"`), with no `images`. The bundled `examples/post.toml`
+is the single-image shape with its picture beside it; dry-run it with
+`facet run post.toml --dry-run`.
 
 ## Authentication
 

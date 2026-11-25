@@ -20,7 +20,7 @@ INPUTS = CAPABILITY["inputs"]
 
 def test_the_package_is_publish_on_the_publish_facet() -> None:
     assert MANIFEST["name"] == "linkedin-member"
-    assert MANIFEST["version"] == "0.1.1"
+    assert MANIFEST["version"] == "0.2.0"
     assert MANIFEST["requires_facet"] == ">=0.1.0b2,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["facet"] == "publish"
@@ -126,6 +126,10 @@ def test_the_inputs_take_text_and_up_to_twenty_images() -> None:
     assert INPUTS["images"]["items"]["path"]["required"] is True
     assert INPUTS["images"]["items"]["alt"]["type"] == "string"
     assert INPUTS["images"]["items"]["alt"]["required"] is True
+    assert INPUTS["video"]["type"] == "path"
+    assert INPUTS["video"].get("required", False) is not True
+    assert INPUTS["video-title"]["type"] == "string"
+    assert INPUTS["video-title"].get("required", False) is not True
 
 
 def test_the_bundled_example_ships_with_its_still() -> None:

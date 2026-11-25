@@ -1,10 +1,10 @@
 name = "linkedin-member"
-version = "0.1.1"
+version = "0.2.0"
 requires_facet = ">=0.1.0b2,<0.2"
 protocol = 1
 provider = "LinkedIn Corporation · Posts API"
 tool_name = "LinkedIn Member"
-description = "Posts text with images to the owner's personal LinkedIn profile through the Posts API."
+description = "Posts text with images or an MP4 video to the owner's personal LinkedIn profile through the Posts API."
 facet = "publish"
 
 [engine]
@@ -62,12 +62,12 @@ obtain = "Stored by the browser sign-in when LinkedIn issues one (optional; self
 produced_by = "auth"
 
 [capabilities.post]
-summary = "Post text with images to the owner's personal LinkedIn profile, then read it back when permitted."
+summary = "Post text with images or an MP4 video to the owner's personal LinkedIn profile, then read it back when permitted."
 kind = "post"
 outward = true
 
 [capabilities.post.i18n.es]
-summary = "Publica texto con imágenes en el perfil personal de LinkedIn, y lo vuelve a leer cuando está permitido."
+summary = "Publica texto con imágenes o un video MP4 en el perfil personal de LinkedIn, y lo vuelve a leer cuando está permitido."
 
 [capabilities.post.inputs.text]
 type = "string"
@@ -87,6 +87,16 @@ description = "The image file, resolved relative to the piece; JPG, GIF or PNG."
 type = "string"
 required = true
 description = "The image's alt text; an image without alt text is refused."
+
+[capabilities.post.inputs.video]
+type = "path"
+required = false
+description = "Optional local .mp4 video file, resolved relative to the piece; refused together with images."
+
+[capabilities.post.inputs.video-title]
+type = "string"
+required = false
+description = "Optional video attachment title; defaults to the video filename stem when omitted."
 
 [capabilities.post.preview]
 viewer = "post"

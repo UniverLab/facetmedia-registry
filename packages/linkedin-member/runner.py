@@ -50,6 +50,10 @@ IMAGE_MIME = {
 MAX_IMAGES = 20
 #: The MultiImage pixel cap: images above it never leave the machine.
 PIXEL_LIMIT = 36152320
+#: The video container LinkedIn's video upload takes.
+VIDEO_SUFFIX = ".mp4"
+#: The largest video file LinkedIn's video upload takes (500 MiB).
+VIDEO_MAX_BYTES = 500 * 1024 * 1024
 #: The longest commentary LinkedIn's post takes.
 TEXT_LIMIT = 3000
 #: What the dry run names as the account: it sends nothing, so it reads none.
@@ -134,6 +138,45 @@ def _images(req: Request, inputs: Mapping[str, Any]) -> list[Image]:
     if len(found) > MAX_IMAGES:
         raise ValueError(f"the piece carries {len(found)} images, over the {MAX_IMAGES} limit")
     return found
+
+
+def _video(req: Request, inputs: Mapping[str, Any]) -> tuple[Path, str] | None:
+    """The piece's optional MP4 video and title, resolved relative to the piece."""
+    raw = inputs.get("video")
+    if raw is None or raw == "":
+        return None
+    if not isinstance(raw, str):
+        raise ValueError("the piece's video is not a path")
+    resolved = Path(raw)
+    if not resolved.is_absolute():
+        resolved = req.piece_dir / resolved
+    raw_title = inputs.get("video-title")
+    if raw_title is None:
+        raw_title = inputs.get("video_title")
+    if raw_title is not None and not isinstance(raw_title, str):
+        raise ValueError("the piece's video-title is not a string")
+    title = raw_title if isinstance(raw_title, str) and raw_title else resolved.stem
+    return resolved, title
+
+
+def _check_media_inputs(images: list[Image], video: tuple[Path, str] | None) -> None:
+    """Refuse pieces that supply both images and a video."""
+    if images and video is not None:
+        raise ValueError("a piece cannot carry both images and video")
+
+
+def _check_video(path: Path) -> int:
+    """Refuse an invalid MP4 video before any network call; return byte size."""
+    if path.suffix.lower() != VIDEO_SUFFIX:
+        raise ValueError(f"{path.name} is not an MP4 video")
+    if not path.is_file():
+        raise ValueError(f"{path} is not a file")
+    size = path.stat().st_size
+    if size <= 0:
+        raise ValueError(f"{path.name} is empty")
+    if size > VIDEO_MAX_BYTES:
+        raise ValueError(f"{path.name} is {size} bytes, over the {VIDEO_MAX_BYTES} limit")
+    return size
 
 
 def _png_size(data: bytes) -> tuple[int, int] | None:
@@ -311,20 +354,30 @@ def _public_url(post_id: str) -> str:
     return f"https://www.linkedin.com/feed/update/{post_id}"
 
 
+def _is_forbidden_detail(detail: str) -> bool:
+    """Whether a formatted error message indicates HTTP 403 / missing permissions."""
+    return "403" in detail or ACCESS_DENIED_MARK in detail or "status 403" in detail
+
+
 @runner.verb("dry-run")
 def dry_run(req: Request) -> dict[str, Any]:
     inputs = _inputs(req)
     text = _text(inputs)
     images = _images(req, inputs)
+    video = _video(req, inputs)
+    _check_media_inputs(images, video)
     warnings = _image_warnings(images)
+    if video is not None:
+        _check_video(video[0])
     if len(text) > TEXT_LIMIT:
         warnings.insert(0, f"the text is {len(text)} characters, over the {TEXT_LIMIT} limit")
     member_id = _optional_secret("member-id")
     who = f"urn:li:person:{member_id}" if member_id else "the signed-in member's personal profile"
+    media = [str(video[0])] if video is not None else [str(image.path) for image in images]
     rendered = {
         "text": text,
         "account": UNREAD_ACCOUNT,
-        "media": [str(image.path) for image in images],
+        "media": media,
         "warnings": warnings,
         "cost": None,
     }
@@ -362,6 +415,72 @@ def _upload(images: list[Image], access: str, author: str) -> tuple[list[tuple[s
     return uploaded, token
 
 
+def _upload_video_chunks(
+    path: Path, instructions: list[dict[str, Any]], file_size_bytes: int
+) -> list[str]:
+    """Stream each byte slice from disk and return the ordered chunk ETags."""
+    part_ids: list[str] = []
+    with path.open("rb") as fh:
+        for instruction in instructions:
+            first_byte = int(instruction["firstByte"])
+            last_byte = int(instruction["lastByte"])
+            length = last_byte - first_byte + 1
+            if first_byte < 0 or length <= 0 or last_byte >= file_size_bytes:
+                raise ValueError(f"invalid upload chunk bounds: {first_byte}-{last_byte}")
+            fh.seek(first_byte)
+            chunk = fh.read(length)
+            if len(chunk) != length:
+                raise ValueError(
+                    f"{path.name} ended early while reading chunk {first_byte}-{last_byte}"
+                )
+            etag = linkedin_member_client.upload_video_chunk(str(instruction["uploadUrl"]), chunk)
+            part_ids.append(etag)
+    return part_ids
+
+
+def _upload_video(
+    path: Path, title: str, access: str, author: str
+) -> tuple[list[tuple[str, str]], str, list[str]]:
+    """Upload one MP4 video via /rest/videos and wait for AVAILABLE."""
+    file_size_bytes = path.stat().st_size
+    token = access
+    try:
+        (video_urn, upload_token, instructions), token = _with_token(
+            lambda tok: linkedin_member_client.init_video_upload(tok, author, file_size_bytes),
+            access=token,
+        )
+        part_ids = _upload_video_chunks(path, instructions, file_size_bytes)
+        _, token = _with_token(
+            lambda tok: linkedin_member_client.finalize_video_upload(
+                tok, video_urn, upload_token, part_ids
+            ),
+            access=token,
+        )
+    except LinkedInError as exc:
+        raise ValueError(f"the video upload failed: {exc}") from exc
+    except ValueError as exc:
+        if REAUTH_MSG in str(exc):
+            raise
+        raise ValueError(f"the video upload failed: {exc}") from exc
+    warnings: list[str] = []
+    try:
+        _, token = _with_token(
+            lambda tok: linkedin_member_client.wait_for_video(tok, video_urn),
+            access=token,
+        )
+    except ValueError as exc:
+        detail = str(exc)
+        if REAUTH_MSG in detail or "token refresh failed" in detail:
+            raise
+        if _is_forbidden_detail(detail):
+            warnings.append(
+                f"video status read-back forbidden ({detail}): proceeding with post creation"
+            )
+        else:
+            raise ValueError(f"the video upload failed: {exc}") from exc
+    return [(video_urn, title)], token, warnings
+
+
 def _post_body(author: str, text: str, uploaded: list[tuple[str, str]]) -> dict[str, Any]:
     """The Posts API body: text only, one image, or a MultiImage post."""
     body: dict[str, Any] = {
@@ -395,7 +514,7 @@ def _read_back_after_create(access: str, post_id: str) -> tuple[str, list[str]]:
         detail = str(exc)
         if REAUTH_MSG in detail or "token refresh failed" in detail:
             raise
-        if "403" in detail or ACCESS_DENIED_MARK in detail or "status 403" in detail:
+        if _is_forbidden_detail(detail):
             return (
                 "unknown",
                 [f"read-back forbidden ({detail}): post {post_id} was created, state is unknown"],
@@ -410,11 +529,19 @@ def run(req: Request) -> dict[str, Any]:
     if len(text) > TEXT_LIMIT:
         raise ValueError(f"the text is {len(text)} characters, over the {TEXT_LIMIT} limit")
     images = _images(req, inputs)
+    video = _video(req, inputs)
+    _check_media_inputs(images, video)
     _check_files(images)
+    if video is not None:
+        _check_video(video[0])
     member_id = _stored("member-id")
     author = f"urn:li:person:{member_id}"
     account, access = _account(member_id)
-    uploaded, access = _upload(images, access, author)
+    upload_warnings: list[str] = []
+    if video is not None:
+        uploaded, access, upload_warnings = _upload_video(video[0], video[1], access, author)
+    else:
+        uploaded, access = _upload(images, access, author)
     try:
         post_id, access = _with_token(
             lambda tok: linkedin_member_client.create_post(tok, _post_body(author, text, uploaded)),
@@ -424,7 +551,8 @@ def run(req: Request) -> dict[str, Any]:
         if REAUTH_MSG in str(exc):
             raise
         raise ValueError(f"the post was refused: {exc}") from exc
-    state, warnings = _read_back_after_create(access, post_id)
+    state, read_warnings = _read_back_after_create(access, post_id)
+    warnings = [*upload_warnings, *read_warnings]
     post: dict[str, Any] = {
         "network": NETWORK,
         "account": account,
@@ -462,14 +590,22 @@ def verify(req: Request) -> dict[str, Any]:
     post_id = str(first["id"])
     inputs = _inputs(req)
     images = _images(req, inputs)
+    video = _video(req, inputs)
+    _check_media_inputs(images, video)
+    media_items = (
+        [{"file": video[0].name, "title": video[1]}]
+        if video is not None
+        else [{"file": image.path.name, "alt": image.alt} for image in images]
+    )
+    expected_media = 1 if video is not None else len(images)
     try:
         outcome, _ = _with_token(lambda token: linkedin_member_client.get_post(token, post_id))
     except ValueError as exc:
         detail = str(exc)
-        if "403" in detail or ACCESS_DENIED_MARK in detail or "status 403" in detail:
+        if _is_forbidden_detail(detail):
             return {
                 "state": "unknown",
-                "media": [{"file": image.path.name, "alt": image.alt} for image in images],
+                "media": media_items,
                 "warnings": [f"read-back forbidden ({detail}): post {post_id} state is unknown"],
             }
         raise
@@ -477,11 +613,11 @@ def verify(req: Request) -> dict[str, Any]:
         raise ValueError("the post read back no record")
     if outcome.get("commentary") != _text(inputs):
         raise ValueError("the post read back another text")
-    if _media_count(outcome) != len(images):
+    if _media_count(outcome) != expected_media:
         raise ValueError("the post read back another media count")
     return {
         "state": "published",
-        "media": [{"file": image.path.name, "alt": image.alt} for image in images],
+        "media": media_items,
     }
 
 
@@ -499,6 +635,13 @@ def preview(req: Request) -> dict[str, Any]:
     if not isinstance(url, str):
         raise ValueError("the receipt names no url")
     images = _images(req, inputs)
+    video = _video(req, inputs)
+    _check_media_inputs(images, video)
+    media_items = (
+        [{"file": video[0].name, "title": video[1]}]
+        if video is not None
+        else [{"file": image.path.name, "alt": image.alt} for image in images]
+    )
     network = str(receipt.get("network", NETWORK))
     account = str(receipt.get("account", ""))
     state = str(receipt.get("state", "published"))
@@ -512,12 +655,12 @@ def preview(req: Request) -> dict[str, Any]:
         "network": network,
         "account": account,
         "state": state,
-        "images": [image.path.name for image in images],
+        "images": [] if video is not None else [image.path.name for image in images],
         "posts": [
             {
                 "text": text,
                 "url": url,
-                "media": [{"file": image.path.name, "alt": image.alt} for image in images],
+                "media": media_items,
             }
         ],
     }

@@ -117,6 +117,11 @@ class FakeLinkedInMember:
         self.counter = 0
         self.inits: list[str] = []
         self.uploads: list[tuple[str, bytes]] = []
+        self.video_inits: list[tuple[str, int]] = []
+        self.video_chunks: list[tuple[str, bytes]] = []
+        self.video_finalizes: list[tuple[str, str, list[str]]] = []
+        self.video_statuses: list[str] = ["PROCESSING", "AVAILABLE"]
+        self.video_read_forbidden = False
         self.bodies: list[dict[str, Any]] = []
         self.posts: dict[str, dict[str, Any]] = {}
         self.refreshed: list[tuple[str, str, str]] = []
@@ -139,6 +144,44 @@ class FakeLinkedInMember:
 
     def upload_image(self, url: str, mime: str, data: bytes) -> None:
         self.uploads.append((mime, data))
+
+    def init_video_upload(
+        self, token: str, owner: str, file_size_bytes: int
+    ) -> tuple[str, str, list[dict[str, Any]]]:
+        self._check(token)
+        self.counter += 1
+        self.video_inits.append((owner, file_size_bytes))
+        mid = file_size_bytes // 2
+        instructions = [
+            {
+                "uploadUrl": f"https://upload.test/video/{self.counter}/part1",
+                "firstByte": 0,
+                "lastByte": mid - 1,
+            },
+            {
+                "uploadUrl": f"https://upload.test/video/{self.counter}/part2",
+                "firstByte": mid,
+                "lastByte": file_size_bytes - 1,
+            },
+        ]
+        return f"urn:li:video:vid{self.counter}", f"tok-{self.counter}", instructions
+
+    def upload_video_chunk(self, upload_url: str, chunk: bytes) -> str:
+        self.video_chunks.append((upload_url, chunk))
+        return f'"etag-{len(self.video_chunks)}"'
+
+    def finalize_video_upload(
+        self, token: str, video_urn: str, upload_token: str, uploaded_part_ids: list[str]
+    ) -> None:
+        self._check(token)
+        self.video_finalizes.append((video_urn, upload_token, list(uploaded_part_ids)))
+
+    def get_video(self, token: str, video_urn: str) -> dict[str, Any]:
+        self._check(token)
+        if self.video_read_forbidden:
+            raise LinkedInError("rest/videos", 403, "Not enough permissions")
+        status = self.video_statuses.pop(0) if self.video_statuses else "AVAILABLE"
+        return {"id": video_urn, "status": status}
 
     def create_post(self, token: str, body: dict[str, Any]) -> str:
         self._check(token)
@@ -195,6 +238,11 @@ def fake(monkeypatch: pytest.MonkeyPatch) -> FakeLinkedInMember:
     monkeypatch.setattr(client, "userinfo", net.userinfo)
     monkeypatch.setattr(client, "init_image_upload", net.init_image_upload)
     monkeypatch.setattr(client, "upload_image", net.upload_image)
+    monkeypatch.setattr(client, "init_video_upload", net.init_video_upload)
+    monkeypatch.setattr(client, "upload_video_chunk", net.upload_video_chunk)
+    monkeypatch.setattr(client, "finalize_video_upload", net.finalize_video_upload)
+    monkeypatch.setattr(client, "get_video", net.get_video)
+    monkeypatch.setattr(client, "VIDEO_POLL_INTERVAL_S", 0.0)
     monkeypatch.setattr(client, "create_post", net.create_post)
     monkeypatch.setattr(client, "get_post", net.get_post)
     monkeypatch.setattr(client, "refresh_tokens", net.refresh_tokens)
@@ -251,7 +299,7 @@ def test_run_single_image_uses_person_urn_and_answers_published_receipt(
     files: dict[str, Path], fake: FakeLinkedInMember
 ) -> None:
     result = RUNNER.runner._verbs["run"](_req("run", files))
-    assert result["tool"] == {"name": "LinkedIn Member", "version": "0.1.1"}
+    assert result["tool"] == {"name": "LinkedIn Member", "version": "0.2.0"}
     post = result["post"]
     assert post["network"] == "linkedin-member"
     assert post["account"] == "Ada Lovelace"
@@ -541,3 +589,170 @@ def test_auth_announces_through_the_core(
     result = RUNNER.runner._verbs["auth"](_req("auth", files))
     assert result == {"secrets": {"access-token": "a", "member-id": "m-1"}}
     assert seen["announce"] is STUB.announce_url
+
+
+def test_run_video_uploads_chunks_polls_and_creates_post(
+    files: dict[str, Path], fake: FakeLinkedInMember
+) -> None:
+    clip = files["dir"] / "demo-clip.mp4"
+    payload = b"0123456789ABCDEF"
+    clip.write_bytes(payload)
+    req = _req("run", files, {"inputs": {"text": "Video update", "video": "demo-clip.mp4"}})
+    result = RUNNER.runner._verbs["run"](req)
+    assert result["tool"] == {"name": "LinkedIn Member", "version": "0.2.0"}
+    assert result["post"]["state"] == "published"
+    assert fake.video_inits == [(AUTHOR, len(payload))]
+    assert [chunk for _, chunk in fake.video_chunks] == [b"01234567", b"89ABCDEF"]
+    assert fake.video_finalizes == [("urn:li:video:vid1", "tok-1", ['"etag-1"', '"etag-2"'])]
+    assert fake.video_statuses == []
+    (body,) = fake.bodies
+    assert body["content"] == {"media": {"id": "urn:li:video:vid1", "title": "demo-clip"}}
+
+
+def test_run_video_403_on_get_video_warns_and_creates_post(
+    files: dict[str, Path], fake: FakeLinkedInMember
+) -> None:
+    clip = files["dir"] / "clip.mp4"
+    clip.write_bytes(b"AABBCCDD")
+    fake.video_read_forbidden = True
+    req = _req(
+        "run",
+        files,
+        {"inputs": {"text": "Video update", "video": str(clip), "video-title": "Custom Title"}},
+    )
+    result = RUNNER.runner._verbs["run"](req)
+    post = result["post"]
+    assert post["state"] == "published"
+    assert any("video status read-back forbidden" in w for w in post["warnings"])
+    assert fake.bodies[0]["content"] == {
+        "media": {"id": "urn:li:video:vid1", "title": "Custom Title"}
+    }
+
+
+def test_verify_and_preview_video_post(files: dict[str, Path], fake: FakeLinkedInMember) -> None:
+    clip = files["dir"] / "clip.mp4"
+    clip.write_bytes(b"AABBCCDD")
+    video_inputs = {"text": "Video update", "video": "clip.mp4", "video-title": "My Clip"}
+    run_res = RUNNER.runner._verbs["run"](_req("run", files, {"inputs": video_inputs}))
+
+    verify_req = _req("verify", files, {"inputs": video_inputs, "post": run_res["post"]})
+    verify_res = RUNNER.runner._verbs["verify"](verify_req)
+    assert verify_res == {
+        "state": "published",
+        "media": [{"file": "clip.mp4", "title": "My Clip"}],
+    }
+
+    receipt = files["dir"] / "video.post.json"
+    receipt.write_text(json.dumps(run_res["post"]))
+    preview_req = _req("preview", files, {"inputs": video_inputs, "assets": [str(receipt)]})
+    preview_res = RUNNER.runner._verbs["preview"](preview_req)
+    preview_file = files["dir"] / preview_res["assets"][0]["file"]
+    data = json.loads(preview_file.read_text(encoding="utf-8"))
+    assert data["images"] == []
+    assert data["posts"][0]["media"] == [{"file": "clip.mp4", "title": "My Clip"}]
+
+
+def test_upload_video_chunk_missing_etag_and_wait_for_video_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = RUNNER.linkedin_member_client
+    _ok(monkeypatch, b"", status=200, headers={})
+    with pytest.raises(LinkedInError, match="no ETag"):
+        client.upload_video_chunk("https://upload.test/part1", b"abc")
+
+    _ok(monkeypatch, b"", status=201, headers={"etag": '  "abc-1"  '})
+    assert client.upload_video_chunk("https://upload.test/part1", b"abc") == '"abc-1"'
+
+    monkeypatch.setattr(
+        client,
+        "get_video",
+        lambda _tok, _urn: {"id": "urn:li:video:1", "status": "PROCESSING_FAILED"},
+    )
+    with pytest.raises(LinkedInError, match="PROCESSING_FAILED"):
+        client.wait_for_video("tok", "urn:li:video:1", timeout_s=1.0, poll_interval_s=0.0)
+
+    monkeypatch.setattr(
+        client, "get_video", lambda _tok, _urn: {"id": "urn:li:video:1", "status": "PROCESSING"}
+    )
+    with pytest.raises(LinkedInError, match="timed out"):
+        client.wait_for_video(
+            "tok", "urn:li:video:1", timeout_s=0.0, poll_interval_s=0.0, sleep=lambda _s: None
+        )
+
+
+def test_client_video_init_finalize_and_get_video(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = RUNNER.linkedin_member_client
+    seen: list[tuple[str, str, dict[str, Any] | None]] = []
+
+    def fake_urlopen(req: urllib.request.Request, timeout: float = 30.0) -> _FakeResponse:
+        body = json.loads(req.data.decode("utf-8")) if req.data else None
+        seen.append((req.get_method(), req.full_url, body))
+        if "initializeUpload" in req.full_url:
+            return _FakeResponse(
+                json.dumps(
+                    {
+                        "value": {
+                            "video": "urn:li:video:abc",
+                            "uploadToken": "utok-1",
+                            "uploadInstructions": [
+                                {"uploadUrl": "https://up/1", "firstByte": 0, "lastByte": 9}
+                            ],
+                        }
+                    }
+                ).encode()
+            )
+        if "finalizeUpload" in req.full_url:
+            return _FakeResponse(b"{}", status=200)
+        return _FakeResponse(json.dumps({"id": "urn:li:video:abc", "status": "AVAILABLE"}).encode())
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    urn, tok, instructions = client.init_video_upload("acc", AUTHOR, 10)
+    assert (urn, tok) == ("urn:li:video:abc", "utok-1")
+    assert instructions == [{"uploadUrl": "https://up/1", "firstByte": 0, "lastByte": 9}]
+
+    client.finalize_video_upload("acc", urn, tok, ['"e1"'])
+    got = client.get_video("acc", urn)
+    assert got["status"] == "AVAILABLE"
+    assert seen == [
+        (
+            "POST",
+            f"{client.API_HOST}{client.VIDEOS_INIT}",
+            {
+                "initializeUploadRequest": {
+                    "owner": AUTHOR,
+                    "fileSizeBytes": 10,
+                    "uploadCaptions": False,
+                    "uploadThumbnail": False,
+                }
+            },
+        ),
+        (
+            "POST",
+            f"{client.API_HOST}{client.VIDEOS_FINALIZE}",
+            {
+                "finalizeUploadRequest": {
+                    "video": "urn:li:video:abc",
+                    "uploadToken": "utok-1",
+                    "uploadedPartIds": ['"e1"'],
+                }
+            },
+        ),
+        ("GET", f"{client.API_HOST}{client.VIDEOS}/urn%3Ali%3Avideo%3Aabc", None),
+    ]
+
+    _ok(
+        monkeypatch,
+        json.dumps(
+            {
+                "value": {
+                    "video": "urn:li:video:abc",
+                    "uploadToken": "t",
+                    "uploadInstructions": [
+                        {"uploadUrl": "https://up/1", "firstByte": True, "lastByte": 1}
+                    ],
+                }
+            }
+        ).encode(),
+    )
+    with pytest.raises(LinkedInError, match="byte bounds"):
+        client.init_video_upload("acc", AUTHOR, 2)

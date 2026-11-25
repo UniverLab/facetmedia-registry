@@ -1,6 +1,6 @@
 # linkedin-member
 
-User-facing notes for the `linkedin-member` package (`linkedin-member.post`), which posts text with images to the owner's personal LinkedIn profile through the Posts API.
+User-facing notes for the `linkedin-member` package (`linkedin-member.post`), which posts text with images or an MP4 video to the owner's personal LinkedIn profile through the Posts API.
 
 ## Choosing between `linkedin` and `linkedin-member`
 
@@ -17,12 +17,15 @@ The two packages sign in separately, each with its own entry in `facet auth logi
 | --- | --- | --- | --- |
 | `text` | string | yes | Post commentary, at most 3000 characters; URLs are unfurled into link previews |
 | `images` | array | no | 0 to 20 entries, each with `path` (JPG, GIF or PNG, up to 36 152 320 pixels, resolved relative to the piece) and required `alt` text |
+| `video` | path | no | One local `.mp4` file, resolved relative to the piece, non-empty and at most 500 MiB; refused together with `images` |
+| `video-title` | string | no | Video attachment title; defaults to the video filename stem when omitted |
 
 There is no `author` input: the author is always the signed-in member (`urn:li:person:{member-id}`).
 
-- 0 images: text-only post.
+- 0 images and no video: text-only post.
 - 1 image: single-image post (the `alt` text rides as the media title).
 - 2 to 20 images: `MultiImage` post. More than 20 images is refused before anything leaves.
+- 1 video: video post (`video-title` rides as the media title, defaulting to the filename stem). `images` and `video` are mutually exclusive.
 
 Example piece:
 
@@ -63,10 +66,10 @@ facet auth login linkedin-member
 
 ## Dry run, posting and read-back
 
-- `facet run <piece> --dry-run` validates `text` and `images` locally without network calls and reports `account = "@not-read"`.
-- A real run uploads each image through the Images API with `urn:li:person:{member-id}` as the owner, creates the post with `PUBLIC` visibility, and reads it back via `GET /rest/posts/{urn}`.
+- `facet run <piece> --dry-run` validates `text`, `images`, and `video` locally without network calls and reports `account = "@not-read"`.
+- A real run uploads each image through the Images API, or uploads an `.mp4` video through the Videos API (`initializeUpload`, chunk PUTs, `finalizeUpload`, then poll until `AVAILABLE`) with `urn:li:person:{member-id}` as the owner, creates the post with `PUBLIC` visibility, and reads it back via `GET /rest/posts/{urn}`.
 - Accepted posts are public at once (LinkedIn keeps no drafts), and an existing receipt is never re-sent.
-- When the read-back succeeds, the receipt state is `published`. When LinkedIn refuses the read-back as forbidden (HTTP 403), the receipt still keeps the post URN and public feed URL (`https://www.linkedin.com/feed/update/{urn}`) with state `unknown` and a warning — do not re-send.
+- When the read-back succeeds, the receipt state is `published`. When LinkedIn refuses the read-back as forbidden (HTTP 403), the receipt still keeps the post URN and public feed URL (`https://www.linkedin.com/feed/update/{urn}`) with state `unknown` and a warning — do not re-send. If the video status read-back is forbidden (403), the runner records a warning and proceeds to create the post.
 
 ## Token expiry and `doctor`
 

@@ -26,6 +26,12 @@ from typing import Any
 
 #: How long one API call may take; the endpoints answer in milliseconds.
 TIMEOUT_S = 30.0
+#: How long one video chunk upload may take.
+UPLOAD_TIMEOUT_S = 120.0
+#: How often to poll LinkedIn while waiting for video processing.
+VIDEO_POLL_INTERVAL_S = 2.0
+#: How long to wait for LinkedIn to finish processing an uploaded video.
+VIDEO_POLL_TIMEOUT_S = 300.0
 #: The host every LinkedIn API call below goes to.
 API_HOST = "https://api.linkedin.com"
 #: The version header every rest call carries, in YYYYMM format.
@@ -36,6 +42,14 @@ RESTLI_PROTOCOL = "2.0.0"
 POSTS = "/rest/posts"
 #: The image asset init endpoint; the upload URL rides the answer.
 IMAGES_INIT = "/rest/images?action=initializeUpload"
+#: The video asset init endpoint; upload instructions ride the answer.
+VIDEOS_INIT = "/rest/videos?action=initializeUpload"
+#: The video asset finalize endpoint; closes a chunked upload.
+VIDEOS_FINALIZE = "/rest/videos?action=finalizeUpload"
+#: The video asset status endpoint.
+VIDEOS = "/rest/videos"
+#: Video statuses that mean processing will never reach AVAILABLE.
+VIDEO_FAILURE_STATUSES = ("PROCESSING_FAILED", "FAILED", "DELETED")
 #: The OpenID member read that names who signed in and holds ``sub``.
 USERINFO = "/v2/userinfo"
 #: Where the browser sign-in starts.
@@ -246,6 +260,130 @@ def upload_image(upload_url: str, mime: str, data: bytes) -> None:
         raise LinkedInError(upload_url, None, f"the image upload failed: {exc}") from exc
     if status not in (HTTPStatus.OK, HTTPStatus.CREATED):
         raise LinkedInError(upload_url, status, "the image upload was refused")
+
+
+def _validate_upload_instruction(item: object) -> dict[str, Any]:
+    """Validate one chunk upload instruction from initializeUpload."""
+    if not isinstance(item, dict):
+        raise LinkedInError(
+            VIDEOS_INIT, None, "the init answer holds an invalid upload instruction"
+        )
+    upload_url = item.get("uploadUrl")
+    first_byte = item.get("firstByte")
+    last_byte = item.get("lastByte")
+    if not isinstance(upload_url, str) or not upload_url:
+        raise LinkedInError(VIDEOS_INIT, None, "the upload instruction holds no uploadUrl")
+    if (
+        not isinstance(first_byte, int)
+        or isinstance(first_byte, bool)
+        or not isinstance(last_byte, int)
+        or isinstance(last_byte, bool)
+    ):
+        raise LinkedInError(VIDEOS_INIT, None, "the upload instruction holds invalid byte bounds")
+    return item
+
+
+def init_video_upload(
+    access_token: str, owner: str, file_size_bytes: int
+) -> tuple[str, str, list[dict[str, Any]]]:
+    """Start the video asset upload; answer video URN, upload token and chunk instructions."""
+    data = _call(
+        "POST",
+        VIDEOS_INIT,
+        {
+            "initializeUploadRequest": {
+                "owner": owner,
+                "fileSizeBytes": file_size_bytes,
+                "uploadCaptions": False,
+                "uploadThumbnail": False,
+            }
+        },
+        token=access_token,
+    )
+    if not isinstance(data, dict):
+        raise LinkedInError(VIDEOS_INIT, None, "the answer is not a JSON object")
+    value = data.get("value")
+    if not isinstance(value, dict):
+        raise LinkedInError(VIDEOS_INIT, None, "the init answer holds no upload")
+    video_urn = value.get("video")
+    upload_token = value.get("uploadToken")
+    instructions = value.get("uploadInstructions")
+    if not isinstance(video_urn, str) or not video_urn:
+        raise LinkedInError(VIDEOS_INIT, None, "the init answer holds no video URN")
+    if not isinstance(upload_token, str):
+        raise LinkedInError(VIDEOS_INIT, None, "the init answer holds no uploadToken")
+    if not isinstance(instructions, list) or not instructions:
+        raise LinkedInError(VIDEOS_INIT, None, "the init answer holds no uploadInstructions")
+    validated = [_validate_upload_instruction(item) for item in instructions]
+    return video_urn, upload_token, validated
+
+
+def upload_video_chunk(upload_url: str, chunk: bytes) -> str:
+    """PUT one video chunk; return its stripped ETag header or raise LinkedInError."""
+    request = urllib.request.Request(upload_url, data=chunk, method="PUT")
+    request.add_header("Content-Type", "application/octet-stream")
+    try:
+        with urllib.request.urlopen(request, timeout=UPLOAD_TIMEOUT_S) as response:
+            status = response.status
+            headers = {str(key).lower(): str(value) for key, value in response.headers.items()}
+    except urllib.error.HTTPError as exc:
+        raise _http_error(upload_url, exc) from exc
+    except (urllib.error.URLError, OSError) as exc:
+        raise LinkedInError(upload_url, None, f"the video upload failed: {exc}") from exc
+    if status not in (HTTPStatus.OK, HTTPStatus.CREATED):
+        raise LinkedInError(upload_url, status, "the video upload was refused")
+    etag = headers.get("etag", "").strip()
+    if not etag:
+        raise LinkedInError(upload_url, status, "the video upload answer holds no ETag")
+    return etag
+
+
+def finalize_video_upload(
+    access_token: str, video_urn: str, upload_token: str, uploaded_part_ids: list[str]
+) -> None:
+    """Finalize a chunked video upload with the ordered list of chunk ETags."""
+    _call(
+        "POST",
+        VIDEOS_FINALIZE,
+        {
+            "finalizeUploadRequest": {
+                "video": video_urn,
+                "uploadToken": upload_token,
+                "uploadedPartIds": uploaded_part_ids,
+            }
+        },
+        token=access_token,
+    )
+
+
+def get_video(access_token: str, video_urn: str) -> dict[str, Any]:
+    """Read a video asset's status and metadata."""
+    encoded = urllib.parse.quote(video_urn, safe="")
+    data = _call("GET", f"{VIDEOS}/{encoded}", token=access_token)
+    if not isinstance(data, dict):
+        raise LinkedInError(VIDEOS, None, "the answer is not a JSON object")
+    return data
+
+
+def wait_for_video(
+    access_token: str,
+    video_urn: str,
+    timeout_s: float = VIDEO_POLL_TIMEOUT_S,
+    poll_interval_s: float = VIDEO_POLL_INTERVAL_S,
+    sleep: Callable[[float], None] = time.sleep,
+) -> dict[str, Any]:
+    """Poll get_video until AVAILABLE, or raise LinkedInError on failure or timeout."""
+    deadline = time.monotonic() + timeout_s
+    while True:
+        video = get_video(access_token, video_urn)
+        status = video.get("status")
+        if status == "AVAILABLE":
+            return video
+        if status in VIDEO_FAILURE_STATUSES:
+            raise LinkedInError(VIDEOS, None, f"video processing failed with status {status}")
+        if time.monotonic() >= deadline:
+            raise LinkedInError(VIDEOS, None, "video processing timed out")
+        sleep(poll_interval_s)
 
 
 def create_post(access_token: str, body: dict[str, Any]) -> str:

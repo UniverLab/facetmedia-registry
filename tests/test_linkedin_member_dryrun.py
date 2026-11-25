@@ -127,6 +127,11 @@ def offline(monkeypatch: pytest.MonkeyPatch) -> None:
         "userinfo",
         "init_image_upload",
         "upload_image",
+        "init_video_upload",
+        "upload_video_chunk",
+        "finalize_video_upload",
+        "get_video",
+        "wait_for_video",
         "create_post",
         "get_post",
         "refresh_tokens",
@@ -222,3 +227,54 @@ def test_dry_run_warns_over_the_character_limit(
     monkeypatch.setattr(RUNNER, "TEXT_LIMIT", 8)
     result = RUNNER.runner._verbs["dry-run"](_req(files, _inputs(files)))
     assert any("over the 8 limit" in warning for warning in result["posts"][0]["warnings"])
+
+
+def test_dry_run_accepts_valid_mp4_video_without_network(
+    files: dict[str, Path], offline: None
+) -> None:
+    clip = files["dir"] / "clip.mp4"
+    clip.write_bytes(b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 32)
+    result = RUNNER.runner._verbs["dry-run"](
+        _req(files, {"text": "Video post", "video": "clip.mp4"})
+    )
+    post = result["posts"][0]
+    assert post["media"] == [str(clip)]
+    assert post["warnings"] == []
+
+
+def test_dry_run_refuses_video_with_bad_extension(files: dict[str, Path], offline: None) -> None:
+    clip = files["dir"] / "clip.mov"
+    clip.write_bytes(b"data")
+    with pytest.raises(ValueError, match="MP4"):
+        RUNNER.runner._verbs["dry-run"](_req(files, {"text": "Video", "video": str(clip)}))
+
+
+def test_dry_run_refuses_missing_video(files: dict[str, Path], offline: None) -> None:
+    with pytest.raises(ValueError, match="not a file"):
+        RUNNER.runner._verbs["dry-run"](
+            _req(files, {"text": "Video", "video": str(files["dir"] / "missing.mp4")})
+        )
+
+
+def test_dry_run_refuses_empty_video(files: dict[str, Path], offline: None) -> None:
+    clip = files["dir"] / "empty.mp4"
+    clip.write_bytes(b"")
+    with pytest.raises(ValueError, match="empty"):
+        RUNNER.runner._verbs["dry-run"](_req(files, {"text": "Video", "video": str(clip)}))
+
+
+def test_dry_run_refuses_video_together_with_images(files: dict[str, Path], offline: None) -> None:
+    clip = files["dir"] / "clip.mp4"
+    clip.write_bytes(b"mp4-bytes")
+    with pytest.raises(ValueError, match="both images and video"):
+        RUNNER.runner._verbs["dry-run"](_req(files, _inputs(files, video=str(clip))))
+
+
+def test_dry_run_refuses_oversized_video(
+    files: dict[str, Path], offline: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clip = files["dir"] / "huge.mp4"
+    clip.write_bytes(b"0123456789")
+    monkeypatch.setattr(RUNNER, "VIDEO_MAX_BYTES", 5)
+    with pytest.raises(ValueError, match="over the 5 limit"):
+        RUNNER.runner._verbs["dry-run"](_req(files, {"text": "Video", "video": str(clip)}))
