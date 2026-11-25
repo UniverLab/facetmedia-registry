@@ -1,7 +1,7 @@
 """The x manifest: the publish facet's second outward package.
 
 The registry suite runs without the core, so the checks here read the
-manifest as data. The package is ``x`` 0.2.0 on the publish facet,
+manifest as data. The package is ``x`` 0.2.1 on the publish facet,
 floored at the facet release that brought it (0.1.0b2): older cores skip
 it before reading the rest. The capability is ``x.post`` of kind post,
 the one outward kind, with the post viewer; the credentials are the
@@ -41,7 +41,7 @@ URL_LENGTH = 23
 
 def test_the_package_is_publish_on_the_publish_facet() -> None:
     assert MANIFEST["name"] == "x"
-    assert MANIFEST["version"] == "0.2.0"
+    assert MANIFEST["version"] == "0.2.1"
     assert MANIFEST["requires_facet"] == ">=0.1.0b2,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["facet"] == "publish"

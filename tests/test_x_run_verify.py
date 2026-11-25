@@ -116,6 +116,8 @@ class FakeNet:
         self.reads = 0
         self.refreshes = 0
         self.rotate = True
+        self.single_use = False
+        self._spent: list[str] = []
         self.refresh_error: Exception | None = None
         self.authorized = {"access-token": "fresh-access", "refresh-token": "fresh-refresh"}
         self.authorize_error: Exception | None = None
@@ -123,9 +125,17 @@ class FakeNet:
 
     def refresh_tokens(self, client_id: str, client_secret: str, refresh_token: str) -> Any:
         self.refreshes += 1
-        assert (client_id, client_secret, refresh_token) == ("s3cr3t", "s3cr3t", "s3cr3t")
+        assert (client_id, client_secret) == ("s3cr3t", "s3cr3t")
+        if not self.single_use:
+            assert refresh_token in ("s3cr3t", "fresh-refresh")
         if self.refresh_error is not None:
             raise self.refresh_error
+        if self.single_use:
+            if refresh_token in self._spent:
+                raise RUNNER.x_client.XError(
+                    "POST /2/oauth2/token", 400, "invalid_grant: refresh token already used"
+                )
+            self._spent.append(refresh_token)
         tokens_cls = RUNNER.x_client.Tokens
         return tokens_cls(
             access_token="fresh-access",
@@ -186,6 +196,7 @@ def net(monkeypatch: pytest.MonkeyPatch) -> FakeNet:
     fake = FakeNet()
     for name in SECRETS:
         monkeypatch.setenv(f"FACET_SECRET_{name}", "s3cr3t")
+    monkeypatch.setattr(RUNNER, "_REFRESH_CACHE", {})
     STUB.renewals.clear()
     monkeypatch.setattr(RUNNER.x_client, "refresh_tokens", fake.refresh_tokens)
     monkeypatch.setattr(RUNNER.x_client, "authorize", fake.authorize)
@@ -349,7 +360,7 @@ def test_run_sends_a_thread_of_replies_with_one_record_each(
     req = _request("run", tmp_path, {"inputs": _inputs(png), "out_dir": str(tmp_path)})
     result = RUNNER.runner._verbs["run"](req)
     post = result["post"]
-    assert result["tool"] == {"name": "X", "version": "0.2.0"}
+    assert result["tool"] == {"name": "X", "version": "0.2.1"}
     assert post["network"] == "x"
     assert post["account"] == "@lab"
     assert post["state"] == "published"
@@ -646,6 +657,7 @@ def test_doctor_full_reports_a_failed_sign_in(
 ) -> None:
     for name in SECRETS:
         monkeypatch.setenv(f"FACET_SECRET_{name}", "mala")
+    monkeypatch.setattr(RUNNER, "_REFRESH_CACHE", {})
 
     def _refused(*args: Any, **kwargs: Any) -> dict[str, Any]:
         raise RUNNER.x_client.XError("GET /2/users/me", 403, "Forbidden")
@@ -660,3 +672,29 @@ def test_doctor_full_reports_a_failed_sign_in(
     checks = {check["name"]: check for check in RUNNER.runner._verbs["doctor"](req)["checks"]}
     assert checks["session"]["ok"] is False
     assert "mala" not in checks["session"]["detail"]
+
+
+def test_doctor_full_refreshes_once_when_tokens_are_single_use(
+    tmp_path: Path, net: FakeNet
+) -> None:
+    net.single_use = True
+    req = _request("doctor", tmp_path, {"depth": "full"})
+    checks = {check["name"]: check for check in RUNNER.runner._verbs["doctor"](req)["checks"]}
+    assert checks["session"]["ok"] is True
+    assert checks["write"]["ok"] is True
+    assert net.refreshes == 1
+
+
+def test_doctor_full_reports_a_probe_that_fails_besides_unauthorized(
+    tmp_path: Path, net: FakeNet, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def _exploded(token: str) -> bool:
+        raise RUNNER.x_client.XError("POST /2/tweets", 500, "server exploded")
+
+    monkeypatch.setattr(RUNNER.x_client, "probe_write", _exploded)
+    req = _request("doctor", tmp_path, {"depth": "full"})
+    checks = {check["name"]: check for check in RUNNER.runner._verbs["doctor"](req)["checks"]}
+    assert checks["session"]["ok"] is True
+    assert checks["write"]["ok"] is False
+    assert "server exploded" in checks["write"]["detail"]
+    assert "facet auth login x" in checks["write"]["fix"]

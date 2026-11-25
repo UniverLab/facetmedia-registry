@@ -382,7 +382,7 @@ def test_set_alt_text_posts_the_v2_metadata_call(monkeypatch: pytest.MonkeyPatch
     CLIENT.set_alt_text(TOKEN, "77", "La escuadra.")
     assert captured.url == "https://api.x.com/2/media/metadata"
     assert captured.auth == "Bearer token-1"
-    assert captured.json() == {"media_id": "77", "alt_text": {"text": "La escuadra."}}
+    assert captured.json() == {"id": "77", "metadata": {"alt_text": {"text": "La escuadra."}}}
 
 
 def test_a_refused_call_carries_the_servers_detail(monkeypatch: pytest.MonkeyPatch) -> None:

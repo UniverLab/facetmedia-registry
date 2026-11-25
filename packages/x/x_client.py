@@ -467,5 +467,5 @@ def set_alt_text(token: str, media_id: str, alt: str) -> None:
         f"{API_HOST}/2/media/metadata",
         method="POST",
         token=token,
-        payload={"media_id": media_id, "alt_text": {"text": alt}},
+        payload={"id": media_id, "metadata": {"alt_text": {"text": alt}}},
     )

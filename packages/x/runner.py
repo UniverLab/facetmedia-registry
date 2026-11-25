@@ -18,6 +18,7 @@ its write access and the cost of the read-back at ``full``.
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import tomllib
@@ -125,6 +126,11 @@ def _tool() -> dict[str, str]:
     return {"name": str(manifest["tool_name"]), "version": str(manifest["version"])}
 
 
+#: Rotated refresh tokens kept in-process, so a second refresh in the
+#: same process never reuses an already-invalidated single-use token.
+_REFRESH_CACHE: dict[str, str] = {}
+
+
 def _stored(name: str) -> str:
     """One stored secret; a missing one names the sign-in that stores it."""
     try:
@@ -146,13 +152,15 @@ def _refresh() -> str:
     never lives only in this process's memory.
     """
     client_id, client_secret = _credentials()
-    refresh_token = _stored("refresh-token")
+    refresh_token = _REFRESH_CACHE.get("refresh-token") or _stored("refresh-token")
     try:
         tokens = x_client.refresh_tokens(client_id, client_secret, refresh_token)
     except XError as exc:
         raise ValueError(f"the token refresh failed: {exc}; {REFRESH_FIX}") from exc
     renew_secret("access-token", tokens.access_token)
     if tokens.refresh_token:
+        _REFRESH_CACHE["refresh-token"] = tokens.refresh_token
+        os.environ["FACET_SECRET_REFRESH_TOKEN"] = tokens.refresh_token
         renew_secret("refresh-token", tokens.refresh_token)
     return tokens.access_token
 
@@ -722,14 +730,14 @@ def _doctor_secrets() -> list[dict[str, Any]]:
     return checks
 
 
-def _doctor_session() -> dict[str, Any]:
+def _doctor_session() -> tuple[dict[str, Any], str | None]:
     """Read the own account with a working token and state what that read costs."""
     try:
-        user, _ = _with_token(x_client.whoami)
+        user, token = _with_token(x_client.whoami)
     except ValueError as exc:
-        return _check("session", False, f"sign-in failed: {exc}", WRITE_FIX)
+        return _check("session", False, f"sign-in failed: {exc}", WRITE_FIX), None
     if not isinstance(user, dict):
-        return _check("session", False, "the account read no user", WRITE_FIX)
+        return _check("session", False, "the account read no user", WRITE_FIX), None
     rates = _rates()
     name = user.get("name") or user.get("username") or ""
     return _check(
@@ -737,14 +745,14 @@ def _doctor_session() -> dict[str, Any]:
         True,
         f"signed in as @{user.get('username', '')} ({name}); "
         f"that read costs ${rates.read_user:.3f}",
-    )
+    ), token
 
 
-def _doctor_write() -> dict[str, Any]:
+def _doctor_write(token: str) -> dict[str, Any]:
     """Probe the token's write access; a refusal names the sign-in that grants it."""
     try:
-        allowed, _ = _with_token(x_client.probe_write)
-    except ValueError as exc:
+        allowed, _ = _send(x_client.probe_write, token)
+    except (ValueError, XError) as exc:
         return _check("write", False, f"the write probe failed: {exc}", WRITE_FIX)
     if allowed:
         return _check(
@@ -761,10 +769,10 @@ def _doctor_write() -> dict[str, Any]:
 def doctor(req: Request) -> dict[str, Any]:
     checks = [_doctor_imports(), *_doctor_secrets()]
     if req.depth == "full":
-        session = _doctor_session()
+        session, token = _doctor_session()
         checks.append(session)
-        if session["ok"]:
-            checks.append(_doctor_write())
+        if session["ok"] and token:
+            checks.append(_doctor_write(token))
     return {"checks": checks}
 
 
