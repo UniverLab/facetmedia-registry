@@ -208,17 +208,17 @@ def _embed(
     videos = [entry for entry in entries if entry.kind == "video"]
     thumbs = [entry for entry in entries if entry.kind == "thumb"]
     if images:
-        return {
-            "$type": "app.bsky.embed.images",
-            "images": [
-                {
-                    "alt": str(entry.alt),
-                    "aspectRatio": _aspect_ratio(entry.path),
-                    "image": _upload(host, token, entry),
-                }
-                for entry in images
-            ],
-        }
+        items: list[dict[str, Any]] = []
+        for entry in images:
+            item: dict[str, Any] = {
+                "alt": str(entry.alt),
+                "image": _upload(host, token, entry),
+            }
+            ratio = _aspect_ratio(entry.path)
+            if ratio is not None:
+                item["aspectRatio"] = ratio
+            items.append(item)
+        return {"$type": "app.bsky.embed.images", "images": items}
     if videos:
         return {"$type": "app.bsky.embed.video", "video": _upload(host, token, videos[0])}
     url = post.get("card-url")
@@ -251,7 +251,7 @@ def _aspect_ratio(path: Path) -> dict[str, int] | None:
     """Width and height from a still's own header, else nothing to declare."""
     try:
         with path.open("rb") as handle:
-            head = handle.read(64)
+            head = handle.read(65536)
     except OSError:
         return None
     size = _still_size(path.suffix.lower(), head)

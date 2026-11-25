@@ -191,7 +191,7 @@ def test_run_sends_a_thread_of_replies_with_one_record_each(
     req = _request("run", tmp_path, {"inputs": _inputs(png), "out_dir": str(tmp_path)})
     result = RUNNER.runner._verbs["run"](req)
     post = result["post"]
-    assert result["tool"] == {"name": "Bluesky", "version": "0.1.1"}
+    assert result["tool"] == {"name": "Bluesky", "version": "0.1.2"}
     assert post["network"] == "bluesky"
     assert post["account"] == HANDLE
     assert post["state"] == "published"
@@ -408,3 +408,50 @@ def test_doctor_full_reports_a_failed_sign_in(
     checks = {check["name"]: check for check in RUNNER.runner._verbs["doctor"](req)["checks"]}
     assert checks["session"]["ok"] is False
     assert "mala" not in checks["session"]["detail"]
+
+
+def _jpeg_past64(tmp_path: Path) -> Path:
+    path = tmp_path / "foto.jpg"
+    path.write_bytes(
+        b"\xff\xd8"
+        + b"\xff\xe1"
+        + (130).to_bytes(2, "big")
+        + b"\x00" * 128
+        + b"\xff\xc0"
+        + b"\x00\x08\x08\x00\x30\x00\x40\x01"
+    )
+    return path
+
+
+def _single_image_inputs(image: Path, alt: str) -> dict[str, Any]:
+    return {
+        "posts": [{"text": "Una foto.", "lang": "es"}],
+        "images": [{"post": 1, "path": str(image), "alt": alt}],
+    }
+
+
+def test_run_reads_jpeg_dimensions_past_byte_64(tmp_path: Path, net: FakeNet) -> None:
+    jpeg = _jpeg_past64(tmp_path)
+    req = _request(
+        "run",
+        tmp_path,
+        {"inputs": _single_image_inputs(jpeg, "Una foto."), "out_dir": str(tmp_path)},
+    )
+    RUNNER.runner._verbs["run"](req)
+    embed = net.records["3khilo01"]["embed"]
+    assert embed["$type"] == "app.bsky.embed.images"
+    assert embed["images"][0]["aspectRatio"] == {"width": 64, "height": 48}
+
+
+def test_run_omits_aspect_ratio_when_dimensions_unknown(tmp_path: Path, net: FakeNet) -> None:
+    junk = tmp_path / "roto.jpg"
+    junk.write_bytes(b"not-a-jpeg")
+    req = _request(
+        "run",
+        tmp_path,
+        {"inputs": _single_image_inputs(junk, "Una foto."), "out_dir": str(tmp_path)},
+    )
+    RUNNER.runner._verbs["run"](req)
+    embed = net.records["3khilo01"]["embed"]
+    assert "aspectRatio" not in embed["images"][0]
+    assert set(embed["images"][0]) == {"alt", "image"}
