@@ -31,12 +31,14 @@ name = "client-id"
 description = "The lab's X developer app client ID, the OAuth 2.0 key shown once with the client secret"
 required = true
 obtain = "Shown once in the Developer Console at developer.x.com, in the app's Keys and Tokens tab"
+link = "https://console.x.com"
 
 [[secrets]]
 name = "client-secret"
 description = "The lab's X developer app client secret, the OAuth 2.0 key shown once with the client ID"
 required = true
 obtain = "Shown once in the Developer Console at developer.x.com, in the app's Keys and Tokens tab"
+link = "https://console.x.com"
 
 [[secrets]]
 name = "access-token"

@@ -24,6 +24,8 @@ MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
 
 #: Longest one-line ``obtain`` hint the core wizard shows; mirrors the core limit.
 MAX_OBTAIN_LEN = 300
+#: Longest ``link`` address the core wizard shows; mirrors the core limit.
+MAX_LINK_LIMIT = 200
 INDEX = tomllib.loads((ROOT / "index.toml").read_text(encoding="utf-8"))
 CAPABILITY = MANIFEST["capabilities"]["post"]
 INPUTS = CAPABILITY["inputs"]
@@ -122,6 +124,20 @@ def test_the_tokens_are_produced_by_the_sign_in() -> None:
         assert "sign-in" in secrets[name]["obtain"], name
     for name in ("client-id", "client-secret"):
         assert "produced_by" not in secrets[name], name
+
+
+def test_the_client_pair_links_to_where_it_is_created() -> None:
+    secrets = {entry["name"]: entry for entry in MANIFEST["secrets"]}
+    assert secrets["client-id"]["link"] == "https://console.x.com"
+    assert secrets["client-secret"]["link"] == "https://console.x.com"
+    for name in ("access-token", "refresh-token"):
+        assert "link" not in secrets[name], name
+    for entry in MANIFEST["secrets"]:
+        link = entry.get("link")
+        if link is None:
+            continue
+        assert link.startswith("https://"), entry["name"]
+        assert len(link) <= MAX_LINK_LIMIT, entry["name"]
 
 
 def test_the_capability_is_the_outward_post() -> None:

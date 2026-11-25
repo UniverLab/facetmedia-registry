@@ -85,7 +85,7 @@ this order:
    or Bot**, with the posting scopes (`tweet.read`, `tweet.write`,
    `users.read`, `media.write`, `offline.access`). The Client ID and
    Client Secret are the OAuth 2.0 keys shown once in the app's **Keys
-   and Tokens** tab — they are saved then.
+   and Tokens** tab (https://console.x.com) — they are saved then.
 3. The user registers the redirect URL in the app's authentication
    settings: `http://127.0.0.1:8080/callback` (a loopback address, so
    the sign-in returns to the user's own machine).

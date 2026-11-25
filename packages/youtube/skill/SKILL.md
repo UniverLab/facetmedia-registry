@@ -76,6 +76,7 @@ in this order:
    test user. An account that is not Google Workspace can only use the
    External audience, and that is the expected choice, not an error.
 3. The user creates an OAuth client of type **Desktop app** under **Clients**
+   (https://console.cloud.google.com/auth/overview)
    and stores the two client values the manifest declares, one command
    each, typed in their own terminal — each command reads the value from a
    hidden prompt, so it never rides a command line:

@@ -74,7 +74,8 @@ the account is the user's own work in their own terminal instead, one
 `facet secret set` fallback command per secret, in this order:
 
 1. The user signs in to the brand account in a browser, opens
-   **Settings → Privacy & Security → App passwords**, and creates one
+   **Settings → Privacy & Security → App passwords**
+   (https://bsky.app/settings/app-passwords), and creates one
    app password for facet (any name, for example `facet`). This is the
    only secret they create; the account password is never used and
    never stored.

@@ -93,7 +93,8 @@ instead, one `facet secret set` fallback command per typed secret:
 2. In the LinkedIn Developer Portal, the user opens the lab's app and
    adds **Share on LinkedIn** and **Sign In with LinkedIn using OpenID Connect**
    in the **Products tab**.
-3. In the **Auth tab**, the user copies the **Client ID** and **Client
+3. In the **Auth tab** (https://www.linkedin.com/developers/apps),
+   the user copies the **Client ID** and **Client
    Secret**, and registers the redirect URI
    `http://localhost:8080/callback` in the app's auth settings (a
    loopback address, so the sign-in returns to the user's own machine).

@@ -61,6 +61,7 @@ def test_the_auth_section_names_secrets_commands_and_confirmation() -> None:
     assert "facet secret set bluesky handle" in body
     assert "facet secret set bluesky app-password" in body
     assert "facet doctor post --full" in body
+    assert "https://bsky.app/settings/app-passwords" in body
 
 
 def test_the_auth_section_never_trades_in_secrets() -> None:

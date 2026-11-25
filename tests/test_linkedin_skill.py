@@ -42,6 +42,7 @@ def test_the_skill_guides_the_sign_in_without_touching_a_secret() -> None:
         "facet auth linkedin",
         "facet auth login linkedin",
         "doctor",
+        "https://www.linkedin.com/developers/apps",
     ):
         assert step in lowered, step
     assert "never asks the user to paste" in lowered

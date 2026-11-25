@@ -45,7 +45,7 @@ alt = "La escuadra del laboratorio sobre el banco de trabajo."
    - **App logo** is required (square recommended, at least 100 px in one dimension).
    - **Privacy policy URL** is optional, and the legal agreement must be accepted.
 2. **Add products** in the app's **Products** tab: **Share on LinkedIn** and **Sign In with LinkedIn using OpenID Connect**.
-3. **Copy credentials and set the redirect URL** in the app's **Auth** tab (auth settings): copy **Client ID** and **Client Secret**, and register the loopback redirect URI `http://localhost:8080/callback`. LinkedIn's help says to add redirect URLs "via HTTPS" and does not say whether `http://localhost` is accepted; when LinkedIn refuses that address, pass an `https` address to the sign-in verb's `redirect-uri` input instead.
+3. **Copy credentials and set the redirect URL** in the app's **Auth** tab (https://www.linkedin.com/developers/apps, auth settings): copy **Client ID** and **Client Secret**, and register the loopback redirect URI `http://localhost:8080/callback`. LinkedIn's help says to add redirect URLs "via HTTPS" and does not say whether `http://localhost` is accepted; when LinkedIn refuses that address, pass an `https` address to the sign-in verb's `redirect-uri` input instead.
 
 Store the app credentials and sign in:
 

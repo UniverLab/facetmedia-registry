@@ -20,6 +20,8 @@ MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
 
 #: Longest one-line ``obtain`` hint the core wizard shows; mirrors the core limit.
 MAX_OBTAIN_LEN = 300
+#: Longest ``link`` address the core wizard shows; mirrors the core limit.
+MAX_LINK_LIMIT = 200
 INDEX = tomllib.loads((ROOT / "index.toml").read_text(encoding="utf-8"))
 CAPABILITY = MANIFEST["capabilities"]["post"]
 INPUTS = CAPABILITY["inputs"]
@@ -76,6 +78,18 @@ def test_every_secret_says_where_to_get_it_and_none_is_browser_minted() -> None:
     assert "App passwords" in MANIFEST["secrets"][1]["obtain"]
     for entry in MANIFEST["secrets"]:
         assert "produced_by" not in entry, entry["name"]
+
+
+def test_the_app_password_links_to_where_it_is_created() -> None:
+    secrets = {entry["name"]: entry for entry in MANIFEST["secrets"]}
+    assert secrets["app-password"]["link"] == "https://bsky.app/settings/app-passwords"
+    assert "link" not in secrets["handle"], "handle"
+    for entry in MANIFEST["secrets"]:
+        link = entry.get("link")
+        if link is None:
+            continue
+        assert link.startswith("https://"), entry["name"]
+        assert len(link) <= MAX_LINK_LIMIT, entry["name"]
 
 
 def test_the_capability_is_the_outward_post() -> None:

@@ -58,6 +58,7 @@ def test_the_auth_guide_covers_setup_signin_and_confirmation() -> None:
     assert "facet auth login youtube" in body
     assert "facet auth youtube" in body
     assert "facet doctor post --full" in body
+    assert "https://console.cloud.google.com/auth/overview" in body
 
 
 def test_the_auth_section_never_trades_in_secrets() -> None:

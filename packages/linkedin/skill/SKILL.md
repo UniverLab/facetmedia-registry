@@ -78,7 +78,8 @@ per typed secret, in this order:
    LinkedIn Page" link; the App logo is required (square recommended,
    at least 100 px in one dimension); the Privacy policy URL is
    optional; and the legal agreement must be accepted. The Client ID
-   and the Client Secret are on the app's Auth tab.
+   and the Client Secret are on the app's Auth tab
+   (https://www.linkedin.com/developers/apps).
 2. The user adds the **Share on LinkedIn** and **Sign In with LinkedIn
    using OpenID Connect** products to the app in the Products tab.
 3. The user requests the **`w_organization_social`** and

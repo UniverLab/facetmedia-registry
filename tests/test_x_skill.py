@@ -65,6 +65,7 @@ def test_the_auth_section_names_secrets_commands_and_confirmation() -> None:
     assert "facet secret set x client-id" in body
     assert "facet secret set x client-secret" in body
     assert "facet doctor post --full" in body
+    assert "https://console.x.com" in body
 
 
 def test_the_auth_section_never_trades_in_secrets() -> None:

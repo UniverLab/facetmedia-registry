@@ -31,12 +31,14 @@ name = "client-id"
 description = "The desktop OAuth client's id, created in the Google Cloud project"
 required = true
 obtain = "Google Cloud Console, Google Auth Platform: fill Branding (app name, support email, contact), set Audience External with your account as test user, create a Desktop app client under Clients with YouTube Data API v3 enabled, then publish so sign-in does not expire in 7 days"
+link = "https://console.cloud.google.com/auth/overview"
 
 [[secrets]]
 name = "client-secret"
 description = "The desktop OAuth client's secret, created with the client id"
 required = true
 obtain = "Shown with the client id in the same Desktop app client when it is created"
+link = "https://console.cloud.google.com/auth/overview"
 
 [[secrets]]
 name = "refresh-token"

@@ -86,7 +86,8 @@ per typed secret, in this order:
    redirect URI must begin with `http` or `https`, use only `localhost`
    or `127.0.0.1`, include a port, take no query parameters or fragment,
    and be repeated exactly in the authorize and token requests. Then
-   copy the client key and client secret from the app's credentials.
+   copy the client key and client secret from the app's credentials
+   (https://developers.tiktok.com/apps).
 4. The app has a **Production** tab that must be submitted for review,
    with at least one demo video (which TikTok says may take several days
    to two weeks), and a **Sandbox** tab that allows trying integrations
