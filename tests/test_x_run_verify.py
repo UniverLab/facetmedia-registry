@@ -73,11 +73,16 @@ def _stub_sdk() -> types.ModuleType:
     def renew_secret(name: str, value: str) -> None:
         stub.renewals.append((name, value))  # type: ignore[attr-defined]
 
+    def announce_url(url: str) -> None:
+        stub.announced.append(url)  # type: ignore[attr-defined]
+
     stub.Request = Request  # type: ignore[attr-defined]
     stub.Runner = Runner  # type: ignore[attr-defined]
     stub.secret = secret  # type: ignore[attr-defined]
     stub.renew_secret = renew_secret  # type: ignore[attr-defined]
     stub.renewals = []  # type: ignore[attr-defined]
+    stub.announce_url = announce_url  # type: ignore[attr-defined]
+    stub.announced = []  # type: ignore[attr-defined]
     return stub
 
 
@@ -127,7 +132,13 @@ class FakeNet:
             refresh_token="fresh-refresh" if self.rotate else None,
         )
 
-    def authorize(self, client_id: str, client_secret: str, redirect_uri: str) -> dict[str, str]:
+    def authorize(
+        self,
+        client_id: str,
+        client_secret: str,
+        redirect_uri: str,
+        announce: Any = None,
+    ) -> dict[str, str]:
         self.seen_redirects.append(redirect_uri)
         if self.authorize_error is not None:
             raise self.authorize_error
@@ -544,6 +555,22 @@ def test_auth_honours_a_redirect_uri_input(tmp_path: Path, net: FakeNet) -> None
     req = _request("auth", tmp_path, {"inputs": {"redirect-uri": "http://127.0.0.1:9000/callback"}})
     RUNNER.runner._verbs["auth"](req)
     assert net.seen_redirects == ["http://127.0.0.1:9000/callback"]
+
+
+def test_auth_announces_through_the_core(
+    tmp_path: Path, net: FakeNet, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: dict[str, Any] = {}
+
+    def capture(
+        client_id: str, client_secret: str, redirect_uri: str, **kwargs: Any
+    ) -> dict[str, str]:
+        seen.update(kwargs)
+        return dict(net.authorized)
+
+    monkeypatch.setattr(RUNNER.x_client, "authorize", capture)
+    RUNNER.runner._verbs["auth"](_request("auth", tmp_path, {"inputs": {}}))
+    assert seen["announce"] is STUB.announce_url
 
 
 def test_auth_refuses_without_the_stored_app_pair(

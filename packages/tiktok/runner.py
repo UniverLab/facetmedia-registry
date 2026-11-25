@@ -27,7 +27,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import tiktok_client
-from facet_runner_sdk import Request, Runner, renew_secret, secret
+from facet_runner_sdk import Request, Runner, announce_url, renew_secret, secret
 from tiktok_client import TikTokError
 
 runner = Runner()
@@ -493,7 +493,7 @@ def auth(req: Request) -> dict[str, Any]:
         raise ValueError("the redirect URI is not a URI")
     uri = str(redirect) if isinstance(redirect, str) else "http://127.0.0.1:8080/callback/"
     try:
-        secrets = tiktok_client.authorize(key, client_secret, uri)
+        secrets = tiktok_client.authorize(key, client_secret, uri, announce=announce_url)
     except TikTokError as exc:
         raise ValueError(str(exc)) from exc
     return {"secrets": secrets}

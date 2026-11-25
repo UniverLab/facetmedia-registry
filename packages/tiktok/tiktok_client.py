@@ -22,7 +22,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from http import HTTPStatus
 from typing import Any
@@ -313,14 +313,24 @@ def publish_status(access_token: str, publish_id: str) -> tuple[str, str]:
     return status, reason if isinstance(reason, str) else ""
 
 
-def authorize(client_key: str, client_secret: str, redirect_uri: str) -> dict[str, str]:
+def _print_address(address: str) -> None:
+    """Show the sign-in address on the terminal, whole and copyable."""
+    print(f"open this address and sign in:\n{address}")
+
+
+def authorize(
+    client_key: str,
+    client_secret: str,
+    redirect_uri: str,
+    announce: Callable[[str], None] = _print_address,
+) -> dict[str, str]:
     """Run the browser sign-in and answer the secrets map facet stores."""
     state = secrets.token_urlsafe(16)
     verifier = make_verifier()
     challenge = challenge_of(verifier)
     print(f"register this redirect URI in your TikTok app:\n{redirect_uri}")
     url = authorize_url(client_key, redirect_uri, state, challenge)
-    print(f"open this address and sign in:\n{url}")
+    announce(url)
     parsed = urllib.parse.urlparse(redirect_uri)
     if parsed.scheme != "http" or not parsed.hostname:
         raise TikTokError(AUTHORIZE_URL, None, "the redirect URI must be an http loopback address")

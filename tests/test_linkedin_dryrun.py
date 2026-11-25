@@ -63,11 +63,16 @@ def _stub_sdk() -> types.ModuleType:
     def renew_secret(name: str, value: str) -> None:
         stub.renewals.append((name, value))  # type: ignore[attr-defined]
 
+    def announce_url(url: str) -> None:
+        stub.announced.append(url)  # type: ignore[attr-defined]
+
     stub.Request = Request  # type: ignore[attr-defined]
     stub.Runner = Runner  # type: ignore[attr-defined]
     stub.secret = secret  # type: ignore[attr-defined]
     stub.renew_secret = renew_secret  # type: ignore[attr-defined]
     stub.renewals = []  # type: ignore[attr-defined]
+    stub.announce_url = announce_url  # type: ignore[attr-defined]
+    stub.announced = []  # type: ignore[attr-defined]
     return stub
 
 

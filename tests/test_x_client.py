@@ -189,7 +189,10 @@ def _free_redirect() -> str:
 
 
 def _run_authorize(
-    monkeypatch: pytest.MonkeyPatch, redirect: str, exchanged: dict[str, Any]
+    monkeypatch: pytest.MonkeyPatch,
+    redirect: str,
+    exchanged: dict[str, Any],
+    announce: Any = None,
 ) -> dict[str, Any]:
     """Run the sign-in in a thread with fixed PKCE values and a stubbed exchange."""
     fixed = iter(["state-1", "verifier-1"])
@@ -205,16 +208,18 @@ def _run_authorize(
     monkeypatch.setattr(CLIENT, "exchange_code", fake_exchange)
     outcome: dict[str, Any] = {}
     thread = threading.Thread(
-        target=lambda: outcome.setdefault("result", _authorize_catch(redirect, outcome)),
+        target=lambda: outcome.setdefault("result", _authorize_catch(redirect, outcome, announce)),
         daemon=True,
     )
     thread.start()
     return {"thread": thread, "outcome": outcome, "redirect": redirect}
 
 
-def _authorize_catch(redirect: str, outcome: dict[str, Any]) -> Any:
+def _authorize_catch(redirect: str, outcome: dict[str, Any], announce: Any = None) -> Any:
     try:
-        return CLIENT.authorize("id-1", "sec-1", redirect)
+        if announce is None:
+            return CLIENT.authorize("id-1", "sec-1", redirect)
+        return CLIENT.authorize("id-1", "sec-1", redirect, announce=announce)
     except Exception as exc:  # noqa: BLE001 - the thread must report, not raise
         outcome["error"] = exc
         return None
@@ -240,6 +245,34 @@ def test_authorize_exchanges_the_returned_code(
     }
     printed = capsys.readouterr().out
     assert printed.startswith("open this address and sign in:\nhttps://x.com/i/oauth2/authorize?")
+
+
+def test_authorize_announces_the_whole_address_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    announced: list[str] = []
+    run = _run_authorize(monkeypatch, _free_redirect(), {}, announce=announced.append)
+    time.sleep(0.5)
+    _callback(run["redirect"], "code=code-1&state=state-1")
+    run["thread"].join(timeout=10)
+    assert run["outcome"]["result"] == {"access-token": "a", "refresh-token": "r"}
+    assert len(announced) == 1
+    assert announced[0].startswith("https://x.com/i/oauth2/authorize?")
+    assert "client_id=id-1" in announced[0]
+
+
+def test_authorize_default_announce_prints_the_whole_address(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert CLIENT.authorize.__defaults__ == (CLIENT._print_address,)
+    run = _run_authorize(monkeypatch, _free_redirect(), exchanged := {})
+    time.sleep(0.5)
+    _callback(run["redirect"], "code=code-1&state=state-1")
+    run["thread"].join(timeout=10)
+    assert run["outcome"]["result"] == {"access-token": "a", "refresh-token": "r"}
+    assert exchanged["code"] == "code-1"
+    printed = capsys.readouterr().out
+    assert "client_id=id-1" in printed
 
 
 def test_authorize_answers_a_wrong_state_with_400_and_keeps_waiting(

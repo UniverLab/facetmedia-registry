@@ -7,8 +7,10 @@ import importlib.util
 import io
 import json
 import os
+import socket
 import struct
 import sys
+import threading
 import types
 import urllib.error
 import urllib.request
@@ -75,11 +77,16 @@ def _stub_sdk() -> types.ModuleType:
     def renew_secret(name: str, value: str) -> None:
         stub.renewals.append((name, value))  # type: ignore[attr-defined]
 
+    def announce_url(url: str) -> None:
+        stub.announced.append(url)  # type: ignore[attr-defined]
+
     stub.Request = Request  # type: ignore[attr-defined]
     stub.Runner = Runner  # type: ignore[attr-defined]
     stub.secret = secret  # type: ignore[attr-defined]
     stub.renew_secret = renew_secret  # type: ignore[attr-defined]
     stub.renewals = []  # type: ignore[attr-defined]
+    stub.announce_url = announce_url  # type: ignore[attr-defined]
+    stub.announced = []  # type: ignore[attr-defined]
     return stub
 
 
@@ -454,6 +461,80 @@ def test_authorize_url_names_the_scopes_and_the_redirect() -> None:
     url = RUNNER.linkedin_client.authorize_url("cid-1", "http://localhost:8080/callback", "s")
     assert url.startswith("https://www.linkedin.com/oauth/v2/authorization?")
     assert "scope=w_organization_social" in url and "redirect_uri=" in url
+
+
+def _free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
+
+
+def test_authorize_announces_the_whole_address_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = RUNNER.linkedin_client
+    redirect_uri = f"http://localhost:{_free_port()}/callback"
+    announced: list[str] = []
+
+    real_urlopen = urllib.request.urlopen
+
+    def fake_urlopen(req: Any, timeout: float = 30.0) -> _FakeResponse:
+        url = req.full_url if hasattr(req, "full_url") else str(req)
+        if "accessToken" in url:
+            return _FakeResponse(
+                json.dumps({"access_token": "tok-1", "refresh_token": "ref-1"}).encode()
+            )
+        raise AssertionError(f"unexpected URL {url}")
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(client.secrets, "token_urlsafe", lambda _n: "fixed-state")
+
+    def send_callbacks() -> None:
+        for _ in range(40):
+            try:
+                real_urlopen(f"{redirect_uri}?state=fixed-state&code=code-1")
+                return
+            except OSError:
+                threading.Event().wait(0.05)
+        raise AssertionError("callback server did not accept connection")
+
+    worker = threading.Thread(target=send_callbacks, daemon=True)
+    worker.start()
+    result = client.authorize("cid-1", "csec", redirect_uri, announce=announced.append)
+    worker.join(timeout=5.0)
+    assert result == {"access-token": "tok-1", "refresh-token": "ref-1"}
+    assert len(announced) == 1
+    assert announced[0].startswith("https://www.linkedin.com/oauth/v2/authorization?")
+    assert "client_id=cid-1" in announced[0]
+
+
+def test_authorize_default_announce_prints_the_whole_address(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    client = RUNNER.linkedin_client
+    assert client.authorize.__defaults__ == (client._print_address,)
+    client._print_address("https://www.linkedin.com/oauth/v2/authorization?client_id=cid-1")
+    assert capsys.readouterr().out == (
+        "open this address and sign in:\n"
+        "https://www.linkedin.com/oauth/v2/authorization?client_id=cid-1\n"
+    )
+
+
+def test_auth_announces_through_the_core(
+    files: dict[str, Path], fake: FakeLinkedIn, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: dict[str, Any] = {}
+
+    def capture(
+        client_id: str, client_secret: str, redirect_uri: str, **kwargs: Any
+    ) -> dict[str, str]:
+        seen.update(kwargs)
+        return {"access-token": "a", "refresh-token": "r"}
+
+    monkeypatch.setattr(RUNNER.linkedin_client, "authorize", capture)
+    result = RUNNER.runner._verbs["auth"](_req("auth", files))
+    assert result == {"secrets": {"access-token": "a", "refresh-token": "r"}}
+    assert seen["announce"] is STUB.announce_url
 
 
 class _FakeResponse:

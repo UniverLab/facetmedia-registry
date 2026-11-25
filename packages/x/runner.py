@@ -32,7 +32,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import x_client
-from facet_runner_sdk import Request, Runner, renew_secret, secret
+from facet_runner_sdk import Request, Runner, announce_url, renew_secret, secret
 from x_client import XError
 
 runner = Runner()
@@ -779,7 +779,7 @@ def auth(req: Request) -> dict[str, Any]:
         raise ValueError("the redirect URI is not a URI")
     uri = str(redirect) if isinstance(redirect, str) else x_client.DEFAULT_REDIRECT_URI
     try:
-        secrets = x_client.authorize(client_id, client_secret, uri)
+        secrets = x_client.authorize(client_id, client_secret, uri, announce=announce_url)
     except XError as exc:
         raise ValueError(str(exc)) from exc
     return {"secrets": secrets}

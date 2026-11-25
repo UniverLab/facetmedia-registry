@@ -25,7 +25,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from http import HTTPStatus
 from typing import Any
@@ -161,12 +161,22 @@ def refresh_tokens(client_id: str, client_secret: str, refresh_token: str) -> To
     )
 
 
-def authorize(client_id: str, client_secret: str, redirect_uri: str) -> dict[str, str]:
+def _print_address(address: str) -> None:
+    """Show the sign-in address on the terminal, whole and copyable."""
+    print(f"open this address and sign in:\n{address}")
+
+
+def authorize(
+    client_id: str,
+    client_secret: str,
+    redirect_uri: str,
+    announce: Callable[[str], None] = _print_address,
+) -> dict[str, str]:
     """Run the browser sign-in and answer the secrets map facet stores."""
     state = secrets.token_urlsafe(16)
     verifier = secrets.token_urlsafe(64)
     address = authorize_url(client_id, redirect_uri, state, _challenge(verifier))
-    print(f"open this address and sign in:\n{address}")
+    announce(address)
     parsed = urllib.parse.urlparse(redirect_uri)
     if parsed.scheme != "http" or not parsed.hostname:
         raise XError(AUTHORIZE_URL, None, "the redirect URI must be an http loopback address")

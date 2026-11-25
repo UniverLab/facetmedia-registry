@@ -75,11 +75,16 @@ def _stub_sdk() -> types.ModuleType:
     def renew_secret(name: str, value: str) -> None:
         stub.renewals.append((name, value))  # type: ignore[attr-defined]
 
+    def announce_url(url: str) -> None:
+        stub.announced.append(url)  # type: ignore[attr-defined]
+
     stub.Request = Request  # type: ignore[attr-defined]
     stub.Runner = Runner  # type: ignore[attr-defined]
     stub.secret = secret  # type: ignore[attr-defined]
     stub.renew_secret = renew_secret  # type: ignore[attr-defined]
     stub.renewals = []  # type: ignore[attr-defined]
+    stub.announce_url = announce_url  # type: ignore[attr-defined]
+    stub.announced = []  # type: ignore[attr-defined]
     return stub
 
 
@@ -140,7 +145,13 @@ class FakeTikTok:
             scopes=("user.info.basic", "video.upload"),
         )
 
-    def authorize(self, key: str, client_secret: str, redirect_uri: str) -> dict[str, str]:
+    def authorize(
+        self,
+        key: str,
+        client_secret: str,
+        redirect_uri: str,
+        announce: Any = None,
+    ) -> dict[str, str]:
         if self.authorize_error is not None:
             raise self.authorize_error
         self.redirect_uri = redirect_uri
@@ -272,6 +283,91 @@ def test_authorize_pkce_and_callback_slash_handling(
     verifier = seen_token_body[0]["code_verifier"]
     assert MIN_VERIFIER_LEN <= len(verifier) <= MAX_VERIFIER_LEN
     assert qs["code_challenge"] == [hashlib.sha256(verifier.encode("ascii")).hexdigest()]
+
+
+def test_authorize_announces_the_whole_address_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = RUNNER.tiktok_client
+    port = _free_port()
+    redirect_uri = f"http://127.0.0.1:{port}/callback/"
+    seen_url: list[str] = []
+    announced: list[str] = []
+    ready = threading.Event()
+    orig_authorize_url = client.authorize_url
+
+    def spy_authorize_url(client_key: str, r_uri: str, state: str, code_challenge: str) -> str:
+        url = orig_authorize_url(client_key, r_uri, state, code_challenge)
+        seen_url.append(url)
+        ready.set()
+        return url
+
+    def fake_urlopen(request: urllib.request.Request, timeout: float = 30.0) -> _FakeTokenResponse:
+        return _FakeTokenResponse(
+            {
+                "data": {
+                    "access_token": "a1",
+                    "refresh_token": "r1",
+                    "open_id": "o1",
+                    "scope": "user.info.basic,video.upload",
+                },
+                "error": {"code": "ok"},
+            }
+        )
+
+    monkeypatch.setattr(client, "authorize_url", spy_authorize_url)
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    def send_callback() -> None:
+        assert ready.wait(timeout=5.0)
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(seen_url[0]).query)
+        state = query["state"][0]
+        for _ in range(50):
+            try:
+                conn = http.client.HTTPConnection("127.0.0.1", port, timeout=2.0)
+                conn.request("GET", f"/callback/?state={state}&code=code-1")
+                resp = conn.getresponse()
+                assert resp.status == HTTPStatus.OK
+                conn.close()
+                return
+            except OSError:
+                time.sleep(0.05)
+        raise AssertionError("callback server did not accept connection")
+
+    thread = threading.Thread(target=send_callback, daemon=True)
+    thread.start()
+    result = client.authorize("k1", "s1", redirect_uri, announce=announced.append)
+    thread.join(timeout=5.0)
+
+    assert result == {"access-token": "a1", "refresh-token": "r1", "open-id": "o1"}
+    assert len(announced) == 1
+    assert announced[0] == seen_url[0]
+    assert "client_key=k1" in announced[0]
+
+
+def test_authorize_default_announce_prints_the_whole_address(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    client = RUNNER.tiktok_client
+    assert client.authorize.__defaults__ == (client._print_address,)
+    client._print_address("https://www.tiktok.com/v2/auth/authorize/?client_key=k1")
+    assert capsys.readouterr().out == (
+        "open this address and sign in:\nhttps://www.tiktok.com/v2/auth/authorize/?client_key=k1\n"
+    )
+
+
+def test_auth_announces_through_the_core(
+    tmp_path: Path, fake: FakeTikTok, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: dict[str, Any] = {}
+
+    def capture(key: str, client_secret: str, redirect_uri: str, **kwargs: Any) -> dict[str, str]:
+        seen.update(kwargs)
+        return dict(fake.authorized)
+
+    monkeypatch.setattr(RUNNER.tiktok_client, "authorize", capture)
+    RUNNER.runner._verbs["auth"](_req("auth", tmp_path))
+    assert seen["announce"] is STUB.announce_url
 
 
 def test_auth_refuses_without_the_stored_app_pair(
