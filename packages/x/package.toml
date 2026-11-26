@@ -1,5 +1,5 @@
 name = "x"
-version = "0.2.1"
+version = "0.2.2"
 requires_facet = ">=0.1.0b2,<0.2"
 protocol = 1
 provider = "X Corp · X API v2"
@@ -30,7 +30,7 @@ spdx = "LicenseRef-X-API-Terms"
 name = "client-id"
 description = "The lab's X developer app client ID, the OAuth 2.0 key shown once with the client secret"
 required = true
-obtain = "Shown once in the Developer Console at developer.x.com, in the app's Keys and Tokens tab"
+obtain = "In developer.x.com, enable User authentication settings (Read and write, Web App, Automated App or Bot, Callback URI http://127.0.0.1:8080/callback, Website URL), then copy the OAuth 2.0 Client ID from Keys and Tokens."
 link = "https://console.x.com"
 
 [[secrets]]

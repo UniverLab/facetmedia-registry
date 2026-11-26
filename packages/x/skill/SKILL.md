@@ -80,15 +80,18 @@ this order:
    Console (developer.x.com), one app for the brand account, and loads
    credits in the same Console: X is pay per use, and a run with no
    credits is refused.
-2. The user opens the app's User authentication settings and sets it up
-   as a confidential client: the app type is **Web App, Automated App
-   or Bot**, with the posting scopes (`tweet.read`, `tweet.write`,
-   `users.read`, `media.write`, `offline.access`). The Client ID and
-   Client Secret are the OAuth 2.0 keys shown once in the app's **Keys
-   and Tokens** tab (https://console.x.com) — they are saved then.
-3. The user registers the redirect URL in the app's authentication
-   settings: `http://127.0.0.1:8080/callback` (a loopback address, so
-   the sign-in returns to the user's own machine).
+2. The user opens the app's **User authentication settings** and sets
+   **App permissions** to **Read and write** and **Type of App** to
+   **Web App, Automated App or Bot** (confidential client), with the
+   posting scopes (`tweet.read`, `tweet.write`, `users.read`,
+   `media.write`, `offline.access`). The Client ID and Client Secret are
+   the OAuth 2.0 keys shown once in the app's **Keys and Tokens** tab
+   (https://console.x.com) — they are saved then.
+3. The user registers the **Callback URI / Redirect URL** in the app's
+   User authentication settings: `http://127.0.0.1:8080/callback`
+   verbatim — specifically `127.0.0.1`, not `localhost`, with no trailing
+   slash — plus a valid **Website URL** (the loopback address returns
+   the sign-in to the user's own machine).
 4. The user stores the two typed secrets, one command each, typed in
    their own terminal — each command reads the value from a hidden
    prompt, so it never rides a command line:
@@ -115,7 +118,11 @@ run refused with `access_token_invalid` after a long idle means the
 refresh failed: sign in again. A refused run with no other change means
 the credits ran out: load more in the Console. An access token works
 only for the account that authorized the app: tokens made on a personal
-account never open the brand account.
+account never open the brand account. X showing *"Something went wrong"*
+without redirecting back to the terminal usually means the Callback URI
+uses `localhost` or does not match `http://127.0.0.1:8080/callback`, or
+User authentication settings are missing **Read and write** / **Web App,
+Automated App or Bot**.
 
 ## Judging the result
 

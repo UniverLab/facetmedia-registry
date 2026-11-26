@@ -360,7 +360,7 @@ def test_run_sends_a_thread_of_replies_with_one_record_each(
     req = _request("run", tmp_path, {"inputs": _inputs(png), "out_dir": str(tmp_path)})
     result = RUNNER.runner._verbs["run"](req)
     post = result["post"]
-    assert result["tool"] == {"name": "X", "version": "0.2.1"}
+    assert result["tool"] == {"name": "X", "version": "0.2.2"}
     assert post["network"] == "x"
     assert post["account"] == "@lab"
     assert post["state"] == "published"

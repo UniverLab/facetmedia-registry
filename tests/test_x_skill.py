@@ -57,6 +57,9 @@ def test_the_auth_section_names_secrets_commands_and_confirmation() -> None:
     assert "## Authentication" in body
     assert "Automated App" in body
     assert "confidential client" in body
+    assert "Read and write" in body
+    assert "Website URL" in body
+    assert "localhost" in body
     assert "http://127.0.0.1:8080/callback" in body
     flat = " ".join(body.split())
     assert "client-id" in flat and "refresh token" in flat
