@@ -58,7 +58,7 @@ facet secret set linkedin-member client-secret
 facet auth login linkedin-member
 ```
 
-`auth` opens the LinkedIn authorization URL with scopes `openid profile w_member_social` and listens on `http://localhost:8080/callback` (overridable via an optional `redirect-uri` input). After exchanging the authorization code, it calls `/v2/userinfo` and stores:
+`auth` opens the LinkedIn authorization URL with scopes `openid profile w_member_social` and listens on `http://localhost:8080/callback` (overridable via an optional `redirect-uri` input). The browser lands on a branded facetMedia HTML page that says `signed in; return to the terminal` on success. If LinkedIn returns an error instead (a denied scope, a cancelled consent, a state mismatch), the sign-in aborts at once with that error — the command does not keep waiting — so fix the cause and run `facet auth login linkedin-member` again. After exchanging the authorization code, it calls `/v2/userinfo` and stores:
 
 - `access-token` (required, `produced_by = "auth"`)
 - `member-id` (required, `produced_by = "auth"`, from the `sub` field)
