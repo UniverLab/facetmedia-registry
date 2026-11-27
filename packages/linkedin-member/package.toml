@@ -1,11 +1,12 @@
 name = "linkedin-member"
-version = "0.2.2"
+version = "0.2.3"
 requires_facet = ">=0.1.0b2,<0.2"
 protocol = 1
 provider = "LinkedIn Corporation · Posts API"
 tool_name = "LinkedIn Member"
 description = "Posts text with images or an MP4 video to the owner's personal LinkedIn profile through the Posts API."
 facet = "publish"
+uses = ["oauth_page"]
 
 [engine]
 type = "python-env"

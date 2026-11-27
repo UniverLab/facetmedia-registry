@@ -1,11 +1,12 @@
 name = "linkedin"
-version = "0.1.4"
+version = "0.1.5"
 requires_facet = ">=0.1.0b2,<0.2"
 protocol = 1
 provider = "LinkedIn Corporation · Posts API"
 tool_name = "LinkedIn"
 description = "Posts text with images to the lab's LinkedIn organization account through the Posts API, with a read-back check."
 facet = "publish"
+uses = ["oauth_page"]
 
 [engine]
 type = "python-env"

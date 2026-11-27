@@ -1,11 +1,12 @@
 name = "x"
-version = "0.2.3"
+version = "0.2.4"
 requires_facet = ">=0.1.0b2,<0.2"
 protocol = 1
 provider = "X Corp · X API v2"
 tool_name = "X"
 description = "Posts text, images, video and threads to the lab's X brand account through the X API v2, with the cost shown before the send and a read-back check."
 facet = "publish"
+uses = ["oauth_page"]
 
 [engine]
 type = "python-env"

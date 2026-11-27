@@ -13,6 +13,7 @@ Requires: stdlib
 
 from __future__ import annotations
 
+import html
 import http.server
 import json
 import secrets
@@ -25,6 +26,18 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from http import HTTPStatus
 from typing import Any
+
+try:
+    from facet_lib.oauth_page import render as _render_oauth_page
+except ImportError:  # pragma: no cover - standalone test fallback
+    try:
+        from lib.oauth_page import render as _render_oauth_page
+    except ImportError:
+
+        def _render_oauth_page(ok: bool, provider: str, detail: str = "") -> bytes:
+            msg = f"{provider} signed in; return to the terminal" if ok else f"{provider}: {detail}"
+            return f"<!doctype html><html><body><p>{html.escape(msg)}</p></body></html>".encode()
+
 
 #: How long one API call may take; the endpoints answer in milliseconds.
 TIMEOUT_S = 30.0
@@ -309,6 +322,15 @@ def _print_address(address: str) -> None:
     print(f"open this address and sign in:\n{address}")
 
 
+def _send_html(handler: http.server.BaseHTTPRequestHandler, status: int, body: bytes) -> None:
+    """Send an HTML response with Content-Type and Content-Length."""
+    handler.send_response(status)
+    handler.send_header("Content-Type", "text/html; charset=utf-8")
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    handler.wfile.write(body)
+
+
 def authorize(
     client_id: str,
     client_secret: str,
@@ -330,15 +352,21 @@ def authorize(
         def do_GET(self) -> None:  # noqa: N802
             query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             if query.get("state", [""])[0] != state:
-                self.send_response(400)
-                self.end_headers()
+                _send_html(self, 400, _render_oauth_page(False, "LinkedIn", "OAuth state mismatch"))
                 return
+            error = query.get("error", [""])[0]
             found = query.get("code", [""])[0]
-            if found:
-                code_holder["code"] = found
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"signed in; return to the terminal")
+            if error or not found:
+                detail = (
+                    query.get("error_description", [""])[0]
+                    or error
+                    or "no authorization code returned"
+                )
+                code_holder["error"] = detail
+                _send_html(self, 400, _render_oauth_page(False, "LinkedIn", detail))
+                return
+            code_holder["code"] = found
+            _send_html(self, 200, _render_oauth_page(True, "LinkedIn"))
 
         def log_message(self, *args: object) -> None:
             return
@@ -347,9 +375,11 @@ def authorize(
     thread = threading.Thread(target=server.handle_request, daemon=True)
     thread.start()
     deadline = time.monotonic() + 300.0
-    while "code" not in code_holder and time.monotonic() < deadline:
+    while "code" not in code_holder and "error" not in code_holder and time.monotonic() < deadline:
         time.sleep(0.2)
     server.server_close()
+    if code_holder.get("error"):
+        raise LinkedInError(AUTHORIZE_URL, None, code_holder["error"])
     code = code_holder.get("code")
     if not code:
         raise LinkedInError(AUTHORIZE_URL, None, "no sign-in code arrived; try again")

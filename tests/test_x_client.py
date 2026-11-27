@@ -304,8 +304,15 @@ def test_authorize_reports_when_no_code_arrives(monkeypatch: pytest.MonkeyPatch)
 def test_authorize_quotes_the_rejection_in_one_line(monkeypatch: pytest.MonkeyPatch) -> None:
     run = _run_authorize(monkeypatch, _free_redirect(), {})
     time.sleep(0.5)
-    with pytest.raises(urllib.error.HTTPError):
-        _callback(run["redirect"], "error=access_denied&error_description=user+denied+it")
+    with pytest.raises(urllib.error.HTTPError) as caught:
+        _callback(
+            run["redirect"],
+            "error=access_denied&error_description=user+denied+it&state=state-1",
+        )
+    assert caught.value.code == HTTPStatus.BAD_REQUEST
+    assert "text/html" in caught.value.headers.get("Content-Type", "")
+    body = caught.value.read().decode("utf-8")
+    assert "user denied it" in body
     run["thread"].join(timeout=10)
     error = run["outcome"].get("error")
     assert isinstance(error, CLIENT.XError)

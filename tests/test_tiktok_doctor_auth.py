@@ -433,3 +433,57 @@ def test_doctor_full_refreshes_only_through_store_back(
     assert fake.refreshes >= 1
     assert ("access-token", "fresh-token") in STUB.renewals
     assert ("refresh-token", "fresh-refresh") in STUB.renewals
+
+
+def test_authorize_aborts_immediately_on_provider_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = RUNNER.tiktok_client
+    port = _free_port()
+    redirect_uri = f"http://127.0.0.1:{port}/callback/"
+    seen_url: list[str] = []
+    ready = threading.Event()
+    orig_authorize_url = client.authorize_url
+
+    def spy_url(client_key: str, r_uri: str, state: str, code_challenge: str) -> str:
+        url = orig_authorize_url(client_key, r_uri, state, code_challenge)
+        seen_url.append(url)
+        ready.set()
+        return url
+
+    monkeypatch.setattr(client, "authorize_url", spy_url)
+    callback_status: list[tuple[int, str, str]] = []
+
+    def send_error() -> None:
+        assert ready.wait(timeout=5.0)
+        state = urllib.parse.parse_qs(urllib.parse.urlparse(seen_url[0]).query)["state"][0]
+        for _ in range(50):
+            try:
+                conn = http.client.HTTPConnection("127.0.0.1", port, timeout=2.0)
+                conn.request(
+                    "GET",
+                    f"/callback/?error=unauthorized_scope_error&error_description=The+scope+is+not+authorized&state={state}",
+                )
+                resp = conn.getresponse()
+                ctype = resp.getheader("Content-Type", "")
+                body = resp.read().decode("utf-8")
+                callback_status.append((resp.status, ctype, body))
+                conn.close()
+                return
+            except OSError:
+                time.sleep(0.05)
+
+    thread = threading.Thread(target=send_error, daemon=True)
+    thread.start()
+    started = time.monotonic()
+    with pytest.raises(client.TikTokError, match="The scope is not authorized"):
+        client.authorize("k1", "s1", redirect_uri, announce=lambda _: None)
+    elapsed = time.monotonic() - started
+    thread.join(timeout=5.0)
+    max_abort_s = 5.0
+    assert elapsed < max_abort_s
+    assert callback_status
+    code, ctype, body = callback_status[0]
+    assert code == HTTPStatus.BAD_REQUEST
+    assert "text/html" in ctype
+    assert "The scope is not authorized" in body

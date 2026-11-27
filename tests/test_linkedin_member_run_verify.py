@@ -10,6 +10,7 @@ import socket
 import struct
 import sys
 import threading
+import time
 import types
 import urllib.error
 import urllib.parse
@@ -299,7 +300,7 @@ def test_run_single_image_uses_person_urn_and_answers_published_receipt(
     files: dict[str, Path], fake: FakeLinkedInMember
 ) -> None:
     result = RUNNER.runner._verbs["run"](_req("run", files))
-    assert result["tool"] == {"name": "LinkedIn Member", "version": "0.2.2"}
+    assert result["tool"] == {"name": "LinkedIn Member", "version": "0.2.3"}
     post = result["post"]
     assert post["network"] == "linkedin-member"
     assert post["account"] == "Ada Lovelace"
@@ -599,7 +600,7 @@ def test_run_video_uploads_chunks_polls_and_creates_post(
     clip.write_bytes(payload)
     req = _req("run", files, {"inputs": {"text": "Video update", "video": "demo-clip.mp4"}})
     result = RUNNER.runner._verbs["run"](req)
-    assert result["tool"] == {"name": "LinkedIn Member", "version": "0.2.2"}
+    assert result["tool"] == {"name": "LinkedIn Member", "version": "0.2.3"}
     assert result["post"]["state"] == "published"
     assert fake.video_inits == [(AUTHOR, len(payload))]
     assert [chunk for _, chunk in fake.video_chunks] == [b"01234567", b"89ABCDEF"]
@@ -756,3 +757,58 @@ def test_client_video_init_finalize_and_get_video(monkeypatch: pytest.MonkeyPatc
     )
     with pytest.raises(LinkedInError, match="byte bounds"):
         client.init_video_upload("acc", AUTHOR, 2)
+
+
+def test_authorize_aborts_immediately_on_provider_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = RUNNER.linkedin_member_client
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = int(sock.getsockname()[1])
+    redirect_uri = f"http://localhost:{port}/callback"
+    seen_url: list[str] = []
+    ready = threading.Event()
+    orig_authorize_url = client.authorize_url
+
+    def spy_url(cid: str, r_uri: str, state: str) -> str:
+        url = orig_authorize_url(cid, r_uri, state)
+        seen_url.append(url)
+        ready.set()
+        return url
+
+    monkeypatch.setattr(client, "authorize_url", spy_url)
+    callback_status: list[tuple[int, str, str]] = []
+
+    def send_error() -> None:
+        assert ready.wait(timeout=5.0)
+        state = urllib.parse.parse_qs(urllib.parse.urlparse(seen_url[0]).query)["state"][0]
+        target = (
+            f"http://127.0.0.1:{port}/callback"
+            f"?error=unauthorized_scope_error&error_description=The+scope+is+not+authorized&state={state}"
+        )
+        for _ in range(50):
+            try:
+                with pytest.raises(urllib.error.HTTPError) as caught:
+                    urllib.request.urlopen(target, timeout=2.0)
+                ctype = caught.value.headers.get("Content-Type", "")
+                body = caught.value.read().decode("utf-8")
+                callback_status.append((caught.value.code, ctype, body))
+                return
+            except urllib.error.URLError:
+                time.sleep(0.05)
+
+    thread = threading.Thread(target=send_error, daemon=True)
+    thread.start()
+    started = time.monotonic()
+    with pytest.raises(LinkedInError, match="The scope is not authorized"):
+        client.authorize("cid", "csec", redirect_uri, announce=lambda _: None)
+    elapsed = time.monotonic() - started
+    thread.join(timeout=5.0)
+    max_abort_s = 5.0
+    assert elapsed < max_abort_s
+    assert callback_status
+    code, ctype, body = callback_status[0]
+    assert code == HTTPStatus.BAD_REQUEST
+    assert "text/html" in ctype
+    assert "The scope is not authorized" in body

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import html
 import http.server
 import json
 import secrets
@@ -29,6 +30,18 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from http import HTTPStatus
 from typing import Any
+
+try:
+    from facet_lib.oauth_page import render as _render_oauth_page
+except ImportError:  # pragma: no cover - standalone test fallback
+    try:
+        from lib.oauth_page import render as _render_oauth_page
+    except ImportError:
+
+        def _render_oauth_page(ok: bool, provider: str, detail: str = "") -> bytes:
+            msg = f"{provider} signed in; return to the terminal" if ok else f"{provider}: {detail}"
+            return f"<!doctype html><html><body><p>{html.escape(msg)}</p></body></html>".encode()
+
 
 #: How long one API call may take; the network answers in milliseconds.
 TIMEOUT_S = 30.0
@@ -166,6 +179,15 @@ def _print_address(address: str) -> None:
     print(f"open this address and sign in:\n{address}")
 
 
+def _send_html(handler: http.server.BaseHTTPRequestHandler, status: int, body: bytes) -> None:
+    """Send an HTML response with Content-Type and Content-Length."""
+    handler.send_response(status)
+    handler.send_header("Content-Type", "text/html; charset=utf-8")
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    handler.wfile.write(body)
+
+
 def authorize(
     client_id: str,
     client_secret: str,
@@ -185,25 +207,22 @@ def authorize(
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
             query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
-            error = query.get("error", [""])[0]
-            if error:
-                detail = query.get("error_description", [error])[0] or error
-                holder["error"] = detail
-                self.send_response(400)
-                self.end_headers()
-                self.wfile.write(f"sign-in rejected: {detail}".encode())
-                return
             if query.get("state", [""])[0] != state:
-                self.send_response(400)
-                self.end_headers()
-                self.wfile.write(b"wrong state; sign in again from the terminal")
+                _send_html(self, 400, _render_oauth_page(False, "X", "OAuth state mismatch"))
                 return
+            error = query.get("error", [""])[0]
             found = query.get("code", [""])[0]
-            if found:
-                holder["code"] = found
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"signed in; return to the terminal")
+            if error or not found:
+                detail = (
+                    query.get("error_description", [""])[0]
+                    or error
+                    or "no authorization code returned"
+                )
+                holder["error"] = detail
+                _send_html(self, 400, _render_oauth_page(False, "X", detail))
+                return
+            holder["code"] = found
+            _send_html(self, 200, _render_oauth_page(True, "X"))
 
         def log_message(self, *args: object) -> None:
             return
@@ -216,8 +235,8 @@ def authorize(
         time.sleep(0.2)
     server.shutdown()
     server.server_close()
-    if "error" in holder:
-        raise XError(AUTHORIZE_URL, None, f"the sign-in was rejected: {holder['error']}")
+    if holder.get("error"):
+        raise XError(AUTHORIZE_URL, None, holder["error"])
     code = holder.get("code")
     if not code:
         raise XError(AUTHORIZE_URL, None, "no sign-in code arrived; try again")
