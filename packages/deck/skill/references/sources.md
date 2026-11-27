@@ -9,3 +9,5 @@ from these sources; only facts and practices are taken from them.
 | D2 | https://marp.app/docs | marp-team | None stated on page | Presenting from an exported PDF rather than building presentation software; separating slide content from its styling. |
 | D3 | https://raw.githubusercontent.com/marp-team/marp-cli/main/README.md | marp-team | None stated on page | Headless-browser PDF export as standard practice, corroborating facet's Chromium architecture. |
 | D4 | https://playwright.dev/docs/api/class-page#page-pdf | Microsoft | None stated on page | The PDF API surface facet already uses, corroborating the print-media export path. |
+| D5 | https://github.com/cathrynlavery/diagram-design | cathrynlavery | MIT | Editorial diagram discipline (flat containment, hairline dividers, whitespace over shadows, single accent). No wording copied. |
+| D6 | https://github.com/anthropics/skills/tree/main/skills/theme-factory | Anthropic | Apache-2.0 | Cohesive theme discipline (one token palette — surface/paper, primary and muted ink, single accent, display/body/mono fonts — reused across slides, posters and infographics). No wording copied. |

@@ -15,6 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "mermaid"
 SKILL = (PACKAGE / "skill" / "SKILL.md").read_text(encoding="utf-8")
+SOURCES = (PACKAGE / "skill" / "references" / "sources.md").read_text(encoding="utf-8")
 HEADINGS = ("## When to use", "## Pieces", "## Judging the result", "## Pitfalls")
 DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
@@ -100,3 +101,28 @@ def test_the_approved_examples_ship() -> None:
         example = examples_dir / name
         assert example.is_file(), example
         assert example.stat().st_size > 0, example
+
+
+def test_the_skill_teaches_editorial_diagram_discipline() -> None:
+    """The editor's eye the skill asks for: flat depth, hairlines, one accent."""
+    body = _body()
+    for token in (
+        "1px hairlines",
+        "drop shadow",
+        "one accent color",
+        "serif display",
+        "monospace",
+        "brand tokens",
+    ):
+        assert token in body, token
+
+
+def test_the_sources_credit_the_editorial_and_theme_origins() -> None:
+    """Both inspirations are cited with their licence and a no-copying note."""
+    rows = SOURCES.splitlines()
+    diagram = next(row for row in rows if "cathrynlavery/diagram-design" in row)
+    assert "MIT" in diagram
+    assert "No wording copied" in diagram
+    factory = next(row for row in rows if "anthropics/skills/tree/main/skills/theme-factory" in row)
+    assert "Apache-2.0" in factory
+    assert "No wording copied" in factory

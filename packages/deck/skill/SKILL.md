@@ -152,6 +152,12 @@ left pointing at removed content.
 from, in any viewer; there is nothing to serve and nothing to open, as the
 presenter section already states.
 
+**One palette for the whole piece.** Decide the token set up front — a paper or
+surface color, a primary ink, a muted ink, one accent, and a display/body/mono
+font trio — and apply it unchanged across every slide, poster or infographic.
+Never restyle a slide with ad-hoc hex values. Prefer flat containment, crisp
+hairline dividers and generous whitespace over drop shadows.
+
 ## Judging the result
 
 **Export, review, and repeat — never call a piece done unexported and unseen.**

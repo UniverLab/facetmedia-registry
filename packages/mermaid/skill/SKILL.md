@@ -100,6 +100,13 @@ PNG: overlaps, cut text and icon placement are judged by eye. Compare against
 the approved diagrams in `examples/`, and use the hand-drawn render at
 `examples/cycle-hand.png` as the reference for `look: handDrawn`.
 
+Judge the styling like an editor: keep depth flat — no heavy drop shadows and
+no muddy gradients behind boxes. Draw edges and borders as crisp 1px hairlines.
+Use one accent color and spend it on at most one or two focal elements; everything
+else stays in the theme's neutrals. Set titles in a serif display face, labels in
+a clean sans, and ids or numbers in monospace. Before choosing colors, read the
+project's brand tokens and reuse them instead of inventing new hex values.
+
 ## Pitfalls
 
 - **`fontFamily` takes one installed family.** A YAML list or `"Ubuntu Sans"`

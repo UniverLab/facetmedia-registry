@@ -22,6 +22,7 @@ MANIFEST = tomllib.loads((PACKAGE / "package.toml").read_text(encoding="utf-8"))
 INDEX = tomllib.loads((ROOT / "index.toml").read_text(encoding="utf-8"))
 READ = (PACKAGE / "README.md").read_text(encoding="utf-8")
 SKILL = (PACKAGE / "skill" / "SKILL.md").read_text(encoding="utf-8")
+SOURCES = (PACKAGE / "skill" / "references" / "sources.md").read_text(encoding="utf-8")
 ENGINE = MANIFEST["engine"]["node"]
 PINS = ENGINE["packages"]
 
@@ -61,7 +62,7 @@ def _expected_tarball(name: str, version: str) -> str:
 
 def test_the_header_names_the_presentation_facet_and_the_pinned_contract() -> None:
     assert MANIFEST["name"] == "deck"
-    assert MANIFEST["version"] == "0.1.4"
+    assert MANIFEST["version"] == "0.1.5"
     assert MANIFEST["requires_facet"] == ">=0.1.0b1,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["provider"] == "facet"
@@ -221,6 +222,30 @@ def test_the_skill_names_the_presenter_capability() -> None:
     assert "deck.slides" in SKILL
     assert "deck.page" in SKILL
     assert "deck.presenter" in SKILL
+
+
+def test_the_skill_teaches_one_palette_for_the_whole_piece() -> None:
+    """The cohesive theme discipline: one token set reused, never per-slide hex."""
+    for token in (
+        "token set",
+        "muted ink",
+        "font trio",
+        "ad-hoc hex",
+        "hairline dividers",
+        "whitespace over drop shadows",
+    ):
+        assert token in SKILL, token
+
+
+def test_the_sources_credit_the_editorial_and_theme_origins() -> None:
+    """Both inspirations are cited with their licence and a no-copying note."""
+    rows = SOURCES.splitlines()
+    diagram = next(row for row in rows if "cathrynlavery/diagram-design" in row)
+    assert "MIT" in diagram
+    assert "No wording copied" in diagram
+    factory = next(row for row in rows if "anthropics/skills/tree/main/skills/theme-factory" in row)
+    assert "Apache-2.0" in factory
+    assert "No wording copied" in factory
 
 
 def test_the_examples_ship_the_approved_print_piece() -> None:

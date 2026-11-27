@@ -13,3 +13,5 @@ from these sources; only facts and practices are taken from them.
 | S9 | https://mermaid.js.org/syntax/mindmap.html | mermaid-js | None stated on page | Depth-based coloring and the gradient caveat under the base theme. |
 | S10 | https://mermaid.js.org/syntax/timeline.html | mermaid-js | None stated on page | Top-down direction and line-break wrapping in timelines. |
 | S-seq | https://mermaid.js.org/syntax/sequenceDiagram.html | mermaid-js | None stated on page | Explicit participant ordering, `actor`, `autonumber`, activate/deactivate, typed participants. |
+| S11 | https://github.com/cathrynlavery/diagram-design | cathrynlavery | MIT | Editorial diagram discipline (flat depth, hairline borders, one accent on few focal elements, display/body/mono type roles, brand tokens first). No wording copied. |
+| S12 | https://github.com/anthropics/skills/tree/main/skills/theme-factory | Anthropic | Apache-2.0 | Cohesive theme discipline (one token palette reused across a piece instead of per-slide values). No wording copied. |
