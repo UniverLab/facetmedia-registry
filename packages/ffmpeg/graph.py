@@ -75,6 +75,7 @@ def normalize_args(
     true_peak_db: float,
     measured: Mapping[str, float],
     sample_rate_hz: int,
+    channels: int | None = None,
 ) -> list[str]:
     """Pass 2: the compressor pre-stage, then loudnorm with pass 1's measured values
     (linear), resampled, to a WAV.
@@ -96,7 +97,48 @@ def normalize_args(
         f",aresample={int(sample_rate_hz)}"
         f",alimiter=limit={num(10 ** (true_peak_db / 20))}:level=false"
     )
-    return ["-i", str(input), "-af", chain, str(output)]
+    args = ["-i", str(input), "-af", chain]
+    if channels is not None:
+        args.extend(["-ac", num(channels)])
+    args.append(str(output))
+    return args
+
+
+#: The spectral denoise the clean capability applies by default: afftdn's noise floor.
+CLEAN_DENOISE: Final[str] = "afftdn=nf=-25"
+#: The channel selections the clean pre-stage understands, and their filter.
+CLEAN_CHANNELS: Final[dict[str, str]] = {
+    "left": "pan=mono|c0=c0",
+    "right": "pan=mono|c0=c1",
+    "mix": "aformat=channel_layouts=mono",
+}
+
+
+def clean_pre_chain(channel: str, *, denoise: bool = True, highpass_hz: int = 80) -> str:
+    """The mono pre-cleanup chain: pick the channel, high-pass the rumble, denoise.
+
+    ``mix`` is ``aformat=channel_layouts=mono`` rather than ``pan=mono|c0=0.5*c0+0.5*c1``:
+    aformat downmixes stereo and multichannel cleanly and leaves a 1-channel
+    mono at unity gain, where the pan would halve its amplitude by 6 dB.
+    """
+    try:
+        steps = [CLEAN_CHANNELS[channel]]
+    except KeyError:
+        known = ", ".join(sorted(CLEAN_CHANNELS))
+        raise ValueError(f"unknown channel {channel!r} (known: {known})") from None
+    if highpass_hz > 0:
+        steps.append(f"highpass=f={int(highpass_hz)}")
+    if denoise:
+        steps.append(CLEAN_DENOISE)
+    return ",".join(steps)
+
+
+def clean_pre_args(
+    input: Path, output: Path, channel: str, *, denoise: bool = True, highpass_hz: int = 80
+) -> list[str]:
+    """The pre-cleanup call: the channel chain to a 32-bit float WAV loudnorm can read."""
+    chain = clean_pre_chain(channel, denoise=denoise, highpass_hz=highpass_hz)
+    return ["-i", str(input), "-vn", "-af", chain, "-acodec", "pcm_f32le", "-f", "wav", str(output)]
 
 
 def measure_chain(target_lufs: float, true_peak_db: float) -> str:

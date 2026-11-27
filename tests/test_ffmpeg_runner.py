@@ -18,6 +18,7 @@ ones the runner reports. No committed binary, no model, no network, no GPU.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import math
 import os
@@ -26,6 +27,7 @@ import subprocess
 import wave
 from pathlib import Path
 
+import imageio_ffmpeg
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,11 +35,23 @@ PACKAGE = ROOT / "packages" / "ffmpeg"
 RUNNER = PACKAGE / "runner.py"
 PYTHON = PACKAGE / ".venv" / "bin" / "python"
 REAL_VOICE = ROOT / "tests" / "fixtures" / "ffmpeg" / "cierre-voz.wav"
+SPEC = importlib.util.spec_from_file_location("ffmpeg_graph_clean", PACKAGE / "graph.py")
+assert SPEC is not None and SPEC.loader is not None
+graph = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(graph)
 RATE = 48000
 TP = -1.5
 MARGIN = 0.1
 TOL = 1.0
 DURATION_TOL = 0.02
+#: clean: how far the pre-stage may move a mono source's level, and how even the sides land.
+UNITY_TOL_DB = 0.5
+BALANCE_TOL_DB = 0.5
+#: clean: a side quieter than this carries no voice.
+SILENT_SIDE_DB = -40.0
+#: The output channel counts the clean tests ask for.
+MONO_CHANNELS = 1
+STEREO_CHANNELS = 2
 TARGETS = (-16.0, -20.0, -12.0)
 HOT_DURATION = 3.72
 BURSTS = 6
@@ -121,6 +135,65 @@ def _write_wav(path: Path, payload: bytes) -> None:
         writer.setsampwidth(2)
         writer.setframerate(RATE)
         writer.writeframes(payload)
+
+
+def _write_stereo(path: Path, left: list[float], right: list[float]) -> None:
+    """Two channels at the fixture rate, 16-bit, from per-side sample lists."""
+    interleaved: list[float] = []
+    for index, value in enumerate(left):
+        interleaved.extend([value, right[index]])
+    with wave.open(str(path), "wb") as writer:
+        writer.setnchannels(2)
+        writer.setsampwidth(2)
+        writer.setframerate(RATE)
+        writer.writeframes(_pcm16(interleaved))
+
+
+def _samples(payload: bytes) -> list[float]:
+    """16-bit PCM bytes back to floats in [-1, 1]."""
+    return [value / 32768.0 for (value,) in struct.iter_unpack("<h", payload)]
+
+
+def _read_channels(path: Path) -> tuple[list[float], list[float] | None]:
+    """A 16-bit WAV's samples per side; mono returns the second side as ``None``."""
+    with wave.open(str(path), "rb") as reader:
+        width = reader.getnchannels()
+        frames = reader.readframes(reader.getnframes())
+    values = [value / 32768.0 for (value,) in struct.iter_unpack("<h", frames)]
+    if width == 1:
+        return values, None
+    return values[0::2], values[1::2]
+
+
+def _level_db(samples: list[float]) -> float:
+    """A channel's RMS in dBFS, floored so digital silence stays finite."""
+    rms = math.sqrt(sum(value * value for value in samples) / max(len(samples), 1))
+    return 20.0 * math.log10(rms + 1e-12)
+
+
+def _pre_stage(
+    tmp_path: Path, source: Path, channel: str
+) -> tuple[list[float], list[float] | None]:
+    """The clean pre-stage alone, denoise and high-pass off, read back as samples."""
+    pre = tmp_path / "pre-stage-f32.wav"
+    pcm = tmp_path / "pre-stage.wav"
+    exe = imageio_ffmpeg.get_ffmpeg_exe()
+    args = graph.clean_pre_args(source, pre, channel, denoise=False, highpass_hz=0)
+    done = subprocess.run(
+        [exe, "-nostdin", "-hide_banner", "-y", *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert done.returncode == 0, done.stderr
+    done = subprocess.run(
+        [exe, "-nostdin", "-hide_banner", "-y", "-i", str(pre), "-acodec", "pcm_s16le", str(pcm)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert done.returncode == 0, done.stderr
+    return _read_channels(pcm)
 
 
 def _hot_voice() -> bytes:
@@ -320,3 +393,76 @@ def test_mix_tracks_target_and_keeps_the_peak_ceiling(tmp_path: Path) -> None:
     properties = _properties(result)
     assert abs(float(properties["lufs"]) + 16.0) <= TOL
     assert float(properties["peak_dbfs"]) <= TP + MARGIN
+
+
+def _clean_request(out: Path, audio: Path, name: str, **fields: object) -> dict[str, object]:
+    inputs: dict[str, object] = {
+        "audio": str(audio),
+        "name": name,
+        "channel": "auto",
+        "target-lufs": -16.0,
+        "true-peak-db": TP,
+        "sample-rate-hz": "48000",
+    }
+    inputs.update(fields)
+    return _base_request(out, "ffmpeg.clean", inputs)
+
+
+def _right_only_stereo(tmp_path: Path) -> Path:
+    """A mono mic recorded on the right side only: left silent, right voice plus hiss."""
+    voice = _samples(_hot_voice())
+    noise = _lcg(len(voice))
+    left = [0.0] * len(voice)
+    right = [0.5 * value + 0.002 * noise[index] for index, value in enumerate(voice)]
+    source = tmp_path / "right-only.wav"
+    _write_stereo(source, left, right)
+    return source
+
+
+def test_clean_pre_stage_keeps_mono_at_unity_gain(tmp_path: Path) -> None:
+    """The mix channel is aformat, never a 0.5+0.5 pan: mono must not drop 6 dB."""
+    source = tmp_path / "mono.wav"
+    _write_wav(source, _sine(seconds=1.0, hz=300.0, amplitude=0.5))
+    staged, right = _pre_stage(tmp_path, source, "mix")
+    assert right is None, "the pre-stage wrote more than one channel for a mono source"
+    source_left, _unused = _read_channels(source)
+    assert abs(_level_db(staged) - _level_db(source_left)) < UNITY_TOL_DB
+
+
+def test_clean_auto_extracts_the_right_channel_as_dual_mono(tmp_path: Path) -> None:
+    source = _right_only_stereo(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    stub = _stub_dir(tmp_path)
+    request = _clean_request(out, source, "voice-clean", channels="2")
+    result = _invoke(tmp_path, stub, request, "clean-stereo")
+    asset = result["assets"][0]
+    properties = asset["properties"]
+    assert asset["params"]["channel"] == "right", "auto detection missed the live channel"
+    assert int(properties["channels"]) == STEREO_CHANNELS
+    assert abs(float(properties["lufs"]) + 16.0) <= TOL
+    assert float(properties["peak_dbfs"]) <= TP + MARGIN
+    left, right = _read_channels(out / "voice-clean.wav")
+    assert right is not None
+    assert _level_db(left) > SILENT_SIDE_DB, "the left side is silent: wrong channel extracted"
+    assert abs(_level_db(left) - _level_db(right)) < BALANCE_TOL_DB
+    verify = {**request, "verb": "verify", "assets": [str(out / "voice-clean.wav")]}
+    verdicts = _invoke(tmp_path, stub, verify, "clean-stereo-verify")["assets"]
+    assert verdicts[0]["passed"] is True
+
+
+def test_clean_defaults_to_centered_mono(tmp_path: Path) -> None:
+    source = _right_only_stereo(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    stub = _stub_dir(tmp_path)
+    request = _clean_request(out, source, "voice-mono")
+    result = _invoke(tmp_path, stub, request, "clean-mono")
+    properties = _properties(result)
+    assert int(properties["channels"]) == MONO_CHANNELS
+    assert int(properties["sample_rate_hz"]) == RATE
+    assert abs(float(properties["lufs"]) + 16.0) <= TOL
+    assert float(properties["peak_dbfs"]) <= TP + MARGIN
+    verify = {**request, "verb": "verify", "assets": [str(out / "voice-mono.wav")]}
+    verdicts = _invoke(tmp_path, stub, verify, "clean-mono-verify")["assets"]
+    assert verdicts[0]["passed"] is True

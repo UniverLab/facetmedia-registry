@@ -1,13 +1,15 @@
 ---
 name: ffmpeg
-description: Normalise, mix and convert audio clips with FFmpeg, with verified loudness and duration.
+description: Clean, normalise, mix and convert audio clips with FFmpeg, with verified loudness and duration.
 ---
 # FFmpeg
 
-Turn an existing audio clip into the clip the platform wants: bring it to a
-loudness target with a two-pass EBU R128 normalisation, lay it over a music
-or ambience bed with the bed ducked under the voice, or convert, resample
-and cut it. Three capabilities — `ffmpeg.normalize`, `ffmpeg.mix` and
+Turn an existing audio clip into the clip the platform wants: clean a
+recorded voice take (pick the live channel when a mono mic landed on one
+side, reduce noise, normalise loudness), bring it to a loudness target with a
+two-pass EBU R128 normalisation, lay it over a music or ambience bed with the
+bed ducked under the voice, or convert, resample and cut it. Four
+capabilities — `ffmpeg.clean`, `ffmpeg.normalize`, `ffmpeg.mix` and
 `ffmpeg.convert` — all writing the `audio` kind with the static FFmpeg
 binary bundled by imageio-ffmpeg. Light package: no models, no GPU, not
 exclusive.
@@ -16,6 +18,9 @@ exclusive.
 
 - After a **voice clip exists** (from the `voice` facet) and it must meet a
   loudness target: `ffmpeg.normalize` brings it to −16 LUFS without clipping.
+- When the take was **recorded badly**: `ffmpeg.clean` extracts the channel
+  that carries the voice when a mono mic was recorded on only left or right,
+  high-passes the rumble, denoises and normalises in one pass.
 - When the clip must sit **over music or ambience**: `ffmpeg.mix` lays voice
   layers over bed layers and ducks the beds under the voice automatically.
 - When a platform wants **another format, rate or length**: `ffmpeg.convert`
@@ -24,6 +29,15 @@ exclusive.
   `voice` and `audio` facets' other packages.
 
 ## Pieces
+
+Clean the lab's voice clip, letting the channel be picked automatically
+(`examples/clean.toml`):
+
+```toml
+[inputs]
+audio = "voice.flac"
+name = "voice-clean"
+```
 
 Normalise the lab's voice clip to the web/podcast target
 (`examples/normalize.toml`):
@@ -74,6 +88,27 @@ bitrate-kbps = 128
 Run any of them with `facet run ffmpeg.mix <piece.toml> --out build/`; the
 asset lands as `<name>.wav` (or `<name>.<ext>` for convert) with its record.
 
+## Before you clean
+
+A mono microphone plugged into a stereo interface often records on one side
+only: the take plays back as silence in one ear. `channel = "auto"` decodes
+the file, measures the left and right RMS, and picks `left` or `right` when
+the two differ by 18 dB or more; it leaves a 1-channel mono untouched and
+downmixes anything else with `aformat=channel_layouts=mono`, which keeps mono
+at unity gain (a `pan` sum would halve it by 6 dB). Set `channel`
+explicitly when the auto rule would guess wrong, and use `mix` to force a
+downmix.
+
+The rest of the chain is the cleanup a phone or laptop take needs: a
+`highpass` at `highpass-hz` (80 Hz by default, `0` disables it) removes the
+rumble below the voice, and `afftdn=nf=-25` (on unless `denoise = false`)
+takes the steady hiss down. Then the same two-pass loudnorm `normalize` runs
+brings the clip to `target-lufs`, and `channels = "2"` writes the centered
+mono signal to both sides so a player never pans it.
+
+Clean before you mix or convert: the channel pick and the denoise are
+pre-stage work, and normalising is the last step before an encode.
+
 ## Before you normalise
 
 Normalise in two passes, never one: the first measures the clip through the
@@ -120,6 +155,9 @@ measuring with soundfile and pyloudnorm (the binary ships no ffprobe):
 - `normalize`: the integrated loudness within `lufs_tol = 1.0` LU of
   `target-lufs`, the peak at or below `true-peak-db` + 0.1 dB, and the
   duration within 20 ms of the source's.
+- `clean`: the same loudness, peak and duration rules as `normalize`, plus
+  exactly the requested `channels` and `sample-rate-hz` in the decoded
+  output.
 - `mix`: the duration equals the longest `start-s` + layer length within
   50 ms, the peak stays at or below −0.9 dBFS, and with `target-lufs` the
   loudness is within 1.0 LU.

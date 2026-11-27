@@ -177,6 +177,17 @@ class TestNormalizeArgs(unittest.TestCase):
             ["-i", "in.wav", "-acodec", "pcm_f32le", "-f", "wav", "m.wav"],
         )
 
+    def test_channels_asked_reach_the_output(self) -> None:
+        got = graph.normalize_args(
+            Path("in.flac"), Path("out.wav"), -16.0, -1.5, MEASURED, 48000, channels=2
+        )
+        self.assertEqual(got[-3:], ["-ac", "2", "out.wav"])
+
+    def test_channels_unasked_stay_out(self) -> None:
+        got = graph.normalize_args(Path("in.flac"), Path("out.wav"), -16.0, -1.5, MEASURED, 48000)
+        self.assertNotIn("-ac", got)
+        self.assertEqual(got[-1], "out.wav")
+
 
 class TestConvertArgs(unittest.TestCase):
     def test_with_cuts_resample_channels_and_bitrate(self) -> None:
@@ -221,6 +232,88 @@ class TestConvertArgs(unittest.TestCase):
     def test_unknown_format_rejected(self) -> None:
         with self.assertRaises(ValueError):
             graph.convert_args(Path("in.wav"), Path("out.aac"), "aac")
+
+
+class TestCleanPreChain(unittest.TestCase):
+    def test_left_picks_the_left_channel(self) -> None:
+        self.assertEqual(
+            graph.clean_pre_chain("left"),
+            "pan=mono|c0=c0,highpass=f=80,afftdn=nf=-25",
+        )
+
+    def test_right_picks_the_right_channel(self) -> None:
+        self.assertEqual(
+            graph.clean_pre_chain("right"),
+            "pan=mono|c0=c1,highpass=f=80,afftdn=nf=-25",
+        )
+
+    def test_mix_downmixes_with_aformat_not_a_pan_sum(self) -> None:
+        """aformat leaves 1-channel mono at unity gain; a 0.5+0.5 pan would halve it."""
+        got = graph.clean_pre_chain("mix")
+        self.assertEqual(got, "aformat=channel_layouts=mono,highpass=f=80,afftdn=nf=-25")
+        self.assertNotIn("pan=", got)
+
+    def test_highpass_zero_disables_it(self) -> None:
+        self.assertEqual(
+            graph.clean_pre_chain("left", highpass_hz=0),
+            "pan=mono|c0=c0,afftdn=nf=-25",
+        )
+
+    def test_highpass_cutoff_is_the_one_asked(self) -> None:
+        self.assertEqual(
+            graph.clean_pre_chain("right", highpass_hz=120),
+            "pan=mono|c0=c1,highpass=f=120,afftdn=nf=-25",
+        )
+
+    def test_denoise_off_leaves_the_chain_alone(self) -> None:
+        self.assertEqual(
+            graph.clean_pre_chain("mix", denoise=False),
+            "aformat=channel_layouts=mono,highpass=f=80",
+        )
+
+    def test_unknown_channel_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            graph.clean_pre_chain("center")
+
+
+class TestCleanPreArgs(unittest.TestCase):
+    def test_channel_chain_to_a_float_wav(self) -> None:
+        got = graph.clean_pre_args(Path("in.flac"), Path("pre.wav"), "right")
+        self.assertEqual(
+            got,
+            [
+                "-i",
+                "in.flac",
+                "-vn",
+                "-af",
+                "pan=mono|c0=c1,highpass=f=80,afftdn=nf=-25",
+                "-acodec",
+                "pcm_f32le",
+                "-f",
+                "wav",
+                "pre.wav",
+            ],
+        )
+
+    def test_options_reach_the_chain(self) -> None:
+        got = graph.clean_pre_args(
+            Path("in.flac"), Path("pre.wav"), "mix", denoise=False, highpass_hz=0
+        )
+        self.assertEqual(
+            got,
+            [
+                "-i",
+                "in.flac",
+                "-vn",
+                "-af",
+                "aformat=channel_layouts=mono",
+                "-acodec",
+                "pcm_f32le",
+                "-f",
+                "wav",
+                "pre.wav",
+            ],
+        )
 
 
 class TestMixArgs(unittest.TestCase):

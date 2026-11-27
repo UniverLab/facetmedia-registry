@@ -1,8 +1,10 @@
 # ffmpeg
 
-Normalise, mix and convert audio clips with FFmpeg: `facet run
+Normalise, mix, clean and convert audio clips with FFmpeg: `facet run
 ffmpeg.normalize` brings clips to a loudness target with a two-pass EBU
-R128 normalisation, `facet run ffmpeg.mix` lays voice layers over a music
+R128 normalisation, `facet run ffmpeg.clean` cleans a recorded voice take
+(picks the live channel when a mono mic landed on one side, denoises and
+normalises it), `facet run ffmpeg.mix` lays voice layers over a music
 or ambience bed with the bed ducked under the voice, `facet run
 ffmpeg.convert` cuts, resamples and encodes to another format. It belongs
 to the **`audio`** facet and writes the `audio` kind, so its assets show
@@ -24,6 +26,21 @@ two-pass) without clipping:
 | Field | Type | Required | Default | Notes |
 |-------|------|----------|---------|-------|
 | `clip` | array | yes | — | at least one clip: `name`, `audio` |
+| `target-lufs` | number | no | −16.0 | −30 to −10, integrated loudness target |
+| `true-peak-db` | number | no | −1.5 | −6 to 0, the peak ceiling in dBFS |
+| `sample-rate-hz` | enum | no | `"48000"` | `"24000"`, `"44100"` or `"48000"` |
+
+`ffmpeg.clean` — clean a recorded voice clip: extract one channel when
+mono-on-one-side, reduce noise, and normalise loudness:
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|-------|
+| `audio` | path | yes | — | source audio or video the bundled FFmpeg decodes |
+| `name` | string | yes | — | `[a-z0-9][a-z0-9-]*`; writes `<name>.wav` |
+| `channel` | enum | no | `auto` | `auto`, `mix`, `left`, `right` |
+| `channels` | enum | no | `"1"` | `"1"` centered mono, `"2"` centered dual-mono stereo |
+| `denoise` | boolean | no | `true` | `afftdn=nf=-25` spectral denoise |
+| `highpass-hz` | integer | no | 80 | 0 to 300; `0` disables the high-pass |
 | `target-lufs` | number | no | −16.0 | −30 to −10, integrated loudness target |
 | `true-peak-db` | number | no | −1.5 | −6 to 0, the peak ceiling in dBFS |
 | `sample-rate-hz` | enum | no | `"48000"` | `"24000"`, `"44100"` or `"48000"` |
@@ -68,7 +85,16 @@ layer is delayed (`adelay`) and scaled (`volume`), the voices are summed
 keyed on the padded voice sum so they drop by about `duck-db` while the
 voice sounds, and the result passes `alimiter` at −1 dBFS. A piece with
 only beds is legal too: the beds are simply summed and limited, with
-nothing to duck under. `convert` cuts
+nothing to duck under. `clean` first decodes the source and, with
+`channel = "auto"`, measures the left and right RMS: 1-channel mono (and
+more than two channels) goes to `mix`, a 2-channel file whose sides differ
+by 18 dB or more goes to `left` or `right`, anything else to `mix`. The
+chosen channel is taken with `pan=mono|c0=c0` (left), `pan=mono|c0=c1`
+(right) or `aformat=channel_layouts=mono` (`mix`, which downmixes stereo
+cleanly and leaves mono at unity gain), then a `highpass` and
+`afftdn=nf=-25` run, the result lands as a 32-bit float WAV and the same
+two loudnorm passes as `normalize` write `<name>.wav` with `-ac` at
+`channels`. `convert` cuts
 with `-ss`/`-to` and encodes with the format's own encoder
 (`pcm_s16le`, `flac`, `libmp3lame`, `libopus`).
 
@@ -80,6 +106,8 @@ the bundled binary and measuring with soundfile and pyloudnorm:
 - `normalize`: integrated loudness within `lufs_tol = 1.0` LU of
   `target-lufs`, peak at or below `true-peak-db` + 0.1 dB, duration
   within 20 ms of the source's;
+- `clean`: the same loudness, peak and duration rules as `normalize`, plus
+  the requested `channels` and `sample-rate-hz` in the decoded output;
 - `mix`: duration equals the longest `start-s` + layer length within
   50 ms, peak at or below −0.9 dBFS, and with `target-lufs` the loudness
   within 1.0 LU;
@@ -118,7 +146,7 @@ package has no models.
 `requirements` in the manifest: **no GPU**, **1 GB RAM**, **0.3 GB
 disk** (the environment plus the 28 MB binary), `exclusive = false` on
 `linux` — the examples run alongside other light work, but they are
-short: each of the three examples runs in a few seconds.
+short: each of the four examples runs in a few seconds.
 
 ## Examples
 
@@ -126,6 +154,13 @@ short: each of the three examples runs in a few seconds.
 mono FLAC whisper transcribes); `examples/bed.flac` is a 15 s pink
 noise bed, low-passed at 800 Hz and laid at −30 dBFS, generated once
 with the bundled ffmpeg (`anoisesrc`), 117 KB.
+
+`examples/clean.toml` cleans the same voice clip with `channel = "auto"` and
+the manifest defaults (mono, denoise on, high-pass at 80 Hz, −16 LUFS); run
+it with `scripts/try-package.sh ffmpeg clean
+packages/ffmpeg/examples/clean.toml`. This source is 1-channel mono, so the
+auto rule keeps it at unity gain and reports `params.channel = "mix"` in the
+record.
 
 `examples/normalize.toml` brings the voice to −16 LUFS; run it with
 `scripts/try-package.sh ffmpeg normalize
@@ -173,6 +208,7 @@ first pull included, and `facet doctor ffmpeg --json` reports
 `facet example <capability> --run` copies the capability's example, with
 every file it names, into a fresh folder and runs it there:
 
+- `ffmpeg.clean` — `examples/clean.toml`: `facet example ffmpeg.clean --run`
 - `ffmpeg.convert` — `examples/convert.toml`: `facet example ffmpeg.convert --run`
 - `ffmpeg.mix` — `examples/mix.toml`: `facet example ffmpeg.mix --run`
 - `ffmpeg.normalize` — `examples/normalize.toml`: `facet example ffmpeg.normalize --run`

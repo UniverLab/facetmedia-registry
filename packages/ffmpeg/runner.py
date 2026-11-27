@@ -2,7 +2,7 @@
 
 Four verbs on the runner SDK (``facet_runner_sdk``, copied into the
 environment at pull): ``run`` executes the requested capability
-(``normalize``, ``mix`` or ``convert``) with the static FFmpeg binary
+(``clean``, ``normalize``, ``mix`` or ``convert``) with the static FFmpeg binary
 imageio-ffmpeg bundles, ``verify`` re-measures the outputs with soundfile
 and pyloudnorm, ``preview`` writes the audio preview file, ``doctor``
 checks the tool at ``quick`` and ``full`` depth.
@@ -22,6 +22,7 @@ from __future__ import annotations
 import importlib
 import importlib.metadata
 import json
+import math
 import shutil
 import subprocess
 import sys
@@ -56,6 +57,14 @@ MIX_RATE_HZ = 48000
 DEFAULT_TARGET_LUFS = -16.0
 DEFAULT_TRUE_PEAK_DB = -1.5
 DEFAULT_BITRATE_KBPS = 128
+#: The clean defaults: the manifest's high-pass cutoff and its output channel count.
+CLEAN_HIGHPASS_HZ = 80
+CLEAN_CHANNELS = "1"
+#: clean: how far the 2-channel L/R RMS levels must differ to pick a side.
+SIDE_ISOLATION_DB = 18.0
+#: The channel counts the clean detector distinguishes.
+MONO_CHANNELS = 1
+STEREO_CHANNELS = 2
 #: Every ffmpeg call: its own process group, no stdin, banners off, overwrite.
 FFMPEG_FLAGS = ("-nostdin", "-hide_banner", "-y")
 #: The stderr tail a failed ffmpeg call reports as the runner error.
@@ -108,7 +117,7 @@ def _tool() -> dict[str, str]:
 
 
 def _capability(req: Request) -> str:
-    """The bare capability name (normalize, mix, convert) this request asked for."""
+    """The bare capability name (clean, normalize, mix, convert) this request asked for."""
     return req.capability.rsplit(".", 1)[-1]
 
 
@@ -128,7 +137,13 @@ def _measure(path: Path, tmp: Path, tag: str) -> dict[str, Any]:
 
 
 def _two_pass(
-    source: Path, out: Path, target_lufs: float, true_peak_db: float, rate: int, tmp: Path
+    source: Path,
+    out: Path,
+    target_lufs: float,
+    true_peak_db: float,
+    rate: int,
+    tmp: Path,
+    channels: int | None = None,
 ) -> None:
     """The two loudnorm passes: measure the source through the compressor, then apply the
     same compressor and values linearly."""
@@ -144,7 +159,7 @@ def _two_pass(
         ]
     )
     measured = graph.loudnorm_json(done.stderr)
-    _ffmpeg(graph.normalize_args(source, out, target_lufs, true_peak_db, measured, rate))
+    _ffmpeg(graph.normalize_args(source, out, target_lufs, true_peak_db, measured, rate, channels))
 
 
 def _asset(
@@ -237,6 +252,95 @@ def _normalize_clip(clip: Mapping[str, Any], out_dir: Path) -> dict[str, Any]:
         "sample-rate-hz": str(int(clip["sample_rate_hz"])),
     }
     return _asset(name, out.name, MIME["wav"], properties, params, [audio])
+
+
+def _rms_db(channel: Any) -> float:
+    """One channel's RMS in dBFS, floored so digital silence stays finite."""
+    numpy = importlib.import_module("numpy")
+    rms = float(numpy.sqrt(numpy.mean(numpy.square(channel))))
+    return 20.0 * math.log10(rms + 1e-12)
+
+
+def _detect_channel(source: Path, tmp: Path) -> str:
+    """``left``/``right`` when a mono mic landed on one side only, else ``mix``."""
+    tmp.mkdir(parents=True, exist_ok=True)
+    decoded = tmp / "detect.measure.wav"
+    _ffmpeg(graph.measure_args(source, decoded))
+    samples, _rate = audiopreview.read_wav(decoded)
+    count = audiopreview.channels(samples)
+    if count == MONO_CHANNELS or count > STEREO_CHANNELS:
+        return "mix"
+    left, right = _rms_db(samples[:, 0]), _rms_db(samples[:, 1])
+    if left - right >= SIDE_ISOLATION_DB:
+        return "left"
+    if right - left >= SIDE_ISOLATION_DB:
+        return "right"
+    return "mix"
+
+
+def _clean_audio(params: Mapping[str, Any]) -> dict[str, Any]:
+    """The clean piece's fields with the manifest defaults resolved."""
+    return {
+        "audio": Path(str(params["audio"])),
+        "name": str(params["name"]),
+        "channel": str(params.get("channel", "auto")),
+        "channels": int(params.get("channels", CLEAN_CHANNELS)),
+        "denoise": bool(params.get("denoise", True)),
+        "highpass_hz": int(params.get("highpass-hz", CLEAN_HIGHPASS_HZ)),
+        "target_lufs": float(params.get("target-lufs", DEFAULT_TARGET_LUFS)),
+        "true_peak_db": float(params.get("true-peak-db", DEFAULT_TRUE_PEAK_DB)),
+        "sample_rate_hz": int(params.get("sample-rate-hz", MIX_RATE_HZ)),
+    }
+
+
+def _run_clean(params: Mapping[str, Any], out_dir: Path) -> list[dict[str, Any]]:
+    """Extract the active channel, high-pass and denoise, then two-pass normalise."""
+    piece = _clean_audio(params)
+    audio = piece["audio"]
+    name = str(piece["name"])
+    out = out_dir / f"{name}.wav"
+    with tempfile.TemporaryDirectory() as folder:
+        tmp = Path(folder)
+        channel = (
+            _detect_channel(audio, tmp) if piece["channel"] == "auto" else str(piece["channel"])
+        )
+        pre = tmp / f"{name}.pre.wav"
+        _ffmpeg(
+            graph.clean_pre_args(
+                audio,
+                pre,
+                channel,
+                denoise=bool(piece["denoise"]),
+                highpass_hz=int(piece["highpass_hz"]),
+            )
+        )
+        _two_pass(
+            pre,
+            out,
+            float(piece["target_lufs"]),
+            float(piece["true_peak_db"]),
+            int(piece["sample_rate_hz"]),
+            tmp,
+            int(piece["channels"]),
+        )
+        properties = _measure(out, tmp, name)
+    resolved = _clean_params(piece, channel)
+    return [_asset(name, out.name, MIME["wav"], properties, resolved, [audio])]
+
+
+def _clean_params(piece: Mapping[str, Any], channel: str) -> dict[str, Any]:
+    """The clean piece fields under their manifest names, with the channel resolved."""
+    return {
+        "audio": str(piece["audio"]),
+        "name": str(piece["name"]),
+        "channel": channel,
+        "channels": str(int(piece["channels"])),
+        "denoise": bool(piece["denoise"]),
+        "highpass-hz": int(piece["highpass_hz"]),
+        "target-lufs": float(piece["target_lufs"]),
+        "true-peak-db": float(piece["true_peak_db"]),
+        "sample-rate-hz": str(int(piece["sample_rate_hz"])),
+    }
 
 
 def _layers(params: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -341,7 +445,14 @@ def _convert_params(params: Mapping[str, Any]) -> dict[str, Any]:
     return resolved
 
 
-CAPABILITY_VERBS.update({"normalize": _run_normalize, "mix": _run_mix, "convert": _run_convert})
+CAPABILITY_VERBS.update(
+    {
+        "normalize": _run_normalize,
+        "clean": _run_clean,
+        "mix": _run_mix,
+        "convert": _run_convert,
+    }
+)
 
 
 @runner.verb("verify")
@@ -393,6 +504,28 @@ def _verify_normalize(params: Mapping[str, Any], path: Path, tmp: Path) -> dict[
         abs(float(props["lufs"]) - float(clip["target_lufs"])) <= LUFS_TOL
         and float(props["peak_dbfs"]) <= float(clip["true_peak_db"]) + PEAK_MARGIN_DB
         and error <= DURATION_TOL_S
+    )
+    return _verdict(path.name, passed, metrics, {"lufs_tol": LUFS_TOL})
+
+
+def _verify_clean(params: Mapping[str, Any], path: Path, tmp: Path) -> dict[str, Any]:
+    """Within 1 LU of the target, under the ceiling, same duration, channels and rate asked."""
+    piece = _clean_audio(params)
+    props = _measure(path, tmp, "out")
+    source = _measure(piece["audio"], tmp, "src")
+    error = _duration_error(props, float(source["duration_s"]))
+    metrics = {
+        "lufs": props["lufs"],
+        "peak_dbfs": props["peak_dbfs"],
+        "duration_s": props["duration_s"],
+        "duration_error_s": error,
+    }
+    passed = (
+        abs(float(props["lufs"]) - float(piece["target_lufs"])) <= LUFS_TOL
+        and float(props["peak_dbfs"]) <= float(piece["true_peak_db"]) + PEAK_MARGIN_DB
+        and error <= DURATION_TOL_S
+        and int(props["channels"]) == int(piece["channels"])
+        and int(props["sample_rate_hz"]) == int(piece["sample_rate_hz"])
     )
     return _verdict(path.name, passed, metrics, {"lufs_tol": LUFS_TOL})
 
@@ -460,6 +593,7 @@ def _wanted_duration(params: Mapping[str, Any], source_s: float) -> float:
 
 _VERIFIES: dict[str, Callable[[Mapping[str, Any], Path, Path], dict[str, Any]]] = {
     "normalize": _verify_normalize,
+    "clean": _verify_clean,
     "mix": _verify_mix,
     "convert": _verify_convert,
 }
@@ -517,7 +651,7 @@ def _preview_data(cap: str, params: Mapping[str, Any], path: Path, tmp: Path) ->
 
 def _target_lufs(cap: str, params: Mapping[str, Any]) -> float | None:
     """The capability's target: normalize's default, mix's when given, never convert's."""
-    if cap == "normalize":
+    if cap in {"normalize", "clean"}:
         return float(params.get("target-lufs", DEFAULT_TARGET_LUFS))
     if cap == "mix":
         return _opt_float(params, "target-lufs")

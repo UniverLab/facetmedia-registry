@@ -1,0 +1,7 @@
+# The lab's reference voice clip cleaned: channel picked automatically, denoised
+# and brought to the web/podcast loudness target as centered mono.
+capability = "ffmpeg.clean"
+
+[inputs]
+audio = "voice.flac"
+name = "voice-clean"

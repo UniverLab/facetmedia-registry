@@ -1,10 +1,10 @@
 name = "ffmpeg"
-version = "0.1.5"
+version = "0.2.0"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "FFmpeg project · imageio (imageio-ffmpeg)"
 tool_name = "FFmpeg (imageio-ffmpeg build)"
-description = "Normalise, mix and convert audio clips with FFmpeg, with loudness and duration verified"
+description = "Clean recorded voice clips, normalise, mix and convert audio with FFmpeg, with loudness and duration verified"
 facet = "audio"
 uses = ["audiopreview"]
 
@@ -91,6 +91,74 @@ description = "Output sample rate."
 thresholds = { lufs_tol = 1.0 }
 
 [capabilities.normalize.preview]
+viewer = "audio"
+
+[capabilities.clean]
+summary = "Clean a recorded voice clip: extract one channel when mono-on-one-side, reduce noise, and normalise loudness"
+kind = "audio"
+
+[capabilities.clean.i18n.es]
+summary = "Limpia un clip de voz grabada: extrae un canal si quedó de un solo lado, reduce ruido y normaliza sonoridad"
+
+[capabilities.clean.inputs.audio]
+type = "path"
+required = true
+description = "Source audio or video file decodable by the bundled FFmpeg."
+
+[capabilities.clean.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.wav."
+
+[capabilities.clean.inputs.channel]
+type = "enum"
+values = ["auto", "mix", "left", "right"]
+default = "auto"
+description = "Channel selection before cleanup: auto keeps 1-channel mono untouched, picks left or right when the 2-channel stereo L/R RMS differs by 18 dB or more, and otherwise downmixes to mono."
+
+[capabilities.clean.inputs.channels]
+type = "enum"
+values = ["1", "2"]
+default = "1"
+description = "Output channel count: 1 centered mono, 2 centered dual-mono stereo."
+
+[capabilities.clean.inputs.denoise]
+type = "boolean"
+default = true
+description = "Apply the afftdn spectral denoise."
+
+[capabilities.clean.inputs.highpass-hz]
+type = "integer"
+default = 80
+min = 0
+max = 300
+description = "High-pass cutoff in Hz; 0 disables the high-pass."
+
+[capabilities.clean.inputs.target-lufs]
+type = "number"
+default = -16.0
+min = -30
+max = -10
+description = "Integrated loudness target in LUFS (web and podcasts use -16, broadcast -23)."
+
+[capabilities.clean.inputs.true-peak-db]
+type = "number"
+default = -1.5
+min = -6
+max = 0
+description = "True-peak ceiling in dBFS; the second pass never overshoots it."
+
+[capabilities.clean.inputs.sample-rate-hz]
+type = "enum"
+values = ["24000", "44100", "48000"]
+default = "48000"
+description = "Output sample rate."
+
+[capabilities.clean.verify]
+thresholds = { lufs_tol = 1.0 }
+
+[capabilities.clean.preview]
 viewer = "audio"
 
 [capabilities.mix]
