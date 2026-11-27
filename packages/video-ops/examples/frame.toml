@@ -1,0 +1,7 @@
+capability = "video-ops.frame"
+
+[inputs]
+video = "fixture.mp4"
+name = "fixture-frame"
+at-s = 0.5
+format = "png"

@@ -1,0 +1,158 @@
+name = "video-ops"
+version = "0.1.0"
+requires_facet = ">=0.1.0b2,<0.2"
+protocol = 1
+provider = "FFmpeg project · imageio (imageio-ffmpeg)"
+tool_name = "FFmpeg Video Ops"
+description = "Deterministic CPU video transcoding (H.264/AAC faststart), audio muxing without video re-encoding, and still frame extraction with bundled FFmpeg"
+facet = "video"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 2
+disk_gb = 0.5
+exclusive = false
+platforms = ["linux"]
+
+[[licenses]]
+subject = "imageio-ffmpeg"
+spdx = "BSD-2-Clause"
+
+[[licenses]]
+subject = "FFmpeg"
+spdx = "GPL-3.0-or-later"
+
+[[licenses]]
+subject = "pillow"
+spdx = "MIT-CMU"
+
+[capabilities.transcode]
+summary = "Transcode a video to H.264/AAC MP4 with faststart, optional downscale, fps cap, and time trim"
+kind = "video"
+
+[capabilities.transcode.i18n.es]
+summary = "Transcodifica un video a MP4 H.264/AAC con faststart, escalado opcional, límite de fps y recorte temporal"
+
+[capabilities.transcode.inputs.video]
+type = "path"
+required = true
+description = "Source video file decodable by the bundled FFmpeg, resolved relative to the piece file."
+
+[capabilities.transcode.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.mp4."
+
+[capabilities.transcode.inputs.crf]
+type = "integer"
+default = 24
+min = 14
+max = 38
+description = "Constant Rate Factor for libx264 (lower means higher quality and larger files)."
+
+[capabilities.transcode.inputs.max-width]
+type = "integer"
+min = 240
+max = 3840
+description = "Maximum output width in pixels (downscales wider sources only, preserving even height)."
+
+[capabilities.transcode.inputs.fps]
+type = "integer"
+min = 1
+max = 60
+description = "Target output frame rate in frames per second; keeps source rate when omitted."
+
+[capabilities.transcode.inputs.start-s]
+type = "number"
+min = 0
+description = "Trim: keep from this timestamp in seconds onward."
+
+[capabilities.transcode.inputs.end-s]
+type = "number"
+min = 0
+description = "Trim: keep up to this timestamp in seconds."
+
+[capabilities.transcode.inputs.audio-bitrate-kbps]
+type = "integer"
+default = 128
+min = 64
+max = 320
+description = "AAC audio bitrate in kbps."
+
+[capabilities.transcode.preview]
+viewer = "video"
+
+[capabilities.mux-audio]
+summary = "Replace a video's audio track with an audio clip without re-encoding the video stream"
+kind = "video"
+
+[capabilities.mux-audio.i18n.es]
+summary = "Reemplaza la pista de audio de un video por un clip de audio sin recodificar el video"
+
+[capabilities.mux-audio.inputs.video]
+type = "path"
+required = true
+description = "Source video file resolved relative to the piece file; its video stream is copied untouched."
+
+[capabilities.mux-audio.inputs.audio]
+type = "path"
+required = true
+description = "Replacement audio clip resolved relative to the piece file; encoded to AAC."
+
+[capabilities.mux-audio.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.mp4."
+
+[capabilities.mux-audio.inputs.audio-bitrate-kbps]
+type = "integer"
+default = 128
+min = 64
+max = 320
+description = "AAC audio bitrate in kbps."
+
+[capabilities.mux-audio.preview]
+viewer = "video"
+
+[capabilities.frame]
+summary = "Extract a single PNG or JPG thumbnail frame from a video at a given timestamp"
+kind = "image"
+
+[capabilities.frame.i18n.es]
+summary = "Extrae un fotograma PNG o JPG de un video en un instante dado"
+
+[capabilities.frame.inputs.video]
+type = "path"
+required = true
+description = "Source video file resolved relative to the piece file."
+
+[capabilities.frame.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.<format>."
+
+[capabilities.frame.inputs.at-s]
+type = "number"
+default = 0.0
+min = 0
+description = "Timestamp in seconds at which to extract the frame."
+
+[capabilities.frame.inputs.format]
+type = "enum"
+values = ["png", "jpg"]
+default = "png"
+description = "Output image format."
+
+[capabilities.frame.preview]
+viewer = "image"

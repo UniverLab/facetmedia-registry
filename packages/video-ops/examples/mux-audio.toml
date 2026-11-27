@@ -1,0 +1,7 @@
+capability = "video-ops.mux-audio"
+
+[inputs]
+video = "fixture.mp4"
+audio = "fixture.wav"
+name = "fixture-muxed"
+audio-bitrate-kbps = 128

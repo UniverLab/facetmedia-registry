@@ -1,0 +1,14 @@
+[project]
+name = "facet-video-ops"
+version = "0.1.0"
+description = "Deterministic CPU video transcode, audio muxing, and frame extraction with bundled FFmpeg."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "imageio-ffmpeg==0.6.0",
+  "pillow==13.0.0",
+]
+
+[tool.uv]
+package = false

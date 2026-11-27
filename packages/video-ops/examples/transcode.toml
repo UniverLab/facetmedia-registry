@@ -1,0 +1,7 @@
+capability = "video-ops.transcode"
+
+[inputs]
+video = "fixture.mp4"
+name = "fixture-transcoded"
+crf = 24
+audio-bitrate-kbps = 128
