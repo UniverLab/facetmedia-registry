@@ -1,0 +1,84 @@
+name = "upscale"
+version = "0.1.0"
+requires_facet = ">=0.1.0b2,<0.2"
+protocol = 1
+provider = "Xintao Wang · Real-ESRGAN ncnn Vulkan"
+tool_name = "Real-ESRGAN"
+description = "Deterministic 2x and 4x image super-resolution using the pinned realesrgan-ncnn-vulkan Linux release and Pillow"
+facet = "image"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 2
+disk_gb = 0.2
+exclusive = true
+platforms = ["linux"]
+
+[[licenses]]
+subject = "realesrgan-ncnn-vulkan"
+spdx = "MIT"
+
+[[licenses]]
+subject = "Real-ESRGAN weights"
+spdx = "BSD-3-Clause"
+
+[[licenses]]
+subject = "pillow"
+spdx = "MIT-CMU"
+
+[[models]]
+id = "realesrgan-ncnn-vulkan-20220424-ubuntu"
+url = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesrgan-ncnn-vulkan-20220424-ubuntu.zip"
+sha256 = "e5aa6eb131234b87c0c51f82b89390f5e3e642b7b70f2b9bbe95b6a285a40c96"
+bytes = 46931474
+path = "realesrgan-ncnn-vulkan-20220424-ubuntu/realesrgan-ncnn-vulkan-20220424-ubuntu.zip"
+spdx = "BSD-3-Clause"
+commercial_use = true
+requires_acceptance = false
+
+[capabilities.enhance]
+summary = "Upscale a PNG, JPEG, or WebP still 2x or 4x with Real-ESRGAN ncnn Vulkan"
+kind = "image"
+
+[capabilities.enhance.i18n.es]
+summary = "Escala una imagen PNG, JPEG o WebP al doble (2x) o cuádruple (4x) con Real-ESRGAN ncnn Vulkan"
+
+[capabilities.enhance.inputs.image]
+type = "path"
+required = true
+description = "Source PNG, JPEG, or WebP still, resolved relative to the piece file."
+
+[capabilities.enhance.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Output asset base name; writes <name>.<format> in the output directory."
+
+[capabilities.enhance.inputs.scale]
+type = "enum"
+values = ["2", "4"]
+default = "4"
+description = "Upscale factor: 2x or 4x."
+
+[capabilities.enhance.inputs.model]
+type = "enum"
+values = ["realesrgan-x4plus", "realesrgan-x4plus-anime", "realesr-animevideov3"]
+default = "realesrgan-x4plus"
+description = "Real-ESRGAN model: realesrgan-x4plus (general photos), realesrgan-x4plus-anime (anime/illustrations), or realesr-animevideov3 (native 2x/4x)."
+
+[capabilities.enhance.inputs.format]
+type = "enum"
+values = ["png", "jpg", "webp"]
+default = "png"
+description = "Output image format: png, jpg, or webp."
+
+[capabilities.enhance.preview]
+viewer = "image"

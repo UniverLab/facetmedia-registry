@@ -1,0 +1,13 @@
+[project]
+name = "facet-upscale"
+version = "0.1.0"
+description = "Deterministic 2x and 4x image super-resolution with Real-ESRGAN ncnn Vulkan and Pillow."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "pillow==13.0.0",
+]
+
+[tool.uv]
+package = false

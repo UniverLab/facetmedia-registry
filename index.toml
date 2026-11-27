@@ -154,3 +154,6 @@ name = "pdf-ops"
 
 [[packages]]
 name = "audiogram"
+
+[[packages]]
+name = "upscale"

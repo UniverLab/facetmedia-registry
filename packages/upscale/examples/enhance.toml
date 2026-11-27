@@ -1,0 +1,9 @@
+# Upscale a small two-color fixture image 4x with Real-ESRGAN.
+capability = "upscale.enhance"
+
+[inputs]
+image = "fixture.png"
+name = "fixture-4x"
+scale = "4"
+model = "realesrgan-x4plus"
+format = "png"
