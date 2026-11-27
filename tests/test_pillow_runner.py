@@ -456,3 +456,163 @@ def test_doctor_passes_the_import_and_the_full_ops_roundtrip(tmp_path: Path) -> 
     assert full_result is not None
     checks = {check["name"]: check for check in full_result["checks"]}
     assert checks["ops"]["ok"] is True
+
+
+def _retouch_request(
+    verb: str,
+    out_dir: Path,
+    piece_dir: Path,
+    inputs: dict[str, object],
+    assets: tuple[Path, ...] = (),
+) -> dict[str, object]:
+    req = _request(verb, out_dir, piece_dir, inputs, assets=assets)
+    req["capability"] = "pillow.retouch"
+    return req
+
+
+def _run_retouch(
+    tmp_path: Path,
+    image: PIL.Image.Image,
+    inputs: dict[str, object],
+    tag: str,
+    filename: str = "photo.png",
+) -> tuple[subprocess.CompletedProcess[str], dict[str, Any] | None, Path, Path]:
+    stub_dir = _stub_dir(tmp_path)
+    piece = tmp_path / f"piece-{tag}"
+    piece.mkdir(exist_ok=True)
+    image.save(piece / filename)
+    out = tmp_path / f"out-{tag}"
+    out.mkdir(exist_ok=True)
+    full_inputs = {"image": filename, "name": "retouched", **inputs}
+    req = _retouch_request("run", out, piece, full_inputs)
+    done, result = _call(stub_dir, "run", req, tmp_path, tag)
+    return done, result, out, piece
+
+
+def test_retouch_aspect_crop_and_pad(tmp_path: Path) -> None:
+    src = PIL.Image.new("RGB", (20, 10), (100, 120, 140))
+    done, result, out, _piece = _run_retouch(
+        tmp_path, src, {"aspect": "1:1", "pad-px": 4, "pad-color": "#112233"}, tag="aspect-pad"
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert result is not None
+    out_path = out / "retouched.png"
+    assert out_path.is_file()
+    with PIL.Image.open(out_path) as img:
+        # 20x10 cropped to 1:1 -> 10x10, plus 4px pad each side -> 18x18
+        assert img.size == (18, 18)
+        assert img.getpixel((0, 0)) == (0x11, 0x22, 0x33)
+        assert img.getpixel((9, 9)) == (100, 120, 140)
+
+
+def test_retouch_warmth_lut(tmp_path: Path) -> None:
+    src = PIL.Image.new("RGB", (8, 8), (128, 128, 128))
+    done, _res, out, _p = _run_retouch(tmp_path, src, {"warmth": 1.0}, tag="warm")
+    assert done.returncode == 0, done.stdout + done.stderr
+    with PIL.Image.open(out / "retouched.png") as img:
+        assert img.getpixel((0, 0)) == (152, 128, 104)
+
+
+def test_retouch_autocontrast_and_grading(tmp_path: Path) -> None:
+    src = PIL.Image.new("RGB", (8, 8), (100, 120, 140))
+    pixels = src.load()
+    assert pixels is not None
+    pixels[0, 0] = (60, 80, 100)
+    pixels[7, 7] = (180, 200, 220)
+    done, _res, out, _p = _run_retouch(
+        tmp_path,
+        src,
+        {"autocontrast": True, "brightness": 1.1, "contrast": 1.2, "saturation": 0.0},
+        tag="grade",
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    with PIL.Image.open(out / "retouched.png") as img:
+        r, g, b = img.getpixel((4, 4))
+        # saturation=0.0 -> grayscale
+        assert r == g == b
+
+
+def test_retouch_sharpen_enhances_edge(tmp_path: Path) -> None:
+    low_val = 80
+    high_val = 160
+    src = PIL.Image.new("RGB", (12, 12), (low_val, low_val, low_val))
+    for y in range(12):
+        for x in range(6, 12):
+            src.putpixel((x, y), (high_val, high_val, high_val))
+    done, _res, out, _p = _run_retouch(tmp_path, src, {"sharpen": 2.0}, tag="sharpen")
+    assert done.returncode == 0, done.stdout + done.stderr
+    with PIL.Image.open(out / "retouched.png") as img:
+        left_edge = img.getpixel((5, 6))[0]
+        right_edge = img.getpixel((6, 6))[0]
+        assert left_edge < low_val
+        assert right_edge > high_val
+
+
+def test_retouch_formats_and_alpha_flattening(tmp_path: Path) -> None:
+    src = PIL.Image.new("RGBA", (8, 8), (0, 0, 0, 0))
+    for y in range(8):
+        for x in range(4):
+            src.putpixel((x, y), OPAQUE_RED)
+    # PNG preserves alpha
+    done_png, _r1, out_png, _p1 = _run_retouch(tmp_path, src, {"format": "png"}, tag="fmt-png")
+    assert done_png.returncode == 0
+    with PIL.Image.open(out_png / "retouched.png") as img:
+        assert img.mode == "RGBA"
+    # WebP preserves alpha
+    done_webp, _r2, out_webp, _p2 = _run_retouch(tmp_path, src, {"format": "webp"}, tag="fmt-webp")
+    assert done_webp.returncode == 0
+    with PIL.Image.open(out_webp / "retouched.webp") as img:
+        assert img.mode == "RGBA"
+    # JPEG with pad-px == 0 flattens onto white
+    done_jpg, _r3, out_jpg, _p3 = _run_retouch(tmp_path, src, {"format": "jpeg"}, tag="fmt-jpg")
+    assert done_jpg.returncode == 0
+    with PIL.Image.open(out_jpg / "retouched.jpg") as img:
+        assert img.mode == "RGB"
+        assert all(c > CHANNEL_HIGH for c in img.getpixel((7, 0)))
+    # JPEG with pad-px > 0 flattens onto pad-color
+    done_pad, _r4, out_pad, _p4 = _run_retouch(
+        tmp_path, src, {"format": "jpeg", "pad-px": 2, "pad-color": "#0000FF"}, tag="fmt-jpg-pad"
+    )
+    assert done_pad.returncode == 0
+    with PIL.Image.open(out_pad / "retouched.jpg") as img:
+        assert img.mode == "RGB"
+        px = img.getpixel((9, 2))
+        assert px[0] < CHANNEL_LOW and px[1] < CHANNEL_LOW and px[2] > CHANNEL_HIGH
+
+
+def test_retouch_verify_and_preview(tmp_path: Path) -> None:
+    src = PIL.Image.new("RGB", (20, 10), (120, 130, 140))
+    inputs: dict[str, object] = {"image": "photo.png", "name": "plate-out", "aspect": "4:5"}
+    done, _res, out, piece = _run_retouch(tmp_path, src, inputs, tag="vp")
+    assert done.returncode == 0, done.stdout + done.stderr
+    asset = out / "plate-out.png"
+    bad = tmp_path / "bad" / "plate-out.png"
+    bad.parent.mkdir()
+    PIL.Image.new("RGB", (5, 5)).save(bad)
+    stub_dir = _stub_dir(tmp_path)
+    v_done, verdict = _call(
+        stub_dir,
+        "verify",
+        _retouch_request("verify", out, piece, inputs, assets=(asset, bad)),
+        tmp_path,
+        "vp-verify",
+    )
+    assert v_done.returncode == 0, v_done.stdout + v_done.stderr
+    assert verdict is not None
+    assert verdict["assets"][0]["passed"] is True
+    assert verdict["assets"][1]["passed"] is False
+
+    p_done, preview = _call(
+        stub_dir,
+        "preview",
+        _retouch_request("preview", out, piece, inputs, assets=(asset,)),
+        tmp_path,
+        "vp-preview",
+    )
+    assert p_done.returncode == 0, p_done.stdout + p_done.stderr
+    assert preview is not None
+    pdata = json.loads((out / "plate-out.png.preview.json").read_text(encoding="utf-8"))
+    assert set(pdata) == PREVIEW_FIELDS
+    assert pdata["prompt"] == "pillow retouch of photo"
+    assert pdata["seed"] == 0
+    assert (pdata["width"], pdata["height"]) == (8, 10)

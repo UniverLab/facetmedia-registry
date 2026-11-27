@@ -1,10 +1,10 @@
 name = "pillow"
-version = "0.1.5"
+version = "0.2.0"
 requires_facet = ">=0.1.0b1,<0.2"
 protocol = 1
 provider = "Jeffrey A. Clark and contributors (Pillow)"
 tool_name = "Pillow"
-description = "Base image operations on CPU with Pillow: convert between PNG, JPEG and WebP, resize with or without aspect, and contact sheets with dividers"
+description = "Base image operations and photo retouching on CPU with Pillow: convert, resize, contact sheets, aspect cropping, color grading, sharpening, and framing"
 facet = "image"
 
 [engine]
@@ -81,4 +81,101 @@ min = 1
 description = "sheet only, required there: number of tile rows."
 
 [capabilities.base.preview]
+viewer = "image"
+
+[capabilities.retouch]
+summary = "Retouch a photo on CPU with deterministic crop, flip, rotate, autocontrast, color grading, sharpening, and editorial border framing"
+kind = "image"
+
+[capabilities.retouch.i18n.es]
+summary = "Retoca una foto en CPU con recorte de proporción, volteo, rotación, autocontraste, ajuste de color, enfoque y marco editorial"
+
+[capabilities.retouch.inputs.image]
+type = "path"
+required = true
+description = "Source photo (PNG, JPEG, WebP or any Pillow-readable format), resolved relative to the piece file; EXIF orientation is applied on open."
+
+[capabilities.retouch.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Output asset base name; writes <name>.<ext> beside the piece."
+
+[capabilities.retouch.inputs.format]
+type = "enum"
+values = ["png", "jpeg", "webp"]
+default = "png"
+description = "Output format; writes .png, .jpg or .webp."
+
+[capabilities.retouch.inputs.aspect]
+type = "enum"
+values = ["1:1", "4:5", "16:9", "9:16", "3:2", "4:3"]
+description = "Optional aspect ratio for center-cropping without stretching."
+
+[capabilities.retouch.inputs.rotate-deg]
+type = "number"
+default = 0.0
+min = -180
+max = 180
+description = "Counter-clockwise rotation in degrees (expands canvas when non-zero)."
+
+[capabilities.retouch.inputs.flip]
+type = "enum"
+values = ["none", "horizontal", "vertical"]
+default = "none"
+description = "Mirror the image horizontally or vertically before rotation."
+
+[capabilities.retouch.inputs.autocontrast]
+type = "boolean"
+default = false
+description = "Apply ImageOps.autocontrast(cutoff=1) to RGB channels."
+
+[capabilities.retouch.inputs.brightness]
+type = "number"
+default = 1.0
+min = 0.2
+max = 3.0
+description = "Brightness multiplier (1.0 is unchanged)."
+
+[capabilities.retouch.inputs.contrast]
+type = "number"
+default = 1.0
+min = 0.2
+max = 3.0
+description = "Contrast multiplier (1.0 is unchanged)."
+
+[capabilities.retouch.inputs.saturation]
+type = "number"
+default = 1.0
+min = 0.0
+max = 3.0
+description = "Color saturation multiplier (1.0 is unchanged, 0.0 is grayscale)."
+
+[capabilities.retouch.inputs.warmth]
+type = "number"
+default = 0.0
+min = -1.0
+max = 1.0
+description = "White-balance warmth shift (-1.0 cooler to 1.0 warmer)."
+
+[capabilities.retouch.inputs.sharpen]
+type = "number"
+default = 0.0
+min = 0.0
+max = 3.0
+description = "Unsharp-mask sharpening amount (0.0 disables sharpening)."
+
+[capabilities.retouch.inputs.pad-px]
+type = "integer"
+default = 0
+min = 0
+max = 400
+description = "Uniform border padding in pixels around the finished photo."
+
+[capabilities.retouch.inputs.pad-color]
+type = "string"
+default = "#F6F3EC"
+description = "Hex color used for border padding when pad-px > 0 (and JPEG alpha flattening when pad-px > 0)."
+
+[capabilities.retouch.preview]
 viewer = "image"

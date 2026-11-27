@@ -27,7 +27,7 @@ CAPABILITIES = {
     "demostage": ("demo",),
     "freecad": ("drawing",),
     "moss": ("sfx",),
-    "pillow": ("base",),
+    "pillow": ("base", "retouch"),
     "rembg": ("cutout", "paper"),
     "svganim": ("bake",),
     "texforge": ("document",),

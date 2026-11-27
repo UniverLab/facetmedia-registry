@@ -1,14 +1,16 @@
 ---
 name: pillow
-description: Base image operations on CPU with Pillow — convert between PNG, JPEG and WebP, resize exact or aspect-preserving, and lay contact sheets with dividers.
+description: Base image ops and photo retouching on CPU with Pillow — convert, resize, contact sheets, aspect cropping, color grading, sharpening, and framing.
 ---
 # pillow
 
-`pillow.base` runs a list of operations on one source image, in order, all
-in memory: `convert` re-encodes the format, `resize` resizes, and
-`sheet` lays a contact sheet for review boards. Each operation writes one
-file named `<image-stem>-<i>-<op>.<ext>` where `i` is the 1-based
-position in `operations`.
+`pillow` provides two deterministic CPU capabilities on one source image:
+
+- `pillow.base` runs a list of operations in order in memory (`convert`,
+  `resize`, `sheet`) and writes `<image-stem>-<i>-<op>.<ext>` per op.
+- `pillow.retouch` crops to an aspect ratio, flips or rotates, applies
+  autocontrast, white-balance warmth, brightness/contrast/saturation grading,
+  unsharp-mask sharpening, and editorial border padding, writing `<name>.<ext>`.
 
 ## When to use
 
@@ -54,6 +56,30 @@ cuts the current image into equal tiles of `floor(W/columns)` by
 `floor(H/rows)` from the top-left — remainder pixels on the right and
 bottom are dropped — and reassembles them row-major into one sheet with
 2 px white dividers and no outer border, ideal for review boards.
+
+For `pillow.retouch`:
+
+```toml
+[inputs]
+image = "foto.png"
+name = "foto-retouched"
+aspect = "4:5"
+autocontrast = true
+contrast = 1.1
+warmth = 0.1
+sharpen = 0.8
+pad-px = 24
+pad-color = "#F6F3EC"
+```
+
+Steps run in deterministic order: EXIF transpose -> `flip` (`none`,
+`horizontal`, `vertical`) -> `rotate-deg` (`expand = true` when non-zero) ->
+`aspect` center-crop (`1:1`, `4:5`, `16:9`, `9:16`, `3:2`, `4:3`) -> split
+alpha (preserved for `png`/`webp`; for `jpeg`, flattened onto `pad-color` when
+`pad-px > 0`, otherwise `#FFFFFF`) -> `autocontrast` (`cutoff = 1`) ->
+`warmth` (`-1.0..1.0`) -> `brightness` (`0.2..3.0`) -> `contrast`
+(`0.2..3.0`) -> `saturation` (`0.0..3.0`) -> `sharpen` (`UnsharpMask` when
+`> 0`) -> reattach alpha -> `pad-px` border in `pad-color` -> `<name>.<ext>`.
 
 ## Working on a photo
 

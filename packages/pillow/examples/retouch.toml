@@ -1,0 +1,12 @@
+# Center-crop the reference plate to 4:5, apply auto-contrast, subtle contrast
+# boost, unsharp-mask sharpening, and an editorial 24 px border.
+capability = "pillow.retouch"
+
+[inputs]
+image = "plate.png"
+name = "plate-retouched"
+aspect = "4:5"
+autocontrast = true
+contrast = 1.1
+sharpen = 0.8
+pad-px = 24

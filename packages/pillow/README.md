@@ -1,9 +1,11 @@
 # pillow
 
-Base image operations on CPU with Pillow: `facet run pillow.base` converts
-a still between PNG, JPEG and WebP, resizes it exact or
+Base image operations and photo retouching on CPU with Pillow: `facet run
+pillow.base` converts a still between PNG, JPEG and WebP, resizes it exact or
 aspect-preserving, and lays contact sheets with white dividers for review
-boards. CPU only, no GPU flag, no models — the whole package is a pinned
+boards; `facet run pillow.retouch` performs deterministic photo cropping,
+rotation/flipping, auto-contrast, color grading, sharpening, and editorial
+border framing. CPU only, no GPU flag, no models — the whole package is a pinned
 Pillow in a python-env, so it is the lightest image package in the
 registry. Heavy image work (cutouts, relighting, generation) belongs to
 the specialized packages; this one is the base layer.
@@ -56,3 +58,4 @@ registry tooling.
 every file it names, into a fresh folder and runs it there:
 
 - `pillow.base` — `examples/base.toml`: `facet example pillow.base --run`
+- `pillow.retouch` — `examples/retouch.toml`: `facet example pillow.retouch --run`

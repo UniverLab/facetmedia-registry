@@ -46,9 +46,55 @@ def test_the_pyproject_pins_pillow_13() -> None:
 
 
 def test_the_capability_is_base_image_with_the_image_viewer() -> None:
+    assert MANIFEST["version"] == "0.2.0"
     assert CAPABILITY["kind"] == "image"
     assert CAPABILITY["preview"] == {"viewer": "image"}
-    assert MANIFEST["capabilities"].keys() == {"base"}
+    assert MANIFEST["capabilities"].keys() == {"base", "retouch"}
+
+
+def test_the_retouch_capability_declares_all_inputs() -> None:
+    retouch = MANIFEST["capabilities"]["retouch"]
+    assert retouch["kind"] == "image"
+    assert retouch["preview"] == {"viewer": "image"}
+    assert retouch["summary"]
+    assert retouch["i18n"]["es"]["summary"]
+    inputs = retouch["inputs"]
+    expected_keys = {
+        "image",
+        "name",
+        "format",
+        "aspect",
+        "rotate-deg",
+        "flip",
+        "autocontrast",
+        "brightness",
+        "contrast",
+        "saturation",
+        "warmth",
+        "sharpen",
+        "pad-px",
+        "pad-color",
+    }
+    assert set(inputs.keys()) == expected_keys
+    assert inputs["image"]["type"] == "path" and inputs["image"]["required"] is True
+    assert inputs["name"]["type"] == "string" and inputs["name"]["required"] is True
+    assert inputs["name"]["pattern"] == "^[a-z0-9][a-z0-9-]*$"
+    assert inputs["format"]["values"] == ["png", "jpeg", "webp"]
+    assert inputs["format"]["default"] == "png"
+    assert inputs["aspect"]["values"] == ["1:1", "4:5", "16:9", "9:16", "3:2", "4:3"]
+    max_deg = 180
+    max_factor = 3.0
+    max_pad = 400
+    assert inputs["rotate-deg"]["min"] == -max_deg and inputs["rotate-deg"]["max"] == max_deg
+    assert inputs["flip"]["values"] == ["none", "horizontal", "vertical"]
+    assert inputs["autocontrast"]["type"] == "boolean"
+    assert inputs["brightness"]["default"] == 1.0
+    assert inputs["contrast"]["default"] == 1.0
+    assert inputs["saturation"]["default"] == 1.0
+    assert inputs["warmth"]["min"] == -1.0 and inputs["warmth"]["max"] == 1.0
+    assert inputs["sharpen"]["min"] == 0.0 and inputs["sharpen"]["max"] == max_factor
+    assert inputs["pad-px"]["type"] == "integer" and inputs["pad-px"]["max"] == max_pad
+    assert inputs["pad-color"]["default"] == "#F6F3EC"
 
 
 def test_image_is_a_required_path_relative_to_the_piece() -> None:

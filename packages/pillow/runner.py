@@ -26,9 +26,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import PIL
 from facet_runner_sdk import Request, Runner
-from PIL import Image, ImageOps
+from PIL import Image, ImageColor, ImageEnhance, ImageFilter, ImageOps
 
 runner = Runner()
+
+CAP_BASE = "pillow.base"
+CAP_RETOUCH = "pillow.retouch"
 
 #: The ops are deterministic; the seed labels the record (rembg precedent).
 SEED = 0
@@ -37,6 +40,17 @@ PILLOW_VERSION = "13.0.0"
 CONVERT_EXT = {"png": ".png", "jpeg": ".jpg", "webp": ".webp"}
 MODES = {"RGB", "RGBA", "L"}
 OPS = ("convert", "resize", "sheet")
+_ASPECTS: dict[str, tuple[int, int]] = {
+    "1:1": (1, 1),
+    "4:5": (4, 5),
+    "16:9": (16, 9),
+    "9:16": (9, 16),
+    "3:2": (3, 2),
+    "4:3": (4, 3),
+}
+_FLIPS = ("none", "horizontal", "vertical")
+_RETOUCH_NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+_MAX_PAD_PX = 400
 MIME = {
     ".png": "image/png",
     ".jpg": "image/jpeg",
@@ -225,6 +239,181 @@ def _apply_ops(req: Request) -> tuple[Path, list[Produced]]:
     return source_path, produced
 
 
+@dataclass(frozen=True)
+class RetouchParams:
+    """Validated inputs for ``pillow.retouch``."""
+
+    name: str
+    fmt: str
+    aspect: str | None
+    rotate_deg: float
+    flip: str
+    autocontrast: bool
+    brightness: float
+    contrast: float
+    saturation: float
+    warmth: float
+    sharpen: float
+    pad_px: int
+    pad_color: str
+
+
+def _num_in_range(
+    params: dict[str, Any], key: str, default: float, low: float, high: float
+) -> float:
+    raw = params.get(key, default)
+    if isinstance(raw, bool) or not isinstance(raw, int | float):
+        raise ValueError(f"pillow retouch: {key} must be a number")
+    val = float(raw)
+    if val < low or val > high:
+        raise ValueError(f"pillow retouch: {key} must be between {low} and {high}")
+    return val
+
+
+def _validate_retouch(params: dict[str, Any]) -> RetouchParams:
+    """Validate and normalize ``pillow.retouch`` inputs."""
+    name = params.get("name")
+    if not isinstance(name, str) or not _RETOUCH_NAME.match(name):
+        raise ValueError("pillow retouch: name must match ^[a-z0-9][a-z0-9-]*$")
+    fmt = params.get("format", "png")
+    if fmt not in CONVERT_EXT:
+        raise ValueError(f"pillow retouch: unknown format {fmt!r}")
+    aspect = params.get("aspect")
+    if aspect is not None and aspect not in _ASPECTS:
+        raise ValueError(f"pillow retouch: unknown aspect {aspect!r}")
+    flip = params.get("flip", "none")
+    if flip not in _FLIPS:
+        raise ValueError(f"pillow retouch: unknown flip {flip!r}")
+    autocontrast = params.get("autocontrast", False)
+    if not isinstance(autocontrast, bool):
+        raise ValueError("pillow retouch: autocontrast must be a boolean")
+    pad_raw = params.get("pad-px", 0)
+    if isinstance(pad_raw, bool) or not isinstance(pad_raw, int) or not 0 <= pad_raw <= _MAX_PAD_PX:
+        raise ValueError(f"pillow retouch: pad-px must be an integer between 0 and {_MAX_PAD_PX}")
+    pad_color = params.get("pad-color", "#F6F3EC")
+    if not isinstance(pad_color, str):
+        raise ValueError("pillow retouch: pad-color must be a hex color string")
+    ImageColor.getrgb(pad_color)
+    return RetouchParams(
+        name=name,
+        fmt=str(fmt),
+        aspect=str(aspect) if aspect is not None else None,
+        rotate_deg=_num_in_range(params, "rotate-deg", 0.0, -180.0, 180.0),
+        flip=str(flip),
+        autocontrast=autocontrast,
+        brightness=_num_in_range(params, "brightness", 1.0, 0.2, 3.0),
+        contrast=_num_in_range(params, "contrast", 1.0, 0.2, 3.0),
+        saturation=_num_in_range(params, "saturation", 1.0, 0.0, 3.0),
+        warmth=_num_in_range(params, "warmth", 0.0, -1.0, 1.0),
+        sharpen=_num_in_range(params, "sharpen", 0.0, 0.0, 3.0),
+        pad_px=pad_raw,
+        pad_color=pad_color,
+    )
+
+
+def _center_crop_aspect(image: Image.Image, aspect: str) -> Image.Image:
+    """Center-crop ``image`` to ``aspect`` without stretching."""
+    aw, ah = _ASPECTS[aspect]
+    w, h = image.size
+    if w * ah > h * aw:
+        new_w = min(w, max(1, round(h * aw / ah)))
+        left = (w - new_w) // 2
+        return image.crop((left, 0, left + new_w, h))
+    if w * ah < h * aw:
+        new_h = min(h, max(1, round(w * ah / aw)))
+        top = (h - new_h) // 2
+        return image.crop((0, top, w, top + new_h))
+    return image
+
+
+def _apply_warmth(rgb: Image.Image, warmth: float) -> Image.Image:
+    """Apply deterministic white-balance warmth shift via a 256-entry RGB LUT."""
+    shift = warmth * 24.0
+    r_lut = [min(255, max(0, round(i + shift))) for i in range(256)]
+    g_lut = list(range(256))
+    b_lut = [min(255, max(0, round(i - shift))) for i in range(256)]
+    return rgb.point(r_lut + g_lut + b_lut)
+
+
+def _flatten_alpha(image: Image.Image, color: str) -> Image.Image:
+    """Composite an image with alpha onto ``color`` and return RGB."""
+    if not _has_alpha(image):
+        return image.convert("RGB")
+    rgba = image.convert("RGBA")
+    bg_rgb = ImageColor.getrgb(color)
+    base = Image.new("RGBA", rgba.size, (bg_rgb[0], bg_rgb[1], bg_rgb[2], 255))
+    base.alpha_composite(rgba)
+    return base.convert("RGB")
+
+
+def _grade_rgb(rgb: Image.Image, cfg: RetouchParams) -> Image.Image:
+    """Apply tonal, color-grading, and sharpening steps to an RGB image."""
+    if cfg.autocontrast:
+        rgb = ImageOps.autocontrast(rgb, cutoff=1)
+    if cfg.warmth != 0.0:
+        rgb = _apply_warmth(rgb, cfg.warmth)
+    if cfg.brightness != 1.0:
+        rgb = ImageEnhance.Brightness(rgb).enhance(cfg.brightness)
+    if cfg.contrast != 1.0:
+        rgb = ImageEnhance.Contrast(rgb).enhance(cfg.contrast)
+    if cfg.saturation != 1.0:
+        rgb = ImageEnhance.Color(rgb).enhance(cfg.saturation)
+    if cfg.sharpen > 0.0:
+        rgb = rgb.filter(
+            ImageFilter.UnsharpMask(radius=1.5, percent=int(round(cfg.sharpen * 100)), threshold=3)
+        )
+    return rgb
+
+
+def _retouch_pipeline(source: Image.Image, cfg: RetouchParams) -> Image.Image:
+    """Run the deterministic ``pillow.retouch`` pipeline on an opened image."""
+    img = ImageOps.exif_transpose(source.copy())
+    if cfg.flip == "horizontal":
+        img = ImageOps.mirror(img)
+    elif cfg.flip == "vertical":
+        img = ImageOps.flip(img)
+    if cfg.rotate_deg != 0.0:
+        img = img.rotate(cfg.rotate_deg, expand=True)
+    if cfg.aspect is not None:
+        img = _center_crop_aspect(img, cfg.aspect)
+    alpha: Image.Image | None = None
+    if cfg.fmt == "jpeg":
+        bg = cfg.pad_color if cfg.pad_px > 0 else "#FFFFFF"
+        rgb = _flatten_alpha(img, bg)
+    elif _has_alpha(img):
+        rgba = img.convert("RGBA")
+        alpha = rgba.getchannel("A")
+        rgb = rgba.convert("RGB")
+    else:
+        rgb = img.convert("RGB")
+    rgb = _grade_rgb(rgb, cfg)
+    out = Image.merge("RGBA", (*rgb.split(), alpha)) if alpha is not None else rgb
+    if cfg.pad_px > 0:
+        fill = ImageColor.getcolor(cfg.pad_color, out.mode)
+        out = ImageOps.expand(out, border=cfg.pad_px, fill=fill)
+    return out
+
+
+def _apply_retouch(req: Request) -> tuple[Path, list[Produced]]:
+    """Open ``image`` and run the ``pillow.retouch`` pipeline."""
+    params = dict(req.inputs)
+    source_path = _image_path(params, req)
+    cfg = _validate_retouch(params)
+    with Image.open(source_path) as source:
+        out = _retouch_pipeline(source, cfg)
+    ext = CONVERT_EXT[cfg.fmt]
+    return source_path, [Produced(f"{cfg.name}{ext}", out, ext)]
+
+
+def _produce(req: Request) -> tuple[Path, list[Produced]]:
+    """Dispatch by capability to produce the in-memory outputs."""
+    if req.capability == CAP_BASE:
+        return _apply_ops(req)
+    if req.capability == CAP_RETOUCH:
+        return _apply_retouch(req)
+    raise ValueError(f"pillow: unknown capability {req.capability!r}")
+
+
 def _asset(item: Produced, path: Path, params: dict[str, Any]) -> dict[str, Any]:
     """One output record: image kind, measured size, seed 0."""
     width, height = item.image.size
@@ -248,7 +437,7 @@ def _asset_name(stem: str) -> str:
 
 @runner.verb("run")
 def run(req: Request) -> dict[str, Any]:
-    _image_source, produced = _apply_ops(req)
+    _image_source, produced = _produce(req)
     params = dict(req.inputs)
     assets = []
     for item in produced:
@@ -261,7 +450,7 @@ def run(req: Request) -> dict[str, Any]:
 def _expected(req: Request) -> dict[str, Produced]:
     """The outputs a fresh pass predicts, by filename; empty on bad input."""
     try:
-        _image_source, produced = _apply_ops(req)
+        _image_source, produced = _produce(req)
     except (OSError, ValueError, KeyError):
         return {}
     return {item.filename: item for item in produced}
@@ -281,7 +470,20 @@ def _file_mode(item: Produced) -> str:
         return image.mode
 
 
-def _verify_asset(path: Path, expected: dict[str, Produced]) -> dict[str, Any]:
+def _aspect_ok(width: int, height: int, req: Request) -> bool:
+    """For unpadded ``pillow.retouch`` with ``aspect``, check aspect within 1 px."""
+    if req.capability != CAP_RETOUCH:
+        return True
+    params = dict(req.inputs)
+    aspect = params.get("aspect")
+    pad_px = params.get("pad-px", 0)
+    if aspect is None or pad_px != 0 or aspect not in _ASPECTS:
+        return True
+    aw, ah = _ASPECTS[str(aspect)]
+    return abs(width * ah - height * aw) <= max(aw, ah)
+
+
+def _verify_asset(path: Path, expected: dict[str, Produced], req: Request) -> dict[str, Any]:
     """The file re-opens and matches the predicted suffix, mode and size."""
     want = expected.get(path.name)
     thresholds: dict[str, Any] = (
@@ -310,6 +512,7 @@ def _verify_asset(path: Path, expected: dict[str, Produced]) -> dict[str, Any]:
             path.suffix.lower() == want.ext
             and mode == thresholds["mode"]
             and (width, height) == (thresholds["width"], thresholds["height"])
+            and _aspect_ok(width, height, req)
         )
     )
     return {
@@ -324,7 +527,7 @@ def _verify_asset(path: Path, expected: dict[str, Produced]) -> dict[str, Any]:
 @runner.verb("verify")
 def verify(req: Request) -> dict[str, Any]:
     expected = _expected(req)
-    return {"assets": [_verify_asset(path, expected) for path in req.assets]}
+    return {"assets": [_verify_asset(path, expected, req) for path in req.assets]}
 
 
 def _preview_data(path: Path, name: str, prompt: str) -> dict[str, Any]:
@@ -358,13 +561,19 @@ def _prompt(path: Path, stem: str) -> str:
     return f"pillow {op} of {stem}" if stem else f"pillow {op}"
 
 
+def _retouch_prompt(stem: str) -> str:
+    """``pillow retouch of <stem>`` for ``pillow.retouch`` previews."""
+    return f"pillow retouch of {stem}" if stem else "pillow retouch"
+
+
 @runner.verb("preview")
 def preview(req: Request) -> dict[str, Any]:
     params = dict(req.inputs)
     stem = _source_stem(params)
     entries = []
     for path in req.assets:
-        data = _preview_data(path, _asset_name(path.stem), _prompt(path, stem))
+        prompt = _retouch_prompt(stem) if req.capability == CAP_RETOUCH else _prompt(path, stem)
+        data = _preview_data(path, _asset_name(path.stem), prompt)
         preview_name = f"{path.name}.preview.json"
         (req.out_dir / preview_name).write_text(
             json.dumps(data, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8"
