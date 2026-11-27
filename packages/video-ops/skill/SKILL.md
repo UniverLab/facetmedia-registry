@@ -1,6 +1,6 @@
 ---
 name: video-ops
-description: Transcode, mux audio, extract frames, concat clips with transitions, burn subtitles, apply color grading, composite overlays, change speed, and reframe aspect ratios on CPU with bundled FFmpeg.
+description: Deterministic CPU video editing with bundled FFmpeg: transcode, mux, frames, concat, subtitles, grading, overlays, speed, reframe, jumpcut, and stylized FX.
 ---
 # Video Ops
 
@@ -44,6 +44,12 @@ reframes footage to vertical or square via center crop or blurred pillarbox.
 - When landscape footage must be delivered **vertical (9:16, 4:5) or square
   (1:1)** via center crop or a blurred pillarbox backdrop: use
   `video-ops.reframe`.
+- When a talking-head or screencast recording has **silence or dead air** that
+  should be automatically cut with a verifiable `.cuts.json` EDL sidecar: use
+  `video-ops.jumpcut`.
+- When footage needs **stylized visual finishes** (film grain, chromatic
+  aberration, halation, scanlines, vignette, or seeded glitch pulses) via
+  curated presets or explicit overrides: use `video-ops.fx`.
 - It **does not generate video, transcribe audio, or clean audio**: use
   `comfy`, `hyperframes`, `demostage`, `whisper-subs`, or `ffmpeg` for those
   steps first.
@@ -211,6 +217,12 @@ has an audio stream.
   dimensions.
 - `video-ops.reframe`: non-zero file size, output duration within 0.25 s of
   the source duration, and output dimensions equal to the target canvas.
+- `video-ops.jumpcut`: non-zero file size, valid monotonic `<name>.cuts.json`
+  sidecar EDL, `output_duration_s <= source_duration_s + 0.15`, and probed MP4
+  duration within 0.35 s of the kept segment sum (`examples/jumpcut.toml`).
+- `video-ops.fx`: non-zero file size, output duration within 0.25 s of the
+  source duration, and output dimensions equal to the source dimensions
+  (`examples/fx.toml`).
 
 Previews write `<asset>.preview.json` matching the `video` schema for MP4
 outputs (`length` and `fps` derived from the probed stream) and the `image`

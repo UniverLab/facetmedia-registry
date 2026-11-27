@@ -14,13 +14,10 @@ MP4-to-PNG roundtrip.
 from __future__ import annotations
 
 import importlib
-import importlib.metadata
 import json
 import re
 import subprocess
 import sys
-import tempfile
-import time
 from collections.abc import Callable, Mapping, Sequence
 from functools import lru_cache
 from pathlib import Path
@@ -28,6 +25,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import fx_jumpcut
 import graph
 from facet_runner_sdk import Request, Runner
 
@@ -446,6 +444,16 @@ def _run_reframe(params: Mapping[str, Any], out_dir: Path, piece_dir: Path) -> l
     return [_asset(name, out.name, "video", MIME["mp4"], _probe_stderr(out), resolved, [video])]
 
 
+def _run_jumpcut(params: Mapping[str, Any], out_dir: Path, piece_dir: Path) -> list[dict[str, Any]]:
+    """Remove silence segments and write ``<name>.mp4`` + ``<name>.cuts.json``."""
+    return fx_jumpcut.run_jumpcut(params, out_dir, piece_dir, _ops())
+
+
+def _run_fx(params: Mapping[str, Any], out_dir: Path, piece_dir: Path) -> list[dict[str, Any]]:
+    """Apply deterministic stylized visual finishes."""
+    return fx_jumpcut.run_fx(params, out_dir, piece_dir, _ops())
+
+
 CAPABILITY_VERBS: dict[str, Callable[[Mapping[str, Any], Path, Path], list[dict[str, Any]]]] = {
     "transcode": _run_transcode,
     "mux-audio": _run_mux_audio,
@@ -456,6 +464,8 @@ CAPABILITY_VERBS: dict[str, Callable[[Mapping[str, Any], Path, Path], list[dict[
     "overlay": _run_overlay,
     "speed": _run_speed,
     "reframe": _run_reframe,
+    "jumpcut": _run_jumpcut,
+    "fx": _run_fx,
 }
 
 
@@ -722,6 +732,10 @@ def verify(req: Request) -> dict[str, Any]:
             entries.append(
                 _verify_burn_subs_or_grade(path, params, req.piece_dir, dims=dims, tol=0.25)
             )
+        elif cap == "jumpcut":
+            entries.append(fx_jumpcut.verify_jumpcut(path, _ops()))
+        elif cap == "fx":
+            entries.append(_verify_burn_subs_or_grade(path, params, req.piece_dir, tol=0.25))
         else:
             entries.append(_verify_video(cap, path))
     return {"assets": entries}
@@ -786,108 +800,25 @@ def preview(req: Request) -> dict[str, Any]:
     return {"assets": entries}
 
 
-def _verdict_check(name: str, ok: bool, detail: str) -> dict[str, Any]:
-    """Format one doctor check entry."""
-    return {"name": name, "ok": ok, "detail": detail, "fix": "" if ok else "facet pull video-ops"}
-
-
-def _doctor_binary() -> dict[str, Any]:
-    """Check that the bundled ffmpeg binary runs ``-version``."""
-    try:
-        text = _version_text()
-        build = graph.version_id(text)
-    except Exception as exc:  # catch-all: doctor reports failure instead of crashing
-        return _verdict_check("binary", False, f"the bundled ffmpeg does not run: {exc}")
-    if not build:
-        return _verdict_check("binary", False, "ffmpeg -version printed no version line")
-    return _verdict_check("binary", True, f"ffmpeg {build} at {Path(_exe()).name}")
-
-
-def _doctor_encoders() -> dict[str, Any]:
-    """Check that libx264 and aac encoders are available in the bundled binary."""
-    try:
-        listed = graph.encoder_names(_ffmpeg(["-encoders"]).stdout)
-    except Exception as exc:  # catch-all: report whatever went wrong
-        return _verdict_check("encoders", False, f"ffmpeg -encoders failed: {exc}")
-    missing = [codec for codec in REQUIRED_ENCODERS if codec not in listed]
-    if missing:
-        return _verdict_check("encoders", False, f"missing encoders: {', '.join(missing)}")
-    return _verdict_check("encoders", True, ", ".join(REQUIRED_ENCODERS))
-
-
-def _doctor_imports() -> dict[str, Any]:
-    """Check that Pillow imports and report its version."""
-    try:
-        image_mod = _pil_image()
-        pil_mod = importlib.import_module("PIL")
-        version = getattr(pil_mod, "__version__", None)
-        if version is None:
-            version = importlib.metadata.version("pillow")
-        _ = image_mod.new
-    except Exception as exc:  # catch-all: report broken import
-        return _verdict_check("imports", False, f"PIL.Image: {exc}")
-    return _verdict_check("imports", True, f"PIL {version}")
-
-
-def _doctor_roundtrip() -> dict[str, Any]:
-    """Full depth: generate a 1 s synthetic lavfi MP4, probe it, and extract a PNG frame."""
-    started = time.monotonic()
-    try:
-        with tempfile.TemporaryDirectory() as folder:
-            tmp = Path(folder)
-            mp4 = tmp / "roundtrip.mp4"
-            _ffmpeg(
-                [
-                    "-f",
-                    "lavfi",
-                    "-i",
-                    "testsrc=duration=1:size=160x120:rate=25",
-                    "-f",
-                    "lavfi",
-                    "-i",
-                    "sine=frequency=440:duration=1",
-                    "-c:v",
-                    "libx264",
-                    "-pix_fmt",
-                    "yuv420p",
-                    "-c:a",
-                    "aac",
-                    "-shortest",
-                    str(mp4),
-                ]
-            )
-            props = _probe_stderr(mp4)
-            png = tmp / "frame.png"
-            _ffmpeg(graph.frame_args(mp4, png, at_s=0.0))
-            width, height = _image_size(png)
-    except Exception as exc:  # catch-all: doctor reports failure cleanly
-        elapsed = time.monotonic() - started
-        return _verdict_check(
-            "roundtrip", False, f"synthetic MP4-to-PNG roundtrip failed after {elapsed:.1f}s: {exc}"
-        )
-    elapsed = time.monotonic() - started
-    ok = bool(
-        props.get("duration_s")
-        and props.get("width") == width
-        and props.get("height") == height
-        and width > 0
-        and height > 0
-    )
-    return _verdict_check(
-        "roundtrip",
-        ok,
-        f"1 s lavfi MP4 ({props.get('width')}x{props.get('height')}) -> "
-        f"PNG ({width}x{height}) in {elapsed:.1f} s",
+def _ops() -> fx_jumpcut.RunnerOps:
+    """Build the callback bundle passed to ``fx_jumpcut``."""
+    return fx_jumpcut.RunnerOps(
+        resolve_path=_resolve_path,
+        probe_stderr=_probe_stderr,
+        ffmpeg=_ffmpeg,
+        asset=_asset,
+        video_metrics=_video_metrics,
+        version_text=_version_text,
+        exe=_exe,
+        image_size=_image_size,
+        pil_image=_pil_image,
     )
 
 
 @runner.verb("doctor")
 def doctor(req: Request) -> dict[str, Any]:
     """Run quick or full environment checks."""
-    checks = [_doctor_binary(), _doctor_encoders(), _doctor_imports()]
-    if req.depth == "full":
-        checks.append(_doctor_roundtrip())
-    return {"checks": checks}
+    return {"checks": fx_jumpcut.doctor_checks(req.depth, _ops())}
 
 
 runner.main()

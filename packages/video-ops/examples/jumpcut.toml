@@ -1,0 +1,9 @@
+capability = "video-ops.jumpcut"
+
+[inputs]
+video = "fixture.mp4"
+name = "fixture-jumpcut"
+threshold-db = -35.0
+min-silence-s = 0.6
+margin-s = 0.12
+crf = 23

@@ -11,9 +11,12 @@ crossfades; `video-ops.burn-subs` burns `.srt`/`.vtt` subtitles via libass; and
 `video-ops.overlay` composites a PNG logo, alpha MOV, or PiP clip over base
 footage; `video-ops.speed` changes playback speed with synchronized audio; and
 `video-ops.reframe` reframes footage to vertical or square via center crop or
-blurred pillarbox.
+blurred pillarbox; `video-ops.jumpcut` removes silence/dead-air segments and
+emits a `.cuts.json` EDL sidecar; and `video-ops.fx` applies deterministic
+stylized visual finishes (`none`, `film`, `vhs`, `glitch`, `crt`).
 It belongs to the **`video`** facet and writes `video` (`transcode`,
-`mux-audio`, `concat`, `burn-subs`, `grade`, `overlay`, `speed`, `reframe`)
+`mux-audio`, `concat`, `burn-subs`, `grade`, `overlay`, `speed`, `reframe`,
+`jumpcut`, `fx`)
 and `image` (`frame`) assets.
 Light package: **no models, no GPU, not exclusive**.
 
@@ -120,6 +123,33 @@ Light package: **no models, no GPU, not exclusive**.
 | `width` | integer | no | 1080 | 360 to 3840; height follows the aspect |
 | `crf` | integer | no | 23 | 14 to 38 |
 
+`video-ops.jumpcut` — automatic silence/dead-air removal with `.cuts.json` EDL:
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `video` | path | yes | — | input A/V recording resolved relative to the piece file |
+| `name` | string | yes | — | `[a-z0-9][a-z0-9-]*`; writes `<name>.mp4` and `<name>.cuts.json` |
+| `threshold-db` | number | no | -35.0 | -60 to -10 dB passed to `silencedetect` |
+| `min-silence-s` | number | no | 0.6 | 0.15 to 5.0 seconds minimum continuous silence |
+| `margin-s` | number | no | 0.12 | 0.0 to 0.5 seconds speech padding kept around cuts |
+| `crf` | integer | no | 23 | 14 to 38 |
+
+`video-ops.fx` — parameterized stylized visual finishes:
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `video` | path | yes | — | source video resolved relative to the piece file |
+| `name` | string | yes | — | `[a-z0-9][a-z0-9-]*`; writes `<name>.mp4` |
+| `preset` | enum | no | `none` | `none`, `film`, `vhs`, `glitch`, `crt` |
+| `grain` | number | no | preset | 0.0 to 1.0 film grain intensity |
+| `chroma-px` | integer | no | preset | 0 to 24 horizontal RGB shift in pixels |
+| `vignette` | number | no | preset | 0.0 to 1.0 vignette strength |
+| `halation` | number | no | preset | 0.0 to 1.0 halation glow intensity |
+| `scanlines` | boolean | no | preset | enable CRT/VHS scanlines |
+| `glitch` | number | no | preset | 0.0 to 1.0 seeded deterministic glitch pulse intensity |
+| `seed` | integer | no | 42 | 0 to 999999 deterministic seed |
+| `crf` | integer | no | 23 | 14 to 38 |
+
 ## Verification and doctor
 
 `verify` probes video outputs via `ffmpeg -i` stderr and checks capability-specific
@@ -142,6 +172,11 @@ invariants:
   dimensions.
 - `reframe`: non-zero bytes, output duration within 0.25 s of the source
   duration, and output dimensions equal to the target canvas.
+- `jumpcut`: non-zero bytes, monotonic `<name>.cuts.json` EDL sidecar,
+  `output_duration_s <= source_duration_s + 0.15`, and probed MP4 duration
+  within 0.35 s of the kept segment sum.
+- `fx`: non-zero bytes, output duration within 0.25 s of the source duration,
+  and output dimensions equal to the source dimensions.
 - `frame`: image readable by Pillow with width and height > 0.
 
 `facet doctor video-ops` checks:
@@ -172,3 +207,5 @@ there:
 - `video-ops.overlay` — `examples/overlay.toml`: `facet example video-ops.overlay --run`
 - `video-ops.speed` — `examples/speed.toml`: `facet example video-ops.speed --run`
 - `video-ops.reframe` — `examples/reframe.toml`: `facet example video-ops.reframe --run`
+- `video-ops.jumpcut` — `examples/jumpcut.toml`: `facet example video-ops.jumpcut --run`
+- `video-ops.fx` — `examples/fx.toml`: `facet example video-ops.fx --run`

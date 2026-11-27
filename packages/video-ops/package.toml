@@ -1,10 +1,10 @@
 name = "video-ops"
-version = "0.3.0"
+version = "0.4.0"
 requires_facet = ">=0.1.0b2,<0.2"
 protocol = 1
 provider = "FFmpeg project · imageio (imageio-ffmpeg)"
 tool_name = "FFmpeg Video Ops"
-description = "Deterministic CPU video editing with bundled FFmpeg: H.264/AAC transcode, audio muxing, frame extraction, xfade/acrossfade concat transitions, libass subtitle burning, eq/fade color grading, alpha/PiP overlays, timelapse/slow-motion speed changes, and vertical/square reframing"
+description = "Deterministic CPU video editing with bundled FFmpeg: H.264/AAC transcode, audio muxing, frame extraction, xfade/acrossfade concat transitions, libass subtitle burning, eq/fade color grading, alpha/PiP overlays, timelapse/slow-motion speed changes, vertical/square reframing, silence jumpcut removal, and stylized visual FX"
 facet = "video"
 
 [engine]
@@ -488,4 +488,128 @@ max = 38
 description = "Constant Rate Factor for libx264 (lower means higher quality and larger files)."
 
 [capabilities.reframe.preview]
+viewer = "video"
+
+[capabilities.jumpcut]
+summary = "Automatically remove silence/dead-air segments from a video and emit a .cuts.json EDL sidecar"
+kind = "video"
+
+[capabilities.jumpcut.i18n.es]
+summary = "Elimina automáticamente silencios y pausas muertas de un video y genera un archivo EDL .cuts.json"
+
+[capabilities.jumpcut.inputs.video]
+type = "path"
+required = true
+description = "Input A/V recording resolved relative to the piece file."
+
+[capabilities.jumpcut.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.mp4 and <name>.cuts.json."
+
+[capabilities.jumpcut.inputs.threshold-db]
+type = "number"
+default = -35.0
+min = -60
+max = -10
+description = "Silence threshold in dB passed to silencedetect."
+
+[capabilities.jumpcut.inputs.min-silence-s]
+type = "number"
+default = 0.6
+min = 0.15
+max = 5.0
+description = "Minimum continuous silence duration in seconds to cut."
+
+[capabilities.jumpcut.inputs.margin-s]
+type = "number"
+default = 0.12
+min = 0.0
+max = 0.5
+description = "Speech padding in seconds kept before and after each cut."
+
+[capabilities.jumpcut.inputs.crf]
+type = "integer"
+default = 23
+min = 14
+max = 38
+description = "Constant Rate Factor for libx264 (lower means higher quality and larger files)."
+
+[capabilities.jumpcut.preview]
+viewer = "video"
+
+[capabilities.fx]
+summary = "Apply deterministic stylized visual finishes (film grain, chromatic aberration, halation, scanlines, vignette, seeded glitch)"
+kind = "video"
+
+[capabilities.fx.i18n.es]
+summary = "Aplica acabados visuales estilizados deterministas (grano de película, aberración cromática, halación, líneas de escaneo, viñeta y glitch con semilla)"
+
+[capabilities.fx.inputs.video]
+type = "path"
+required = true
+description = "Source video file resolved relative to the piece file."
+
+[capabilities.fx.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.mp4."
+
+[capabilities.fx.inputs.preset]
+type = "enum"
+values = ["none", "film", "vhs", "glitch", "crt"]
+default = "none"
+description = "Curated preset starting point; any explicit knob overrides the preset value."
+
+[capabilities.fx.inputs.grain]
+type = "number"
+min = 0.0
+max = 1.0
+description = "Film grain intensity (0.0 to 1.0); inherits from preset when omitted."
+
+[capabilities.fx.inputs.chroma-px]
+type = "integer"
+min = 0
+max = 24
+description = "Chromatic aberration horizontal RGB shift in pixels; inherits from preset when omitted."
+
+[capabilities.fx.inputs.vignette]
+type = "number"
+min = 0.0
+max = 1.0
+description = "Vignette strength (0.0 to 1.0); inherits from preset when omitted."
+
+[capabilities.fx.inputs.halation]
+type = "number"
+min = 0.0
+max = 1.0
+description = "Halation glow intensity (0.0 to 1.0); inherits from preset when omitted."
+
+[capabilities.fx.inputs.scanlines]
+type = "boolean"
+description = "Enable CRT/VHS horizontal scanlines; inherits from preset when omitted."
+
+[capabilities.fx.inputs.glitch]
+type = "number"
+min = 0.0
+max = 1.0
+description = "Seeded deterministic glitch pulse intensity (0.0 to 1.0); inherits from preset when omitted."
+
+[capabilities.fx.inputs.seed]
+type = "integer"
+default = 42
+min = 0
+max = 999999
+description = "Deterministic seed for glitch pulse timing and film grain noise."
+
+[capabilities.fx.inputs.crf]
+type = "integer"
+default = 23
+min = 14
+max = 38
+description = "Constant Rate Factor for libx264 (lower means higher quality and larger files)."
+
+[capabilities.fx.preview]
 viewer = "video"

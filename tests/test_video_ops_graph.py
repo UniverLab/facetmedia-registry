@@ -665,3 +665,88 @@ def test_reframe_args_no_audio() -> None:
     args = graph.reframe_args(Path("vid.mp4"), Path("out.mp4"), "4:5", width=720, has_audio=False)
     assert "-an" in args
     assert "-c:a" not in args
+
+
+def test_resolve_fx_presets_and_overrides() -> None:
+    film = graph.resolve_fx("film", {"grain": 0.8, "chroma-px": 3, "vignette": None})
+    assert film == {
+        "grain": 0.8,
+        "chroma_px": 3,
+        "vignette": 0.35,
+        "halation": 0.25,
+        "scanlines": False,
+        "glitch": 0.0,
+    }
+    assert set(graph.FX_PRESETS) == {"none", "film", "vhs", "glitch", "crt"}
+    try:
+        graph.resolve_fx("unknown")
+    except ValueError:
+        return
+    raise AssertionError("expected ValueError for unknown preset")
+
+
+def test_silence_detect_and_parse_silences() -> None:
+    args = graph.silence_detect_args(Path("talk.mp4"), -32.0, 0.5)
+    assert args == ["-i", "talk.mp4", "-af", "silencedetect=noise=-32dB:d=0.5", "-f", "null", "-"]
+    stderr = (
+        "[silencedetect @ 0x1] silence_start: 1.000\n"
+        "[silencedetect @ 0x1] silence_end: 2.500 | silence_duration: 1.500\n"
+        "[silencedetect @ 0x1] silence_start: 4.000\n"
+    )
+    assert graph.parse_silences(stderr, duration_s=5.0) == [(1.0, 2.5), (4.0, 5.0)]
+    assert graph.parse_silences(stderr, duration_s=None) == [(1.0, 2.5)]
+
+
+def test_keep_segments_margins_merges_and_all_silence_fallback() -> None:
+    kept = graph.keep_segments(6.0, [(1.0, 2.6), (2.3, 3.5)], margin_s=0.1)
+    assert kept == [(0.0, 1.1), (3.4, 6.0)]
+    assert graph.keep_segments(2.0, [(0.0, 2.0)], margin_s=0.0) == [(0.0, 2.0)]
+
+
+def test_jumpcut_args_with_and_without_audio() -> None:
+    args = graph.jumpcut_args(Path("in.mp4"), Path("out.mp4"), [(0.0, 1.1), (3.4, 6.0)], crf=21)
+    fc = args[args.index("-filter_complex") + 1]
+    assert "[0:v]trim=start=0:end=1.1,setpts=PTS-STARTPTS[v0]" in fc
+    assert "[0:a]atrim=start=0:end=1.1,asetpts=PTS-STARTPTS[a0]" in fc
+    assert "[v0][a0][v1][a1]concat=n=2:v=1:a=1[vout][aout]" in fc
+    assert "-map" in args and "[aout]" in args and "aac" in args
+
+    no_audio = graph.jumpcut_args(Path("in.mp4"), Path("out.mp4"), [(0.0, 1.0)], has_audio=False)
+    assert "-an" in no_audio
+    assert "[aout]" not in no_audio
+
+
+def test_fx_args_filter_order_and_noop_null() -> None:
+    noop = graph.fx_args(Path("in.mp4"), Path("out.mp4"))
+    assert noop[noop.index("-vf") + 1] == "null"
+    assert "-c:a" in noop and "copy" in noop
+
+    styled = graph.fx_args(
+        Path("in.mp4"),
+        Path("out.mp4"),
+        halation=0.5,
+        chroma_px=2,
+        glitch=0.5,
+        grain=0.25,
+        scanlines=True,
+        vignette=0.5,
+        seed=7,
+        has_audio=False,
+    )
+    vf = styled[styled.index("-vf") + 1]
+    assert "-an" in styled
+    positions = [
+        vf.index("gblur="),
+        vf.index("rgbashift=rh=2:bh=-2"),
+        vf.index("rgbashift=rh=8:bh=-8:enable="),
+        vf.index("noise=alls=10:allf=t+u:all_seed=7"),
+        vf.index("drawgrid=w=0:h=2:t=1:c=black@0.22"),
+        vf.index("vignette=angle="),
+    ]
+    assert positions == sorted(positions)
+
+    try:
+        graph.fx_args(Path("in.mp4"), Path("out.mp4"), options=graph.FxOptions(), grain=0.1)
+    except TypeError:
+        return
+    raise AssertionError("expected TypeError for options+keywords")

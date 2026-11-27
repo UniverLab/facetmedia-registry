@@ -49,11 +49,22 @@ MAX_SPEED_FACTOR = 8.0
 DEFAULT_REFRAME_WIDTH = 1080
 MIN_REFRAME_WIDTH = 360
 MAX_REFRAME_WIDTH = 3840
+DEFAULT_THRESHOLD_DB = -35.0
+MIN_THRESHOLD_DB = -60
+MAX_THRESHOLD_DB = -10
+DEFAULT_MIN_SILENCE_S = 0.6
+MIN_SILENCE_S = 0.15
+MAX_SILENCE_S = 5.0
+DEFAULT_MARGIN_S = 0.12
+MAX_MARGIN_S = 0.5
+MAX_CHROMA_PX = 24
+DEFAULT_FX_SEED = 42
+MAX_FX_SEED = 999999
 
 
 def test_package_metadata_and_requirements() -> None:
     assert MANIFEST["name"] == "video-ops"
-    assert MANIFEST["version"] == "0.3.0"
+    assert MANIFEST["version"] == "0.4.0"
     assert MANIFEST["requires_facet"] == ">=0.1.0b2,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["facet"] == "video"
@@ -64,7 +75,8 @@ def test_package_metadata_and_requirements() -> None:
         == "Deterministic CPU video editing with bundled FFmpeg: H.264/AAC transcode, "
         "audio muxing, frame extraction, xfade/acrossfade concat transitions, "
         "libass subtitle burning, eq/fade color grading, alpha/PiP overlays, "
-        "timelapse/slow-motion speed changes, and vertical/square reframing"
+        "timelapse/slow-motion speed changes, vertical/square reframing, "
+        "silence jumpcut removal, and stylized visual FX"
     )
     assert MANIFEST["engine"] == {"type": "python-env", "python": "3.12"}
     assert MANIFEST["transport"] == {"type": "cli", "entry": "runner.py"}
@@ -84,7 +96,7 @@ def test_licenses_and_pyproject_dependencies() -> None:
         "pillow": "MIT-CMU",
     }
     pyproject = tomllib.loads((PACKAGE / "pyproject.toml").read_text(encoding="utf-8"))
-    assert pyproject["project"]["version"] == "0.3.0"
+    assert pyproject["project"]["version"] == "0.4.0"
     assert pyproject["project"]["dependencies"] == [
         "imageio-ffmpeg==0.6.0",
         "pillow==13.0.0",
@@ -104,6 +116,8 @@ def test_capabilities_kinds_viewers_and_i18n() -> None:
         "overlay",
         "speed",
         "reframe",
+        "jumpcut",
+        "fx",
     }
     assert CAPABILITIES["transcode"]["kind"] == "video"
     assert CAPABILITIES["transcode"]["preview"] == {"viewer": "video"}
@@ -123,6 +137,10 @@ def test_capabilities_kinds_viewers_and_i18n() -> None:
     assert CAPABILITIES["speed"]["preview"] == {"viewer": "video"}
     assert CAPABILITIES["reframe"]["kind"] == "video"
     assert CAPABILITIES["reframe"]["preview"] == {"viewer": "video"}
+    assert CAPABILITIES["jumpcut"]["kind"] == "video"
+    assert CAPABILITIES["jumpcut"]["preview"] == {"viewer": "video"}
+    assert CAPABILITIES["fx"]["kind"] == "video"
+    assert CAPABILITIES["fx"]["preview"] == {"viewer": "video"}
     for cap in CAPABILITIES.values():
         es_summary = cap["i18n"]["es"]["summary"]
         assert isinstance(es_summary, str) and es_summary
@@ -330,3 +348,43 @@ def test_index_and_root_readme_list_video_ops() -> None:
     assert "overlay" in rows[0].lower()
     assert "speed" in rows[0].lower()
     assert "refram" in rows[0].lower()
+    assert "jumpcut" in rows[0].lower()
+    assert "fx" in rows[0].lower()
+
+
+def test_jumpcut_inputs_schema() -> None:
+    inputs = CAPABILITIES["jumpcut"]["inputs"]
+    assert inputs["video"]["type"] == "path"
+    assert inputs["video"]["required"] is True
+    assert inputs["name"]["pattern"] == "^[a-z0-9][a-z0-9-]*$"
+    assert inputs["threshold-db"]["default"] == DEFAULT_THRESHOLD_DB
+    assert (inputs["threshold-db"]["min"], inputs["threshold-db"]["max"]) == (
+        MIN_THRESHOLD_DB,
+        MAX_THRESHOLD_DB,
+    )
+    assert inputs["min-silence-s"]["default"] == DEFAULT_MIN_SILENCE_S
+    assert (inputs["min-silence-s"]["min"], inputs["min-silence-s"]["max"]) == (
+        MIN_SILENCE_S,
+        MAX_SILENCE_S,
+    )
+    assert inputs["margin-s"]["default"] == DEFAULT_MARGIN_S
+    assert (inputs["margin-s"]["min"], inputs["margin-s"]["max"]) == (0.0, MAX_MARGIN_S)
+    assert inputs["crf"]["default"] == DEFAULT_CRF_23
+    assert (inputs["crf"]["min"], inputs["crf"]["max"]) == (MIN_CRF, MAX_CRF)
+
+
+def test_fx_inputs_schema() -> None:
+    inputs = CAPABILITIES["fx"]["inputs"]
+    assert inputs["video"]["type"] == "path"
+    assert inputs["video"]["required"] is True
+    assert inputs["name"]["pattern"] == "^[a-z0-9][a-z0-9-]*$"
+    assert inputs["preset"]["type"] == "enum"
+    assert inputs["preset"]["default"] == "none"
+    assert inputs["preset"]["values"] == ["none", "film", "vhs", "glitch", "crt"]
+    for opt in ("grain", "chroma-px", "vignette", "halation", "scanlines", "glitch"):
+        assert "default" not in inputs[opt]
+    assert (inputs["chroma-px"]["min"], inputs["chroma-px"]["max"]) == (0, MAX_CHROMA_PX)
+    assert inputs["seed"]["default"] == DEFAULT_FX_SEED
+    assert (inputs["seed"]["min"], inputs["seed"]["max"]) == (0, MAX_FX_SEED)
+    assert inputs["crf"]["default"] == DEFAULT_CRF_23
+    assert (inputs["crf"]["min"], inputs["crf"]["max"]) == (MIN_CRF, MAX_CRF)

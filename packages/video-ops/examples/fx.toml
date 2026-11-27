@@ -1,0 +1,8 @@
+capability = "video-ops.fx"
+
+[inputs]
+video = "fixture.mp4"
+name = "fixture-fx"
+preset = "film"
+seed = 42
+crf = 23

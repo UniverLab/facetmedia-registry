@@ -420,6 +420,8 @@ def test_new_caps_verify_fail_on_corrupt_assets(tmp_path: Path) -> None:
             "video-ops.reframe",
             {"video": FIXTURE_MP4.name, "name": "x", "aspect": "9:16"},
         ),
+        ("video-ops.jumpcut", {"video": FIXTURE_MP4.name, "name": "x"}),
+        ("video-ops.fx", {"video": FIXTURE_MP4.name, "name": "x", "preset": "film"}),
     ]:
         res = _invoke(tmp_path, "verify", capability=cap, inputs=inputs, assets=[bad_mp4])
         assert res["assets"][0]["passed"] is False, (cap, res)
@@ -540,3 +542,75 @@ def test_reframe_blur_pad_run_and_verify(tmp_path: Path) -> None:
     assert entry["passed"] is True, ver_res
     assert entry["metrics"]["width"] == REFRAME_SQUARE
     assert entry["metrics"]["height"] == REFRAME_SQUARE
+
+
+def test_jumpcut_run_verify_and_preview(tmp_path: Path) -> None:
+    inputs = {
+        "video": FIXTURE_MP4.name,
+        "name": "jumpcut-out",
+        "threshold-db": -35.0,
+        "min-silence-s": 0.6,
+        "margin-s": 0.12,
+        "crf": 23,
+    }
+    run_res = _invoke(tmp_path, "run", capability="video-ops.jumpcut", inputs=inputs)
+    assert len(run_res["assets"]) == 1
+    asset = run_res["assets"][0]
+    out_file = tmp_path / "out" / asset["file"]
+    cuts_file = out_file.with_suffix(".cuts.json")
+    assert out_file.is_file()
+    assert cuts_file.is_file()
+    assert asset["kind"] == "video"
+    assert asset["properties"]["cuts_file"] == cuts_file.name
+
+    cuts_data = json.loads(cuts_file.read_text(encoding="utf-8"))
+    assert cuts_data["segments"]
+    assert cuts_data["output_duration_s"] <= cuts_data["source_duration_s"]
+
+    ver_res = _invoke(
+        tmp_path, "verify", capability="video-ops.jumpcut", inputs=inputs, assets=[out_file]
+    )
+    assert ver_res["assets"][0]["passed"] is True, ver_res
+
+    cuts_file.unlink()
+    bad_ver = _invoke(
+        tmp_path, "verify", capability="video-ops.jumpcut", inputs=inputs, assets=[out_file]
+    )
+    assert bad_ver["assets"][0]["passed"] is False
+
+    prev_res = _invoke(
+        tmp_path, "preview", capability="video-ops.jumpcut", inputs=inputs, assets=[out_file]
+    )
+    preview_data = json.loads((tmp_path / "out" / prev_res["assets"][0]["preview"]).read_text())
+    assert set(preview_data) == VIDEO_PREVIEW_KEYS
+
+
+def test_fx_run_verify_and_preview(tmp_path: Path) -> None:
+    inputs = {
+        "video": FIXTURE_MP4.name,
+        "name": "fx-out",
+        "preset": "crt",
+        "chroma-px": 3,
+        "seed": 42,
+        "crf": 23,
+    }
+    run_res = _invoke(tmp_path, "run", capability="video-ops.fx", inputs=inputs)
+    asset = run_res["assets"][0]
+    out_file = tmp_path / "out" / asset["file"]
+    assert out_file.is_file()
+    assert asset["kind"] == "video"
+
+    ver_res = _invoke(
+        tmp_path, "verify", capability="video-ops.fx", inputs=inputs, assets=[out_file]
+    )
+    entry = ver_res["assets"][0]
+    assert entry["passed"] is True, ver_res
+    assert entry["metrics"]["width"] == DOWNSCALED_WIDTH
+    assert entry["metrics"]["height"] == FIXTURE_HEIGHT
+    assert abs(entry["metrics"]["duration_s"] - 1.0) <= DURATION_TOL_S
+
+    prev_res = _invoke(
+        tmp_path, "preview", capability="video-ops.fx", inputs=inputs, assets=[out_file]
+    )
+    preview_data = json.loads((tmp_path / "out" / prev_res["assets"][0]["preview"]).read_text())
+    assert set(preview_data) == VIDEO_PREVIEW_KEYS
