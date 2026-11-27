@@ -157,4 +157,3 @@ def test_the_root_readme_and_index_list_linkedin_member() -> None:
     assert "| publish | linkedin-member |" in (ROOT / "README.md").read_text(encoding="utf-8")
     names = [entry["name"] for entry in INDEX["packages"]]
     assert "linkedin-member" in names
-    assert names.index("linkedin-member") == len(names) - 1

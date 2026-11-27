@@ -1,0 +1,6 @@
+# A crisp two-block raster traced into a clean deterministic SVG.
+capability = "vtracer.trace"
+
+[inputs]
+image = "fixture.png"
+name = "fixture"

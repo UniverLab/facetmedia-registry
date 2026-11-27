@@ -1,0 +1,78 @@
+name = "vtracer"
+version = "0.1.0"
+requires_facet = ">=0.1.0b2,<0.2"
+protocol = 1
+provider = "VisionCortex · VTracer"
+tool_name = "VTracer"
+description = "Raster images traced into clean deterministic SVGs on CPU with VisionCortex VTracer"
+facet = "image"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 0.2
+exclusive = false
+platforms = ["linux"]
+
+[[licenses]]
+subject = "vtracer"
+spdx = "MIT"
+
+[[licenses]]
+subject = "pillow"
+spdx = "MIT-CMU"
+
+[capabilities.trace]
+summary = "Trace a crisp raster image (PNG, JPEG or WebP) into a clean deterministic SVG on CPU with VisionCortex VTracer"
+kind = "image"
+
+[capabilities.trace.i18n.es]
+summary = "Convierte una imagen ráster nítida (PNG, JPEG o WebP) en un SVG limpio y determinista en CPU con VisionCortex VTracer"
+
+[capabilities.trace.inputs.image]
+type = "path"
+required = true
+description = "Raster image to trace (PNG, JPEG or WebP), resolved relative to the piece file; writes <name>.svg."
+
+[capabilities.trace.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; the runner writes <name>.svg into the output directory."
+
+[capabilities.trace.inputs.colormode]
+type = "enum"
+values = ["color", "binary"]
+default = "color"
+description = "Trace in full colour or as a two-tone black-and-white silhouette."
+
+[capabilities.trace.inputs.mode]
+type = "enum"
+values = ["spline", "polygon", "none"]
+default = "spline"
+description = "Path fitting: smooth splines, straight polygon segments, or pixel-aligned steps."
+
+[capabilities.trace.inputs.filter-speckle]
+type = "integer"
+default = 4
+min = 0
+max = 128
+description = "Drop speckles smaller than this many pixels; higher values simplify noisy sources."
+
+[capabilities.trace.inputs.color-precision]
+type = "integer"
+default = 6
+min = 1
+max = 8
+description = "Significant bits per colour channel; fewer group similar colours into one path."
+
+[capabilities.trace.preview]
+viewer = "image"
