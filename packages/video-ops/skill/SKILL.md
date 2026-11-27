@@ -1,6 +1,6 @@
 ---
 name: video-ops
-description: Transcode, mux audio, extract frames, concat clips with transitions, burn subtitles, and apply color grading on CPU with bundled FFmpeg.
+description: Transcode, mux audio, extract frames, concat clips with transitions, burn subtitles, apply color grading, composite overlays, change speed, and reframe aspect ratios on CPU with bundled FFmpeg.
 ---
 # Video Ops
 
@@ -12,8 +12,11 @@ without re-encoding the video stream; `video-ops.frame` extracts a PNG or JPG
 thumbnail frame at a chosen timestamp; `video-ops.concat` joins 2+ clips with
 `xfade` visual transitions and `acrossfade` audio crossfades (or a hard cut);
 `video-ops.burn-subs` burns `.srt`/`.vtt` subtitles into video via the FFmpeg
-`subtitles` (libass) filter; and `video-ops.grade` applies deterministic `eq`
-color grading with optional fade-in/fade-out.
+`subtitles` (libass) filter; `video-ops.grade` applies deterministic `eq`
+color grading with optional fade-in/fade-out; `video-ops.overlay` composites
+a PNG logo, alpha MOV, or PiP clip over base footage; `video-ops.speed`
+changes playback speed with synchronized audio; and `video-ops.reframe`
+reframes footage to vertical or square via center crop or blurred pillarbox.
 
 ## When to use
 
@@ -34,6 +37,13 @@ color grading with optional fade-in/fade-out.
   need them permanently burned into the video: use `video-ops.burn-subs`.
 - When a video needs **deterministic color correction** (brightness, contrast,
   saturation, gamma) or simple fade-in/fade-out: use `video-ops.grade`.
+- When a **logo, alpha animation, or PiP clip** must be composited over base
+  footage at a corner, center, or fullscreen: use `video-ops.overlay`.
+- When footage must run **faster (timelapse) or slower (slow-motion)** with
+  audio kept in sync: use `video-ops.speed`.
+- When landscape footage must be delivered **vertical (9:16, 4:5) or square
+  (1:1)** via center crop or a blurred pillarbox backdrop: use
+  `video-ops.reframe`.
 - It **does not generate video, transcribe audio, or clean audio**: use
   `comfy`, `hyperframes`, `demostage`, `whisper-subs`, or `ffmpeg` for those
   steps first.
@@ -128,6 +138,46 @@ fade-out-s = 0.2
 crf = 23
 ```
 
+Composite a PNG logo centered over base footage (`examples/overlay.toml`):
+
+```toml
+capability = "video-ops.overlay"
+
+[inputs]
+base = "fixture.mp4"
+overlay = "logo.png"
+name = "fixture-overlay"
+position = "center"
+crf = 23
+```
+
+Double playback speed keeping audio in sync (`examples/speed.toml`):
+
+```toml
+capability = "video-ops.speed"
+
+[inputs]
+video = "fixture.mp4"
+name = "fixture-speed"
+factor = 2.0
+keep-audio = true
+crf = 23
+```
+
+Reframe landscape footage to vertical 9:16 (`examples/reframe.toml`):
+
+```toml
+capability = "video-ops.reframe"
+
+[inputs]
+video = "fixture.mp4"
+name = "fixture-reframe"
+aspect = "9:16"
+mode = "crop"
+width = 1080
+crf = 23
+```
+
 Note that `max-width` in `video-ops.transcode` only downscales sources wider
 than `max-width` (`scale='min(iw,<w>)':-2`); narrower sources keep their
 original width, and `-2` keeps height divisible by 2 for `yuv420p`. `start-s`
@@ -154,6 +204,13 @@ has an audio stream.
 - `video-ops.burn-subs` and `video-ops.grade`: non-zero file size, output
   duration within 0.2 s of the source duration, and output dimensions equal to
   the source dimensions.
+- `video-ops.overlay`: non-zero file size, output duration within 0.25 s of
+  the base duration, and output dimensions equal to the base dimensions.
+- `video-ops.speed`: non-zero file size, output duration within 0.25 s of
+  `source duration / factor`, and output dimensions equal to the source
+  dimensions.
+- `video-ops.reframe`: non-zero file size, output duration within 0.25 s of
+  the source duration, and output dimensions equal to the target canvas.
 
 Previews write `<asset>.preview.json` matching the `video` schema for MP4
 outputs (`length` and `fps` derived from the probed stream) and the `image`

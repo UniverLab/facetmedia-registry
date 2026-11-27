@@ -31,6 +31,16 @@ EXPECTED_DURATION = 62.5
 EXPECTED_WIDTH = 1280
 EXPECTED_HEIGHT = 720
 EXPECTED_FPS = 29.97
+REFRAME_WIDTH = 1080
+REFRAME_HEIGHT_9_16 = 1920
+REFRAME_HEIGHT_4_5 = 1350
+REFRAME_HEIGHT_16_9 = 608
+ATEMPO_MIN = 0.5
+ATEMPO_MAX = 2.0
+CHAIN_TOLERANCE = 1e-9
+BASE_WIDTH = 160
+BASE_HEIGHT = 120
+OVERLAY_MARGIN = 24
 
 
 def test_transcode_args_defaults() -> None:
@@ -432,3 +442,226 @@ def test_grade_args_rejects_unknown_keyword() -> None:
     except TypeError:
         return
     raise AssertionError("expected TypeError for unknown keyword")
+
+
+def test_even_rounds_to_nearest_even() -> None:
+    assert graph._even(REFRAME_WIDTH) == REFRAME_WIDTH
+    assert graph._even(607.5) == REFRAME_HEIGHT_16_9
+    assert graph._even(1350.0) == REFRAME_HEIGHT_4_5
+    assert graph._even(1920.4) == REFRAME_HEIGHT_9_16
+
+
+def test_atempo_chain_splits_out_of_range_factors() -> None:
+    assert graph._atempo_chain(1.0) == [1.0]
+    assert graph._atempo_chain(0.5) == [0.5]
+    assert graph._atempo_chain(2.0) == [2.0]
+    assert graph._atempo_chain(4.0) == [2.0, 2.0]
+    assert graph._atempo_chain(3.0) == [2.0, 1.5]
+    assert graph._atempo_chain(0.25) == [0.5, 0.5]
+    for factor in (0.25, 0.5, 1.0, 2.0, 3.0, 4.0, 8.0):
+        parts = graph._atempo_chain(factor)
+        assert all(ATEMPO_MIN <= part <= ATEMPO_MAX for part in parts)
+        product = 1.0
+        for part in parts:
+            product *= part
+        assert abs(product - factor) < CHAIN_TOLERANCE
+
+
+def test_overlay_xy_corners_and_center() -> None:
+    margin = str(OVERLAY_MARGIN)
+    assert graph._overlay_xy("top-left", OVERLAY_MARGIN) == (margin, margin)
+    assert graph._overlay_xy("top-right", OVERLAY_MARGIN) == (f"W-w-{margin}", margin)
+    assert graph._overlay_xy("bottom-left", OVERLAY_MARGIN) == (margin, f"H-h-{margin}")
+    assert graph._overlay_xy("bottom-right", OVERLAY_MARGIN) == (
+        f"W-w-{margin}",
+        f"H-h-{margin}",
+    )
+    assert graph._overlay_xy("center", OVERLAY_MARGIN) == ("(W-w)/2", "(H-h)/2")
+
+
+def test_reframe_dims_are_exact_and_even() -> None:
+    dims = graph._reframe_dims("9:16", REFRAME_WIDTH)
+    assert dims == (REFRAME_WIDTH, REFRAME_HEIGHT_9_16)
+    assert graph._reframe_dims("1:1", REFRAME_WIDTH) == (REFRAME_WIDTH, REFRAME_WIDTH)
+    dims_4_5 = graph._reframe_dims("4:5", REFRAME_WIDTH)
+    assert dims_4_5 == (REFRAME_WIDTH, REFRAME_HEIGHT_4_5)
+    dims_16_9 = graph._reframe_dims("16:9", REFRAME_WIDTH)
+    assert dims_16_9 == (REFRAME_WIDTH, REFRAME_HEIGHT_16_9)
+    for aspect in ("9:16", "1:1", "4:5", "16:9"):
+        width, height = graph._reframe_dims(aspect, 721)
+        assert width % 2 == 0 and height % 2 == 0
+
+
+def test_overlay_args_fullscreen_defaults() -> None:
+    args = graph.overlay_args(Path("base.mp4"), Path("logo.png"), Path("out.mp4"), 160, 120)
+    assert args == [
+        "-i",
+        "base.mp4",
+        "-i",
+        "logo.png",
+        "-filter_complex",
+        "[1:v]scale=160:120[ov];[0:v][ov]overlay=0:0:eof_action=pass,format=yuv420p[vout]",
+        "-map",
+        "[vout]",
+        "-map",
+        "0:a",
+        "-c:a",
+        "copy",
+        "-c:v",
+        "libx264",
+        "-crf",
+        "23",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        "out.mp4",
+    ]
+
+
+def test_overlay_args_corner_with_scale_and_enable_window() -> None:
+    args = graph.overlay_args(
+        Path("base.mp4"),
+        Path("clip.mp4"),
+        Path("out.mp4"),
+        160,
+        120,
+        position="bottom-right",
+        scale_width=64,
+        margin_px=10,
+        start_s=1.0,
+        end_s=2.5,
+    )
+    fc = args[args.index("-filter_complex") + 1]
+    assert "[1:v]scale=64:-2[ov]" in fc
+    assert "overlay=W-w-10:H-h-10:enable='between(t,1,2.5)':eof_action=pass" in fc
+
+
+def test_overlay_args_fullscreen_ignores_scale_width() -> None:
+    args = graph.overlay_args(
+        Path("base.mp4"),
+        Path("clip.mp4"),
+        Path("out.mp4"),
+        160,
+        120,
+        position="fullscreen",
+        scale_width=64,
+    )
+    fc = args[args.index("-filter_complex") + 1]
+    assert "[1:v]scale=160:120[ov]" in fc
+    assert "scale=64" not in fc
+
+
+def test_overlay_args_no_audio_maps_no_stream() -> None:
+    args = graph.overlay_args(
+        Path("base.mp4"), Path("logo.png"), Path("out.mp4"), 160, 120, has_audio=False
+    )
+    assert "-an" in args
+    assert "0:a" not in args
+
+
+def test_overlay_args_options_match_keywords() -> None:
+    by_keywords = graph.overlay_args(
+        Path("base.mp4"),
+        Path("clip.mp4"),
+        Path("out.mp4"),
+        160,
+        120,
+        position="top-left",
+        margin_px=8,
+        start_s=0.5,
+        crf=20,
+        has_audio=False,
+    )
+    by_options = graph.overlay_args(
+        Path("base.mp4"),
+        Path("clip.mp4"),
+        Path("out.mp4"),
+        160,
+        120,
+        options=graph.OverlayOptions(
+            position="top-left", margin_px=8, start_s=0.5, crf=20, has_audio=False
+        ),
+    )
+    assert by_keywords == by_options
+
+
+def test_overlay_args_rejects_options_and_keywords() -> None:
+    try:
+        graph.overlay_args(
+            Path("b.mp4"),
+            Path("o.png"),
+            Path("out.mp4"),
+            160,
+            120,
+            options=graph.OverlayOptions(),
+            crf=20,
+        )
+    except TypeError:
+        return
+    raise AssertionError("expected TypeError for options+keywords")
+
+
+def test_speed_args_faster_with_audio() -> None:
+    args = graph.speed_args(Path("vid.mp4"), Path("out.mp4"), 2.0)
+    assert args == [
+        "-i",
+        "vid.mp4",
+        "-vf",
+        "setpts=PTS/2",
+        "-af",
+        "atempo=2",
+        "-c:a",
+        "aac",
+        "-c:v",
+        "libx264",
+        "-crf",
+        "23",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        "out.mp4",
+    ]
+
+
+def test_speed_args_chains_atempo_outside_tempo_range() -> None:
+    slow = graph.speed_args(Path("vid.mp4"), Path("out.mp4"), 0.5)
+    assert slow[slow.index("-af") + 1] == "atempo=0.5"
+    fast = graph.speed_args(Path("vid.mp4"), Path("out.mp4"), 4.0)
+    assert fast[fast.index("-af") + 1] == "atempo=2,atempo=2"
+    assert "setpts=PTS/4" in fast
+
+
+def test_speed_args_drops_audio_without_keep_or_source() -> None:
+    no_keep = graph.speed_args(Path("v.mp4"), Path("o.mp4"), 2.0, keep_audio=False)
+    assert "-an" in no_keep
+    no_src = graph.speed_args(Path("v.mp4"), Path("o.mp4"), 2.0, has_audio=False)
+    assert "-an" in no_src
+    assert "-af" not in no_src
+
+
+def test_reframe_args_crop_centers_and_scales() -> None:
+    args = graph.reframe_args(Path("vid.mp4"), Path("out.mp4"), "9:16")
+    vf = args[args.index("-vf") + 1]
+    assert vf == (
+        "scale=1080:1920:force_original_aspect_ratio=increase,"
+        "crop=1080:1920,setsar=1,format=yuv420p"
+    )
+    assert "-c:a" in args and "copy" in args
+    assert args[-1] == "out.mp4"
+
+
+def test_reframe_args_blur_pad_uses_backdrop() -> None:
+    args = graph.reframe_args(Path("vid.mp4"), Path("out.mp4"), "1:1", mode="blur-pad", width=720)
+    vf = args[args.index("-vf") + 1]
+    assert "[0:v]split=2[bg_src][fg_src]" in vf
+    assert "[bg_src]scale=720:720,boxblur=20:5[bg]" in vf
+    assert "force_original_aspect_ratio=decrease" in vf
+    assert "[bg][fg]overlay=(W-w)/2:(H-h)/2" in vf
+
+
+def test_reframe_args_no_audio() -> None:
+    args = graph.reframe_args(Path("vid.mp4"), Path("out.mp4"), "4:5", width=720, has_audio=False)
+    assert "-an" in args
+    assert "-c:a" not in args

@@ -32,6 +32,9 @@ _TBR_RE: Final[re.Pattern[str]] = re.compile(r"(\d+(?:\.\d+)?)\s*tbr\b")
 #: One ``ffmpeg -encoders`` listing line: six flag characters, then the name.
 _ENCODER_LINE: Final[re.Pattern[str]] = re.compile(r"^\s*[A-Z.]{6}\s+(\S+)")
 MIN_CONCAT_CLIPS: Final[int] = 2
+#: atempo filter accepts tempo values in [0.5, 2.0]; wider factors chain.
+ATEMPO_MIN: Final[float] = 0.5
+ATEMPO_MAX: Final[float] = 2.0
 
 
 @dataclass(frozen=True)
@@ -55,6 +58,19 @@ class ConcatOptions:
     fps: int = 30
     crf: int = 23
     include_audio: bool = False
+
+
+@dataclass(frozen=True)
+class OverlayOptions:
+    """Optional parameters for ``overlay_args``."""
+
+    position: str = "fullscreen"
+    scale_width: int | None = None
+    margin_px: int = 24
+    start_s: float = 0.0
+    end_s: float | None = None
+    crf: int = 23
+    has_audio: bool = True
 
 
 @dataclass(frozen=True)
@@ -355,6 +371,193 @@ def burn_subs_args(
         "-pix_fmt",
         "yuv420p",
     ]
+    if has_audio:
+        args.extend(["-c:a", "copy"])
+    else:
+        args.append("-an")
+    args.extend(["-movflags", "+faststart", str(output)])
+    return args
+
+
+def _even(value: float) -> int:
+    """Round to the nearest even integer (libx264 + yuv420p requirement)."""
+    return int(round(float(value) / 2.0)) * 2
+
+
+def _atempo_chain(factor: float) -> list[float]:
+    """Split a speed factor into chained atempo values each in [0.5, 2.0]."""
+    remaining = float(factor)
+    parts: list[float] = []
+    while remaining > ATEMPO_MAX:
+        parts.append(ATEMPO_MAX)
+        remaining /= ATEMPO_MAX
+    while remaining < ATEMPO_MIN:
+        parts.append(ATEMPO_MIN)
+        remaining /= ATEMPO_MIN
+    parts.append(remaining)
+    return parts
+
+
+def _overlay_xy(position: str, margin: int) -> tuple[str, str]:
+    """Return overlay x:y expressions for a corner/center placement."""
+    m = num(margin)
+    if position == "top-left":
+        return (m, m)
+    if position == "top-right":
+        return (f"W-w-{m}", m)
+    if position == "bottom-left":
+        return (m, f"H-h-{m}")
+    if position == "bottom-right":
+        return (f"W-w-{m}", f"H-h-{m}")
+    return ("(W-w)/2", "(H-h)/2")
+
+
+def _reframe_dims(aspect: str, width: int) -> tuple[int, int]:
+    """Return exact even (target_width, target_height) for an aspect string."""
+    wide, _, high = aspect.partition(":")
+    target_w = _even(width)
+    target_h = _even(target_w * float(high) / float(wide))
+    return (target_w, target_h)
+
+
+def _resolve_overlay_options(
+    options: OverlayOptions | None, kwargs: dict[str, Any]
+) -> OverlayOptions:
+    """Resolve ``overlay_args`` settings from an options object or spec keywords."""
+    if options is None:
+        return OverlayOptions(**kwargs)
+    if kwargs:
+        raise TypeError("overlay_args: pass either options or keywords, not both")
+    return options
+
+
+def _overlay_enable(start_s: float, end_s: float | None) -> str:
+    """Build the overlay enable expression for a [start, end] window."""
+    if end_s is None:
+        if float(start_s) <= 0:
+            return ""
+        return f"gte(t,{num(start_s)})"
+    return f"between(t,{num(start_s)},{num(end_s)})"
+
+
+def overlay_args(
+    base: Path | str,
+    overlay: Path | str,
+    output: Path | str,
+    base_width: int,
+    base_height: int,
+    *,
+    options: OverlayOptions | None = None,
+    **kwargs: Any,
+) -> list[str]:
+    """Build ffmpeg args to composite an overlay over base footage.
+
+    Spec calling convention (every keyword optional)::
+
+        overlay_args(base, overlay, output, base_width, base_height,
+                     position="fullscreen", scale_width=None, margin_px=24,
+                     start_s=0.0, end_s=None, crf=23, has_audio=True)
+
+    ``options`` carries the same fields as one object; pass either ``options``
+    or keywords, never both. ``eof_action=pass`` keeps base frames after a
+    shorter overlay ends; ``fullscreen`` scales the overlay to the base canvas
+    and ignores ``scale_width``.
+    """
+    cfg = _resolve_overlay_options(options, kwargs)
+    if cfg.position == "fullscreen":
+        prep = f"[1:v]scale={int(base_width)}:{int(base_height)}[ov]"
+        x, y = "0", "0"
+    elif cfg.scale_width is not None:
+        prep = f"[1:v]scale={int(cfg.scale_width)}:-2[ov]"
+        x, y = _overlay_xy(cfg.position, int(cfg.margin_px))
+    else:
+        prep = "[1:v]copy[ov]"
+        x, y = _overlay_xy(cfg.position, int(cfg.margin_px))
+    enable = _overlay_enable(float(cfg.start_s), cfg.end_s)
+    suffix = f":enable='{enable}'" if enable else ""
+    overlay_filter = f"[0:v][ov]overlay={x}:{y}{suffix}:eof_action=pass,format=yuv420p[vout]"
+    args = ["-i", str(base), "-i", str(overlay)]
+    args.extend(["-filter_complex", f"{prep};{overlay_filter}"])
+    args.extend(["-map", "[vout]"])
+    if cfg.has_audio:
+        args.extend(["-map", "0:a", "-c:a", "copy"])
+    else:
+        args.append("-an")
+    args.extend(
+        [
+            "-c:v",
+            "libx264",
+            "-crf",
+            str(int(cfg.crf)),
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
+            str(output),
+        ]
+    )
+    return args
+
+
+def speed_args(
+    video: Path | str,
+    output: Path | str,
+    factor: float,
+    *,
+    keep_audio: bool = True,
+    has_audio: bool = True,
+    crf: int = 23,
+) -> list[str]:
+    """Build ffmpeg args for timelapse/slow-motion with synchronized audio."""
+    args = ["-i", str(video), "-vf", f"setpts=PTS/{num(factor)}"]
+    if keep_audio and has_audio:
+        chain = ",".join(f"atempo={num(part)}" for part in _atempo_chain(float(factor)))
+        args.extend(["-af", chain, "-c:a", "aac"])
+    else:
+        args.append("-an")
+    args.extend(
+        [
+            "-c:v",
+            "libx264",
+            "-crf",
+            str(int(crf)),
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
+            str(output),
+        ]
+    )
+    return args
+
+
+def reframe_args(
+    video: Path | str,
+    output: Path | str,
+    aspect: str,
+    *,
+    mode: str = "crop",
+    width: int = 1080,
+    crf: int = 23,
+    has_audio: bool = True,
+) -> list[str]:
+    """Build ffmpeg args to reframe footage to a vertical/square canvas."""
+    target_w, target_h = _reframe_dims(aspect, int(width))
+    if mode == "blur-pad":
+        vf = (
+            "[0:v]split=2[bg_src][fg_src];"
+            f"[bg_src]scale={target_w}:{target_h},boxblur=20:5[bg];"
+            f"[fg_src]scale={target_w}:{target_h}"
+            ":force_original_aspect_ratio=decrease[fg];"
+            "[bg][fg]overlay=(W-w)/2:(H-h)/2,format=yuv420p"
+        )
+    else:
+        vf = (
+            f"scale={target_w}:{target_h}:force_original_aspect_ratio=increase,"
+            f"crop={target_w}:{target_h},setsar=1,format=yuv420p"
+        )
+    args = ["-i", str(video), "-vf", vf, "-c:v", "libx264", "-crf", str(int(crf))]
+    args.extend(["-pix_fmt", "yuv420p"])
     if has_audio:
         args.extend(["-c:a", "copy"])
     else:

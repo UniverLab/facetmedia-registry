@@ -380,6 +380,72 @@ def _run_grade(params: Mapping[str, Any], out_dir: Path, piece_dir: Path) -> lis
     return [_asset(name, out.name, "video", MIME["mp4"], props, resolved, [video])]
 
 
+IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"})
+
+
+def _run_overlay(params: Mapping[str, Any], out_dir: Path, piece_dir: Path) -> list[dict[str, Any]]:
+    """Composite a PNG, alpha MOV, or PiP clip over base footage."""
+    base = _resolve_path(piece_dir, params["base"])
+    overlay = _resolve_path(piece_dir, params["overlay"])
+    name = str(params["name"])
+    probe = _probe_stderr(base)
+    dims = (int(probe.get("width") or 0), int(probe.get("height") or 0))
+    if min(dims) <= 0:
+        raise ValueError(f"overlay: base has no readable dimensions: {base}")
+    out = out_dir / f"{name}.mp4"
+    built = graph.overlay_args(
+        base,
+        overlay,
+        out,
+        *dims,
+        has_audio=bool(probe.get("audio_codec")),
+        position=str(params.get("position", "fullscreen")),
+        scale_width=_opt_int(params, "scale-width"),
+        margin_px=int(params.get("margin-px", 24)),
+        start_s=float(params.get("start-s", 0.0)),
+        end_s=_opt_float(params, "end-s"),
+        crf=int(params.get("crf", 23)),
+    )
+    if overlay.suffix.lower() in IMAGE_SUFFIXES:
+        # Still images emit one frame: loop the logo and stop at the base end.
+        built[2:2] = ["-loop", "1"]
+        built.insert(len(built) - 1, "-shortest")
+    _ffmpeg(built)
+    props = _probe_stderr(out)
+    resolved = {**params, "base": str(base), "overlay": str(overlay)}
+    return [_asset(name, out.name, "video", MIME["mp4"], props, resolved, [base, overlay])]
+
+
+def _run_speed(params: Mapping[str, Any], out_dir: Path, piece_dir: Path) -> list[dict[str, Any]]:
+    """Change playback speed with synchronized video and audio."""
+    video, name = _resolve_path(piece_dir, params["video"]), str(params["name"])
+    factor = float(params["factor"])
+    crf = int(params.get("crf", 23))
+    keep_audio = bool(params.get("keep-audio", True))
+    has_audio = bool(_probe_stderr(video).get("audio_codec"))
+    out = out_dir / f"{name}.mp4"
+    args = graph.speed_args(video, out, factor, keep_audio=keep_audio, has_audio=has_audio, crf=crf)
+    _ffmpeg(args)
+    resolved = {**params, "video": str(video), "factor": factor}
+    return [_asset(name, out.name, "video", MIME["mp4"], _probe_stderr(out), resolved, [video])]
+
+
+def _run_reframe(params: Mapping[str, Any], out_dir: Path, piece_dir: Path) -> list[dict[str, Any]]:
+    """Reframe footage to a vertical or square canvas."""
+    video, name = _resolve_path(piece_dir, params["video"]), str(params["name"])
+    aspect = str(params["aspect"])
+    mode = str(params.get("mode", "crop"))
+    width = int(params.get("width", 1080))
+    crf = int(params.get("crf", 23))
+    has_audio = bool(_probe_stderr(video).get("audio_codec"))
+    out = out_dir / f"{name}.mp4"
+    _ffmpeg(
+        graph.reframe_args(video, out, aspect, mode=mode, width=width, crf=crf, has_audio=has_audio)
+    )
+    resolved = {**params, "video": str(video), "aspect": aspect, "mode": mode, "width": width}
+    return [_asset(name, out.name, "video", MIME["mp4"], _probe_stderr(out), resolved, [video])]
+
+
 CAPABILITY_VERBS: dict[str, Callable[[Mapping[str, Any], Path, Path], list[dict[str, Any]]]] = {
     "transcode": _run_transcode,
     "mux-audio": _run_mux_audio,
@@ -387,6 +453,9 @@ CAPABILITY_VERBS: dict[str, Callable[[Mapping[str, Any], Path, Path], list[dict[
     "concat": _run_concat,
     "burn-subs": _run_burn_subs,
     "grade": _run_grade,
+    "overlay": _run_overlay,
+    "speed": _run_speed,
+    "reframe": _run_reframe,
 }
 
 
@@ -533,9 +602,15 @@ def _verify_concat(path: Path, params: Mapping[str, Any], piece_dir: Path) -> di
 
 
 def _verify_burn_subs_or_grade(
-    path: Path, params: Mapping[str, Any], piece_dir: Path
+    path: Path,
+    params: Mapping[str, Any],
+    piece_dir: Path,
+    video_key: str = "video",
+    duration_divisor: float = 1.0,
+    dims: tuple[int, int] | None = None,
+    tol: float = SOURCE_DURATION_TOL_S,
 ) -> dict[str, Any]:
-    """Verify burn-subs/grade output preserves source duration and dimensions."""
+    """Verify duration/dimensions, with optional re-key, scaling, or reframe canvas."""
     verifier = f"ffmpeg {graph.version_id(_version_text())}"
     size, props, err = _video_metrics(path)
     if props is None:
@@ -547,11 +622,10 @@ def _verify_burn_subs_or_grade(
             "verifier": verifier,
         }
     try:
-        source = _resolve_path(piece_dir, params["video"])
+        source = _resolve_path(piece_dir, params[video_key])
         src = _probe_stderr(source)
-        src_dur = float(src.get("duration_s") or 0.0)
-        src_w = int(src.get("width") or 0)
-        src_h = int(src.get("height") or 0)
+        src_dur = float(src.get("duration_s") or 0.0) / duration_divisor
+        dims = dims or (int(src.get("width") or 0), int(src.get("height") or 0))
     except Exception as exc:  # catch-all
         return {
             "file": path.name,
@@ -565,11 +639,11 @@ def _verify_burn_subs_or_grade(
     out_h = int(props.get("height") or 0)
     passed = bool(
         size > 0
-        and abs(out_dur - src_dur) <= SOURCE_DURATION_TOL_S
-        and out_w == src_w
-        and out_h == src_h
-        and src_w > 0
-        and src_h > 0
+        and abs(out_dur - src_dur) <= tol
+        and out_w == dims[0]
+        and out_h == dims[1]
+        and dims[0] > 0
+        and dims[1] > 0
     )
     return {
         "file": path.name,
@@ -580,10 +654,10 @@ def _verify_burn_subs_or_grade(
             "source_duration_s": src.get("duration_s"),
             "width": props.get("width"),
             "height": props.get("height"),
-            "source_width": src_w,
-            "source_height": src_h,
+            "source_width": dims[0],
+            "source_height": dims[1],
         },
-        "thresholds": {"duration_tolerance_s": SOURCE_DURATION_TOL_S},
+        "thresholds": {"duration_tolerance_s": tol},
         "verifier": verifier,
     }
 
@@ -633,6 +707,21 @@ def verify(req: Request) -> dict[str, Any]:
             entries.append(_verify_concat(path, params, req.piece_dir))
         elif cap in {"burn-subs", "grade"}:
             entries.append(_verify_burn_subs_or_grade(path, params, req.piece_dir))
+        elif cap == "overlay":
+            entries.append(
+                _verify_burn_subs_or_grade(path, params, req.piece_dir, video_key="base", tol=0.25)
+            )
+        elif cap == "speed":
+            entries.append(
+                _verify_burn_subs_or_grade(
+                    path, params, req.piece_dir, duration_divisor=float(params["factor"]), tol=0.25
+                )
+            )
+        elif cap == "reframe":
+            dims = graph._reframe_dims(str(params["aspect"]), int(params.get("width", 1080)))
+            entries.append(
+                _verify_burn_subs_or_grade(path, params, req.piece_dir, dims=dims, tol=0.25)
+            )
         else:
             entries.append(_verify_video(cap, path))
     return {"assets": entries}

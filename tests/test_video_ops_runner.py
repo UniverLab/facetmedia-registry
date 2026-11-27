@@ -44,6 +44,9 @@ DOWNSCALED_WIDTH = 160
 FIXTURE_HEIGHT = 120
 TRIM_DURATION_S = 0.5
 DURATION_TOL_S = 0.25
+REFRAME_WIDTH = 1080
+REFRAME_HEIGHT_9_16 = 1920
+REFRAME_SQUARE = 720
 
 STUB_SDK = """
 import json
@@ -408,6 +411,132 @@ def test_new_caps_verify_fail_on_corrupt_assets(tmp_path: Path) -> None:
             {"video": FIXTURE_MP4.name, "subtitles": "sample.srt", "name": "x"},
         ),
         ("video-ops.grade", {"video": FIXTURE_MP4.name, "name": "x"}),
+        (
+            "video-ops.overlay",
+            {"base": FIXTURE_MP4.name, "overlay": "logo.png", "name": "x"},
+        ),
+        ("video-ops.speed", {"video": FIXTURE_MP4.name, "name": "x", "factor": 2.0}),
+        (
+            "video-ops.reframe",
+            {"video": FIXTURE_MP4.name, "name": "x", "aspect": "9:16"},
+        ),
     ]:
         res = _invoke(tmp_path, "verify", capability=cap, inputs=inputs, assets=[bad_mp4])
         assert res["assets"][0]["passed"] is False, (cap, res)
+
+
+def test_overlay_run_verify_and_preview(tmp_path: Path) -> None:
+    inputs = {
+        "base": FIXTURE_MP4.name,
+        "overlay": "logo.png",
+        "name": "overlay-out",
+        "position": "center",
+        "crf": 23,
+    }
+    run_res = _invoke(tmp_path, "run", capability="video-ops.overlay", inputs=inputs)
+    asset = run_res["assets"][0]
+    out_file = tmp_path / "out" / asset["file"]
+    assert out_file.is_file()
+    assert asset["kind"] == "video"
+
+    ver_res = _invoke(
+        tmp_path, "verify", capability="video-ops.overlay", inputs=inputs, assets=[out_file]
+    )
+    entry = ver_res["assets"][0]
+    assert entry["passed"] is True, ver_res
+    assert entry["metrics"]["width"] == DOWNSCALED_WIDTH
+    assert entry["metrics"]["height"] == FIXTURE_HEIGHT
+    assert abs(entry["metrics"]["duration_s"] - 1.0) <= DURATION_TOL_S
+
+    prev_res = _invoke(
+        tmp_path, "preview", capability="video-ops.overlay", inputs=inputs, assets=[out_file]
+    )
+    preview_data = json.loads((tmp_path / "out" / prev_res["assets"][0]["preview"]).read_text())
+    assert set(preview_data) == VIDEO_PREVIEW_KEYS
+    assert preview_data["kind"] == "video"
+
+
+def test_speed_run_verify_and_preview(tmp_path: Path) -> None:
+    inputs = {
+        "video": FIXTURE_MP4.name,
+        "name": "speed-out",
+        "factor": 2.0,
+        "keep-audio": True,
+        "crf": 23,
+    }
+    run_res = _invoke(tmp_path, "run", capability="video-ops.speed", inputs=inputs)
+    asset = run_res["assets"][0]
+    out_file = tmp_path / "out" / asset["file"]
+    assert out_file.is_file()
+    assert asset["kind"] == "video"
+
+    ver_res = _invoke(
+        tmp_path, "verify", capability="video-ops.speed", inputs=inputs, assets=[out_file]
+    )
+    entry = ver_res["assets"][0]
+    assert entry["passed"] is True, ver_res
+    assert entry["metrics"]["width"] == DOWNSCALED_WIDTH
+    assert entry["metrics"]["height"] == FIXTURE_HEIGHT
+    assert abs(entry["metrics"]["duration_s"] - 1.0 / 2.0) <= DURATION_TOL_S
+    assert entry["thresholds"]["duration_tolerance_s"] == DURATION_TOL_S
+
+    prev_res = _invoke(
+        tmp_path, "preview", capability="video-ops.speed", inputs=inputs, assets=[out_file]
+    )
+    preview_data = json.loads((tmp_path / "out" / prev_res["assets"][0]["preview"]).read_text())
+    assert set(preview_data) == VIDEO_PREVIEW_KEYS
+    assert preview_data["kind"] == "video"
+
+
+def test_reframe_run_verify_and_preview(tmp_path: Path) -> None:
+    inputs = {
+        "video": FIXTURE_MP4.name,
+        "name": "reframe-out",
+        "aspect": "9:16",
+        "mode": "crop",
+        "width": 1080,
+        "crf": 23,
+    }
+    run_res = _invoke(tmp_path, "run", capability="video-ops.reframe", inputs=inputs)
+    asset = run_res["assets"][0]
+    out_file = tmp_path / "out" / asset["file"]
+    assert out_file.is_file()
+    assert asset["kind"] == "video"
+
+    ver_res = _invoke(
+        tmp_path, "verify", capability="video-ops.reframe", inputs=inputs, assets=[out_file]
+    )
+    entry = ver_res["assets"][0]
+    assert entry["passed"] is True, ver_res
+    assert entry["metrics"]["width"] == REFRAME_WIDTH
+    assert entry["metrics"]["height"] == REFRAME_HEIGHT_9_16
+    assert abs(entry["metrics"]["duration_s"] - 1.0) <= DURATION_TOL_S
+
+    prev_res = _invoke(
+        tmp_path, "preview", capability="video-ops.reframe", inputs=inputs, assets=[out_file]
+    )
+    preview_data = json.loads((tmp_path / "out" / prev_res["assets"][0]["preview"]).read_text())
+    assert set(preview_data) == VIDEO_PREVIEW_KEYS
+    assert preview_data["kind"] == "video"
+
+
+def test_reframe_blur_pad_run_and_verify(tmp_path: Path) -> None:
+    inputs = {
+        "video": FIXTURE_MP4.name,
+        "name": "reframe-pad-out",
+        "aspect": "1:1",
+        "mode": "blur-pad",
+        "width": 720,
+        "crf": 23,
+    }
+    run_res = _invoke(tmp_path, "run", capability="video-ops.reframe", inputs=inputs)
+    out_file = tmp_path / "out" / run_res["assets"][0]["file"]
+    assert out_file.is_file()
+
+    ver_res = _invoke(
+        tmp_path, "verify", capability="video-ops.reframe", inputs=inputs, assets=[out_file]
+    )
+    entry = ver_res["assets"][0]
+    assert entry["passed"] is True, ver_res
+    assert entry["metrics"]["width"] == REFRAME_SQUARE
+    assert entry["metrics"]["height"] == REFRAME_SQUARE

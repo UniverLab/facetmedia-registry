@@ -39,11 +39,21 @@ MAX_FONT_SIZE = 72
 DEFAULT_MARGIN_V = 36
 MIN_MARGIN_V = 0
 MAX_MARGIN_V = 300
+DEFAULT_MARGIN_PX = 24
+MIN_MARGIN_PX = 0
+MAX_MARGIN_PX = 400
+MIN_SCALE_WIDTH = 32
+MAX_SCALE_WIDTH = 3840
+MIN_SPEED_FACTOR = 0.25
+MAX_SPEED_FACTOR = 8.0
+DEFAULT_REFRAME_WIDTH = 1080
+MIN_REFRAME_WIDTH = 360
+MAX_REFRAME_WIDTH = 3840
 
 
 def test_package_metadata_and_requirements() -> None:
     assert MANIFEST["name"] == "video-ops"
-    assert MANIFEST["version"] == "0.2.0"
+    assert MANIFEST["version"] == "0.3.0"
     assert MANIFEST["requires_facet"] == ">=0.1.0b2,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["facet"] == "video"
@@ -53,7 +63,8 @@ def test_package_metadata_and_requirements() -> None:
         MANIFEST["description"]
         == "Deterministic CPU video editing with bundled FFmpeg: H.264/AAC transcode, "
         "audio muxing, frame extraction, xfade/acrossfade concat transitions, "
-        "libass subtitle burning, and eq/fade color grading"
+        "libass subtitle burning, eq/fade color grading, alpha/PiP overlays, "
+        "timelapse/slow-motion speed changes, and vertical/square reframing"
     )
     assert MANIFEST["engine"] == {"type": "python-env", "python": "3.12"}
     assert MANIFEST["transport"] == {"type": "cli", "entry": "runner.py"}
@@ -73,7 +84,7 @@ def test_licenses_and_pyproject_dependencies() -> None:
         "pillow": "MIT-CMU",
     }
     pyproject = tomllib.loads((PACKAGE / "pyproject.toml").read_text(encoding="utf-8"))
-    assert pyproject["project"]["version"] == "0.2.0"
+    assert pyproject["project"]["version"] == "0.3.0"
     assert pyproject["project"]["dependencies"] == [
         "imageio-ffmpeg==0.6.0",
         "pillow==13.0.0",
@@ -83,7 +94,17 @@ def test_licenses_and_pyproject_dependencies() -> None:
 
 
 def test_capabilities_kinds_viewers_and_i18n() -> None:
-    assert set(CAPABILITIES) == {"transcode", "mux-audio", "frame", "concat", "burn-subs", "grade"}
+    assert set(CAPABILITIES) == {
+        "transcode",
+        "mux-audio",
+        "frame",
+        "concat",
+        "burn-subs",
+        "grade",
+        "overlay",
+        "speed",
+        "reframe",
+    }
     assert CAPABILITIES["transcode"]["kind"] == "video"
     assert CAPABILITIES["transcode"]["preview"] == {"viewer": "video"}
     assert CAPABILITIES["mux-audio"]["kind"] == "video"
@@ -96,6 +117,12 @@ def test_capabilities_kinds_viewers_and_i18n() -> None:
     assert CAPABILITIES["burn-subs"]["preview"] == {"viewer": "video"}
     assert CAPABILITIES["grade"]["kind"] == "video"
     assert CAPABILITIES["grade"]["preview"] == {"viewer": "video"}
+    assert CAPABILITIES["overlay"]["kind"] == "video"
+    assert CAPABILITIES["overlay"]["preview"] == {"viewer": "video"}
+    assert CAPABILITIES["speed"]["kind"] == "video"
+    assert CAPABILITIES["speed"]["preview"] == {"viewer": "video"}
+    assert CAPABILITIES["reframe"]["kind"] == "video"
+    assert CAPABILITIES["reframe"]["preview"] == {"viewer": "video"}
     for cap in CAPABILITIES.values():
         es_summary = cap["i18n"]["es"]["summary"]
         assert isinstance(es_summary, str) and es_summary
@@ -217,6 +244,76 @@ def test_grade_inputs_schema() -> None:
     assert inputs["crf"]["default"] == DEFAULT_CRF_23
 
 
+def test_overlay_inputs_schema() -> None:
+    inputs = CAPABILITIES["overlay"]["inputs"]
+    assert inputs["base"]["type"] == "path"
+    assert inputs["base"]["required"] is True
+    assert inputs["overlay"]["type"] == "path"
+    assert inputs["overlay"]["required"] is True
+    assert inputs["name"]["pattern"] == "^[a-z0-9][a-z0-9-]*$"
+    assert inputs["position"]["type"] == "enum"
+    assert inputs["position"]["default"] == "fullscreen"
+    assert inputs["position"]["values"] == [
+        "top-left",
+        "top-right",
+        "bottom-left",
+        "bottom-right",
+        "center",
+        "fullscreen",
+    ]
+    assert (inputs["scale-width"]["min"], inputs["scale-width"]["max"]) == (
+        MIN_SCALE_WIDTH,
+        MAX_SCALE_WIDTH,
+    )
+    assert inputs["margin-px"]["default"] == DEFAULT_MARGIN_PX
+    assert (inputs["margin-px"]["min"], inputs["margin-px"]["max"]) == (
+        MIN_MARGIN_PX,
+        MAX_MARGIN_PX,
+    )
+    assert inputs["start-s"]["default"] == 0.0
+    assert inputs["start-s"]["min"] == 0
+    assert inputs["end-s"]["min"] == 0
+    assert inputs["crf"]["default"] == DEFAULT_CRF_23
+    assert (inputs["crf"]["min"], inputs["crf"]["max"]) == (MIN_CRF, MAX_CRF)
+
+
+def test_speed_inputs_schema() -> None:
+    inputs = CAPABILITIES["speed"]["inputs"]
+    assert inputs["video"]["type"] == "path"
+    assert inputs["video"]["required"] is True
+    assert inputs["name"]["pattern"] == "^[a-z0-9][a-z0-9-]*$"
+    assert inputs["factor"]["type"] == "number"
+    assert inputs["factor"]["required"] is True
+    assert (inputs["factor"]["min"], inputs["factor"]["max"]) == (
+        MIN_SPEED_FACTOR,
+        MAX_SPEED_FACTOR,
+    )
+    assert inputs["keep-audio"]["type"] == "boolean"
+    assert inputs["keep-audio"]["default"] is True
+    assert inputs["crf"]["default"] == DEFAULT_CRF_23
+    assert (inputs["crf"]["min"], inputs["crf"]["max"]) == (MIN_CRF, MAX_CRF)
+
+
+def test_reframe_inputs_schema() -> None:
+    inputs = CAPABILITIES["reframe"]["inputs"]
+    assert inputs["video"]["type"] == "path"
+    assert inputs["video"]["required"] is True
+    assert inputs["name"]["pattern"] == "^[a-z0-9][a-z0-9-]*$"
+    assert inputs["aspect"]["type"] == "enum"
+    assert inputs["aspect"]["required"] is True
+    assert inputs["aspect"]["values"] == ["9:16", "1:1", "4:5", "16:9"]
+    assert inputs["mode"]["type"] == "enum"
+    assert inputs["mode"]["default"] == "crop"
+    assert inputs["mode"]["values"] == ["crop", "blur-pad"]
+    assert inputs["width"]["default"] == DEFAULT_REFRAME_WIDTH
+    assert (inputs["width"]["min"], inputs["width"]["max"]) == (
+        MIN_REFRAME_WIDTH,
+        MAX_REFRAME_WIDTH,
+    )
+    assert inputs["crf"]["default"] == DEFAULT_CRF_23
+    assert (inputs["crf"]["min"], inputs["crf"]["max"]) == (MIN_CRF, MAX_CRF)
+
+
 def test_index_and_root_readme_list_video_ops() -> None:
     names = [entry["name"] for entry in INDEX["packages"]]
     assert names.index("video-ops") == len(names) - 2
@@ -230,3 +327,6 @@ def test_index_and_root_readme_list_video_ops() -> None:
     assert "concat" in rows[0]
     assert "subtitle" in rows[0].lower() or "subtitles" in rows[0].lower()
     assert "grading" in rows[0].lower() or "grade" in rows[0].lower()
+    assert "overlay" in rows[0].lower()
+    assert "speed" in rows[0].lower()
+    assert "refram" in rows[0].lower()

@@ -7,9 +7,14 @@ video's audio track without re-encoding the video stream; `video-ops.frame`
 extracts a single PNG or JPG thumbnail frame at a timestamp; `video-ops.concat`
 joins 2+ clips with `xfade` visual transitions and `acrossfade` audio
 crossfades; `video-ops.burn-subs` burns `.srt`/`.vtt` subtitles via libass; and
-`video-ops.grade` applies deterministic `eq` color grading with optional fades.
+`video-ops.grade` applies deterministic `eq` color grading with optional fades;
+`video-ops.overlay` composites a PNG logo, alpha MOV, or PiP clip over base
+footage; `video-ops.speed` changes playback speed with synchronized audio; and
+`video-ops.reframe` reframes footage to vertical or square via center crop or
+blurred pillarbox.
 It belongs to the **`video`** facet and writes `video` (`transcode`,
-`mux-audio`, `concat`, `burn-subs`, `grade`) and `image` (`frame`) assets.
+`mux-audio`, `concat`, `burn-subs`, `grade`, `overlay`, `speed`, `reframe`)
+and `image` (`frame`) assets.
 Light package: **no models, no GPU, not exclusive**.
 
 ## Piece fields
@@ -81,6 +86,40 @@ Light package: **no models, no GPU, not exclusive**.
 | `fade-out-s` | number | no | 0.0 | 0.0 to 10.0 seconds |
 | `crf` | integer | no | 23 | 14 to 38 |
 
+`video-ops.overlay` — composite a PNG, alpha MOV, or PiP clip over base footage:
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `base` | path | yes | — | base video resolved relative to the piece file |
+| `overlay` | path | yes | — | PNG, alpha-channel MOV, or video clip |
+| `name` | string | yes | — | `[a-z0-9][a-z0-9-]*`; writes `<name>.mp4` |
+| `position` | enum | no | `fullscreen` | `top-left`, `top-right`, `bottom-left`, `bottom-right`, `center`, `fullscreen` |
+| `scale-width` | integer | no | — | 32 to 3840; ignored for `fullscreen` |
+| `margin-px` | integer | no | 24 | 0 to 400 |
+| `start-s` / `end-s` | number | no | 0.0 / — | overlay enable window in seconds |
+| `crf` | integer | no | 23 | 14 to 38 |
+
+`video-ops.speed` — timelapse or slow-motion with synchronized audio:
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `video` | path | yes | — | source video resolved relative to the piece file |
+| `name` | string | yes | — | `[a-z0-9][a-z0-9-]*`; writes `<name>.mp4` |
+| `factor` | number | yes | — | 0.25 to 8.0; 2.0 is 2x faster, 0.5 is 2x slower |
+| `keep-audio` | boolean | no | true | chain `atempo` filters when source has audio |
+| `crf` | integer | no | 23 | 14 to 38 |
+
+`video-ops.reframe` — reframe to vertical or square:
+
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `video` | path | yes | — | source video resolved relative to the piece file |
+| `name` | string | yes | — | `[a-z0-9][a-z0-9-]*`; writes `<name>.mp4` |
+| `aspect` | enum | yes | — | `9:16`, `1:1`, `4:5`, `16:9` |
+| `mode` | enum | no | `crop` | `crop` or `blur-pad` |
+| `width` | integer | no | 1080 | 360 to 3840; height follows the aspect |
+| `crf` | integer | no | 23 | 14 to 38 |
+
 ## Verification and doctor
 
 `verify` probes video outputs via `ffmpeg -i` stderr and checks capability-specific
@@ -94,6 +133,15 @@ invariants:
   target canvas.
 - `burn-subs` / `grade`: non-zero bytes, output duration within 0.2 s of the
   source duration, and output dimensions equal to the source dimensions.
+- `overlay`: non-zero bytes, output duration within 0.25 s of the base
+  duration, and output dimensions equal to the base dimensions (shorter video
+  overlays pass base frames through via `eof_action=pass`; still-image overlays
+  are looped for the full base clip).
+- `speed`: non-zero bytes, output duration within 0.25 s of
+  `source duration / factor`, and output dimensions equal to the source
+  dimensions.
+- `reframe`: non-zero bytes, output duration within 0.25 s of the source
+  duration, and output dimensions equal to the target canvas.
 - `frame`: image readable by Pillow with width and height > 0.
 
 `facet doctor video-ops` checks:
@@ -121,3 +169,6 @@ there:
 - `video-ops.concat` — `examples/concat.toml`: `facet example video-ops.concat --run`
 - `video-ops.burn-subs` — `examples/burn-subs.toml`: `facet example video-ops.burn-subs --run`
 - `video-ops.grade` — `examples/grade.toml`: `facet example video-ops.grade --run`
+- `video-ops.overlay` — `examples/overlay.toml`: `facet example video-ops.overlay --run`
+- `video-ops.speed` — `examples/speed.toml`: `facet example video-ops.speed --run`
+- `video-ops.reframe` — `examples/reframe.toml`: `facet example video-ops.reframe --run`

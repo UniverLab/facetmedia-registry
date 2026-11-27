@@ -1,0 +1,8 @@
+capability = "video-ops.speed"
+
+[inputs]
+video = "fixture.mp4"
+name = "fixture-speed"
+factor = 2.0
+keep-audio = true
+crf = 23

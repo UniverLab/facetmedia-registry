@@ -1,0 +1,9 @@
+capability = "video-ops.reframe"
+
+[inputs]
+video = "fixture.mp4"
+name = "fixture-reframe"
+aspect = "9:16"
+mode = "crop"
+width = 1080
+crf = 23

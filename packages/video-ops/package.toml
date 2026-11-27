@@ -1,10 +1,10 @@
 name = "video-ops"
-version = "0.2.0"
+version = "0.3.0"
 requires_facet = ">=0.1.0b2,<0.2"
 protocol = 1
 provider = "FFmpeg project · imageio (imageio-ffmpeg)"
 tool_name = "FFmpeg Video Ops"
-description = "Deterministic CPU video editing with bundled FFmpeg: H.264/AAC transcode, audio muxing, frame extraction, xfade/acrossfade concat transitions, libass subtitle burning, and eq/fade color grading"
+description = "Deterministic CPU video editing with bundled FFmpeg: H.264/AAC transcode, audio muxing, frame extraction, xfade/acrossfade concat transitions, libass subtitle burning, eq/fade color grading, alpha/PiP overlays, timelapse/slow-motion speed changes, and vertical/square reframing"
 facet = "video"
 
 [engine]
@@ -338,4 +338,154 @@ max = 38
 description = "Constant Rate Factor for libx264 (lower means higher quality and larger files)."
 
 [capabilities.grade.preview]
+viewer = "video"
+
+[capabilities.overlay]
+summary = "Composite an alpha MOV, PNG logo, or PiP clip over base footage with corner/center/fullscreen placement"
+kind = "video"
+
+[capabilities.overlay.i18n.es]
+summary = "Superpone un MOV alfa, un logo PNG o un clip PiP sobre el video base con posición de esquina, centro o pantalla completa"
+
+[capabilities.overlay.inputs.base]
+type = "path"
+required = true
+description = "Base video file resolved relative to the piece file."
+
+[capabilities.overlay.inputs.overlay]
+type = "path"
+required = true
+description = "Overlay file resolved relative to the piece file: PNG, alpha-channel MOV, or video clip."
+
+[capabilities.overlay.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.mp4."
+
+[capabilities.overlay.inputs.position]
+type = "enum"
+values = ["top-left", "top-right", "bottom-left", "bottom-right", "center", "fullscreen"]
+default = "fullscreen"
+description = "Overlay placement on the base frame."
+
+[capabilities.overlay.inputs.scale-width]
+type = "integer"
+min = 32
+max = 3840
+description = "Optional width to scale the overlay preserving aspect (ignored when position is fullscreen)."
+
+[capabilities.overlay.inputs.margin-px]
+type = "integer"
+default = 24
+min = 0
+max = 400
+description = "Margin in pixels from the frame edge for corner and center placement."
+
+[capabilities.overlay.inputs.start-s]
+type = "number"
+default = 0.0
+min = 0
+description = "Overlay enable window start in seconds."
+
+[capabilities.overlay.inputs.end-s]
+type = "number"
+min = 0
+description = "Overlay enable window end in seconds; overlay runs to base end when omitted."
+
+[capabilities.overlay.inputs.crf]
+type = "integer"
+default = 23
+min = 14
+max = 38
+description = "Constant Rate Factor for libx264 (lower means higher quality and larger files)."
+
+[capabilities.overlay.preview]
+viewer = "video"
+
+[capabilities.speed]
+summary = "Change playback speed for timelapse or slow-motion with synchronized video and audio"
+kind = "video"
+
+[capabilities.speed.i18n.es]
+summary = "Cambia la velocidad de reproducción para timelapse o cámara lenta con video y audio sincronizados"
+
+[capabilities.speed.inputs.video]
+type = "path"
+required = true
+description = "Source video file resolved relative to the piece file."
+
+[capabilities.speed.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.mp4."
+
+[capabilities.speed.inputs.factor]
+type = "number"
+required = true
+min = 0.25
+max = 8.0
+description = "Speed factor: 2.0 is 2x faster timelapse, 0.5 is 2x slower."
+
+[capabilities.speed.inputs.keep-audio]
+type = "boolean"
+default = true
+description = "Chain atempo filters to keep audio pitch when the source has audio."
+
+[capabilities.speed.inputs.crf]
+type = "integer"
+default = 23
+min = 14
+max = 38
+description = "Constant Rate Factor for libx264 (lower means higher quality and larger files)."
+
+[capabilities.speed.preview]
+viewer = "video"
+
+[capabilities.reframe]
+summary = "Reframe 16:9 footage to vertical or square via center crop or blurred pillarbox"
+kind = "video"
+
+[capabilities.reframe.i18n.es]
+summary = "Reencuadra video 16:9 a vertical o cuadrado con recorte centrado o fondo desenfocado"
+
+[capabilities.reframe.inputs.video]
+type = "path"
+required = true
+description = "Source video file resolved relative to the piece file."
+
+[capabilities.reframe.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.mp4."
+
+[capabilities.reframe.inputs.aspect]
+type = "enum"
+values = ["9:16", "1:1", "4:5", "16:9"]
+required = true
+description = "Target aspect ratio."
+
+[capabilities.reframe.inputs.mode]
+type = "enum"
+values = ["crop", "blur-pad"]
+default = "crop"
+description = "Center crop to the target canvas, or blur-pad the full frame onto a blurred backdrop."
+
+[capabilities.reframe.inputs.width]
+type = "integer"
+default = 1080
+min = 360
+max = 3840
+description = "Target output width in pixels; height follows the aspect."
+
+[capabilities.reframe.inputs.crf]
+type = "integer"
+default = 23
+min = 14
+max = 38
+description = "Constant Rate Factor for libx264 (lower means higher quality and larger files)."
+
+[capabilities.reframe.preview]
 viewer = "video"

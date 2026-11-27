@@ -1,0 +1,8 @@
+capability = "video-ops.overlay"
+
+[inputs]
+base = "fixture.mp4"
+overlay = "logo.png"
+name = "fixture-overlay"
+position = "center"
+crf = 23

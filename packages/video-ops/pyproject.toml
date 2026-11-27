@@ -1,6 +1,6 @@
 [project]
 name = "facet-video-ops"
-version = "0.2.0"
+version = "0.3.0"
 description = "Deterministic CPU video editing with bundled FFmpeg: transcode, audio mux, frame extraction, concat transitions, subtitle burning, and color grading."
 readme = "README.md"
 license = "Apache-2.0"
