@@ -1,0 +1,110 @@
+name = "charts"
+version = "0.1.0"
+requires_facet = ">=0.1.0b2,<0.2"
+protocol = 1
+provider = "Matplotlib Development Team"
+tool_name = "Editorial Charts"
+description = "Publication-grade editorial data charts (bar, horizontal bar, line, scatter) from tabular CSV or JSON data to verified PNG or SVG with matplotlib and Pillow on CPU"
+facet = "presentation"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 0.3
+exclusive = false
+platforms = ["linux"]
+
+[[licenses]]
+subject = "matplotlib"
+spdx = "PSF-2.0"
+
+[[licenses]]
+subject = "numpy"
+spdx = "BSD-3-Clause"
+
+[[licenses]]
+subject = "pillow"
+spdx = "MIT-CMU"
+
+[capabilities.render]
+summary = "Render a publication-grade editorial data chart (bar, horizontal bar, line or scatter) from a CSV or JSON table to a verified PNG or SVG"
+kind = "image"
+
+[capabilities.render.i18n.es]
+summary = "Genera un gráfico editorial de datos de calidad de publicación (barras, barras horizontales, líneas o dispersión) desde una tabla CSV o JSON a un PNG o SVG verificado"
+
+[capabilities.render.inputs.data]
+type = "path"
+required = true
+description = "Source data file, resolved relative to the piece file: a local .csv (UTF-8, comma-delimited with a header row) or .json (a top-level JSON array of row objects)."
+
+[capabilities.render.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.png when format is png or <name>.svg when format is svg."
+
+[capabilities.render.inputs.chart]
+type = "enum"
+values = ["bar", "barh", "line", "scatter"]
+required = true
+description = "Chart type: vertical bars, horizontal bars, a line over ordered x, or an x/y scatter."
+
+[capabilities.render.inputs.title]
+type = "string"
+required = true
+description = "Chart title, drawn above the axes."
+
+[capabilities.render.inputs.subtitle]
+type = "string"
+description = "Chart subtitle, drawn under the title in muted ink."
+
+[capabilities.render.inputs.source]
+type = "string"
+description = "Footer attribution line, drawn under the axes (the data source)."
+
+[capabilities.render.inputs.x]
+type = "string"
+required = true
+description = "Exact column header (CSV) or key (JSON object) for the x values or category labels."
+
+[capabilities.render.inputs.y]
+type = "string"
+required = true
+description = "Exact column header (CSV) or key (JSON object) for the numeric y values (single series)."
+
+[capabilities.render.inputs.format]
+type = "enum"
+values = ["png", "svg"]
+default = "png"
+description = "Output format: png raster or svg vector."
+
+[capabilities.render.inputs.accent]
+type = "string"
+default = "#E8C547"
+description = "Single accent hex color for the data marks; the rest of the palette stays neutral ink, paper and grid tokens."
+
+[capabilities.render.inputs.width-px]
+type = "integer"
+default = 1200
+min = 400
+max = 3840
+description = "Output width in pixels."
+
+[capabilities.render.inputs.height-px]
+type = "integer"
+default = 675
+min = 300
+max = 2160
+description = "Output height in pixels."
+
+[capabilities.render.preview]
+viewer = "image"

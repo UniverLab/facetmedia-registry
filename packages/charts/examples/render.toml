@@ -1,0 +1,13 @@
+# Bar chart of quarterly production (thousands of units) as a PNG.
+capability = "charts.render"
+
+[inputs]
+data = "sample.csv"
+name = "output-q1"
+chart = "bar"
+title = "Q1 production"
+subtitle = "Thousands of units"
+source = "Lab ledger, 2026"
+x = "month"
+y = "units"
+format = "png"
