@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "svganim"
 SKILL = (PACKAGE / "skill" / "SKILL.md").read_text(encoding="utf-8")
+SOURCES = (PACKAGE / "skill" / "references" / "sources.md").read_text(encoding="utf-8")
 HEADINGS = ("## When to use", "## Pieces", "## Judging the result", "## Pitfalls")
 DESCRIPTION_MIN = 20
 DESCRIPTION_MAX = 200
@@ -68,3 +69,27 @@ def test_the_build_banners_reference_carries_the_recipe() -> None:
         assert token in reference
     for token in ("process.argv", "process.stdout.write", "require("):
         assert token in reference
+
+
+def test_generative_visual_craft() -> None:
+    body = _body()
+    for token in (
+        "visual grammar",
+        "Math.random()",
+        "seeded",
+        "crisp",
+        "single accent",
+        "focal hierarchy",
+    ):
+        assert token in body, token
+
+
+def test_generative_sources() -> None:
+    for token in (
+        "https://github.com/anthropics/skills/tree/main/skills/algorithmic-art",
+        "https://github.com/cathrynlavery/diagram-design",
+        "Apache-2.0",
+        "MIT",
+        "No wording copied",
+    ):
+        assert token in SOURCES, token

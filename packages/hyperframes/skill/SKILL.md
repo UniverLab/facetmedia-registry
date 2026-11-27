@@ -313,6 +313,14 @@ Count holds in frames, never in odd fractions of a second: a hold of 0.067 s at
 15 fps drifts across the frame grid and steps unevenly. Seed every random
 offset so the same piece renders the same way twice.
 
+### Lock the visual grammar before coding scenes
+
+Define a token palette and one visual grammar before writing scene markup or
+tweens so colours, stroke weights and spacing stay consistent across cuts.
+Drive any procedural motion or particles from seeded deterministic randomness
+so re-renders match bit-for-bit, and keep surfaces clean — avoid
+muddy drop shadows or cluttered frames that compete with the focal beat.
+
 ### Write the brief so the motion survives
 
 When the agent writes the `prompt` rather than the composition, keep one shared

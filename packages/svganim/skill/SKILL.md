@@ -57,6 +57,18 @@ Composition and accessibility, which a baked file keeps for free:
   `<title>` and `<desc>` in the document; `verify` refuses `<text>`, not these
   metadata elements.
 
+Generative craft that keeps procedural banners sharp and reproducible:
+
+- **Commit to one visual grammar first.** Choose the geometric motif, grid
+  or stroke language before writing animation code so every element belongs to
+  the same system.
+- **Use a seeded PRNG, never `Math.random()`.** Drive procedural placement,
+  delays and jitter from a deterministic seeded generator so every bake
+  reproduces identical SVG and PNG output.
+- **Keep strokes flat and crisp.** Pair clean flat geometry with a
+  single accent colour and a clear focal hierarchy so the composition reads at a
+  glance without visual noise.
+
 facet bakes CSS `@keyframes` only, on purpose: HyperFrames inlines and
 coordinates the document, so SMIL is not used even where it would survive an
 `<img>` embed that JavaScript cannot reach.

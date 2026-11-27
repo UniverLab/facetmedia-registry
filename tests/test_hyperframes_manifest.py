@@ -156,7 +156,7 @@ def _expected_tarball(name: str, version: str) -> str:
 
 def test_the_header_names_the_video_facet_and_the_pinned_contract() -> None:
     assert MANIFEST["name"] == "hyperframes"
-    assert MANIFEST["version"] == "0.1.5"
+    assert MANIFEST["version"] == "0.1.6"
     assert MANIFEST["requires_facet"] == ">=0.1.0b1,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["provider"] == "HeyGen (hyperframes)"
@@ -350,7 +350,7 @@ def test_the_sources_reference_names_a_licence_for_every_row() -> None:
         cells = [cell.strip() for cell in row.strip("|").split("|")]
         assert len(cells) == SOURCE_COLUMNS, row
         assert cells[1] and cells[2] and cells[3], row
-        assert "none stated" in cells[2] or "Apache-2.0" in cells[2], row
+        assert "none stated" in cells[2] or "Apache-2.0" in cells[2] or "MIT" in cells[2], row
 
 
 def test_each_pillar_has_one_row_per_capability() -> None:
@@ -570,3 +570,27 @@ def test_old_spanish_names_are_absent() -> None:
     for old in OLD_CAPABILITIES:
         assert old not in _skill_body(), old
         assert old not in READ, old
+
+
+def test_generative_composition_craft() -> None:
+    section = _section(_skill_body(), "## Authoring")
+    for token in (
+        "token palette",
+        "visual grammar",
+        "bit-for-bit",
+        "muddy drop shadows",
+        "cluttered frames",
+    ):
+        assert token in section, token
+
+
+def test_generative_sources() -> None:
+    text = (REFERENCES / "sources.md").read_text(encoding="utf-8")
+    for token in (
+        "https://github.com/anthropics/skills/tree/main/skills/algorithmic-art",
+        "https://github.com/cathrynlavery/diagram-design",
+        "Apache-2.0",
+        "MIT",
+        "No wording copied",
+    ):
+        assert token in text, token
