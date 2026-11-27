@@ -1,10 +1,10 @@
 name = "video-ops"
-version = "0.1.0"
+version = "0.2.0"
 requires_facet = ">=0.1.0b2,<0.2"
 protocol = 1
 provider = "FFmpeg project · imageio (imageio-ffmpeg)"
 tool_name = "FFmpeg Video Ops"
-description = "Deterministic CPU video transcoding (H.264/AAC faststart), audio muxing without video re-encoding, and still frame extraction with bundled FFmpeg"
+description = "Deterministic CPU video editing with bundled FFmpeg: H.264/AAC transcode, audio muxing, frame extraction, xfade/acrossfade concat transitions, libass subtitle burning, and eq/fade color grading"
 facet = "video"
 
 [engine]
@@ -156,3 +156,186 @@ description = "Output image format."
 
 [capabilities.frame.preview]
 viewer = "image"
+
+[capabilities.concat]
+summary = "Join 2+ clips with xfade visual transitions and acrossfade audio crossfades"
+kind = "video"
+
+[capabilities.concat.i18n.es]
+summary = "Une 2 o más clips con transiciones visuales xfade y fundidos cruzados de audio acrossfade"
+
+[capabilities.concat.inputs.clip]
+type = "array"
+min_items = 2
+required = true
+description = "Clips to join in order; each provides a video file."
+
+[capabilities.concat.inputs.clip.items.video]
+type = "path"
+required = true
+description = "Source video file resolved relative to the piece file."
+
+[capabilities.concat.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.mp4."
+
+[capabilities.concat.inputs.transition]
+type = "enum"
+values = ["cut", "fade", "fadeblack", "fadewhite", "dissolve", "wipeleft", "wiperight", "slideleft", "slideright", "smoothleft", "smoothright", "zoomin"]
+default = "fade"
+description = "Visual transition between clips (cut uses concat with no overlap)."
+
+[capabilities.concat.inputs.transition-s]
+type = "number"
+default = 0.5
+min = 0.1
+max = 3.0
+description = "Transition overlap duration in seconds (ignored when transition is cut)."
+
+[capabilities.concat.inputs.width]
+type = "integer"
+min = 240
+max = 3840
+description = "Target output width in pixels (defaults to the first clip's probed width)."
+
+[capabilities.concat.inputs.height]
+type = "integer"
+min = 240
+max = 2160
+description = "Target output height in pixels (defaults to the first clip's probed height)."
+
+[capabilities.concat.inputs.fps]
+type = "integer"
+default = 30
+min = 12
+max = 60
+description = "Output frame rate in frames per second."
+
+[capabilities.concat.inputs.crf]
+type = "integer"
+default = 23
+min = 14
+max = 38
+description = "Constant Rate Factor for libx264 (lower means higher quality and larger files)."
+
+[capabilities.concat.preview]
+viewer = "video"
+
+[capabilities.burn-subs]
+summary = "Burn SRT or VTT subtitles into a video with the libass subtitles filter"
+kind = "video"
+
+[capabilities.burn-subs.i18n.es]
+summary = "Incrusta subtítulos SRT o VTT en un video con el filtro subtitles de libass"
+
+[capabilities.burn-subs.inputs.video]
+type = "path"
+required = true
+description = "Source video file resolved relative to the piece file."
+
+[capabilities.burn-subs.inputs.subtitles]
+type = "path"
+required = true
+description = "Subtitle file (.srt or .vtt) resolved relative to the piece file."
+
+[capabilities.burn-subs.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.mp4."
+
+[capabilities.burn-subs.inputs.font-size]
+type = "integer"
+default = 22
+min = 10
+max = 72
+description = "Subtitle font size in points."
+
+[capabilities.burn-subs.inputs.margin-v]
+type = "integer"
+default = 36
+min = 0
+max = 300
+description = "Vertical margin in pixels from the bottom edge."
+
+[capabilities.burn-subs.inputs.crf]
+type = "integer"
+default = 23
+min = 14
+max = 38
+description = "Constant Rate Factor for libx264 (lower means higher quality and larger files)."
+
+[capabilities.burn-subs.preview]
+viewer = "video"
+
+[capabilities.grade]
+summary = "Apply deterministic color grading (eq) and optional fade-in/fade-out to a video"
+kind = "video"
+
+[capabilities.grade.i18n.es]
+summary = "Aplica gradación de color determinista (eq) y fundidos de entrada/salida opcionales a un video"
+
+[capabilities.grade.inputs.video]
+type = "path"
+required = true
+description = "Source video file resolved relative to the piece file."
+
+[capabilities.grade.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.mp4."
+
+[capabilities.grade.inputs.brightness]
+type = "number"
+default = 0.0
+min = -1.0
+max = 1.0
+description = "Brightness adjustment (-1.0 to 1.0, 0.0 unchanged)."
+
+[capabilities.grade.inputs.contrast]
+type = "number"
+default = 1.0
+min = 0.2
+max = 3.0
+description = "Contrast multiplier (1.0 unchanged)."
+
+[capabilities.grade.inputs.saturation]
+type = "number"
+default = 1.0
+min = 0.0
+max = 3.0
+description = "Saturation multiplier (1.0 unchanged, 0.0 grayscale)."
+
+[capabilities.grade.inputs.gamma]
+type = "number"
+default = 1.0
+min = 0.2
+max = 3.0
+description = "Gamma adjustment (1.0 unchanged)."
+
+[capabilities.grade.inputs.fade-in-s]
+type = "number"
+default = 0.0
+min = 0.0
+max = 10.0
+description = "Fade-in duration in seconds from the start (0 disables)."
+
+[capabilities.grade.inputs.fade-out-s]
+type = "number"
+default = 0.0
+min = 0.0
+max = 10.0
+description = "Fade-out duration in seconds to the end (0 disables)."
+
+[capabilities.grade.inputs.crf]
+type = "integer"
+default = 23
+min = 14
+max = 38
+description = "Constant Rate Factor for libx264 (lower means higher quality and larger files)."
+
+[capabilities.grade.preview]
+viewer = "video"

@@ -1,8 +1,10 @@
-"""The video-ops package runner: transcode, mux-audio, and frame extraction.
+"""The video-ops package runner: transcode, mux-audio, frame extraction, concat,
+subtitle burning, and color grading.
 
 Four verbs on the runner SDK (``facet_runner_sdk``, copied into the
-environment at pull): ``run`` executes ``transcode``, ``mux-audio``, or
-``frame`` with the static FFmpeg binary bundled by ``imageio-ffmpeg``;
+environment at pull): ``run`` executes ``transcode``, ``mux-audio``,
+``frame``, ``concat``, ``burn-subs``, or ``grade`` with the static FFmpeg
+binary bundled by ``imageio-ffmpeg``;
 ``verify`` probes output streams or validates extracted images with Pillow;
 ``preview`` writes ``video`` or ``image`` preview JSON; ``doctor`` checks
 the binary, encoders, Pillow import, and (at ``full`` depth) a synthetic
@@ -38,6 +40,8 @@ DEFAULT_FPS = 24
 DEFAULT_SEED = 0
 SUMMARY_MAX = 160
 STDERR_TAIL_CHARS = 2000
+CONCAT_DURATION_TOL_S = 0.35
+SOURCE_DURATION_TOL_S = 0.2
 FFMPEG_FLAGS = ("-nostdin", "-hide_banner", "-y")
 REQUIRED_ENCODERS = ("aac", "libx264")
 MIME = {
@@ -232,10 +236,157 @@ def _run_frame(params: Mapping[str, Any], out_dir: Path, piece_dir: Path) -> lis
     return [_asset(name, out.name, "image", MIME[fmt], props, resolved, [video])]
 
 
+def _run_concat(params: Mapping[str, Any], out_dir: Path, piece_dir: Path) -> list[dict[str, Any]]:
+    """Join clips with xfade/acrossfade transitions or cut concat."""
+    clips_in = params["clip"]
+    if not isinstance(clips_in, list):
+        raise ValueError("concat: clip must be an array")
+    clip_paths = [_resolve_path(piece_dir, str(item["video"])) for item in clips_in]
+    name = str(params["name"])
+    transition = str(params.get("transition", "fade"))
+    transition_s = float(params.get("transition-s", 0.5))
+    fps = int(params.get("fps", 30))
+    crf = int(params.get("crf", 23))
+
+    probes = [_probe_stderr(path) for path in clip_paths]
+    durations: list[float] = []
+    for index, probe in enumerate(probes):
+        dur = probe.get("duration_s")
+        if dur is None or float(dur) <= 0:
+            raise ValueError(f"concat: clip {index} has no readable duration: {clip_paths[index]}")
+        durations.append(float(dur))
+
+    target_width = _opt_int(params, "width")
+    target_height = _opt_int(params, "height")
+    first_w = probes[0].get("width")
+    first_h = probes[0].get("height")
+    if target_width is None:
+        if first_w is None or int(first_w) <= 0:
+            raise ValueError("concat: first clip has no readable width")
+        target_width = int(first_w)
+    if target_height is None:
+        if first_h is None or int(first_h) <= 0:
+            raise ValueError("concat: first clip has no readable height")
+        target_height = int(first_h)
+
+    include_audio = all(bool(p.get("audio_codec")) for p in probes)
+    out = out_dir / f"{name}.mp4"
+    _ffmpeg(
+        graph.concat_args(
+            clip_paths,
+            out,
+            durations,
+            target_width,
+            target_height,
+            transition=transition,
+            transition_s=transition_s,
+            fps=fps,
+            crf=crf,
+            include_audio=include_audio,
+        )
+    )
+    props = _probe_stderr(out)
+    resolved: dict[str, Any] = {
+        "clip": [{"video": str(p)} for p in clip_paths],
+        "name": name,
+        "transition": transition,
+        "transition-s": transition_s,
+        "width": target_width,
+        "height": target_height,
+        "fps": fps,
+        "crf": crf,
+    }
+    return [_asset(name, out.name, "video", MIME["mp4"], props, resolved, clip_paths)]
+
+
+def _run_burn_subs(
+    params: Mapping[str, Any], out_dir: Path, piece_dir: Path
+) -> list[dict[str, Any]]:
+    """Burn SRT/VTT subtitles into a video with libass."""
+    video = _resolve_path(piece_dir, params["video"])
+    subtitles = _resolve_path(piece_dir, params["subtitles"])
+    name = str(params["name"])
+    font_size = int(params.get("font-size", 22))
+    margin_v = int(params.get("margin-v", 36))
+    crf = int(params.get("crf", 23))
+    probe = _probe_stderr(video)
+    has_audio = bool(probe.get("audio_codec"))
+    out = out_dir / f"{name}.mp4"
+    _ffmpeg(
+        graph.burn_subs_args(
+            video,
+            subtitles,
+            out,
+            font_size=font_size,
+            margin_v=margin_v,
+            crf=crf,
+            has_audio=has_audio,
+        )
+    )
+    props = _probe_stderr(out)
+    resolved = {
+        "video": str(video),
+        "subtitles": str(subtitles),
+        "name": name,
+        "font-size": font_size,
+        "margin-v": margin_v,
+        "crf": crf,
+    }
+    return [_asset(name, out.name, "video", MIME["mp4"], props, resolved, [video, subtitles])]
+
+
+def _run_grade(params: Mapping[str, Any], out_dir: Path, piece_dir: Path) -> list[dict[str, Any]]:
+    """Apply eq color grading and optional fades to a video."""
+    video = _resolve_path(piece_dir, params["video"])
+    name = str(params["name"])
+    brightness = float(params.get("brightness", 0.0))
+    contrast = float(params.get("contrast", 1.0))
+    saturation = float(params.get("saturation", 1.0))
+    gamma = float(params.get("gamma", 1.0))
+    fade_in_s = float(params.get("fade-in-s", 0.0))
+    fade_out_s = float(params.get("fade-out-s", 0.0))
+    crf = int(params.get("crf", 23))
+    probe = _probe_stderr(video)
+    duration_s = float(probe.get("duration_s") or 0.0)
+    has_audio = bool(probe.get("audio_codec"))
+    out = out_dir / f"{name}.mp4"
+    _ffmpeg(
+        graph.grade_args(
+            video,
+            out,
+            duration_s,
+            brightness=brightness,
+            contrast=contrast,
+            saturation=saturation,
+            gamma=gamma,
+            fade_in_s=fade_in_s,
+            fade_out_s=fade_out_s,
+            crf=crf,
+            has_audio=has_audio,
+        )
+    )
+    props = _probe_stderr(out)
+    resolved = {
+        "video": str(video),
+        "name": name,
+        "brightness": brightness,
+        "contrast": contrast,
+        "saturation": saturation,
+        "gamma": gamma,
+        "fade-in-s": fade_in_s,
+        "fade-out-s": fade_out_s,
+        "crf": crf,
+    }
+    return [_asset(name, out.name, "video", MIME["mp4"], props, resolved, [video])]
+
+
 CAPABILITY_VERBS: dict[str, Callable[[Mapping[str, Any], Path, Path], list[dict[str, Any]]]] = {
     "transcode": _run_transcode,
     "mux-audio": _run_mux_audio,
     "frame": _run_frame,
+    "concat": _run_concat,
+    "burn-subs": _run_burn_subs,
+    "grade": _run_grade,
 }
 
 
@@ -302,6 +453,141 @@ def _verify_video(cap: str, path: Path) -> dict[str, Any]:
     }
 
 
+def _video_metrics(path: Path) -> tuple[int, dict[str, Any] | None, str | None]:
+    size = path.stat().st_size if path.is_file() else 0
+    if size <= 0:
+        return size, None, "empty output"
+    try:
+        return size, _probe_stderr(path), None
+    except Exception as exc:  # catch-all: verify reports failure instead of crashing
+        return size, None, str(exc)
+
+
+def _verify_concat(path: Path, params: Mapping[str, Any], piece_dir: Path) -> dict[str, Any]:
+    """Verify concat output duration and dimensions."""
+    verifier = f"ffmpeg {graph.version_id(_version_text())}"
+    size, props, err = _video_metrics(path)
+    if props is None:
+        return {
+            "file": path.name,
+            "passed": False,
+            "metrics": {"bytes": size, "error": err},
+            "thresholds": {},
+            "verifier": verifier,
+        }
+    try:
+        clips_in = params["clip"]
+        clip_paths = [_resolve_path(piece_dir, str(item["video"])) for item in clips_in]
+        durations = []
+        for clip_path in clip_paths:
+            probe = _probe_stderr(clip_path)
+            dur = probe.get("duration_s")
+            if dur is None:
+                raise ValueError(f"missing duration for {clip_path}")
+            durations.append(float(dur))
+        transition = str(params.get("transition", "fade"))
+        transition_s = float(params.get("transition-s", 0.5))
+        if transition == "cut":
+            expected = sum(durations)
+        else:
+            expected = sum(durations) - (len(durations) - 1) * transition_s
+        target_width = _opt_int(params, "width")
+        target_height = _opt_int(params, "height")
+        if target_width is None:
+            target_width = int(_probe_stderr(clip_paths[0]).get("width") or 0)
+        if target_height is None:
+            target_height = int(_probe_stderr(clip_paths[0]).get("height") or 0)
+    except Exception as exc:  # catch-all: bad inputs fail verification cleanly
+        return {
+            "file": path.name,
+            "passed": False,
+            "metrics": {"bytes": size, "error": str(exc)},
+            "thresholds": {},
+            "verifier": verifier,
+        }
+
+    out_dur = float(props.get("duration_s") or 0.0)
+    out_w = int(props.get("width") or 0)
+    out_h = int(props.get("height") or 0)
+    passed = bool(
+        size > 0
+        and abs(out_dur - expected) <= CONCAT_DURATION_TOL_S
+        and out_w == target_width
+        and out_h == target_height
+    )
+    return {
+        "file": path.name,
+        "passed": passed,
+        "metrics": {
+            "bytes": size,
+            "duration_s": props.get("duration_s"),
+            "expected_duration_s": round(expected, 3),
+            "width": props.get("width"),
+            "height": props.get("height"),
+            "target_width": target_width,
+            "target_height": target_height,
+        },
+        "thresholds": {"duration_tolerance_s": CONCAT_DURATION_TOL_S},
+        "verifier": verifier,
+    }
+
+
+def _verify_burn_subs_or_grade(
+    path: Path, params: Mapping[str, Any], piece_dir: Path
+) -> dict[str, Any]:
+    """Verify burn-subs/grade output preserves source duration and dimensions."""
+    verifier = f"ffmpeg {graph.version_id(_version_text())}"
+    size, props, err = _video_metrics(path)
+    if props is None:
+        return {
+            "file": path.name,
+            "passed": False,
+            "metrics": {"bytes": size, "error": err},
+            "thresholds": {},
+            "verifier": verifier,
+        }
+    try:
+        source = _resolve_path(piece_dir, params["video"])
+        src = _probe_stderr(source)
+        src_dur = float(src.get("duration_s") or 0.0)
+        src_w = int(src.get("width") or 0)
+        src_h = int(src.get("height") or 0)
+    except Exception as exc:  # catch-all
+        return {
+            "file": path.name,
+            "passed": False,
+            "metrics": {"bytes": size, "error": str(exc)},
+            "thresholds": {},
+            "verifier": verifier,
+        }
+    out_dur = float(props.get("duration_s") or 0.0)
+    out_w = int(props.get("width") or 0)
+    out_h = int(props.get("height") or 0)
+    passed = bool(
+        size > 0
+        and abs(out_dur - src_dur) <= SOURCE_DURATION_TOL_S
+        and out_w == src_w
+        and out_h == src_h
+        and src_w > 0
+        and src_h > 0
+    )
+    return {
+        "file": path.name,
+        "passed": passed,
+        "metrics": {
+            "bytes": size,
+            "duration_s": props.get("duration_s"),
+            "source_duration_s": src.get("duration_s"),
+            "width": props.get("width"),
+            "height": props.get("height"),
+            "source_width": src_w,
+            "source_height": src_h,
+        },
+        "thresholds": {"duration_tolerance_s": SOURCE_DURATION_TOL_S},
+        "verifier": verifier,
+    }
+
+
 def _verify_frame(path: Path) -> dict[str, Any]:
     """Verify an extracted image is readable by Pillow with positive dimensions."""
     size = path.stat().st_size if path.is_file() else 0
@@ -338,9 +624,17 @@ def verify(req: Request) -> dict[str, Any]:
     cap = _capability(req)
     if cap not in CAPABILITY_VERBS:
         raise ValueError(f"{req.capability}: no verifier for this capability")
-    entries = [
-        _verify_frame(path) if cap == "frame" else _verify_video(cap, path) for path in req.assets
-    ]
+    params = dict(req.inputs)
+    entries = []
+    for path in req.assets:
+        if cap == "frame":
+            entries.append(_verify_frame(path))
+        elif cap == "concat":
+            entries.append(_verify_concat(path, params, req.piece_dir))
+        elif cap in {"burn-subs", "grade"}:
+            entries.append(_verify_burn_subs_or_grade(path, params, req.piece_dir))
+        else:
+            entries.append(_verify_video(cap, path))
     return {"assets": entries}
 
 

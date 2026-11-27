@@ -283,3 +283,131 @@ def test_doctor_quick_and_full(tmp_path: Path) -> None:
     full = _invoke(tmp_path, "doctor", depth="full")
     assert [c["name"] for c in full["checks"]] == ["binary", "encoders", "imports", "roundtrip"]
     assert all(c["ok"] for c in full["checks"]), full
+
+
+def test_concat_run_verify_and_preview(tmp_path: Path) -> None:
+    inputs = {
+        "clip": [{"video": FIXTURE_MP4.name}, {"video": FIXTURE_MP4.name}],
+        "name": "joined",
+        "transition": "fade",
+        "transition-s": 0.5,
+        "fps": 30,
+        "crf": 23,
+    }
+    run_res = _invoke(tmp_path, "run", capability="video-ops.concat", inputs=inputs)
+    asset = run_res["assets"][0]
+    out_file = tmp_path / "out" / asset["file"]
+    assert out_file.is_file()
+    assert asset["kind"] == "video"
+    assert asset["properties"]["width"] == DOWNSCALED_WIDTH
+    assert asset["properties"]["height"] == FIXTURE_HEIGHT
+
+    ver_res = _invoke(
+        tmp_path, "verify", capability="video-ops.concat", inputs=inputs, assets=[out_file]
+    )
+    assert ver_res["assets"][0]["passed"] is True, ver_res
+
+    prev_res = _invoke(
+        tmp_path, "preview", capability="video-ops.concat", inputs=inputs, assets=[out_file]
+    )
+    preview_data = json.loads((tmp_path / "out" / prev_res["assets"][0]["preview"]).read_text())
+    assert set(preview_data) == VIDEO_PREVIEW_KEYS
+    assert preview_data["kind"] == "video"
+    assert preview_data["width"] == DOWNSCALED_WIDTH
+    assert preview_data["height"] == FIXTURE_HEIGHT
+
+
+def test_concat_cut_verify(tmp_path: Path) -> None:
+    inputs = {
+        "clip": [{"video": FIXTURE_MP4.name}, {"video": FIXTURE_MP4.name}],
+        "name": "cut-join",
+        "transition": "cut",
+        "fps": 30,
+        "crf": 23,
+    }
+    run_res = _invoke(tmp_path, "run", capability="video-ops.concat", inputs=inputs)
+    out_file = tmp_path / "out" / run_res["assets"][0]["file"]
+    ver_res = _invoke(
+        tmp_path, "verify", capability="video-ops.concat", inputs=inputs, assets=[out_file]
+    )
+    assert ver_res["assets"][0]["passed"] is True, ver_res
+
+
+def test_burn_subs_run_verify_and_preview(tmp_path: Path) -> None:
+    inputs = {
+        "video": FIXTURE_MP4.name,
+        "subtitles": "sample.srt",
+        "name": "subs-out",
+        "font-size": 22,
+        "margin-v": 36,
+        "crf": 23,
+    }
+    run_res = _invoke(tmp_path, "run", capability="video-ops.burn-subs", inputs=inputs)
+    asset = run_res["assets"][0]
+    out_file = tmp_path / "out" / asset["file"]
+    assert out_file.is_file()
+    assert asset["kind"] == "video"
+
+    ver_res = _invoke(
+        tmp_path, "verify", capability="video-ops.burn-subs", inputs=inputs, assets=[out_file]
+    )
+    assert ver_res["assets"][0]["passed"] is True, ver_res
+
+    prev_res = _invoke(
+        tmp_path, "preview", capability="video-ops.burn-subs", inputs=inputs, assets=[out_file]
+    )
+    preview_data = json.loads((tmp_path / "out" / prev_res["assets"][0]["preview"]).read_text())
+    assert set(preview_data) == VIDEO_PREVIEW_KEYS
+    assert preview_data["kind"] == "video"
+
+
+def test_grade_run_verify_and_preview(tmp_path: Path) -> None:
+    inputs = {
+        "video": FIXTURE_MP4.name,
+        "name": "graded-out",
+        "brightness": 0.05,
+        "contrast": 1.1,
+        "saturation": 1.2,
+        "gamma": 1.0,
+        "fade-in-s": 0.2,
+        "fade-out-s": 0.2,
+        "crf": 23,
+    }
+    run_res = _invoke(tmp_path, "run", capability="video-ops.grade", inputs=inputs)
+    asset = run_res["assets"][0]
+    out_file = tmp_path / "out" / asset["file"]
+    assert out_file.is_file()
+    assert asset["kind"] == "video"
+
+    ver_res = _invoke(
+        tmp_path, "verify", capability="video-ops.grade", inputs=inputs, assets=[out_file]
+    )
+    assert ver_res["assets"][0]["passed"] is True, ver_res
+
+    prev_res = _invoke(
+        tmp_path, "preview", capability="video-ops.grade", inputs=inputs, assets=[out_file]
+    )
+    preview_data = json.loads((tmp_path / "out" / prev_res["assets"][0]["preview"]).read_text())
+    assert set(preview_data) == VIDEO_PREVIEW_KEYS
+    assert preview_data["kind"] == "video"
+
+
+def test_new_caps_verify_fail_on_corrupt_assets(tmp_path: Path) -> None:
+    bad_mp4 = tmp_path / "bad.mp4"
+    bad_mp4.write_bytes(b"not a video")
+    concat_inputs = {
+        "clip": [{"video": FIXTURE_MP4.name}, {"video": FIXTURE_MP4.name}],
+        "name": "x",
+        "transition": "fade",
+        "transition-s": 0.5,
+    }
+    for cap, inputs in [
+        ("video-ops.concat", concat_inputs),
+        (
+            "video-ops.burn-subs",
+            {"video": FIXTURE_MP4.name, "subtitles": "sample.srt", "name": "x"},
+        ),
+        ("video-ops.grade", {"video": FIXTURE_MP4.name, "name": "x"}),
+    ]:
+        res = _invoke(tmp_path, "verify", capability=cap, inputs=inputs, assets=[bad_mp4])
+        assert res["assets"][0]["passed"] is False, (cap, res)

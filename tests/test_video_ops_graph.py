@@ -158,3 +158,277 @@ def test_version_and_encoder_helpers() -> None:
     assert graph.version_id(ver) == "7.0.2-static"
     encoders = " V..... libx264              libx264 H.264\n A..... aac                  AAC\n"
     assert graph.encoder_names(encoders) == {"libx264", "aac"}
+
+
+def test_concat_args_cut_no_audio() -> None:
+    args = graph.concat_args(
+        [Path("a.mp4"), Path("b.mp4")],
+        Path("out.mp4"),
+        [1.0, 2.0],
+        160,
+        120,
+        options=graph.ConcatOptions(
+            transition="cut",
+            transition_s=0.5,
+            fps=30,
+            crf=23,
+            include_audio=False,
+        ),
+    )
+    assert args[:4] == ["-i", "a.mp4", "-i", "b.mp4"]
+    fc = args[args.index("-filter_complex") + 1]
+    assert "scale=160:120:force_original_aspect_ratio=decrease" in fc
+    assert "pad=160:120:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p[v0]" in fc
+    assert "[v0][v1]concat=n=2:v=1:a=0[vout]" in fc
+    assert args[args.index("-map") + 1] == "[vout]"
+    assert "-an" in args
+    assert args[-1] == "out.mp4"
+
+
+def test_concat_args_xfade_with_audio() -> None:
+    args = graph.concat_args(
+        [Path("a.mp4"), Path("b.mp4"), Path("c.mp4")],
+        Path("out.mp4"),
+        [2.0, 2.0, 2.0],
+        320,
+        240,
+        options=graph.ConcatOptions(
+            transition="fade",
+            transition_s=0.5,
+            fps=30,
+            crf=23,
+            include_audio=True,
+        ),
+    )
+    fc = args[args.index("-filter_complex") + 1]
+    assert "[0:a]aformat=sample_rates=48000:channel_layouts=stereo[a0]" in fc
+    assert "xfade=transition=fade:duration=0.5:offset=1.5[xv1]" in fc
+    assert "xfade=transition=fade:duration=0.5:offset=3[vout]" in fc
+    assert "acrossfade=d=0.5[xa1]" in fc
+    assert "acrossfade=d=0.5[aout]" in fc
+    assert "[vout]" in args
+    assert "[aout]" in args
+    assert "-c:a" in args
+    assert "aac" in args
+
+
+def test_burn_subs_args_escapes_path_and_copies_audio() -> None:
+    args = graph.burn_subs_args(
+        Path("in.mp4"),
+        Path("/tmp/a:b c.srt"),
+        Path("out.mp4"),
+        font_size=24,
+        margin_v=40,
+        crf=20,
+        has_audio=True,
+    )
+    assert args[:2] == ["-i", "in.mp4"]
+    vf = args[args.index("-vf") + 1]
+    assert "subtitles=" in vf
+    assert "\\:" in vf
+    assert "\\ " in vf
+    assert "Fontsize=24" in vf
+    assert "MarginV=40" in vf
+    assert "-c:a" in args
+    assert "copy" in args
+    assert args[-1] == "out.mp4"
+
+
+def test_burn_subs_args_no_audio() -> None:
+    args = graph.burn_subs_args(Path("in.mp4"), Path("subs.srt"), Path("out.mp4"), has_audio=False)
+    assert "-an" in args
+    assert "copy" not in args
+
+
+def test_grade_args_with_fades() -> None:
+    args = graph.grade_args(
+        Path("in.mp4"),
+        Path("out.mp4"),
+        10.0,
+        options=graph.GradeOptions(
+            brightness=0.1,
+            contrast=1.2,
+            saturation=0.9,
+            gamma=1.1,
+            fade_in_s=0.5,
+            fade_out_s=1.0,
+            crf=22,
+            has_audio=True,
+        ),
+    )
+    vf = args[args.index("-vf") + 1]
+    assert "eq=brightness=0.1:contrast=1.2:saturation=0.9:gamma=1.1" in vf
+    assert "fade=t=in:st=0:d=0.5" in vf
+    assert "fade=t=out:st=9:d=1" in vf
+    assert "-c:a" in args
+    assert "copy" in args
+    assert args[args.index("-crf") + 1] == "22"
+
+
+def test_grade_args_no_audio_no_fades() -> None:
+    args = graph.grade_args(
+        Path("in.mp4"),
+        Path("out.mp4"),
+        5.0,
+        options=graph.GradeOptions(
+            brightness=0.0,
+            contrast=1.0,
+            saturation=1.0,
+            gamma=1.0,
+            fade_in_s=0.0,
+            fade_out_s=0.0,
+            crf=23,
+            has_audio=False,
+        ),
+    )
+    vf = args[args.index("-vf") + 1]
+    assert vf == "eq=brightness=0:contrast=1:saturation=1:gamma=1"
+    assert "-an" in args
+
+
+def test_concat_args_spec_keywords_equal_options() -> None:
+    clips = [Path("a.mp4"), Path("b.mp4")]
+    by_keywords = graph.concat_args(
+        clips,
+        Path("out.mp4"),
+        [1.0, 2.0],
+        160,
+        120,
+        transition="cut",
+        transition_s=0.5,
+        fps=30,
+        crf=23,
+        include_audio=False,
+    )
+    by_options = graph.concat_args(
+        clips,
+        Path("out.mp4"),
+        [1.0, 2.0],
+        160,
+        120,
+        options=graph.ConcatOptions(
+            transition="cut",
+            transition_s=0.5,
+            fps=30,
+            crf=23,
+            include_audio=False,
+        ),
+    )
+    assert by_keywords == by_options
+
+
+def test_concat_args_defaults_match_explicit_spec_keywords() -> None:
+    clips = [Path("a.mp4"), Path("b.mp4")]
+    assert graph.concat_args(clips, Path("out.mp4"), [2.0, 2.0], 320, 240) == graph.concat_args(
+        clips,
+        Path("out.mp4"),
+        [2.0, 2.0],
+        320,
+        240,
+        transition="fade",
+        transition_s=0.5,
+        fps=30,
+        crf=23,
+        include_audio=False,
+    )
+
+
+def test_concat_args_rejects_options_and_keywords() -> None:
+    try:
+        graph.concat_args(
+            [Path("a.mp4"), Path("b.mp4")],
+            Path("out.mp4"),
+            [1.0, 2.0],
+            160,
+            120,
+            options=graph.ConcatOptions(),
+            transition="cut",
+        )
+    except TypeError:
+        return
+    raise AssertionError("expected TypeError for options+keywords")
+
+
+def test_concat_args_rejects_unknown_keyword() -> None:
+    try:
+        graph.concat_args(
+            [Path("a.mp4"), Path("b.mp4")],
+            Path("out.mp4"),
+            [1.0, 2.0],
+            160,
+            120,
+            no_such_option=1,
+        )
+    except TypeError:
+        return
+    raise AssertionError("expected TypeError for unknown keyword")
+
+
+def test_grade_args_spec_keywords_equal_options() -> None:
+    by_keywords = graph.grade_args(
+        Path("in.mp4"),
+        Path("out.mp4"),
+        10.0,
+        brightness=0.1,
+        contrast=1.2,
+        saturation=0.9,
+        gamma=1.1,
+        fade_in_s=0.5,
+        fade_out_s=1.0,
+        crf=22,
+        has_audio=True,
+    )
+    by_options = graph.grade_args(
+        Path("in.mp4"),
+        Path("out.mp4"),
+        10.0,
+        options=graph.GradeOptions(
+            brightness=0.1,
+            contrast=1.2,
+            saturation=0.9,
+            gamma=1.1,
+            fade_in_s=0.5,
+            fade_out_s=1.0,
+            crf=22,
+            has_audio=True,
+        ),
+    )
+    assert by_keywords == by_options
+
+
+def test_grade_args_defaults_match_explicit_spec_keywords() -> None:
+    assert graph.grade_args(Path("in.mp4"), Path("out.mp4"), 5.0) == graph.grade_args(
+        Path("in.mp4"),
+        Path("out.mp4"),
+        5.0,
+        brightness=0.0,
+        contrast=1.0,
+        saturation=1.0,
+        gamma=1.0,
+        fade_in_s=0.0,
+        fade_out_s=0.0,
+        crf=23,
+        has_audio=True,
+    )
+
+
+def test_grade_args_rejects_options_and_keywords() -> None:
+    try:
+        graph.grade_args(
+            Path("in.mp4"),
+            Path("out.mp4"),
+            5.0,
+            options=graph.GradeOptions(),
+            crf=20,
+        )
+    except TypeError:
+        return
+    raise AssertionError("expected TypeError for options+keywords")
+
+
+def test_grade_args_rejects_unknown_keyword() -> None:
+    try:
+        graph.grade_args(Path("in.mp4"), Path("out.mp4"), 5.0, no_such_option=1)
+    except TypeError:
+        return
+    raise AssertionError("expected TypeError for unknown keyword")

@@ -1,0 +1,14 @@
+capability = "video-ops.concat"
+
+[[inputs.clip]]
+video = "fixture.mp4"
+
+[[inputs.clip]]
+video = "fixture.mp4"
+
+[inputs]
+name = "fixture-concat"
+transition = "fade"
+transition-s = 0.5
+fps = 30
+crf = 23

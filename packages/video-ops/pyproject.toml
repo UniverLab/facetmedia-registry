@@ -1,7 +1,7 @@
 [project]
 name = "facet-video-ops"
-version = "0.1.0"
-description = "Deterministic CPU video transcode, audio muxing, and frame extraction with bundled FFmpeg."
+version = "0.2.0"
+description = "Deterministic CPU video editing with bundled FFmpeg: transcode, audio mux, frame extraction, concat transitions, subtitle burning, and color grading."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12,<3.13"

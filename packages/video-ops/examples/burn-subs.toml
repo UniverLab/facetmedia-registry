@@ -1,0 +1,9 @@
+capability = "video-ops.burn-subs"
+
+[inputs]
+video = "fixture.mp4"
+subtitles = "sample.srt"
+name = "fixture-subs"
+font-size = 22
+margin-v = 36
+crf = 23
