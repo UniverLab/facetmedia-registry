@@ -50,6 +50,7 @@ the core:
 | text | ascii | ASCII art from images, figlet banners in any pyfiglet or figlet.js font, and the full font list with its source plus a contact sheet of every font |
 | text | recipes | Complete-piece recipes that chain existing packages into ordered plans — narrated explainer video, architectural render, voiced material with music and tool demo — as data a stdlib-only `plan` answers, plus a stdlib-only `status` that reports each step as done, missing or stale with the next step to run |
 | text | texforge | Long documents (reports, articles, theses) to verified PDF with real pagination, footnotes, indexes, bibliography and math via the person-installed texforge binary, with per-page PNG previews |
+| text | pdf-ops | Deterministic CPU PDF manipulation with pikepdf and pypdfium2: merge PDFs in order, split page ranges, recompress and linearize, and rasterize pages to PNGs for visual inspection |
 | voice | kokoro | Narration from text on CPU (Spanish and English), checked by transcription and silence |
 | voice | whisper | Transcripts and subtitles from audio on CPU, checked by confidence or reference text |
 | voice | whisper-subs | Readable SRT and VTT subtitles from a whisper JSON sidecar, shaped from word timings to common readability limits (about 20 cps, 42-char lines, at most 2 per cue, 0.8–7 s cues) and verified against them — no model, no transcription; the `.vtt` export whisper does not write |

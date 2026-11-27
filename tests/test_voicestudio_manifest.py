@@ -324,6 +324,7 @@ def test_the_index_lists_the_package() -> None:
         "charts",
         "video-ops",
         "deepfilter",
+        "pdf-ops",
     ]
 
 

@@ -1,0 +1,6 @@
+capability = "pdf-ops.split"
+
+[inputs]
+pdf = "doc.pdf"
+pages = "1"
+name = "split-doc"

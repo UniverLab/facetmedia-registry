@@ -1,0 +1,15 @@
+[project]
+name = "facet-pdf-ops"
+version = "0.1.0"
+description = "Deterministic CPU PDF manipulation with pikepdf and pypdfium2: merge, split, compress, and rasterize."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "pikepdf==10.18.3",
+  "pypdfium2==5.15.2",
+  "pillow==13.0.0",
+]
+
+[tool.uv]
+package = false

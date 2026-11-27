@@ -1,0 +1,7 @@
+capability = "pdf-ops.rasterize"
+
+[inputs]
+pdf = "doc.pdf"
+name = "doc-shots"
+pages = "1-2"
+dpi = 150

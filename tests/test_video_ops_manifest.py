@@ -334,8 +334,8 @@ def test_reframe_inputs_schema() -> None:
 
 def test_index_and_root_readme_list_video_ops() -> None:
     names = [entry["name"] for entry in INDEX["packages"]]
-    assert names.index("video-ops") == len(names) - 2
-    assert names[-1] == "deepfilter"
+    assert names.index("video-ops") == len(names) - 3
+    assert names[-1] == "pdf-ops"
     rows = [
         line
         for line in (ROOT / "README.md").read_text(encoding="utf-8").splitlines()

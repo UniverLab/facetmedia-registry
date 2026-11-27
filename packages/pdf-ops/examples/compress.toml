@@ -1,0 +1,5 @@
+capability = "pdf-ops.compress"
+
+[inputs]
+pdf = "doc.pdf"
+name = "compressed-doc"

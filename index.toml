@@ -148,3 +148,6 @@ name = "video-ops"
 
 [[packages]]
 name = "deepfilter"
+
+[[packages]]
+name = "pdf-ops"

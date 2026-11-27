@@ -1,0 +1,10 @@
+capability = "pdf-ops.merge"
+
+[[inputs.pdf]]
+path = "a.pdf"
+
+[[inputs.pdf]]
+path = "b.pdf"
+
+[inputs]
+name = "merged-doc"
