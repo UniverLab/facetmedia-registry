@@ -1,0 +1,108 @@
+name = "audiogram"
+version = "0.1.0"
+requires_facet = ">=0.1.0b2,<0.2"
+protocol = 1
+provider = "UniverLab · NumPy + Pillow + FFmpeg"
+tool_name = "Audiogram"
+description = "Audio-reactive waveform or frequency-bars MP4 videos over an editorial card or cover image, rendered with NumPy, soundfile and Pillow through the bundled imageio-ffmpeg binary"
+facet = "video"
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 0.3
+exclusive = false
+platforms = ["linux"]
+
+[[licenses]]
+subject = "imageio-ffmpeg"
+spdx = "BSD-2-Clause"
+
+[[licenses]]
+subject = "FFmpeg"
+spdx = "GPL-3.0-or-later"
+
+[[licenses]]
+subject = "numpy"
+spdx = "BSD-3-Clause"
+
+[[licenses]]
+subject = "soundfile"
+spdx = "BSD-3-Clause"
+
+[[licenses]]
+subject = "pillow"
+spdx = "MIT-CMU"
+
+[capabilities.render]
+summary = "Render an audio-reactive waveform or frequency-bars MP4 video from an audio clip over an editorial card or cover image"
+kind = "video"
+
+[capabilities.render.i18n.es]
+summary = "Genera un video MP4 con forma de onda o barras de frecuencia que reaccionan al audio, sobre una tarjeta editorial o imagen de portada"
+
+[capabilities.render.inputs.audio]
+type = "path"
+required = true
+description = "Source audio clip resolved relative to the piece file; any clip decodable by the bundled FFmpeg."
+
+[capabilities.render.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.mp4."
+
+[capabilities.render.inputs.style]
+type = "enum"
+values = ["bars", "waveform"]
+default = "bars"
+description = "Visualizer style: FFT frequency bars or a centered amplitude waveform."
+
+[capabilities.render.inputs.aspect]
+type = "enum"
+values = ["16:9", "9:16", "1:1"]
+default = "1:1"
+description = "Output canvas aspect ratio (16:9 landscape, 9:16 vertical, 1:1 square)."
+
+[capabilities.render.inputs.cover]
+type = "path"
+description = "Optional background or cover image resolved relative to the piece file; scaled to fill the canvas behind the visualizer."
+
+[capabilities.render.inputs.title]
+type = "string"
+description = "Optional short title drawn cleanly on the card above the visualizer."
+
+[capabilities.render.inputs.background]
+type = "string"
+default = "#111315"
+description = "Hex background color used when cover is omitted."
+
+[capabilities.render.inputs.accent]
+type = "string"
+default = "#E8C547"
+description = "Hex color of the reactive bars or waveform."
+
+[capabilities.render.inputs.fps]
+type = "integer"
+default = 24
+min = 12
+max = 30
+description = "Output frame rate in frames per second."
+
+[capabilities.render.inputs.crf]
+type = "integer"
+default = 23
+min = 14
+max = 38
+description = "Constant Rate Factor for libx264 (lower means higher quality and larger files)."
+
+[capabilities.render.preview]
+viewer = "video"

@@ -1,0 +1,7 @@
+# Square bars-style card from the bundled fixture tone.
+capability = "audiogram.render"
+
+[inputs]
+audio = "fixture.wav"
+name = "fixture-card"
+style = "bars"
