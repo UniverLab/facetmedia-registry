@@ -1,0 +1,97 @@
+name = "deepfilter"
+version = "0.1.0"
+requires_facet = ">=0.1.0b2,<0.2"
+protocol = 1
+provider = "Hendrik Schröter (DeepFilterNet3)"
+tool_name = "DeepFilterNet3"
+description = "Studio-grade 48 kHz neural voice noise suppression on CPU with the pinned DeepFilterNet3 static binary"
+facet = "audio"
+uses = ["audiopreview"]
+
+[engine]
+type = "python-env"
+python = "3.12"
+
+[transport]
+type = "cli"
+entry = "runner.py"
+
+[requirements]
+gpu = false
+ram_gb = 1
+disk_gb = 0.2
+exclusive = false
+platforms = ["linux"]
+
+[[licenses]]
+subject = "DeepFilterNet3"
+spdx = "MIT"
+
+[[licenses]]
+subject = "imageio-ffmpeg"
+spdx = "BSD-2-Clause"
+
+[[licenses]]
+subject = "FFmpeg (binary bundled in imageio-ffmpeg)"
+spdx = "GPL-3.0-or-later"
+
+[[licenses]]
+subject = "soundfile"
+spdx = "BSD-3-Clause"
+
+[[licenses]]
+subject = "pyloudnorm"
+spdx = "MIT"
+
+[[licenses]]
+subject = "numpy"
+spdx = "BSD-3-Clause"
+
+[[models]]
+id = "deep-filter-0.5.6-linux-x86_64"
+url = "https://github.com/Rikorose/DeepFilterNet/releases/download/v0.5.6/deep-filter-0.5.6-x86_64-unknown-linux-musl"
+sha256 = "70775e251eee44c0f2451a1e833326cf8bcbbe304d3e7cd12851e6fce72ef7da"
+bytes = 36417296
+path = "deep-filter-0.5.6-linux-x86_64/deep-filter"
+spdx = "MIT"
+commercial_use = true
+requires_acceptance = false
+
+[capabilities.enhance]
+summary = "Suppress noise in a voice clip with the DeepFilterNet3 neural denoiser at 48 kHz"
+kind = "audio"
+
+[capabilities.enhance.i18n.es]
+summary = "Suprime el ruido de un clip de voz con el reductor neuronal DeepFilterNet3 a 48 kHz"
+
+[capabilities.enhance.inputs.audio]
+type = "path"
+required = true
+description = "Source audio or video file; decoded to 48 kHz mono WAV with the bundled imageio-ffmpeg before denoising."
+
+[capabilities.enhance.inputs.name]
+type = "string"
+required = true
+pattern = "^[a-z0-9][a-z0-9-]*$"
+description = "Asset base name; writes <name>.wav."
+
+[capabilities.enhance.inputs.channel]
+type = "enum"
+values = ["auto", "mix", "left", "right"]
+default = "auto"
+description = "Channel extraction before denoising: auto leaves 1-channel mono untouched, picks left or right when the 2-channel stereo L/R RMS differs by 18 dB or more, and otherwise downmixes to mono."
+
+[capabilities.enhance.inputs.atten-lim-db]
+type = "number"
+default = 100.0
+min = 0
+max = 100
+description = "Maximum noise attenuation in dB, passed as -a to deep-filter."
+
+[capabilities.enhance.inputs.post-filter]
+type = "boolean"
+default = true
+description = "Apply the post-filter for extra attenuation of residual noise, passed as --pf to deep-filter."
+
+[capabilities.enhance.preview]
+viewer = "audio"

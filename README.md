@@ -33,6 +33,7 @@ the core:
 |-------|---------|--------------|
 | audio | acestep | Instrumental beds from an English caption with ACE-Step 1.5, at most 30 s per piece, reproducible from a seed with optional tempo, key, metre (one of 2/4, 3/4, 4/4 or 6/8), steps and guidance over the server's defaults, checked by duration and peak |
 | audio | ffmpeg | Clean, normalise, mix and convert audio clips with FFmpeg, with loudness and duration verified |
+| audio | deepfilter | Studio-grade 48 kHz neural voice noise suppression on CPU with the pinned DeepFilterNet3 static binary, checked by duration, peak and loudness |
 | audio | moss | Described sound effects from an English description with MOSS-SoundEffect v2 on a staged CPU/GPU memory path, about 40 s per effect at 100 steps, at most 30 s, normalised to a loudness target (default -23 LUFS), reproducible from a seed with optional steps and guidance over the defaults, checked by integrated loudness |
 | cad | cad | 3D parts and 2D plans from CadQuery or ezdxf scripts, plus the glTF the script writes for blender, checked by exact solid count, volume and bounding box, and by a DXF audit that requires set and consistent header units and every referenced layer, linetype and text style defined |
 | cad | freecad | Workshop drawings from 3D parts through a host FreeCAD's scripted `freecadcmd` (TechDraw, assemblies, FEM, opening a part by hand), with script failures reported, returning the drawing PDF plus its SVG sheets, previewed page by page; the host app is never installed (`freecad.path` or `FREECAD_EXE`) |

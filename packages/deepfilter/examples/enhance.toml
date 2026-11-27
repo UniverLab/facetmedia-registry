@@ -1,0 +1,7 @@
+# The lab's noisy voice clip denoised: channel picked automatically, full
+# attenuation with the post-filter, writing voice-denoised.wav at 48 kHz.
+capability = "deepfilter.enhance"
+
+[inputs]
+audio = "voice-noisy.wav"
+name = "voice-denoised"

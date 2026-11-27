@@ -145,3 +145,6 @@ name = "charts"
 
 [[packages]]
 name = "video-ops"
+
+[[packages]]
+name = "deepfilter"
