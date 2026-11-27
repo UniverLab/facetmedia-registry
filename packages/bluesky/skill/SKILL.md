@@ -24,6 +24,13 @@ a thread can tell a longer story.
   speaks Bluesky. It never schedules, deletes or edits posts, and never
   reads timelines.
 
+Craft the post for Bluesky itself: lead with a concrete hook in the
+opening line or the first post of a thread, keep the voice direct, and
+skip generic AI clichés and artificial single-sentence line breaks.
+When repurposing one source story across networks, adapt it into a
+native Bluesky shape — a concise thread with a link when it fits —
+rather than copying identical text everywhere.
+
 ## Pieces
 
 ```toml

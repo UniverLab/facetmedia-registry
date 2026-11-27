@@ -20,7 +20,7 @@ INPUTS = CAPABILITY["inputs"]
 
 def test_the_package_is_publish_on_the_publish_facet() -> None:
     assert MANIFEST["name"] == "linkedin-member"
-    assert MANIFEST["version"] == "0.2.0"
+    assert MANIFEST["version"] == "0.2.1"
     assert MANIFEST["requires_facet"] == ">=0.1.0b2,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["facet"] == "publish"

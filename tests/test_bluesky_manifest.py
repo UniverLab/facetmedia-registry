@@ -31,7 +31,7 @@ IMAGES = INPUTS["images"]["items"]
 
 def test_the_package_is_publish_on_the_publish_facet() -> None:
     assert MANIFEST["name"] == "bluesky"
-    assert MANIFEST["version"] == "0.1.2"
+    assert MANIFEST["version"] == "0.1.3"
     assert MANIFEST["requires_facet"] == ">=0.1.0b2,<0.2"
     assert MANIFEST["protocol"] == 1
     assert MANIFEST["facet"] == "publish"

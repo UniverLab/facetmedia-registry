@@ -10,3 +10,9 @@ licence as the research report states them, and what was taken from it.
 | https://atproto.com/specs/xrpc | Bluesky Social PBC | MIT (atproto.com, facts only, no wording taken) | The fact that every call is an XRPC namespaced query or procedure over HTTP with JSON bodies, which is why the vendored client speaks plain POST and GET with no SDK. |
 | https://atproto.com/specs/record-key | Bluesky Social PBC | MIT (atproto.com, facts only, no wording taken) | The fact that a repository record is addressed by its collection and record key, which is how the read-back fetches each receipt post straight from the account's server. |
 | https://bsky.app/settings/app-passwords | Bluesky Social PBC | none stated (in-app settings screen, facts only, no wording taken) | The fact that an app password is created per account under Settings, Privacy and Security, and is the only credential a client stores — the account password is never used. |
+
+## Craft references
+
+Hook and repurposing guidance in this skill was informed by the
+[marketingskills social skill](https://github.com/coreyhaines31/marketingskills/tree/main/skills/social)
+(MIT licence, no wording copied), adapted in facetMedia's own voice.

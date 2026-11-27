@@ -32,6 +32,14 @@ through the API: every post it accepts is public.
   speaks X. It never schedules, deletes or reads timelines, and never
   touches DMs.
 
+Craft the post for X itself: lead with a concrete hook in the opening
+line or the first post of a thread, keep the voice direct, and skip
+generic AI clichés and artificial single-sentence line breaks. When
+repurposing one source story across networks, adapt it into a concise
+X thread; avoid placing a URL in the post text when possible because a
+URL raises the post cost, and show the link in media or a follow-up
+post when that fits the piece.
+
 ## Pieces
 
 ```toml

@@ -10,3 +10,9 @@ licence as stated, and what was taken from it.
 | https://developers.google.com/youtube/v3/docs/thumbnails/set | Google LLC | none stated (developers.google.com, facts only, no wording taken) | The fact that `thumbnails.set` uploads a custom thumbnail for a video and can be refused when the channel is not verified, which is why a failed thumbnail keeps the video and receipt with a warning. |
 | https://developers.google.com/youtube/v3/guides/auth/installed-apps | Google LLC | none stated (developers.google.com, facts only, no wording taken) | The facts that an installed (desktop) application uses an OAuth client of type Desktop app, obtains consent through a loopback redirect, and exchanges the authorization for tokens including a refresh token when requested with offline access and consent. |
 | https://developers.google.com/identity/protocols/oauth2#expiration | Google LLC | none stated (developers.google.com, facts only, no wording taken) | The fact that a refresh token issued while the OAuth consent screen is in Testing expires after a short period, so the consent screen must be moved out of Testing for a durable connection. |
+
+## Craft references
+
+Hook and repurposing guidance in this skill was informed by the
+[marketingskills social skill](https://github.com/coreyhaines31/marketingskills/tree/main/skills/social)
+(MIT licence, no wording copied), adapted in facetMedia's own voice.

@@ -13,3 +13,9 @@ licence as the research report states them, and what was taken from it.
 | https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code | X Corp | none stated (docs.x.com, facts only, no wording taken) | The facts that a confidential client signs in with the Authorization Code flow with PKCE, that the browser opens the authorize address with response_type code, client_id, redirect_uri, scope, state and the S256 code challenge, and that the token endpoint takes HTTP Basic auth of the client pair. |
 | https://docs.x.com/fundamentals/authentication/oauth-2-0/refresh-token | X Corp | none stated (docs.x.com, facts only, no wording taken) | The facts that an expired access token is renewed by trading the refresh token at the same token endpoint with grant_type refresh_token, and that every answer carrying a new refresh token stores it. |
 | https://docs.x.com/fundamentals/authentication/oauth-2-0/user-context | X Corp | none stated (docs.x.com, facts only, no wording taken) | The facts that the app is set up as Web App, Automated App or Bot, that the redirect URL is registered in its User authentication settings, and that the Client ID and Client Secret are the OAuth 2.0 keys in its Keys and Tokens tab. |
+
+## Craft references
+
+Hook and repurposing guidance in this skill was informed by the
+[marketingskills social skill](https://github.com/coreyhaines31/marketingskills/tree/main/skills/social)
+(MIT licence, no wording copied), adapted in facetMedia's own voice.

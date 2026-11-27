@@ -27,6 +27,13 @@ unlisted videos; uploads have their own quota.
   playlists, captions, scheduled publish times, live streams, comments or
   analytics.
 
+Craft the upload for YouTube itself: lead with a concrete hook in the
+title and the opening of the description, keep the voice direct, and
+skip generic AI clichés and artificial single-sentence line breaks.
+When repurposing one source story across networks, adapt it into a
+video-first shape with a strong title and description rather than
+copying identical text everywhere.
+
 ## Pieces
 
 ```toml

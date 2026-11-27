@@ -30,6 +30,13 @@ run, the receipt's preview and these instructions.
   (which needs an audit the lab does not have), never schedules, never
   touches comments or analytics.
 
+Craft the draft for TikTok itself: lead with a concrete hook in the
+first two seconds of the video or the opening of the caption, keep the
+voice direct, and skip generic AI clichés and artificial
+single-sentence line breaks. When repurposing one source story across
+networks, adapt it into a short vertical video or photo-native draft
+rather than copying identical text everywhere.
+
 ## Pieces
 
 ```toml

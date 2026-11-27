@@ -11,3 +11,9 @@ and licence as stated, and what was taken from it.
 | https://developers.tiktok.com/doc/content-posting-api-reference-photo-post/ | TikTok Pte. Ltd. | none stated (developers.tiktok.com, facts only, no wording taken) | The facts that photos init with `POST /v2/post/publish/content/init/` carrying `media_type` PHOTO, `post_mode` MEDIA_UPLOAD for the inbox draft, a `post_info` object whose title and description are optional, and a `source_info` with `PULL_FROM_URL`, up to 35 `photo_images` URLs and a zero-based `photo_cover_index`. |
 | https://developers.tiktok.com/doc/content-posting-api-reference-get-video-status/ | TikTok Pte. Ltd. | none stated (developers.tiktok.com, facts only, no wording taken) | The facts that the status fetch is `POST /v2/post/publish/status/fetch/` with a `publish_id`, that `SEND_TO_USER_INBOX` means the draft reached the inbox, that `FAILED` carries a `fail_reason`, and that the creator-info query answers the account's username and nickname. |
 | https://developers.tiktok.com/doc/content-posting-api-get-started/ | TikTok Pte. Ltd. | none stated (developers.tiktok.com, facts only, no wording taken) | The facts that direct posting to public needs the `video.publish` scope plus an audit the lab does not have, which is why this package stays on the inbox draft flow with `video.upload` only. |
+
+## Craft references
+
+Hook and repurposing guidance in this skill was informed by the
+[marketingskills social skill](https://github.com/coreyhaines31/marketingskills/tree/main/skills/social)
+(MIT licence, no wording copied), adapted in facetMedia's own voice.

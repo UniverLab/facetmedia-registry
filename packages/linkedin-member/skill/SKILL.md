@@ -47,6 +47,13 @@ so the dry run comes first and a receipt is never re-sent.
   posts to the personal profile with text, images, or an MP4 video; it
   never schedules, never touches DMs or analytics.
 
+Craft the post for LinkedIn itself: lead with a concrete hook in the
+opening line before the fold, keep the voice direct, and skip generic
+AI clichés and artificial single-sentence line breaks. When repurposing
+one source story across networks, adapt it into a native LinkedIn
+shape — a full story with a video or rich post when it fits — rather
+than copying identical text everywhere.
+
 ## Pieces
 
 ```toml
