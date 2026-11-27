@@ -1,5 +1,5 @@
 name = "tiktok"
-version = "0.1.3"
+version = "0.1.4"
 requires_facet = ">=0.1.0b2,<0.2"
 protocol = 1
 provider = "TikTok Pte. Ltd. · Content Posting API"
@@ -30,7 +30,7 @@ spdx = "LicenseRef-TikTok-API-Terms"
 name = "client-key"
 description = "The lab's TikTok app client key, shown once when the app is created"
 required = true
-obtain = "In TikTok for Developers, create an app (Manage apps, Connect an app, ideally under an organization), add Login Kit and Content Posting API, add user.info.basic and video.upload scopes, set the Desktop redirect URI the sign-in prints, then copy the client key from credentials."
+obtain = "In TikTok for Developers, create an app (Manage apps, Connect an app, ideally under an organization), add Login Kit and Content Posting API, add user.info.basic and video.upload scopes, set Desktop redirect URI to http://127.0.0.1:8080/callback/, then copy client key from credentials."
 link = "https://developers.tiktok.com/apps"
 
 [[secrets]]

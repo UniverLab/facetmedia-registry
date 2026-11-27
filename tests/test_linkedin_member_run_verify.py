@@ -299,7 +299,7 @@ def test_run_single_image_uses_person_urn_and_answers_published_receipt(
     files: dict[str, Path], fake: FakeLinkedInMember
 ) -> None:
     result = RUNNER.runner._verbs["run"](_req("run", files))
-    assert result["tool"] == {"name": "LinkedIn Member", "version": "0.2.1"}
+    assert result["tool"] == {"name": "LinkedIn Member", "version": "0.2.2"}
     post = result["post"]
     assert post["network"] == "linkedin-member"
     assert post["account"] == "Ada Lovelace"
@@ -599,7 +599,7 @@ def test_run_video_uploads_chunks_polls_and_creates_post(
     clip.write_bytes(payload)
     req = _req("run", files, {"inputs": {"text": "Video update", "video": "demo-clip.mp4"}})
     result = RUNNER.runner._verbs["run"](req)
-    assert result["tool"] == {"name": "LinkedIn Member", "version": "0.2.1"}
+    assert result["tool"] == {"name": "LinkedIn Member", "version": "0.2.2"}
     assert result["post"]["state"] == "published"
     assert fake.video_inits == [(AUTHOR, len(payload))]
     assert [chunk for _, chunk in fake.video_chunks] == [b"01234567", b"89ABCDEF"]

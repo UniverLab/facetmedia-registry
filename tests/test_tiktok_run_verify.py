@@ -223,7 +223,7 @@ def test_run_video_uploads_chunks_and_answers_a_draft(
     files: dict[str, Path], fake: FakeTikTok
 ) -> None:
     result = RUNNER.runner._verbs["run"](_req("run", files))
-    assert result["tool"] == {"name": "TikTok", "version": "0.1.3"}
+    assert result["tool"] == {"name": "TikTok", "version": "0.1.4"}
     post = result["post"]
     assert post["network"] == "tiktok"
     assert post["account"] == "@lab"
